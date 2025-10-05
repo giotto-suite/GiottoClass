@@ -1572,13 +1572,13 @@ giottoToSeuratV5 <- function(gobject,
         gobject = gobject,
         spat_unit = spat_unit
     )
-    assay_names <- names(gobject@expression$cell)
+    assay_names <- names(gobject@expression[[spat_unit]])
 
     # Identify assays with spaces and replace with underscores
     new_assay_names <- gsub(" ", "_", assay_names)
 
     # Apply the new names to the gobject expression slot
-    names(gobject@expression$cell) <- new_assay_names
+    names(gobject@expression[[spat_unit]]) <- new_assay_names
 
     # verify if optional package is installed
     package_check(pkg_name = "Seurat", repository = "CRAN")
@@ -1622,15 +1622,17 @@ giottoToSeuratV5 <- function(gobject,
                 assay = assay_use
             )
             if ("normalized" %in% slot_use) {
-                sobj <- Seurat::SetAssayData(sobj,
-                    slot = "data",
+                sobj <- Seurat::SetAssayData(
+                    sobj,
+                    layer = "data",
                     new.data = expr_use[["normalized"]][],
                     assay = assay_use
                 )
             }
             if ("scaled" %in% slot_use) {
-                sobj <- Seurat::SetAssayData(sobj,
-                    slot = "scale.data",
+                sobj <- Seurat::SetAssayData(
+                    sobj,
+                    layer = "scale.data",
                     # does not accept 'dgeMatrix'
                     new.data = as.matrix(expr_use[["scaled"]][]),
                     assay = assay_use
@@ -1662,8 +1664,9 @@ giottoToSeuratV5 <- function(gobject,
             sobj[[assay_use]] <- assay_obj
             if ("scaled" %in% slot_use) {
                 data_scale <- as.matrix(expr_use[["scaled"]][])
-                sobj <- Seurat::SetAssayData(sobj,
-                    slot = "scale.data",
+                sobj <- Seurat::SetAssayData(
+                    sobj,
+                    layer = "scale.data",
                     new.data = data_scale,
                     assay = assay_use
                 )
@@ -1671,7 +1674,8 @@ giottoToSeuratV5 <- function(gobject,
         }
 
         # add cell metadata
-        names(gobject@cell_metadata$cell) <- gsub(" ", "_", names(gobject@cell_metadata$cell))
+        names(gobject@cell_metadata$cell) <- gsub(
+            " ", "_", names(gobject@cell_metadata$cell))
         meta_cells <- data.table::setDF(
             getCellMetadata(
                 gobject = gobject,
@@ -1682,7 +1686,8 @@ giottoToSeuratV5 <- function(gobject,
             )
         )
         rownames(meta_cells) <- meta_cells$cell_ID
-        meta_cells <- meta_cells[, -which(colnames(meta_cells) == "cell_ID"), drop = FALSE]
+        meta_cells <- meta_cells[
+            , -which(colnames(meta_cells) == "cell_ID"), drop = FALSE]
         if (ncol(meta_cells) > 0) {
             colnames(meta_cells) <- paste0(
                 assay_use, "_",
@@ -1695,7 +1700,8 @@ giottoToSeuratV5 <- function(gobject,
         }
 
         # add feature metadata
-        names(gobject@feat_metadata$cell) <- gsub(" ", "_", names(gobject@feat_metadata$cell))
+        names(gobject@feat_metadata$cell) <- gsub(
+            " ", "_", names(gobject@feat_metadata$cell))
         meta_genes <- data.table::setDF(
             getFeatureMetadata(
                 gobject = gobject,
@@ -1829,7 +1835,7 @@ giottoToSeuratV5 <- function(gobject,
 
     # spatial network
     avail_sn <- list_spatial_networks(gobject = gobject, spat_unit = spat_unit)
-    if (!is.null(avail_nn)) {
+    if (!is.null(avail_sn)) {
         if (nrow(avail_sn) > 0) {
             sn_all <- avail_sn[, name]
             for (i in sn_all) {
