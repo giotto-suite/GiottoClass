@@ -152,7 +152,7 @@ evaluate_input <- function(type, x, ...) {
         .gstop(
             "expression input needs to be a path to matrix-like data or an",
             "object of class 'Matrix', 'data.table', 'data.frame', 'matrix'",
-      "'DelayedMatrix' or 'dbSparseMatrix'."
+            "'DelayedMatrix' or 'dbSparseMatrix'."
         )
     }
 
@@ -321,7 +321,7 @@ evaluate_input <- function(type, x, ...) {
     rnames <- rownames(x)
     if (!is.null(rnames)) {
         vmsg(.v = verbose, "[spatlocs] matrix input has rownames.
-             Using these as IDs.")
+            Using these as IDs.")
         dt[, id := rnames]
     }
     .evaluate_spatial_locations(dt, verbose = verbose, ...)
