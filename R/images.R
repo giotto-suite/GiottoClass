@@ -2850,7 +2850,7 @@ to_simple_tif <- function(input_file,
             unlink(outpath, force = TRUE) # if overwrite, delete original
         } else {
             stop("File already exists: ", outpath,
-                 "\nSet overwrite = TRUE to replace.\n",
+                "\nSet overwrite = TRUE to replace.\n",
                 call. = FALSE
             )
         }
