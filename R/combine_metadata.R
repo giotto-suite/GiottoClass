@@ -695,10 +695,10 @@ calculateLabelProportions <- function(gobject, labels,
         ), call. = FALSE)
     }
 
-    spat_unit = set_default_spat_unit(
+    spat_unit <- set_default_spat_unit(
         gobject = gobject, spat_unit = spat_unit
     )
-    feat_type = set_default_feat_type(
+    feat_type <- set_default_feat_type(
         gobject = gobject, spat_unit = spat_unit, feat_type = feat_type
     )
 
@@ -881,7 +881,7 @@ calculateLabelProportions <- function(gobject, labels,
         sn <- sn[, c("source", "target")] # drop weights info if any
     } else if (!"weight" %in% colnames(sn) || isFALSE(weights)) {
         warning(wrap_txt("No 'weight' information present in spatial network.
-                         Using adjacency instead."), call. = FALSE)
+                        Using adjacency instead."), call. = FALSE)
         sn[, "weight" := 1] # fallback if no weight info exists
     }
     # ensure unique
