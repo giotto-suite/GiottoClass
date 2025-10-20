@@ -2884,11 +2884,11 @@ ometif_to_tif <- to_simple_tif
 #' "integer"). `output = "structure"` can help
 #' with figuring out which is most appropriate.
 #' @param output character. One of "data.frame" to return a data.frame of the
-#' attributes information of the xml node, "xmL" for an \{xml2\} representation
+#' attributes information of the xml node, "xml" for an \{xml2\} representation
 #' of the node, "list" for an R native list (note that many items in the
-#' list may have overlapping names that make indexing difficult), or
+#' list may have overlapping names that make indexing difficult),
 #' "structure" to invisibly return NULL, but print the structure of the XML
-#' document or node.
+#' document/node, or "kv" (extract key/value pairs from OME MapAnnotations).
 #' @returns list/data.frame/XML depending on `output`
 #' @examples
 #' if (FALSE) {
@@ -2911,7 +2911,7 @@ tif_metadata <- function(path,
     node = NULL,
     page = NULL,
     type = c("attribute", "text", "double", "integer"),
-    output = c("data.frame", "xml", "list", "structure")) {
+    output = c("data.frame", "xml", "list", "structure", "kv")) {
     checkmate::assert_file_exists(path)
     package_check(
         pkg_name   = c("tifffile", "imagecodecs", "xml2"),
@@ -2923,7 +2923,7 @@ tif_metadata <- function(path,
     img <- TIF$TiffFile(path)
     on.exit(try(img$close(), silent = TRUE), add = TRUE)
     output <- match.arg(output,
-        choices = c("data.frame", "xml", "list", "structure")
+        choices = c("data.frame", "xml", "list", "structure", "kv")
     )
     type <- match.arg(type,
         choices = c("attribute", "text", "double", "integer")
@@ -2992,12 +2992,14 @@ ometif_metadata <- tif_metadata
         # qptiff: per-page description
         p1 <- as.integer(page)[1]
         x  <- tryCatch(img$pages[[p1 - 1L]]$description, error = function(e) NULL)
+        if (is.null(x) || !nzchar(x)) {
+            x <- tryCatch(img$series[[1]]$pages[[p1 - 1L]]$description, error = function(e) NULL)
+        }
     } else if (img$is_fluoview) x <- img$fluoview_metadata
     else if (img$is_nih) x <- img$nih_metadata
     else if (img$is_astrotiff) x <- img$astrotiff_metadata
     else if (img$is_imagej) x <- img$imagej_metadata
     else if (img$is_lsm) x <- img$lsm_metadata
-    else if (img$is_qpi) x <- img$series[[1]]$pages[[page - 1L]]$description
     else if (img$is_micromanager) x <- img$micromanager_metadata
     else stop("unrecognized tif format\n", call. = FALSE)
 
@@ -3008,6 +3010,20 @@ ometif_metadata <- tif_metadata
     x <- xml2::read_xml(x)
     ns <- xml2::xml_ns(x)
     has_namespace <- length(ns) > 0L
+
+    ## NEW: output = "kv" (read OME MapAnnotation K/Vs) ---
+    if (identical(output, "kv")) {
+        m_nodes <- xml2::xml_find_all(
+            x,
+            ".//*[local-name()='StructuredAnnotations']//*[local-name()='MapAnnotation']/*[local-name()='Value']//*[local-name()='M']"
+        )
+        if (!length(m_nodes)) return(NULL)
+        keys   <- xml2::xml_attr(m_nodes, "K")
+        values <- xml2::xml_text(m_nodes)
+        out <- as.list(values)
+        names(out) <- keys
+        return(out)
+    }
 
     if (!is.null(node)) {
         node_parts <- node
