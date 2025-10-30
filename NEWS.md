@@ -1,3 +1,8 @@
+# GiottoClass 0.4.11 (TBD)
+
+## enhancements
+- escape hatch for gobject initialize checking. Set option `"giotto.init_check_severity"` to `"stop"` (default), or `"warning"` depending on needs.
+
 # GiottoClass 0.4.10 (2025/09/30)
 
 ## bug fixes
