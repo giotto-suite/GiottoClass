@@ -484,8 +484,7 @@ updateGiottoObject <- function(gobject) {
 
     # GiottoClass 0.4.12 adds @misc slot
     if (.gversion(gobject) < numeric_version("0.4.12")) {
-        attr(gobject, "misc") <- NA_character_
-        gobject@misc <- NULL
+        attr(gobject, "misc") <- list()
     }
 
     # -------------------------------------------------------------------------#
@@ -627,7 +626,7 @@ giotto <- setClass(
         join_info = "ANY",
         multiomics = "ANY",
         h5_file = "ANY",
-        misc = "ANY"
+        misc = "list"
         # mirai = 'list'
     ),
     prototype = list(
@@ -653,7 +652,7 @@ giotto <- setClass(
         join_info = NULL,
         multiomics = NULL,
         h5_file = NULL,
-        misc = NULL
+        misc = list()
         # mirai = list()
     )
 
@@ -705,7 +704,7 @@ setClass(
         join_info = "ANY",
         multiomics = "ANY",
         h5_file = "ANY",
-        misc = "ANY"
+        misc = "list"
     ),
     prototype = list(
         packed_spatial_info = NULL,
@@ -730,7 +729,7 @@ setClass(
         join_info = NULL,
         multiomics = NULL,
         h5_file = NULL,
-        misc = NULL
+        misc = list()
     )
 )
 
