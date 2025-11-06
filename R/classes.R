@@ -459,7 +459,8 @@ updateGiottoObject <- function(gobject) {
     }
 
     # warn if gobject newer than package
-    if (as.character(.gversion(gobject)) > as.character(packageVersion("GiottoClass"))) {
+    if (numeric_version(.gversion(gobject)) >
+        numeric_version(packageVersion("GiottoClass"))) {
         warning(
             call. = FALSE,
             sprintf(
@@ -473,13 +474,19 @@ updateGiottoObject <- function(gobject) {
     # [version-based updates] -------------------------------------------------#
 
     # GiottoClass 0.3.0 removes @largeImages slot
-    if (.gversion(gobject) < "0.3.0") {
+    if (.gversion(gobject) < numeric_version("0.3.0")) {
         gobject <- .update_image_slot(gobject)
     }
 
     # GiottoClass 0.1.2 image updates moved here
     # TODO remove in future update
     gobject@images <- lapply(gobject@images, .update_giotto_image)
+
+    # GiottoClass 0.4.12 adds @misc slot
+    if (.gversion(gobject) < numeric_version("0.4.12")) {
+        attr(gobject, "misc") <- NA_character_
+        gobject@misc <- NULL
+    }
 
     # -------------------------------------------------------------------------#
 
@@ -567,6 +574,7 @@ updateGiottoObject <- function(gobject) {
 #' @slot join_info information about joined Giotto objects
 #' @slot multiomics multiomics integration results
 #' @slot h5_file path to h5 file
+#' @slot misc miscellaneous or unstructured data
 #' @details
 #'
 #' \[**initialize**\]
@@ -618,7 +626,8 @@ giotto <- setClass(
         versions = "list",
         join_info = "ANY",
         multiomics = "ANY",
-        h5_file = "ANY"
+        h5_file = "ANY",
+        misc = "ANY"
         # mirai = 'list'
     ),
     prototype = list(
@@ -643,7 +652,8 @@ giotto <- setClass(
         versions = .versions_info(),
         join_info = NULL,
         multiomics = NULL,
-        h5_file = NULL
+        h5_file = NULL,
+        misc = NULL
         # mirai = list()
     )
 
@@ -694,7 +704,8 @@ setClass(
         versions = "ANY",
         join_info = "ANY",
         multiomics = "ANY",
-        h5_file = "ANY"
+        h5_file = "ANY",
+        misc = "ANY"
     ),
     prototype = list(
         packed_spatial_info = NULL,
@@ -718,7 +729,8 @@ setClass(
         versions = NULL,
         join_info = NULL,
         multiomics = NULL,
-        h5_file = NULL
+        h5_file = NULL,
+        misc = NULL
     )
 )
 
