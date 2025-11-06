@@ -453,13 +453,13 @@ updateGiottoObject <- function(gobject) {
     if (!is.null(attr(gobject, "OS_platform"))) {
         attr(gobject, "OS_platform") <- NULL
     }
-    if (is.null(attr(gobject, "versions"))) { # apply default version 0
+    if (is.null(attr(gobject, "versions"))) { # apply default version 0.0.0
         attr(gobject, "versions") <- .versions_info()
-        gobject@versions$gclass <- 0 # untracked
+        gobject@versions$gclass <- "0.0.0" # untracked
     }
 
     # warn if gobject newer than package
-    if (numeric_version(.gversion(gobject)) >
+    if (.gversion(gobject) >
         numeric_version(packageVersion("GiottoClass"))) {
         warning(
             call. = FALSE,
