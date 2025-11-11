@@ -177,7 +177,7 @@ spatQuery <- function(gobject,
     if (!is.null(name)) checkmate::assert_character(name)
     checkmate::assert_list(filters,
         types = c("character", "giottoPolygon", "spatLocsObj", "numeric",
-                  "integer", "SpatVector")
+                "integer", "SpatVector")
     )
     checkmate::assert_character(use_centroids, null.ok = TRUE)
     checkmate::assert_numeric(buffer)
@@ -190,29 +190,29 @@ spatQuery <- function(gobject,
     # more specific checks on inputs  ----------------------------------- #
     if (length(filters) < 2L) {
         stop(wrap_txt("At least two elements in filters are needed."),
-             call. = FALSE)
+            call. = FALSE)
     }
     # `filters` input must be named.
     filter_names <- names(filters)
     if (any(vapply(filter_names, is_empty_char, FUN.VALUE = logical(1L)))) {
         stop(wrap_txt("All elements in filters list must be named"),
-             call. = FALSE)
+            call. = FALSE)
     }
     if (!is.null(use_centroids)) {
         if (!all(use_centroids %in% filter_names)) {
             stop("all entries in `use_centroids` must be names in `filters`\n",
-                 call. = FALSE)
+                call. = FALSE)
         }
     }
     if (length(buffer) > 1L) {
         buffer_names <- names(buffer)
         if (is.null(buffer_names)) {
             stop("if multiple `buffer` values given, they must be named\n",
-                 call. = FALSE)
+                call. = FALSE)
         }
         if (!all(buffer_names %in% filter_names)) {
             stop("all names for `buffer` values must be names in `filters`\n",
-                 call. = FALSE)
+                call. = FALSE)
         }
     }
 
@@ -334,7 +334,7 @@ spatQuery <- function(gobject,
         # not allowed.
         stop(wrap_txtf(
             "'%s' is not the last layer of query.
-                Assigned 'buffer' may not be 0", fname
+            Assigned 'buffer' may not be 0", fname
         ), call. = FALSE)
     }
 }
@@ -355,7 +355,7 @@ spatQueryGiottoPolygons <- spatQuery
 
 .squery_get_sv.default <- function(x, ...) {
     stop(wrap_txt("[spatQuery] unrecognized filter input type:", class(x)),
-         call. = FALSE)
+        call. = FALSE)
 }
 
 .squery_get_sv.character <- function(x, gobject, centroids, spat_unit, ...) {
@@ -429,7 +429,7 @@ spatQueryGiottoPolygons <- spatQuery
 
     if (is.null(sv)) {
         stop(sprintf("Requested filter '%s' not found in giotto object\n", x),
-             call. = FALSE)
+            call. = FALSE)
     }
 
     # filter by x if needed

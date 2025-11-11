@@ -11,6 +11,21 @@
 - `overlaps()` will now properly find image overlaps
 
 
+# GiottoClass 0.4.12 (TBD)
+
+## new
+- `misc` slot for storing unstructured data
+
+## enhancements
+- escape hatch for gobject initialize checking. Set option `"giotto.init_check_severity"` to `"stop"` (default), or `"warning"` depending on needs.
+
+# GiottoClass 0.4.10 (2025/09/30)
+
+## bug fixes
+- fix bug in spatial grid getter [#1193](https://github.com/drieslab/Giotto/issues/1193) by RunBelief
+
+## enhancements
+- improvements to `tif_metadata()` and `to_simple_tif()`
 
 # GiottoClass 0.4.9 (2025/07/07)
 
