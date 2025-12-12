@@ -1,4 +1,7 @@
-# GiottoClass 0.4.12 (TBD)
+# GiottoClass 0.4.12 (2025/12/12)
+
+## enhancements
+- automatic checking for `"count"` column in feature info
 
 ## new
 - `misc` slot for storing unstructured data
