@@ -328,6 +328,8 @@ setMethod(
     return_gpolygon = TRUE,
     verbose = TRUE,
     ...) {
+        if (names(y) )
+
         res <- calculateOverlap(
             x = x[],
             y = y[],
