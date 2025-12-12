@@ -328,7 +328,16 @@ setMethod(
     return_gpolygon = TRUE,
     verbose = TRUE,
     ...) {
-        if (names(y) )
+        if ("count" %in% names(y) && is.null(count_info_column)) {
+            vmsg(.v = verbose,
+                "[overlap] Found column \"count\" in feature info.
+                - Using as `count_info_column`
+                [!] Set count_info_column = FALSE to disable.")
+            count_info_column <- "count"
+        }
+        if (isFALSE(count_info_column)) {
+            count_info_column <- NULL
+        }
 
         res <- calculateOverlap(
             x = x[],
@@ -1262,7 +1271,7 @@ setMethod(
     ...) {
         type <- match.arg(type, choices = c("point", "intensity"))
         checkmate::assert_character(name, len = 1L)
-        if (!is.null(count_info_column)) {
+        if (!is.null(count_info_column) && !isFALSE(count_info_column)) {
             checkmate::assert_character(count_info_column, len = 1L)
         }
         checkmate::assert_logical(return_gobject)
@@ -1441,6 +1450,19 @@ setMethod(
 
 
         # 2. Perform aggregation to counts DT
+
+        # autodetect counts col
+        if ("count" %in% names(dtoverlap) && is.null(count_info_column)) {
+            vmsg(.v = verbose,
+                 "[overlap] Found column \"count\" in feature info.
+                - Using as `count_info_column`
+                [!] Set count_info_column = FALSE to disable.")
+            count_info_column <- "count"
+        }
+        if (isFALSE(count_info_column)) {
+            count_info_column <- NULL
+        }
+
         if (!is.null(count_info_column)) { # if there is a counts col
 
             if (!count_info_column %in% colnames(dtoverlap)) {
