@@ -111,7 +111,9 @@ in \code{feat_subset_column} in order to subset feature points when performing
 overlap calculation.}
 
 \item{count_info_column}{character. (optional) column with count information.
-Useful in cases when more than one detection is reported per point.}
+Useful in cases when more than one detection is reported per point. If a
+column called "count" is present in the feature points data, it will be
+automatically selected.}
 
 \item{return_gpolygon}{default = TRUE. Whether to return the entire
 giottoPolygon provided to \code{x}, but with the overlaps information appended or

@@ -80,7 +80,9 @@ polygon_to_raster <- function(polygon, field = NULL) {
 #' in `feat_subset_column` in order to subset feature points when performing
 #' overlap calculation.
 #' @param count_info_column character. (optional) column with count information.
-#' Useful in cases when more than one detection is reported per point.
+#' Useful in cases when more than one detection is reported per point. If a
+#' column called "count" is present in the feature points data, it will be
+#' automatically selected.
 #' @param verbose be verbose
 #' @param \dots additional params to pass to methods.
 #' @details `feat_subset_column`, `feat_subset_ids`, and `count_info_column` are
@@ -1231,7 +1233,9 @@ calculateOverlapParallel <- function(gobject,
 #' @param x object containing overlaps info. Can be giotto object or SpatVector
 #' points or data.table of overlaps generated from `calculateOverlap`
 #' @param name name for the overlap count matrix
-#' @param count_info_column column with count information
+#' @param count_info_column column with count information. If a
+#' column called "count" is present in the feature points data, it will be
+#' automatically selected.
 #' @param \dots additional params to pass to methods
 #' @concept overlap
 #' @returns giotto object or count matrix
