@@ -453,13 +453,14 @@ updateGiottoObject <- function(gobject) {
     if (!is.null(attr(gobject, "OS_platform"))) {
         attr(gobject, "OS_platform") <- NULL
     }
-    if (is.null(attr(gobject, "versions"))) { # apply default version 0
+    if (is.null(attr(gobject, "versions"))) { # apply default version 0.0.0
         attr(gobject, "versions") <- .versions_info()
-        gobject@versions$gclass <- 0 # untracked
+        gobject@versions$gclass <- "0.0.0" # untracked
     }
 
     # warn if gobject newer than package
-    if (as.character(.gversion(gobject)) > as.character(packageVersion("GiottoClass"))) {
+    if (.gversion(gobject) >
+        numeric_version(packageVersion("GiottoClass"))) {
         warning(
             call. = FALSE,
             sprintf(
@@ -473,13 +474,18 @@ updateGiottoObject <- function(gobject) {
     # [version-based updates] -------------------------------------------------#
 
     # GiottoClass 0.3.0 removes @largeImages slot
-    if (.gversion(gobject) < "0.3.0") {
+    if (.gversion(gobject) < numeric_version("0.3.0")) {
         gobject <- .update_image_slot(gobject)
     }
 
     # GiottoClass 0.1.2 image updates moved here
     # TODO remove in future update
     gobject@images <- lapply(gobject@images, .update_giotto_image)
+
+    # GiottoClass 0.4.12 adds @misc slot
+    if (.gversion(gobject) < numeric_version("0.4.12")) {
+        attr(gobject, "misc") <- list()
+    }
 
     # -------------------------------------------------------------------------#
 
@@ -567,6 +573,7 @@ updateGiottoObject <- function(gobject) {
 #' @slot join_info information about joined Giotto objects
 #' @slot multiomics multiomics integration results
 #' @slot h5_file path to h5 file
+#' @slot misc miscellaneous or unstructured data
 #' @details
 #'
 #' \[**initialize**\]
@@ -618,7 +625,8 @@ giotto <- setClass(
         versions = "list",
         join_info = "ANY",
         multiomics = "ANY",
-        h5_file = "ANY"
+        h5_file = "ANY",
+        misc = "list"
         # mirai = 'list'
     ),
     prototype = list(
@@ -643,7 +651,8 @@ giotto <- setClass(
         versions = .versions_info(),
         join_info = NULL,
         multiomics = NULL,
-        h5_file = NULL
+        h5_file = NULL,
+        misc = list()
         # mirai = list()
     )
 
@@ -694,7 +703,8 @@ setClass(
         versions = "ANY",
         join_info = "ANY",
         multiomics = "ANY",
-        h5_file = "ANY"
+        h5_file = "ANY",
+        misc = "list"
     ),
     prototype = list(
         packed_spatial_info = NULL,
@@ -718,7 +728,8 @@ setClass(
         versions = NULL,
         join_info = NULL,
         multiomics = NULL,
-        h5_file = NULL
+        h5_file = NULL,
+        misc = list()
     )
 )
 

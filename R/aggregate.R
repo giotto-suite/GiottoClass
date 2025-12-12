@@ -80,7 +80,9 @@ polygon_to_raster <- function(polygon, field = NULL) {
 #' in `feat_subset_column` in order to subset feature points when performing
 #' overlap calculation.
 #' @param count_info_column character. (optional) column with count information.
-#' Useful in cases when more than one detection is reported per point.
+#' Useful in cases when more than one detection is reported per point. If a
+#' column called "count" is present in the feature points data, it will be
+#' automatically selected.
 #' @param verbose be verbose
 #' @param \dots additional params to pass to methods.
 #' @details `feat_subset_column`, `feat_subset_ids`, and `count_info_column` are
@@ -328,6 +330,17 @@ setMethod(
     return_gpolygon = TRUE,
     verbose = TRUE,
     ...) {
+        if ("count" %in% names(y) && is.null(count_info_column)) {
+            vmsg(.v = verbose,
+                "[overlap] Found column \"count\" in feature info.
+                - Using as `count_info_column`
+                [!] Set count_info_column = FALSE to disable.")
+            count_info_column <- "count"
+        }
+        if (isFALSE(count_info_column)) {
+            count_info_column <- NULL
+        }
+
         res <- calculateOverlap(
             x = x[],
             y = y[],
@@ -1220,7 +1233,9 @@ calculateOverlapParallel <- function(gobject,
 #' @param x object containing overlaps info. Can be giotto object or SpatVector
 #' points or data.table of overlaps generated from `calculateOverlap`
 #' @param name name for the overlap count matrix
-#' @param count_info_column column with count information
+#' @param count_info_column column with count information. If a
+#' column called "count" is present in the feature points data, it will be
+#' automatically selected.
 #' @param \dots additional params to pass to methods
 #' @concept overlap
 #' @returns giotto object or count matrix
@@ -1260,7 +1275,7 @@ setMethod(
     ...) {
         type <- match.arg(type, choices = c("point", "intensity"))
         checkmate::assert_character(name, len = 1L)
-        if (!is.null(count_info_column)) {
+        if (!is.null(count_info_column) && !isFALSE(count_info_column)) {
             checkmate::assert_character(count_info_column, len = 1L)
         }
         checkmate::assert_logical(return_gobject)
@@ -1439,6 +1454,19 @@ setMethod(
 
 
         # 2. Perform aggregation to counts DT
+
+        # autodetect counts col
+        if ("count" %in% names(dtoverlap) && is.null(count_info_column)) {
+            vmsg(.v = verbose,
+                 "[overlap] Found column \"count\" in feature info.
+                - Using as `count_info_column`
+                [!] Set count_info_column = FALSE to disable.")
+            count_info_column <- "count"
+        }
+        if (isFALSE(count_info_column)) {
+            count_info_column <- NULL
+        }
+
         if (!is.null(count_info_column)) { # if there is a counts col
 
             if (!count_info_column %in% colnames(dtoverlap)) {

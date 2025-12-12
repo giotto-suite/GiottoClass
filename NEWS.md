@@ -1,3 +1,14 @@
+# GiottoClass 0.4.12 (2025/12/12)
+
+## enhancements
+- automatic checking for `"count"` column in feature info
+
+## new
+- `misc` slot for storing unstructured data
+
+## enhancements
+- escape hatch for gobject initialize checking. Set option `"giotto.init_check_severity"` to `"stop"` (default), or `"warning"` depending on needs.
+
 # GiottoClass 0.4.10 (2025/09/30)
 
 ## bug fixes
