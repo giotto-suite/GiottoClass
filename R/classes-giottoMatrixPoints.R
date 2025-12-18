@@ -117,18 +117,24 @@ setMethod("plot", signature("giottoBinPoints", "missing"), function(x,
     do.call(terra::plot, a)
 })
 
-setMethod("relate", signature(x = "giottoSpatial", y = "giottoBinPoints"),
-    function(x, y, relation,
-        pairs = TRUE,
-        na.rm = TRUE,
-        output = c("data.table", "matrix"),
-        use_names = TRUE,
-        ...
-    ) {
-        output <- match.arg(output, choices = c("data.table", "matrix"))
+setMethod("calculateOverlap", signature("giottoPolygon", "giottoBinPoints"),
+    function(x, y, name_overlap = NULL, poly_subset_ids = NULL) {
+        checkmate::assert_character(poly_subset_ids, null.ok = TRUE)
+        if (!is.null(poly_subset_ids)) {
+            x <- x[x$poly_ID %in% poly_subset_ids]
+        }
+        res <- terra::relate(x[], y@spatial,
+            relation = "intersects", pairs = TRUE) |>
+            data.table::as.data.table()
+        names(res) <- c("poly_ID", "b")
+        res <- res[, .gbp_spatial_select_counts(y, b), by = "poly_ID"]
+        res[, "poly_ID" := spatIDs(x)[poly_ID]]
+        res
+    })
+
+setMethod("ext", signature("giottoBinPoints"), function(x, ...) {
+    ext(x@spatial, ...)
 })
-
-
 
 # internals
 
