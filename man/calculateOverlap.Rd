@@ -85,7 +85,7 @@
   feat_subset_column = NULL,
   feat_subset_values = NULL,
   feat_count_column = NULL,
-  method = c("raster", "vector"),
+  method = getOption("giotto.overlap_point_method", "vector"),
   verbose = TRUE,
   feat_subset_ids = deprecated(),
   count_info_column = deprecated()
@@ -124,7 +124,9 @@ in \code{feat_subset_column} in order to subset feature points when performing
 overlap calculation.}
 
 \item{feat_count_column}{character. (optional) column with count information.
-Useful in cases when more than one detection is reported per point.}
+Useful in cases when more than one detection is reported per point. If a
+column called "count" is present in the feature points data, it will be
+automatically selected.}
 
 \item{return_gpolygon}{default = TRUE. Whether to return the entire
 giottoPolygon provided to \code{x}, but with the overlaps information appended or
@@ -133,6 +135,17 @@ as a bare terra \code{SpatVector}}
 \item{feat_subset_ids}{deprecated. Use \code{feat_subset_values} instead.}
 
 \item{count_info_column}{deprecated. Use \code{feat_count_column} instead.}
+
+\item{method}{character. One of \code{"vector"} or \code{"raster"},
+(default = \code{"vector"}). Method for polygon-point feature overlap calculation.
+Can also set as an option: \code{"giotto.overlap_point_method"}
+\itemize{
+\item \code{"vector"} uses direct spatial extraction (more accurate to input geometry,
+will double count features in overlapping polygon regions for all overlapping
+polygons).
+\item \code{"raster"} uses rasterization (faster, assigns each feature to only one
+polygon even in overlapping regions as a byproduct of the rasterization).
+}}
 }
 \value{
 Usually an object of the same class as \code{x}, with the overlaps

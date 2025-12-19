@@ -83,7 +83,9 @@ points or data.table of overlaps generated from \code{calculateOverlap}}
 
 \item{type}{character. Type of overlap data (either 'point' or 'intensity')}
 
-\item{feat_count_column}{column with count information}
+\item{feat_count_column}{column with count information. If a
+column called "count" is present in the feature points data, it will be
+automatically selected.}
 
 \item{fun}{character. Function to aggregate image information
 (default = "sum")}
