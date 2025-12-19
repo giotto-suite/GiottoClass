@@ -11,7 +11,8 @@
 #' @importFrom methods validObject
 #' @importFrom graphics legend par rect
 #' @importMethodsFrom terra spin flip rescale t
-#' @importMethodsFrom Matrix t
+#' @importMethodsFrom Matrix t dim %*% as.matrix coerce
+#' @importMethodsFrom Matrix colSums rowSums colMeans rowMeans diag summary
 #' @importMethodsFrom terra ext ext<- hull
 #' @importMethodsFrom terra plot
 #' @importMethodsFrom terra wrap

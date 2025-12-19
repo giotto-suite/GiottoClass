@@ -256,7 +256,9 @@ polygon_to_raster <- function(polygon, field = NULL) {
 #' overlap calculation.
 #' @param feat_subset_ids deprecated. Use `feat_subset_values` instead.
 #' @param feat_count_column character. (optional) column with count information.
-#' Useful in cases when more than one detection is reported per point.
+#' Useful in cases when more than one detection is reported per point. If a
+#' column called "count" is present in the feature points data, it will be
+#' automatically selected.
 #' @param verbose be verbose
 #' @param count_info_column deprecated. Use `feat_count_column` instead.
 #' @param \dots additional params to pass to methods.
@@ -516,12 +518,24 @@ setMethod(
         # deprecations
         feat_subset_values <- GiottoUtils::deprecate_param(
             feat_subset_ids, feat_subset_values,
-            fun = "calculateOverlap", when = "0.4.7"
+            fun = "calculateOverlap", when = "0.5.0"
         )
         feat_count_column <- GiottoUtils::deprecate_param(
             count_info_column, feat_count_column,
-            fun = "calculateOverlap", when = "0.4.7"
+            fun = "calculateOverlap", when = "0.5.0"
         )
+
+        # autodetect count columns
+        if ("count" %in% names(y) && is.null(feat_count_column)) {
+            vmsg(.v = verbose,
+                "[overlap] Found column \"count\" in feature info.
+                - Using as `feat_count_column`
+                [!] Set feat_count_column = FALSE to disable.")
+            feat_count_column <- "count"
+        }
+        if (isFALSE(feat_count_column)) {
+            feat_count_column <- NULL
+        }
 
         # return an overlap info object
         res <- calculateOverlap(
@@ -1533,7 +1547,9 @@ calculateOverlapParallel <- function(gobject,
 #' @param x object containing overlaps info. Can be giotto object or SpatVector
 #' points or data.table of overlaps generated from `calculateOverlap`
 #' @param name name for the overlap count matrix
-#' @param feat_count_column column with count information
+#' @param feat_count_column column with count information. If a
+#' column called "count" is present in the feature points data, it will be
+#' automatically selected.
 #' @param count_info_column deprecated. Use `feat_count_column` instead.
 #' @param \dots additional params to pass to methods
 #' @concept overlap
@@ -1590,8 +1606,9 @@ setMethod(
 
         type <- match.arg(type, choices = c("point", "intensity"))
         checkmate::assert_character(name, len = 1L)
-        checkmate::assert_character(feat_count_column,
-            len = 1L, null.ok = TRUE)
+        if (!is.null(feat_count_column) && !isFALSE(feat_count_column)) {
+            checkmate::assert_character(feat_count_column, len = 1L)
+        }
         checkmate::assert_logical(return_gobject)
 
         spat_info <- set_default_spat_unit(
@@ -1762,7 +1779,19 @@ setMethod(
 
 
         # 2. Perform aggregation to counts DT
-        if (!is.null(feat_count_column)) { # if there is a counts col
+        # autodetect counts col
+        if ("count" %in% names(dtoverlap) && is.null(feat_count_column)) {
+            vmsg(.v = verbose,
+                 "[overlap] Found column \"count\" in feature info.
+                - Using as `feat_count_column`
+                [!] Set feat_count_column = FALSE to disable.")
+            feat_count_column <- "count"
+        }
+        if (isFALSE(feat_count_column)) {
+            feat_count_column <- NULL
+        }
+
+        if (!is.null(feat_count_column)) { # if there is a counts col selected
 
             if (!feat_count_column %in% colnames(dtoverlap)) {
                 .gstop("feat_count_column ", feat_count_column,
