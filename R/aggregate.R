@@ -737,6 +737,15 @@ setMethod(
 
 # * SpatVector SpatVector ####
 #' @rdname calculateOverlap
+#' @param method character. One of `"vector"` or `"raster"`,
+#' (default = `"vector"`). Method for polygon-point feature overlap calculation.
+#' Can also set as an option: `"giotto.overlap_point_method"`
+#'
+#' * `"vector"` uses direct spatial extraction (more accurate to input geometry,
+#' will double count features in overlapping polygon regions for all overlapping
+#' polygons).
+#' * `"raster"` uses rasterization (faster, assigns each feature to only one
+#' polygon even in overlapping regions as a byproduct of the rasterization).
 #' @export
 setMethod(
     "calculateOverlap", signature(x = "SpatVector", y = "SpatVector"),
@@ -745,11 +754,11 @@ setMethod(
     feat_subset_column = NULL,
     feat_subset_values = NULL,
     feat_count_column = NULL,
-    method = c("raster", "vector"),
+    method = getOption("giotto.overlap_point_method", "vector"),
     verbose = TRUE,
     feat_subset_ids = deprecated(),
     count_info_column = deprecated()) {
-        method <- match.arg(method, choices = c("raster", "vector"))
+        method <- match.arg(method, choices = c("vector", "raster"))
         feat_subset_values <- GiottoUtils::deprecate_param(
             feat_subset_ids, feat_subset_values,
             fun = "calculateOverlap", when = "0.4.7"
