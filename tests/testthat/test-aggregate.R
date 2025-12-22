@@ -34,15 +34,13 @@ img <- imglist[[1]]
 # these tests can change if the source test dataset changes
 
 test_that("calculateOverlap works for points", {
-    res_rast <- calculateOverlap(gpoly, gpts, verbose = FALSE)
+    res_rast <- calculateOverlap(gpoly, gpts, verbose = FALSE, method = "raster")
     expect_identical(names(res_rast@overlaps), "rna")
     ovlp_rast <- overlaps(res_rast, "rna")
     checkmate::expect_class(ovlp_rast, "overlapInfo")
     expect_equal(nrow(ovlp_rast@data), 12383)
     expect_identical(as.numeric(ovlp_rast@data[100,]), c(385, 685, 12))
-    res_vect <- calculateOverlap(gpoly, gpts,
-        verbose = FALSE, method = "vector"
-    )
+    res_vect <- calculateOverlap(gpoly, gpts, verbose = FALSE, method = "vector")
 
     # larger due to double counts being possible with vector method
     ovlp_vect <- overlaps(res_vect, "rna")
