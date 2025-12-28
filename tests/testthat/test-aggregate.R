@@ -8,16 +8,19 @@ random_pts_names <- function(n, species = 20) {
     sample(nameset, replace = TRUE, size = n, prob = runif(species))
 }
 
-random_points_gen <- function(n = 500, extent = ext(gpoly)) {
+random_points_gen <- function(n = 500, extent = ext(gpoly), count = TRUE) {
     GiottoUtils::local_seed(1234)
     evect <- as.numeric(ext(extent)[])
-    count <- abs(round(rnorm(n, 0, sd = 0.8))) + 1
-    data.table::data.table(
+    d <- data.table::data.table(
         id = random_pts_names(n),
         x = runif(n, min = evect[[1]], max = evect[[2]]),
-        y = runif(n, min = evect[[3]], max = evect[[4]]),
-        count = count
+        y = runif(n, min = evect[[3]], max = evect[[4]])
     )
+    if (count) {
+        count <- abs(round(rnorm(n, 0, sd = 0.8))) + 1
+        d[, count := count]
+    }
+    d
 }
 
 g <- test_data$viz
