@@ -836,6 +836,44 @@ setMethod(
 }
 
 
+#' @name .calculate_overlap_raster
+#' @title Find feature points overlapped by rasterized polygon.
+#' @description Core workflow function that accepts simple `SpatVector` inputs,
+#' performs rasterization of the polys and then checks for overlaps.
+#' @param spatvec `SpatVector` polygon from a `giottoPolygon` object
+#' @param pointvec `SpatVector` points from a `giottoPoints` object
+#' @param keep column(s) to keep
+#' @param verbose be verbose
+#' @concept overlap
+#' @returns `SpatVector` of overlapped points info
+#' @seealso [calculateOverlapRaster()]
+#' @keywords internal
+.calculate_overlap_raster <- function(spatvec,
+    pointvec,
+    keep = NULL,
+    verbose = TRUE) {
+    # DT vars
+    poly_ID <- poly_i <- ID <- x <- y <- feat_ID <- feat_ID_uniq <- NULL
+    # spatial vector to raster
+    if (verbose) GiottoUtils::wrap_msg("1. convert polygon to raster \n")
+    spatrast_res <- polygon_to_raster(spatvec, field = "poly_ID")
+    spatrast <- spatrast_res[["raster"]]
+    ID_vector <- spatrast_res[["ID_vector"]]
+
+    ## overlap between raster and point
+    if (verbose) GiottoUtils::wrap_msg("2. overlap raster and points \n")
+    res <- terra::extract(x = spatrast, y = pointvec)
+    res <- res[!is.na(res[[2]]),] # drop NAs (sparsify extracted relations)
+
+    if (!is.null(keep)) {
+        feat_keep <- do.call(
+            data.frame, terra::as.list(pointvec[][res[[1]], keep])
+        ) # list of vectors
+        res <- cbind(res, feat_keep)
+    }
+
+    return(res)
+}
 
 
 
@@ -1039,45 +1077,6 @@ calculateOverlapRaster <- function(
     odt@data <- overlap_data
 
     odt
-}
-
-#' @name .calculate_overlap_raster
-#' @title Find feature points overlapped by rasterized polygon.
-#' @description Core workflow function that accepts simple `SpatVector` inputs,
-#' performs rasterization of the polys and then checks for overlaps.
-#' @param spatvec `SpatVector` polygon from a `giottoPolygon` object
-#' @param pointvec `SpatVector` points from a `giottoPoints` object
-#' @param keep column(s) to keep
-#' @param verbose be verbose
-#' @concept overlap
-#' @returns `SpatVector` of overlapped points info
-#' @seealso [calculateOverlapRaster()]
-#' @keywords internal
-.calculate_overlap_raster <- function(spatvec,
-    pointvec,
-    keep = NULL,
-    verbose = TRUE) {
-    # DT vars
-    poly_ID <- poly_i <- ID <- x <- y <- feat_ID <- feat_ID_uniq <- NULL
-    # spatial vector to raster
-    if (verbose) GiottoUtils::wrap_msg("1. convert polygon to raster \n")
-    spatrast_res <- polygon_to_raster(spatvec, field = "poly_ID")
-    spatrast <- spatrast_res[["raster"]]
-    ID_vector <- spatrast_res[["ID_vector"]]
-
-    ## overlap between raster and point
-    if (verbose) GiottoUtils::wrap_msg("2. overlap raster and points \n")
-    res <- terra::extract(x = spatrast, y = pointvec)
-    res <- res[!is.na(res[[2]]),] # drop NAs (sparsify extracted relations)
-
-    if (!is.null(keep)) {
-        feat_keep <- do.call(
-            data.frame, terra::as.list(pointvec[][res[[1]], keep])
-        ) # list of vectors
-        res <- cbind(res, feat_keep)
-    }
-
-    return(res)
 }
 
 
