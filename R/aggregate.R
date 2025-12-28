@@ -794,7 +794,7 @@ setMethod(
             "raster" = .calculate_overlap_raster(
                 spatvec = x,
                 pointvec = y,
-                count_info_column = feat_count_column,
+                keep = feat_count_column,
                 verbose = verbose
             ),
             "vector" = .calculate_overlap_vector(
@@ -818,12 +818,14 @@ setMethod(
     checkmate::assert_character(keep, null.ok = TRUE)
     res <- terra::extract(spatvec, pointvec)
     cn <- colnames(res)
+    # keep only spat relation info from extract
     if (all(c("id.y", "poly_ID") %in% cn)) {
         res_keep <- c("id.y", "poly_ID")
     } else {
         res_keep <- cn[c(1L, 2L)]
     }
     res <- res[!is.na(res[[2]]), res_keep] # drop NAs (sparsify) + col select
+    # get any needed attributes for `keep` and append them to relations info
     if (!is.null(keep)) {
         feat_keep <- do.call(
             data.frame, terra::as.list(pointvec[][res[[1]], keep])
@@ -1045,7 +1047,7 @@ calculateOverlapRaster <- function(
 #' performs rasterization of the polys and then checks for overlaps.
 #' @param spatvec `SpatVector` polygon from a `giottoPolygon` object
 #' @param pointvec `SpatVector` points from a `giottoPoints` object
-#' @param count_info_column column with count information (optional)
+#' @param keep column(s) to keep
 #' @param verbose be verbose
 #' @concept overlap
 #' @returns `SpatVector` of overlapped points info
@@ -1053,11 +1055,10 @@ calculateOverlapRaster <- function(
 #' @keywords internal
 .calculate_overlap_raster <- function(spatvec,
     pointvec,
-    count_info_column = NULL,
+    keep = NULL,
     verbose = TRUE) {
     # DT vars
     poly_ID <- poly_i <- ID <- x <- y <- feat_ID <- feat_ID_uniq <- NULL
-
     # spatial vector to raster
     if (verbose) GiottoUtils::wrap_msg("1. convert polygon to raster \n")
     spatrast_res <- polygon_to_raster(spatvec, field = "poly_ID")
@@ -1066,9 +1067,17 @@ calculateOverlapRaster <- function(
 
     ## overlap between raster and point
     if (verbose) GiottoUtils::wrap_msg("2. overlap raster and points \n")
-    overlap_res <- terra::extract(x = spatrast, y = pointvec)
+    res <- terra::extract(x = spatrast, y = pointvec)
+    res <- res[!is.na(res[[2]]),] # drop NAs (sparsify extracted relations)
 
-    return(overlap_res)
+    if (!is.null(keep)) {
+        feat_keep <- do.call(
+            data.frame, terra::as.list(pointvec[][res[[1]], keep])
+        ) # list of vectors
+        res <- cbind(res, feat_keep)
+    }
+
+    return(res)
 }
 
 
