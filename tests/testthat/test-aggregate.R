@@ -37,29 +37,29 @@ img <- imglist[[1]]
 # these tests can change if the source test dataset changes
 
 test_that("calculateOverlap works for points", {
+    # counts info now automatically included if a `count` column is available
+    # in points input
+
+    # 1. test raster method
     res_rast <- calculateOverlap(gpoly, gpts, verbose = FALSE, method = "raster")
     expect_identical(names(res_rast@overlaps), "rna")
     ovlp_rast <- overlaps(res_rast, "rna")
     checkmate::expect_class(ovlp_rast, "overlapInfo")
     expect_equal(nrow(ovlp_rast@data), 12383)
-    expect_identical(as.numeric(ovlp_rast@data[100,]), c(385, 685, 12))
+    expect_identical(as.numeric(ovlp_rast@data[100,]), c(385, 685, 12, 2))
+
+    # 2. test vector method (default)
     res_vect <- calculateOverlap(gpoly, gpts, verbose = FALSE, method = "vector")
 
-    # larger due to double counts being possible with vector method
     ovlp_vect <- overlaps(res_vect, "rna")
     expect_equal(nrow(ovlp_vect@data), 12311)
-    expect_identical(as.numeric(ovlp_vect@data[100,]), c(12, 671, 3))
+    expect_identical(as.numeric(ovlp_vect@data[100,]), c(12, 671, 3, 2))
 
-    # with counts info
-    res_vect_cts <- calculateOverlap(gpoly, gpts,
-        feat_count_column = "count", verbose = FALSE, method = "vector"
-    )
-    ovlp_vect_cts <- overlaps(res_vect_cts, "rna")
+    # 3. check expected col names in output
     expect_identical(
-        names(ovlp_vect_cts@data),
+        names(ovlp_vect@data),
         c("poly", "feat", "feat_id_index", "count")
     )
-    expect_identical(as.numeric(ovlp_vect_cts@data[100,]), c(12, 671, 3, 2))
 })
 
 test_that("calculateOverlap works for basic images", {
