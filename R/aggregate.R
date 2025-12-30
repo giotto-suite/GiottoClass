@@ -815,24 +815,7 @@ setMethod(
 #' @keywords internal
 #' @noRd
 .calculate_overlap_vector <- function(spatvec, pointvec, keep = NULL) {
-    checkmate::assert_character(keep, null.ok = TRUE)
-    res <- terra::extract(spatvec, pointvec)
-    cn <- colnames(res)
-    # keep only spat relation info from extract
-    if (all(c("id.y", "poly_ID") %in% cn)) {
-        res_keep <- c("id.y", "poly_ID")
-    } else {
-        res_keep <- cn[c(1L, 2L)]
-    }
-    res <- res[!is.na(res[[2]]), res_keep] # drop NAs (sparsify) + col select
-    # get any needed attributes for `keep` and append them to relations info
-    if (!is.null(keep)) {
-        feat_keep <- do.call(
-            data.frame, terra::as.list(pointvec[][res[[1]], keep])
-        ) # list of vectors
-        res <- cbind(res, feat_keep)
-    }
-    res
+    .terra_extract(x = spatvec, y = pointvec, keep = keep)
 }
 
 
@@ -862,19 +845,29 @@ setMethod(
 
     ## overlap between raster and point
     if (verbose) GiottoUtils::wrap_msg("2. overlap raster and points \n")
-    res <- terra::extract(x = spatrast, y = pointvec)
+    .terra_extract(x = spatrast, y = pointvec, keep = keep)
+}
+
+# x is segmentation, y is point
+# keep is additional cols of point metadata to keep
+# assume output first two cols from `terra::extract()` are:
+# (1) point idx, (2) poly idx
+# additional cols (if any) are poly or mask attributes and they will be dropped
+.terra_extract <- function(x, y, keep, ...) {
+    checkmate::assert_character(keep, null.ok = TRUE)
+    res <- terra::extract(x, y, ...)[, 1L:2L]
+    # 2nd cols can have NA values. NAs denote points that are not overlapped
     res <- res[!is.na(res[[2]]),] # drop NAs (sparsify extracted relations)
 
+    # get any needed attributes for `keep` and append them to relations info
     if (!is.null(keep)) {
         feat_keep <- do.call(
-            data.frame, terra::as.list(pointvec[][res[[1]], keep])
+            data.frame, terra::as.list(y[][res[[1]], keep])
         ) # list of vectors
         res <- cbind(res, feat_keep)
     }
-
     return(res)
 }
-
 
 
 #' @title calculateOverlapRaster
