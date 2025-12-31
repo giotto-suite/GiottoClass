@@ -11,14 +11,14 @@ random_pts_names <- function(n, species = 20) {
 random_points_gen <- function(n = 500, extent = ext(gpoly), count = TRUE) {
     GiottoUtils::local_seed(1234)
     evect <- as.numeric(ext(extent)[])
+    cts <- abs(round(rnorm(n, 0, sd = 0.8))) + 1
     d <- data.table::data.table(
         id = random_pts_names(n),
         x = runif(n, min = evect[[1]], max = evect[[2]]),
         y = runif(n, min = evect[[3]], max = evect[[4]])
     )
     if (count) {
-        count <- abs(round(rnorm(n, 0, sd = 0.8))) + 1
-        d[, count := count]
+        d[, count := cts]
     }
     d
 }
@@ -27,7 +27,10 @@ g <- test_data$viz
 gpoly <- g[["spatial_info", "aggregate"]][[1]]
 gpoly@overlaps = NULL
 gpoly@spatVectorCentroids <- NULL
-gpts <- createGiottoPoints(random_points_gen(80000), verbose = FALSE)
+gpts <- createGiottoPoints(random_points_gen(80000, count = FALSE),
+                           verbose = FALSE)
+gpts_cts <- createGiottoPoints(random_points_gen(80000, count = TRUE),
+                               verbose = FALSE)
 imglist <- g[["images",]]
 img <- imglist[[1]]
 
@@ -37,11 +40,34 @@ img <- imglist[[1]]
 # these tests can change if the source test dataset changes
 
 test_that("calculateOverlap works for points", {
+    # [NO COUNTS]
+    # 1. test raster method
+    res_rast <- calculateOverlap(gpoly, gpts, verbose = FALSE, method = "raster")
+    expect_identical(names(res_rast@overlaps), "rna")
+    ovlp_rast <- overlaps(res_rast, "rna")
+    checkmate::expect_class(ovlp_rast, "overlapInfo")
+    expect_equal(nrow(ovlp_rast@data), 12383)
+    expect_identical(as.numeric(ovlp_rast@data[100,]), c(385, 685, 12))
+
+    # 2. test vector method (default)
+    res_vect <- calculateOverlap(gpoly, gpts, verbose = FALSE, method = "vector")
+
+    ovlp_vect <- overlaps(res_vect, "rna")
+    expect_equal(nrow(ovlp_vect@data), 12311)
+    expect_identical(as.numeric(ovlp_vect@data[100,]), c(12, 671, 3))
+
+    # 3. check expected col names in output
+    expect_identical(
+        names(ovlp_vect@data),
+        c("poly", "feat", "feat_id_index")
+    )
+
+    # [WITH COUNTS]
     # counts info now automatically included if a `count` column is available
     # in points input
 
     # 1. test raster method
-    res_rast <- calculateOverlap(gpoly, gpts, verbose = FALSE, method = "raster")
+    res_rast <- calculateOverlap(gpoly, gpts_cts, verbose = FALSE, method = "raster")
     expect_identical(names(res_rast@overlaps), "rna")
     ovlp_rast <- overlaps(res_rast, "rna")
     checkmate::expect_class(ovlp_rast, "overlapInfo")
@@ -49,7 +75,7 @@ test_that("calculateOverlap works for points", {
     expect_identical(as.numeric(ovlp_rast@data[100,]), c(385, 685, 12, 2))
 
     # 2. test vector method (default)
-    res_vect <- calculateOverlap(gpoly, gpts, verbose = FALSE, method = "vector")
+    res_vect <- calculateOverlap(gpoly, gpts_cts, verbose = FALSE, method = "vector")
 
     ovlp_vect <- overlaps(res_vect, "rna")
     expect_equal(nrow(ovlp_vect@data), 12311)
@@ -94,18 +120,18 @@ test_that("calculateOverlap works for affine images", {
 test_that("overlapToMatrix works for point overlaps", {
     res_vect <- calculateOverlap(gpoly, gpts,
         verbose = FALSE,
-        method = "vector",
-        feat_count_column = FALSE # override autodetect of "count" col
+        method = "vector"
     )
     ovlp_vect <- overlaps(res_vect, "rna")
     expect_identical(names(ovlp_vect@data),
                      c("poly", "feat", "feat_id_index"))
 
     # with a counts column summation
-    res_vect_cts <- calculateOverlap(gpoly, gpts,
+    res_vect_cts <- calculateOverlap(gpoly, gpts_cts,
         feat_count_column = "count",
         verbose = FALSE,
         method = "vector"
+        # count col should be autodetected
     )
     ovlp_vect_cts <- overlaps(res_vect_cts, "rna")
     expect_identical(names(ovlp_vect_cts@data),
