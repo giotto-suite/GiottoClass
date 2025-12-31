@@ -1,34 +1,5 @@
-createGiottoBinPoints <- function(expr_values, spatial_locs) {
-    ids_p <- spatial_locs$cell_ID
-    spatial_locs[] <- spatial_locs[][, c("sdimx", "sdimy")] # drop point IDs col
-    sl_points <- as.points(spatial_locs)
 
-    # get counts information as `d`
-    M <- expr_values[]
-    if (!inherits(M, "Matrix")) stop("expr_values should be Matrix")
-    d <- data.table::as.data.table(Matrix::summary(M))
-    ids_m <- colnames(M) |> as.character()
-
-    # keep only existing points geoms so it matches `d` content
-    exist_j <- sort(unique(d$j))
-    keep_ids <- ids_m[exist_j] # ids that actually exist (character)
-    keep_index <- which(ids_p %in% keep_ids) # i integer values for spatial
-    if (length(keep_index) == 0L) warning("No bin points exist\n")
-    # remove non-existing from spatial info
-    ids_p <- ids_p[keep_index]
-    sl_points <- sl_points[keep_index]
-
-    x <- new("giottoBinPoints",
-        spatial = sl_points,
-        counts = d,
-        bid = ids_m,
-        pmap = match(ids_p, ids_m),
-        fid = rownames(M),
-        compact = TRUE
-    )
-    .gbp_compact(x, ids_p = ids_p, exist_j = exist_j)
-}
-
+# * definitions ####
 setClass("giottoBinPoints",
     contains = c("featData", "giottoSubobject"),
     slots = list(
@@ -44,6 +15,7 @@ setClass("giottoBinPoints",
     )
 )
 
+# * methods ####
 setMethod("show", signature("giottoBinPoints"), function(object) {
     cat(sprintf("An object of class %s\n", class(object)))
     .show_feat(object)
@@ -136,6 +108,40 @@ setMethod("ext", signature("giottoBinPoints"), function(x, ...) {
     ext(x@spatial, ...)
 })
 
+
+# * constructor ####
+
+createGiottoBinPoints <- function(expr_values, spatial_locs) {
+    ids_p <- spatial_locs$cell_ID
+    spatial_locs[] <- spatial_locs[][, c("sdimx", "sdimy")] # drop point IDs col
+    sl_points <- as.points(spatial_locs)
+
+    # get counts information as `d`
+    M <- expr_values[]
+    if (!inherits(M, "Matrix")) stop("expr_values should be Matrix")
+    d <- data.table::as.data.table(Matrix::summary(M))
+    ids_m <- colnames(M) |> as.character()
+
+    # keep only existing points geoms so it matches `d` content
+    exist_j <- sort(unique(d$j))
+    keep_ids <- ids_m[exist_j] # ids that actually exist (character)
+    keep_index <- which(ids_p %in% keep_ids) # i integer values for spatial
+    if (length(keep_index) == 0L) warning("No bin points exist\n")
+    # remove non-existing from spatial info
+    ids_p <- ids_p[keep_index]
+    sl_points <- sl_points[keep_index]
+
+    x <- new("giottoBinPoints",
+        spatial = sl_points,
+        counts = d,
+        bid = ids_m,
+        pmap = match(ids_p, ids_m),
+        fid = rownames(M),
+        compact = TRUE
+    )
+    .gbp_compact(x, ids_p = ids_p, exist_j = exist_j)
+}
+
 # internals
 
 # pids are mapped 1:1 with spatial row number
@@ -214,49 +220,3 @@ setMethod("ext", signature("giottoBinPoints"), function(x, ...) {
     counts
 }
 
-
-# .plot_giotto_points_raster <- function(data, feats = NULL, ...) {
-#     args_list <- list(...)
-#
-#     # raster size
-#     if (is.null(args_list$size)) {
-#         args_list$size <- c(600, 600)
-#     } else if (length(args_list$size) == 1L) {
-#         # if size provided as single value, replicate to give a square window
-#         args_list$size <- rep(args_list$size, 2L)
-#     }
-#
-#     # axis font size
-#     if (is.null(args_list$cex.axis)) args_list$cex.axis <- 0.7
-#
-#     args_list$ann <- FALSE
-#
-#     if (is.null(feats)) {
-#         include_values <- FALSE
-#     } else {
-#         include_values <- TRUE
-#     }
-#
-#     dataDT <- data.table::as.data.table(
-#         x = data,
-#         geom = "XY",
-#         include_values = include_values
-#     )
-#
-#
-#     if (length(feats) == 0L) {
-#         do.call(.plot_giotto_points_all, args = c(list(x = data), args_list))
-#     } else if (length(feats) == 1L) {
-#         .plot_giotto_points_one(
-#             dataDT = dataDT,
-#             feats = feats,
-#             args_list = args_list
-#         )
-#     } else {
-#         .plot_giotto_points_several(
-#             dataDT = dataDT,
-#             feats = feats,
-#             args_list = args_list
-#         )
-#     }
-# }
