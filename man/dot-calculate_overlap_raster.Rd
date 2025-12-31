@@ -4,19 +4,14 @@
 \alias{.calculate_overlap_raster}
 \title{Find feature points overlapped by rasterized polygon.}
 \usage{
-.calculate_overlap_raster(
-  spatvec,
-  pointvec,
-  count_info_column = NULL,
-  verbose = TRUE
-)
+.calculate_overlap_raster(spatvec, pointvec, keep = NULL, verbose = TRUE)
 }
 \arguments{
 \item{spatvec}{\code{SpatVector} polygon from a \code{giottoPolygon} object}
 
 \item{pointvec}{\code{SpatVector} points from a \code{giottoPoints} object}
 
-\item{count_info_column}{column with count information (optional)}
+\item{keep}{column(s) to keep}
 
 \item{verbose}{be verbose}
 }

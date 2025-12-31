@@ -15,4 +15,5 @@
     init_option("giotto.update_param", TRUE)
     init_option("giotto.no_python_warn", FALSE)
     init_option("giotto.init_check_severity", "stop")
+    init_option("giotto.overlap_point_method", "vector")
 }
