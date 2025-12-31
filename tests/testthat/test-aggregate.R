@@ -95,7 +95,7 @@ test_that("overlapToMatrix works for point overlaps", {
     res_vect <- calculateOverlap(gpoly, gpts,
         verbose = FALSE,
         method = "vector",
-        feat_count_column = NULL
+        feat_count_column = FALSE # override autodetect of "count" col
     )
     ovlp_vect <- overlaps(res_vect, "rna")
     expect_identical(names(ovlp_vect@data),
