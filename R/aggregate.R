@@ -770,9 +770,7 @@ setMethod(
 
         checkmate::assert_true(terra::is.polygons(x))
         checkmate::assert_true(terra::is.points(y)) # TODO allow another poly?
-        if (!is.null(poly_subset_ids)) {
-            checkmate::assert_character(poly_subset_ids)
-        }
+        checkmate::assert_character(poly_subset_ids, null.ok = TRUE)
 
         # subset points and polys if needed
         # * subset x
