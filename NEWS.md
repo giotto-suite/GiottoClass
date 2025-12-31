@@ -1,7 +1,21 @@
+# GiottoClass 0.5.0
+
+## changes
+- `calculateOverlap()` and `overlapToMatrix()` param harmonization
+
+## new
+- `aggregateFeatures()` wrapper for running `calculateOverlap()` and `overlapToMatrix()`
+- `overlapPointDT()` and `overlapIntensityDT()` classes to store overlaps relationships efficiently and help with aggregation pipeline
+
+## bug fixes
+- `overlaps()` will now properly find image overlaps
+
+
 # GiottoClass 0.4.12 (2025/12/12)
 
 ## enhancements
 - automatic checking for `"count"` column in feature info
+
 
 ## new
 - `misc` slot for storing unstructured data
