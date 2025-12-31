@@ -31,7 +31,6 @@
   feat_info = "rna",
   type = c("point", "intensity"),
   feat_count_column = NULL,
-  output = c("Matrix", "data.table"),
   count_info_column = deprecated(),
   ...
 )
@@ -102,12 +101,12 @@ automatically selected.}
 
 \item{\dots}{additional params to pass to methods}
 
-\item{output}{data format/class to return the results as}
-
 \item{col_names, row_names}{character vector. (optional) Set of row and col
 names that are expected to exist. This fixes the dimensions of the matrix
 since the overlaps information does not directly report rows and cols where
 no values were detected.}
+
+\item{output}{data format/class to return the results as. Default is "Matrix"}
 
 \item{sort}{logical (default = TRUE). Whether to perform a mixed sort on
 output matrix row and col names.}

@@ -1697,14 +1697,13 @@ setMethod(
 
 # * giottoPolygon ####
 #' @rdname overlapToMatrix
-#' @param output data format/class to return the results as
+#' @param output data format/class to return the results as. Default is "Matrix"
 #' @export
 setMethod(
     "overlapToMatrix", signature("giottoPolygon"), function(x,
     feat_info = "rna",
     type = c("point", "intensity"),
     feat_count_column = NULL,
-    output = c("Matrix", "data.table"),
     count_info_column = deprecated(),
     ...) {
         # deprecations
@@ -1731,7 +1730,6 @@ setMethod(
         argslist <- list(
             x = overlaps_data,
             feat_count_column = feat_count_column,
-            output = output,
             ...
         )
 
