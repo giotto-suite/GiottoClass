@@ -975,7 +975,7 @@ calculateOverlapRaster <- function(
     overlap_points <- .calculate_overlap_raster(
         spatvec = spatvec,
         pointvec = pointvec,
-        count_info_column = feat_count_column,
+        keep = feat_count_column,
         verbose = verbose
     )
 

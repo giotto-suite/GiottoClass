@@ -94,7 +94,8 @@ test_that("calculateOverlap works for affine images", {
 test_that("overlapToMatrix works for point overlaps", {
     res_vect <- calculateOverlap(gpoly, gpts,
         verbose = FALSE,
-        method = "vector"
+        method = "vector",
+        feat_count_column = NULL
     )
     ovlp_vect <- overlaps(res_vect, "rna")
     expect_identical(names(ovlp_vect@data),
