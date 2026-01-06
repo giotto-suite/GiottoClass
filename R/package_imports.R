@@ -14,11 +14,7 @@
 #' @importMethodsFrom Matrix t dim %*% as.matrix coerce
 #' @importMethodsFrom Matrix colSums rowSums colMeans rowMeans diag summary
 #' @importMethodsFrom terra ext ext<- hull
-#' @importMethodsFrom terra plot
-#' @importMethodsFrom terra wrap
-#' @importMethodsFrom terra zoom
-#' @importMethodsFrom terra crop
-#' @importMethodsFrom terra vect buffer
+#' @importMethodsFrom terra plot wrap zoom crop vect buffer head tail
 #' @importMethodsFrom terra relate
 #' @importMethodsFrom terra union erase intersect symdif snap
 #' @importMethodsFrom terra as.data.frame as.polygons as.points
