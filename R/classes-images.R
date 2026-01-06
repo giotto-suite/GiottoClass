@@ -1,3 +1,7 @@
+#' @include classes-virtuals.R
+#' @include classes-utils.R
+NULL
+
 # * definitions ####
 
 #' @title S4 giottoImage Class

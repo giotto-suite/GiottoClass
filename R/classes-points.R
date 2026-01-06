@@ -1,3 +1,6 @@
+#' @include classes-virtuals.R
+NULL
+
 ## * definition ####
 # giottoPoints class
 
