@@ -80,6 +80,12 @@ Suggests:
 Remotes: drieslab/GiottoUtils
 Config/testthat/edition: 3
 Collate: 
+    'classes-virtuals.R'
+    'classes-utils.R'
+    'classes-images.R'
+    'classes-overlaps.R'
+    'classes-points.R'
+    'classes-polygons.R'
     'package_imports.R'
     'classes.R'
     'generics.R'
@@ -87,6 +93,7 @@ Collate:
     'aggregate.R'
     'auxilliary.R'
     'buffer.R'
+    'classes-binpoints.R'
     'combine_metadata.R'
     'slot_accessors.R'
     'create.R'
