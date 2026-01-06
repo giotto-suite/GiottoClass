@@ -4,7 +4,7 @@ setClass("giottoBinPoints",
     contains = c("featData", "giottoSubobject"),
     slots = list(
         spatial = "ANY", # spatvector etc.
-        counts = "data.frame",
+        counts = "data.table",
         bid = "character", # bin ID (static)
         pmap = "integer", # point IDs by mapping onto bid
         fid = "character",
@@ -24,10 +24,7 @@ setMethod("show", signature("giottoBinPoints"), function(object) {
         compact = as.character(object@compact)
     )
     print_list(plist)
-    preview <- head(object@counts)[, c("i", "x")]
-    preview$i <- object@fid[preview$i]
-    names(preview) <- c("feat_ID", "count")
-    print(preview)
+    print(as.data.table(head(object)))
     cat("\n")
 })
 
@@ -108,6 +105,28 @@ setMethod("ext", signature("giottoBinPoints"), function(x, ...) {
     ext(x@spatial, ...)
 })
 
+setMethod("head", signature("giottoBinPoints"), function(x, n = 6L, ...) {
+    n <- min(nrow(x), n)
+    x[seq_len(n)]
+})
+
+setMethod("tail", signature("giottoBinPoints"), function(x, n = 6L, ...) {
+    nr <- nrow(x)
+    begin <- nr - n + 1L
+    begin <- max(1, begin)
+    x[begin:nr]
+})
+
+#' @rdname as.data.table
+#' @method as.data.table giottoBinPoints
+#' @export
+as.data.table.giottoBinPoints <- function(x, ...) {
+    d <- x@counts[, c("i", "x")]
+    d$i <- x@fid[d$i]
+    names(d) <- c("feat_ID", "count")
+    d
+}
+
 
 # * constructor ####
 
@@ -185,12 +204,13 @@ createGiottoBinPoints <- function(expr_values, spatial_locs) {
     bloat_ratio > 10 # arbitrary setting
 }
 
+# get spatial points from GBP (only existing ones)
 .gbp_get_spatial <- function(x, counts = FALSE) {
     if (counts) return(.gbp_get_spatial_sum_counts(x))
     if (x@compact) {
         return(x@spatial)
     }
-    # these are both mappings of @bid, so they can be directly compared
+    # these are both mappings of IDs in @bid, so they can be directly compared
     ids_select <- which(x@pmap %in% x@counts$j)
     x@spatial[ids_select]
 }
@@ -204,7 +224,9 @@ createGiottoBinPoints <- function(expr_values, spatial_locs) {
     spatial
 }
 
-# `i` is row number(s) of spatial
+# For the ith spatial point(s), get the contained feature counts as a 2 column
+# `data.table` of "feat_ID" and "count"
+#' @param i is row number(s) of spatial
 .gbp_spatial_select_counts <- function(x, i) {
     i <- as.integer(i)
     if (max(i) > length(x@pmap) || min(i) < 1) {
