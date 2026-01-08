@@ -62,6 +62,13 @@ setMethod("[", signature(x = "giottoBinPoints", i = "character", j = "missing", 
     x[i, ..., compact = compact]
 })
 
+setMethod("objName", signature("giottoBinPoints"), function(x) x@feat_type)
+setMethod("objName<-", signature("giottoBinPoints", "character"),
+    function(x, value) {
+    x@feat_type <- value
+        x
+    })
+
 setMethod("plot", signature("giottoBinPoints", "missing"), function(x,
     point_size = 0.2, feats = NULL, dens = FALSE, dens_transform = NULL, raster = TRUE, raster_size = 600, ...) {
     checkmate::assert_function(dens_transform, null.ok = TRUE)
@@ -87,18 +94,42 @@ setMethod("plot", signature("giottoBinPoints", "missing"), function(x,
 })
 
 setMethod("calculateOverlap", signature("giottoPolygon", "giottoBinPoints"),
-    function(x, y, name_overlap = NULL, poly_subset_ids = NULL) {
+    function(x, y,
+        name_overlap = NULL,
+        poly_subset_ids = NULL,
+        return_gpolygon = TRUE,
+        verbose = NULL,
+        ...) {
         checkmate::assert_character(poly_subset_ids, null.ok = TRUE)
         if (!is.null(poly_subset_ids)) {
             x <- x[x$poly_ID %in% poly_subset_ids]
         }
-        res <- terra::relate(x[], y@spatial,
-            relation = "intersects", pairs = TRUE) |>
-            data.table::as.data.table()
-        names(res) <- c("poly_ID", "b")
-        res <- res[, .gbp_spatial_select_counts(y, b), by = "poly_ID"]
-        res[, "poly_ID" := spatIDs(x)[poly_ID]]
-        res
+        overlap_data <- terra::extract(x[], y@spatial)
+        # res <- terra::relate(x[], y@spatial,
+        #     relation = "intersects", pairs = TRUE) |>
+        #     data.table::as.data.table()
+        # names(res) <- c("poly_ID", "b")
+        # res <- res[, .gbp_spatial_select_counts(y, b), by = "poly_ID"]
+
+        res <- .gbp_create_overlap_point_dt(x, y, overlap_data)
+
+        if (isTRUE(return_gpolygon)) {
+            # update schema metadata in overlap object
+            if (is.null(name_overlap)) name_overlap <- objName(y)
+            prov(res) <- spatUnit(x)
+            spatUnit(res) <- spatUnit(x)
+            featType(res) <- name_overlap
+
+            # ensure centroids calculated
+            if (is.null(centroids(x))) {
+                x <- centroids(x, append_gpolygon = TRUE)
+            }
+
+            x@overlaps[[name_overlap]] <- res
+            return(x)
+        } else {
+            return(res)
+        }
     })
 
 setMethod("ext", signature("giottoBinPoints"), function(x, ...) {
@@ -121,16 +152,19 @@ setMethod("tail", signature("giottoBinPoints"), function(x, n = 6L, ...) {
 #' @method as.data.table giottoBinPoints
 #' @export
 as.data.table.giottoBinPoints <- function(x, ...) {
-    d <- x@counts[, c("i", "x")]
+    cn <- colnames(x@counts)
+    get_cols <- cn[!cn == "j"]
+    d <- x@counts[, get_cols, with = FALSE]
     d$i <- x@fid[d$i]
-    names(d) <- c("feat_ID", "count")
+    names(d)[1:2] <- c("feat_ID", "count")
     d
 }
 
 
 # * constructor ####
 
-createGiottoBinPoints <- function(expr_values, spatial_locs) {
+createGiottoBinPoints <- function(expr_values, spatial_locs,
+    feat_type = "rna") {
     ids_p <- spatial_locs$cell_ID
     spatial_locs[] <- spatial_locs[][, c("sdimx", "sdimy")] # drop point IDs col
     sl_points <- as.points(spatial_locs)
@@ -156,6 +190,7 @@ createGiottoBinPoints <- function(expr_values, spatial_locs) {
         bid = ids_m,
         pmap = match(ids_p, ids_m),
         fid = rownames(M),
+        feat_type = feat_type,
         compact = TRUE
     )
     .gbp_compact(x, ids_p = ids_p, exist_j = exist_j)
@@ -214,7 +249,7 @@ createGiottoBinPoints <- function(expr_values, spatial_locs) {
     ids_select <- which(x@pmap %in% x@counts$j)
     x@spatial[ids_select]
 }
-
+# get spatial + count col with sum of all features per point
 .gbp_get_spatial_sum_counts <- function(x) {
     counts <- x@counts[, .("count" = sum(x)), keyby = "j"]
     idx <- match(counts$j, x@pmap)
@@ -226,7 +261,7 @@ createGiottoBinPoints <- function(expr_values, spatial_locs) {
 
 # For the ith spatial point(s), get the contained feature counts as a 2 column
 # `data.table` of "feat_ID" and "count"
-#' @param i is row number(s) of spatial
+# param i is row number(s) of spatial
 .gbp_spatial_select_counts <- function(x, i) {
     i <- as.integer(i)
     if (max(i) > length(x@pmap) || min(i) < 1) {
@@ -242,3 +277,80 @@ createGiottoBinPoints <- function(expr_values, spatial_locs) {
     counts
 }
 
+#' @description
+#' Internal constructor for point overlap objects backed by `data.table`.
+#' Contains all information needed to construct a matrix or [exprObj].
+#' Internally represented as a 2+ column `data.table` of `integers` mapped to
+#' poly_ID and feat_ID lookup vectors for efficiency.
+#' @param x from data (SpatVector) - need just the poly_ID info
+#' @param y `giottoBinPoints` object
+#' @param overlap_data relationships (data.frame). Expected to be numeric row
+#' indices between x and y
+#' @param keep additional col(s) in `y` to keep
+#' @examples
+#' # load test data
+#' sl <- GiottoData::loadSubObjectMini("spatLocsObj")
+#' m <- GiottoData::loadSubObjectMini("exprObj")
+#' gpoly <- GiottoData::loadSubObjectMini("giottoPolygon")
+#'
+#' # create a giottoBinPoints object
+#' gbp <- createGiottoBinPoints(m, sl)
+#' # find overlapped points
+#' o <- terra::extract(gpoly[], gbp@spatial)
+#' odt <- .gbp_create_overlap_point_dt(gpoly, gbp, o)
+#'
+#' overlapToMatrix(odt, feat_count_column = "count")
+#' @noRd
+.gbp_create_overlap_point_dt <- function(x, y,
+    overlap_data, keep = NULL) {
+    poly <- feat_idx <- feat <- feat_id_index <- NULL # NSE vars
+    # cleanup input overlap_data
+    checkmate::assert_data_frame(overlap_data)
+    data.table::setDT(overlap_data)
+    cnames <- colnames(overlap_data)
+    data.table::setnames(overlap_data,
+        old = c(cnames[[2]], cnames[[1]]),
+        new = c("poly", "feat_idx") # feat_idx is the idx of gbp@spatial
+    )
+
+    # initialize overlap object and needed ids
+    odt <- new("overlapPointDT",
+        spat_ids = x$poly_ID,
+        feat_ids = as.character(y@fid),
+        nfeats = nrow(y)
+    )
+
+    # make relationships table sparse by removing non-overlapped features
+    # these results are indexed by all features, so no need to filter
+    # non-overlapped polys
+    overlap_data <- overlap_data[!is.na(poly)]
+    # change poly to map against spat_ids
+    overlap_data[, poly := match(poly, odt@spat_ids)]
+    # append a feature index col to counts info in gbp
+    y@counts$feat_ID_uniq <- seq_len(nrow(y))
+    # add col matched to gbp counts j col in overlap info
+    overlap_data[, count_j := y@pmap[feat_idx]]
+    # left join counts info into overlap_data.
+    overlap_data <- y@counts[overlap_data, on = .(j = count_j)]
+    overlap_data[, feat_idx := NULL] # no longer needed.
+    overlap_data[, j := NULL] # j is from y@spatial mapping. No longer needed.
+    # current expected cols:
+    # i (feat name map), x (count), feat_ID_uniq, poly
+    data.table::setnames(overlap_data,
+        old = c("i", "x", "feat_ID_uniq"),
+        new = c("feat_id_index", "count", "feat")
+    )
+
+    # extract needed info from y
+    keep <- unique(c("feat_id_index", "count", "feat", "poly", keep))
+    overlap_data <- overlap_data[, keep, with = FALSE]
+
+    # set indices
+    data.table::setkeyv(overlap_data, "feat")
+    data.table::setindexv(overlap_data, "poly")
+    data.table::setcolorder(overlap_data, c("poly", "feat", "feat_id_index"))
+    # add to object
+    odt@data <- overlap_data
+
+    odt
+}
