@@ -100,14 +100,19 @@ setClass("overlapIntensityDT",
     odt
 }
 
+
+#' @description
+#' Internal constructor for point overlap objects backed by `data.table`.
+#' Contains all information needed to construct a matrix or [exprObj].
+#' Internally represented as a 2+ column `data.table` of `integers` mapped to
+#' poly_ID and feat_ID lookup vectors for efficiency.
 #' @param x from data (SpatVector) - need just the poly_ID info
 #' @param y to data (SpatVector) - need meta info extracted from cols by overlap info + nrow
 #' @param overlap_data relationships (data.frame). Expected to be numeric row
 #' indices between x and y
 #' @param keep additional col(s) in `y` to keep
-#' @examples
-#' d <- data.frame(a = sort(rep(1:2, 2)), b = 1:4)
-#'
+#' @param feat_ids character. Set of unique features that were involved in the
+#' overlap. This is needed for matrix row generation
 #' @noRd
 .create_overlap_point_dt <- function(x, y,
         overlap_data, keep = NULL, feat_ids) {
@@ -126,32 +131,24 @@ setClass("overlapIntensityDT",
     overlap_data <- overlap_data[!is.na(poly)]
 
     # extract needed info from y
-    keep <- c("feat_ID", keep)
+    keep <- unique(c("feat_ID", "feat_ID_uniq", keep))
     ytab <- terra::as.data.frame(y[overlap_data$feat_idx, keep])
 
     # initialize overlap object and needed ids
-    sids <- x$poly_ID
-    fids <- unique(ytab$feat_ID)
     odt <- new("overlapPointDT",
-        spat_ids = sids,
+        spat_ids = x$poly_ID,
         feat_ids = feat_ids,
-        nfeats = as.integer(nrow(y))
+        nfeats = nrow(y)
     )
 
     # Ensure data is stored as integer or integer-based mapping
-    ## - if poly/feat_idx contents are NOT integer coercible, establish a map #
+    ## - if poly col contents are NOT integer coercible, establish a map #
     if (!overlap_data[, checkmate::test_integerish(head(poly, 100))]) {
-        overlap_data[, poly := match(poly, sids)]
-    }
-    if (!overlap_data[, checkmate::test_integerish(head(feat_idx, 100))]) {
-        overlap_data[, feat_idx := match(feat_idx, fids)]
+        overlap_data[, poly := match(poly, odt@spat_ids)]
     }
     ## -- if still not integer, coerce to integer --------------------------- #
     if (!is.integer(overlap_data$poly[1])) {
         overlap_data[, poly := as.integer(poly)]
-    }
-    if (!is.integer(overlap_data$feat_idx[1])) {
-        overlap_data[, feat_idx := as.integer(feat_idx)]
     }
 
     # append y attribute info
