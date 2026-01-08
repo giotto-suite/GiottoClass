@@ -138,7 +138,7 @@ setClass("overlapIntensityDT",
     odt <- new("overlapPointDT",
         spat_ids = x$poly_ID,
         feat_ids = feat_ids,
-        nfeats = nrow(y)
+        nfeats = as.integer(nrow(y))
     )
 
     # Ensure data is stored as integer or integer-based mapping
