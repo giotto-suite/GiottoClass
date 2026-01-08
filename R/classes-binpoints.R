@@ -63,11 +63,11 @@ setMethod("[", signature(x = "giottoBinPoints", i = "character", j = "missing", 
 })
 
 setMethod("objName", signature("giottoBinPoints"), function(x) x@feat_type)
-setMethod("objName<-", signature("giottoBinPoints", "character"),
+setMethod("objName<-", signature("giottoBinPoints", "ANY"),
     function(x, value) {
-    x@feat_type <- value
-        x
-    })
+    x@feat_type <- as.character(value)
+    x
+})
 
 setMethod("plot", signature("giottoBinPoints", "missing"), function(x,
     point_size = 0.2, feats = NULL, dens = FALSE, dens_transform = NULL, raster = TRUE, raster_size = 600, ...) {
