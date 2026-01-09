@@ -152,7 +152,7 @@ updateGiottoObject <- function(gobject) {
         info_list <- lapply(info_list, function(info) {
             try_val <- try(validObject(info), silent = TRUE)
             if (inherits(try_val, "try-error") ||
-                .gversion(gobject) <= "0.4.7") {
+                .gversion(gobject) < "0.5.0") {
                 info <- updateGiottoPolygonObject(info)
             }
             return(info)
