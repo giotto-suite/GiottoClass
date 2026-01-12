@@ -56,16 +56,18 @@ saveGiotto <- function(
         gobject@feat_info <- NULL
     }
 
-    overwriting <- FALSE
+    # change name of `overwrite` var to avoid confusion with underlying
+    # function call params
+    do_overwrite <- FALSE
     if (dir.exists(final_dir)) {
         if (!overwrite) {
             stop(wrap_txt(
-                "Folder already exist and overwrite = FALSE abort saving"
+                "Folder already exists and overwrite = FALSE abort saving"
             ))
         } else {
             wrap_msg("Folder already exist and overwrite = TRUE,
                     overwrite folder")
-            overwriting <- TRUE
+            do_overwrite <- TRUE
             use_dir <- file.path(dir, ".giotto_scratch")
             dir.create(use_dir, recursive = TRUE, showWarnings = FALSE)
         }
@@ -248,7 +250,7 @@ saveGiotto <- function(
     )
 
     # effect overwrite
-    if (overwrite && overwriting) {
+    if (do_overwrite) {
         unlink(x = final_dir, recursive = TRUE)
         file.rename(from = use_dir, to = final_dir)
     }
