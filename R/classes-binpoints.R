@@ -1,5 +1,32 @@
 
 # * definitions ####
+
+#' @title Binned point class
+#' @name giottoBinPoints-class
+#' @exportClass giottoBinPoints
+#' @description
+#' S4 class allowing point detection-like access patterns for binned spatial
+#' values. Implemented more efficiently by only representing the spatial points
+#' once and mapping the sparse values information against the points.
+#' @slot spatial ANY (currently `SpatVector` only). Row-indexed spatial points
+#' @slot counts `data.table` with integer cols `i` and `j` mapping to `@fid`
+#' and `@bid` respectively. `x` is a numeric col standing for count or value of
+#' a feature for this bin point. Row indexing of this object is based on this
+#' slot.
+#' @slot bid `character`. Bin IDs to map against
+#' @slot pmap `integer`. For each spatial point, gives the index into `@bid`.
+#' Length equals `length(spatial)`. Forms a bridge between spatial and counts:
+#' both `pmap` and `counts$j` are indices into `@bid`. **Invariant**: every bin
+#' ID in `counts$j` must appear in `pmap` (i.e., counts is always a subset of
+#' spatial). Allows subsetting `counts` without modifying the more expensive
+#' `spatial` representation until compaction.
+#' @slot fid `character`. Feature IDs to map against
+#' @slot compact `logical`. State of compaction. When `TRUE`, `@bid`, `@pmap`,
+#' and `@spatial` contain only bins that appear in `@counts` (bidirectional
+#' relationship). When `FALSE`, they may contain bins not present in `@counts`
+#' (unidirectional: every bin in counts has spatial, but not every spatial has
+#' counts).
+#' @export
 setClass("giottoBinPoints",
     contains = c("featData", "giottoSubobject"),
     slots = list(
@@ -7,7 +34,7 @@ setClass("giottoBinPoints",
         counts = "data.table",
         bid = "character", # bin ID (static)
         pmap = "integer", # point IDs by mapping onto bid
-        fid = "character",
+        fid = "character", # feature ID
         compact = "logical" # state of compaction
     ),
     prototype = list(
@@ -29,14 +56,14 @@ setMethod("show", signature("giottoBinPoints"), function(object) {
 })
 
 setMethod("dim", signature("giottoBinPoints"), function(x) {
-    c(nrow(x@counts), 1L)
+    c(nrow(x@counts), 2L)
 })
 
 setMethod("nrow", signature("giottoBinPoints"), function(x) nrow(x@counts))
 
 setMethod("ncol", signature("giottoBinPoints"), function(x) 1L)
 
-setMethod("[", signature(x = "giottoBinPoints", i = "numeric", j = "missing", drop = "missing"), function(x, i, j, ..., compact = "auto", drop) {
+setMethod("[", signature(x = "giottoBinPoints", i = "numeric", j = "missing", drop = "missing"), function(x, i, j, compact = "auto", ...,  drop) {
     i <- as.integer(i)
     x@counts <- x@counts[i,]
     if (identical(compact, "auto")) compact <- .gbp_compact_auto(x)
@@ -47,7 +74,13 @@ setMethod("[", signature(x = "giottoBinPoints", i = "numeric", j = "missing", dr
     .gbp_compact(x)
 })
 
-setMethod("[", signature(x = "giottoBinPoints", i = "logical", j = "missing", drop = "missing"), function(x, i, j, ..., compact = "auto", drop) {
+#' @rdname subset_bracket
+#' @param compact `character` or `logical` (default = "auto"). Whether to
+#' compact object. See [giottoBinPoints-class]. `"auto"` will perform a
+#' compaction when number of spatial points referenced in `@counts` is 1/10 of
+#' that existing in `@spatial`
+#' @export
+setMethod("[", signature(x = "giottoBinPoints", i = "logical", j = "missing", drop = "missing"), function(x, i, j, compact = "auto", ..., drop) {
     if (length(i) != nrow(x)) {
         i <- rep(i, length.out = nrow(x))
     }
@@ -56,7 +89,7 @@ setMethod("[", signature(x = "giottoBinPoints", i = "logical", j = "missing", dr
 })
 
 # feature subsetting
-setMethod("[", signature(x = "giottoBinPoints", i = "character", j = "missing", drop = "missing"), function(x, i, j, ..., compact = "auto", drop) {
+setMethod("[", signature(x = "giottoBinPoints", i = "character", j = "missing", drop = "missing"), function(x, i, j, compact = "auto", ..., drop) {
     keep_feat_idx <- which(x@fid %in% i) # i is feature whitelist
     i <- which(x@counts$i %in% keep_feat_idx)
     x[i, ..., compact = compact]
@@ -136,11 +169,38 @@ setMethod("ext", signature("giottoBinPoints"), function(x, ...) {
     ext(x@spatial, ...)
 })
 
+#' @rdname crop
+#' @param ext `logical`. When `TRUE`, the extent of y will be used instead of y
+#' @param compact `character` or `logical` (default = "auto"). Whether to
+#' compact object. See [giottoBinPoints-class]. `"auto"` will perform a
+#' compaction when number of spatial points referenced in `@counts` is 1/10 of
+#' that existing in `@spatial`
+#' @export
+setMethod("crop", signature("giottoBinPoints", "giottoPolygon"), function(x, y,
+    ext = FALSE, compact = "auto") {
+    if (isTRUE(ext)) y <- ext(y)
+    else y <- y[]
+    keep_spat_idx <- which(terra::relate(x@spatial, y, relation = "intersects"))
+    keep_j <- x@pmap[keep_spat_idx]
+    keep_count_idx <- which(x@counts$j %in% keep_j)
+    x[keep_count_idx, compact = compact]
+})
+
+#' @name headtail
+#' @description
+#' Get the head (first values) or tail (last values) of an object
+#' @param x object
+#' @param n `integerlike` how many to get
+#' @param ... additional arguments to pass to other methods
+#' @returns the same class as `x`
+#' @export
 setMethod("head", signature("giottoBinPoints"), function(x, n = 6L, ...) {
     n <- min(nrow(x), n)
     x[seq_len(n)]
 })
 
+#' @rdname headtail
+#' @export
 setMethod("tail", signature("giottoBinPoints"), function(x, n = 6L, ...) {
     nr <- nrow(x)
     begin <- nr - n + 1L
@@ -163,6 +223,56 @@ as.data.table.giottoBinPoints <- function(x, ...) {
 
 # * constructor ####
 
+#' @describeIn giottoBinPoints constructor function
+#' @param expr_values `exprObj` Bin counts/values
+#' @param spatial_locs `spatLocsObj` Spatial locations of bins
+#' @param feat_type `character` (default = "rna"). Feature type of the data
+#' @examples
+#' ids <- sprintf("bin_%d", 1:50)
+#' sl <- createSpatLocsObj(rnorm(100))
+#' sl$cell_ID <- ids
+#' m <- matrix(floor(runif(500) * 3),
+#'     ncol = 50,
+#'     dimnames = list(letters[1:10], ids)
+#' )
+#' ex <- createExprObj(m)
+#' gbp <- createGiottoBinPoints(ex, sl)
+#'
+#' # basics -------------------------------------------------------- #
+#' force(gbp)
+#' nrow(gbp)
+#' dim(gbp)
+#' data.table::as.data.table(gbp)
+#' head(gbp)
+#' tail(gbp)
+#' objName(gbp)
+#' featType(gbp)
+#'
+#' # subsetting ---------------------------------------------------- #
+#' gbp[50:100]
+#' gbp["a"] # get only points for feature "a"
+#' gbp[letters[1:4]] # get only points for features "a", "b", "c", "d"
+#'
+#' # plotting ------------------------------------------------------ #
+#' plot(gbp, dens = TRUE) # will take a long time on large datasets
+#' plot(gbp["a"]) # plot feature "a" only
+#' plot(gbp[c("a", "d")]) # plot features "a" and "d" together
+#'
+#' # spatial ------------------------------------------------------- #
+#' ext(gbp) # spatial extent
+#'
+#' d <- Giotto::hexVertices(1)
+#' d$poly_ID <- "a"
+#' hex <- createGiottoPolygon(d)
+#' plot(gbp, col = "blue")
+#' plot(hex, add = TRUE, border = "red")
+#' plot(crop(gbp, hex), add = TRUE, col = "green") # cropping
+#'
+#' hex2 <- tessellate(ext(gbp), shape_size = 1)
+#' res <- calculateOverlap(hex2, gbp) # overlapped feature calculation
+#' m <- overlapToMatrix(res) # overlap info to expression matrix
+#' force(m)
+#' @export
 createGiottoBinPoints <- function(expr_values, spatial_locs,
     feat_type = "rna") {
     ids_p <- spatial_locs$cell_ID
