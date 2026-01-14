@@ -43,7 +43,7 @@ m <- as.matrix(sl)
 }
 \seealso{
 Other As coercion functions: 
-\code{\link{as.data.table}()},
+\code{\link{as.data.table.giottoBinPoints}()},
 \code{\link{as.points}()},
 \code{\link{as.polygons}()},
 \code{\link{r_spatial_conversions}}

@@ -1,4 +1,4 @@
-## I/O helpers ####
+
 
 #' @title saveGiotto
 #' @name saveGiotto
@@ -56,16 +56,18 @@ saveGiotto <- function(
         gobject@feat_info <- NULL
     }
 
-    overwriting <- FALSE
+    # change name of `overwrite` var to avoid confusion with underlying
+    # function call params
+    do_overwrite <- FALSE
     if (dir.exists(final_dir)) {
         if (!overwrite) {
             stop(wrap_txt(
-                "Folder already exist and overwrite = FALSE abort saving"
+                "Folder already exists and overwrite = FALSE abort saving"
             ))
         } else {
             wrap_msg("Folder already exist and overwrite = TRUE,
                     overwrite folder")
-            overwriting <- TRUE
+            do_overwrite <- TRUE
             use_dir <- file.path(dir, ".giotto_scratch")
             dir.create(use_dir, recursive = TRUE, showWarnings = FALSE)
         }
@@ -79,108 +81,26 @@ saveGiotto <- function(
     feat_info_names <- list_feature_info_names(gobject)
 
     if (!is.null(feat_info_names)) {
-        feat_dir <- paste0(use_dir, "/", "Features")
-        dir.create(feat_dir)
         for (feat in feat_info_names) {
-            if (verbose) wrap_msg("For feature: ", feat, "\n")
-
-            # original spatvector
-            if (!is.null(gobject@feat_info[[feat]]@spatVector)) {
-                # write names of spatvector
-                spatvecnames <- names(gobject@feat_info[[feat]]@spatVector)
-                filename_names <- paste0(
-                    feat_dir, "/", feat, "_feature_spatVector_names.txt"
-                )
-                write.table(
-                    x = spatvecnames,
-                    file = filename_names,
-                    col.names = FALSE,
-                    row.names = FALSE
-                )
-
-                # write spatvector
-                filename <- paste0(
-                    feat_dir, "/", feat, "_feature_spatVector.shp"
-                )
-                terra::writeVector(
-                    x = gobject@feat_info[[feat]]@spatVector,
-                    filename = filename, overwrite = TRUE
-                )
-            }
-
-            # network
-            # ? data.table object
+            .save_external(gobject@feat_info[[feat]],
+                dir = use_dir,
+                verbose = verbose
+            )
         }
     }
-
 
     ## save spatVector objects related to spatial information
     if (verbose) wrap_msg("2. Start writing spatial information \n")
     spat_info_names <- list_spatial_info_names(gobject)
 
     if (!is.null(spat_info_names)) {
-        spatinfo_dir <- paste0(use_dir, "/", "SpatialInfo")
-        dir.create(spatinfo_dir)
         for (spatinfo in spat_info_names) {
-            vmsg(.v = verbose, "For spatial information: ", spatinfo)
-
-            # original spatVectors
-            if (!is.null(gobject@spatial_info[[spatinfo]]@spatVector)) {
-                # write names of spatvector
-                spatvecnames <- names(
-                    gobject@spatial_info[[spatinfo]]@spatVector
-                )
-                filename_names <- paste0(
-                    spatinfo_dir, "/", spatinfo,
-                    "_spatInfo_spatVector_names.txt"
-                )
-                write.table(
-                    x = spatvecnames, file = filename_names,
-                    col.names = FALSE, row.names = FALSE
-                )
-
-                # write spatvector
-                filename <- paste0(
-                    spatinfo_dir, "/", spatinfo,
-                    "_spatInfo_spatVector.shp"
-                )
-                terra::writeVector(
-                    gobject@spatial_info[[spatinfo]]@spatVector,
-                    filename = filename, overwrite = TRUE
-                )
-            }
-
-            # spatVectorCentroids
-            if (!is.null(
-                gobject@spatial_info[[spatinfo]]@spatVectorCentroids
-            )) {
-                # write names of spatvector
-                spatvecnames <- names(
-                    gobject@spatial_info[[spatinfo]]@spatVectorCentroids
-                )
-                filename_names <- paste0(
-                    spatinfo_dir, "/", spatinfo,
-                    "_spatInfo_spatVectorCentroids_names.txt"
-                )
-                write.table(
-                    x = spatvecnames, file = filename_names,
-                    col.names = FALSE, row.names = FALSE
-                )
-
-                # write spatvector
-                filename <- paste0(
-                    spatinfo_dir, "/", spatinfo,
-                    "_spatInfo_spatVectorCentroids.shp"
-                )
-                terra::writeVector(
-                    gobject@spatial_info[[spatinfo]]@spatVectorCentroids,
-                    filename = filename, overwrite = TRUE
-                )
-            }
+            .save_external(gobject@spatial_info[[spatinfo]],
+                dir = use_dir,
+                verbose = verbose
+            )
         }
     }
-
-
 
     ## save images
     vmsg(.v = verbose, "3. Start writing image information")
@@ -200,10 +120,10 @@ saveGiotto <- function(
                 # save extent info (needed for non-COG outputs)
                 img@extent <- terra::ext(r)[]
                 # update filepath
+                filename <- file.path(image_dir, paste0(image, "_spatRaster"))
                 img@file_path <- filename
 
                 # save raster
-                filename <- file.path(image_dir, paste0(image, "_spatRaster"))
                 terra::writeRaster(
                     x = r,
                     filename = filename,
@@ -248,7 +168,7 @@ saveGiotto <- function(
     )
 
     # effect overwrite
-    if (overwrite && overwriting) {
+    if (do_overwrite) {
         unlink(x = final_dir, recursive = TRUE)
         file.rename(from = use_dir, to = final_dir)
     }
@@ -379,6 +299,145 @@ loadGiotto <- function(path_to_folder,
 
 # internals ####
 
+# * internal generics ####
+
+setGeneric(".save_external", function(x, ...) standardGeneric(".save_external"))
+setGeneric(".load_external", function(x, ...) standardGeneric(".load_external"))
+
+## * save methods ####
+setMethod(".save_external", signature("ANY"), function(x, ...) return())
+# dir - save directory
+setMethod(".save_external", signature("giottoPolygon"), function(x, dir,
+    verbose = NULL, ...) {
+    dir <- file.path(dir, "SpatialInfo")
+    if (!dir.exists(dir)) dir.create(dir)
+    vmsg(.v = verbose, "For spatial information: ", objName(x))
+    if (!is.null(x@spatVector)) {
+        name_fmt1 <- paste0(objName(x), "_spatInfo_%s")
+        .save_external(x@spatVector,
+            name_fmt = name_fmt1,
+            dir = dir,
+            ...
+        )
+    }
+    if (!is.null(x@spatVectorCentroids)) {
+        name_fmt2 <- paste0(objName(x), "_spatInfo_%sCentroids")
+        .save_external(x@spatVectorCentroids,
+            name_fmt = name_fmt2,
+            dir = dir,
+            ...
+        )
+    }
+})
+setMethod(".save_external", signature("giottoPoints"), function(x, dir,
+    verbose = NULL, ...) {
+    dir <- file.path(dir, "Features")
+    if (!dir.exists(dir)) dir.create(dir)
+    vmsg(.v = verbose, "For feature: ", objName(x))
+    if (is.null(x@spatVector)) return()
+    name_fmt <- paste0(objName(x), "_feature_%s")
+    .save_external(x@spatVector, name_fmt = name_fmt, dir = dir, ...)
+})
+setMethod(".save_external", signature("giottoBinPoints"), function(x, dir,
+    verbose = NULL, ...) {
+    dir <- file.path(dir, "Features")
+    if (!dir.exists(dir)) dir.create(dir)
+    vmsg(.v = verbose, "For feature: ", objName(x))
+    name_fmt <- paste0(objName(x), "_feature_%s")
+    .save_external(x@spatial, name_fmt = name_fmt, dir = dir,
+        write_colnames = FALSE, ...
+    )
+})
+# name - character. Used in naming for files
+setMethod(".save_external", signature("SpatVector"), function(x, name_fmt, dir,
+    write_colnames = TRUE, ...) {
+    name <- sprintf(name_fmt, "spatVector")
+    fname_txt <- file.path(dir, paste0(name, "_names.txt"))
+    fname_shp <- file.path(dir, paste0(name, ".shp"))
+    if (write_colnames) {
+        sv_names <- names(x)
+        write.table(sv_names,
+            file = fname_txt,
+            col.names = FALSE,
+            row.names = FALSE
+        )
+    }
+    terra::writeVector(x,
+        filename = fname_shp,
+        overwrite = TRUE
+    )
+})
+
+## * load methods ####
+
+setMethod(".load_external", signature("ANY"), function(x, ...) return())
+setMethod(".load_external", signature("giottoPolygon"), function(x, dir, version, ...) {
+    dir <- file.path(dir, "SpatialInfo")
+    if (!dir.exists(dir)) return(x)
+    name_fmt1 <- paste0(objName(x), "_spatInfo_%s")
+    x@spatVector <- .load_external(x@spatVector,
+        name_fmt = name_fmt1, dir = dir, read_colnames = TRUE, oname = objName(x), ...
+    )
+    name_fmt2 <- paste0(objName(x), "_spatInfo_%sCentroids")
+    x@spatVectorCentroids <- .load_external(x@spatVectorCentroids,
+        name_fmt = name_fmt2, dir = dir, read_colnames = TRUE, oname = objName(x), ...
+    )
+    if (version >= "0.5.0" || is.null(x@overlaps)) return(x)
+
+    # catch legacy overlap outputs
+    name_fmt3 <- paste0(objName(x), "_spatInfo_%sOverlaps")
+    overlap_names <- names(x@overlaps)
+    names(overlap_names) <- overlap_names # ensure lapply outputs are named
+    x@overlaps <- lapply(overlap_names, function(overlap_feat) {
+        .load_external(x@overlaps[[overlap_feat]],
+            name_fmt = name_fmt3,
+            dir = dir,
+            read_colnames = TRUE,
+            oname = objName(x),
+            prefix = overlap_feat,
+            ...
+        )
+    })
+    x
+})
+setMethod(".load_external", signature("giottoPoints"), function(x, dir, ...) {
+    dir <- file.path(dir, "Features")
+    if (!dir.exists(dir)) return(x)
+    name_fmt <- paste0(objName(x), "_feature_%s")
+    x@spatVector <- .load_external(x@spatVector,
+        name_fmt = name_fmt, dir = dir, read_colnames = TRUE, oname = objName(x), ...
+    )
+    x
+})
+setMethod(".load_external", signature("giottoBinPoints"), function(x, dir, ...) {
+    dir <- file.path(dir, "Features")
+    if (!dir.exists(dir)) return(x)
+    name_fmt <- paste0(objName(x), "_feature_%s")
+    x@spatial <- .load_external(x@spatial,
+        name_fmt = name_fmt, dir = dir, read_colnames = FALSE, oname = objName(x), ...
+    )
+    x
+})
+setMethod(".load_external", signature("SpatVector"), function(x, name_fmt, dir,
+    read_colnames = TRUE, verbose = NULL, oname, prefix = NULL, ...) {
+    if (!is.null(prefix)) name_fmt <- paste(prefix, name_fmt, sep = "_")
+    name <- sprintf(name_fmt, "spatVector")
+    fname_txt <- file.path(dir, paste0(name, "_names.txt"))
+    fname_shp <- file.path(dir, paste0(name, ".shp"))
+
+    if (!file.exists(fname_shp)) return(x)
+    vmsg(.v = verbose, .is_debug = TRUE, .initial = "  ",
+        sprintf("[%s] %s", oname, basename(fname_shp))
+    )
+    sv <- terra::vect(fname_shp)
+    if (read_colnames) {
+        sv_names <- data.table::fread(input = fname_txt, header = FALSE)[["V1"]]
+        names(sv) <- sv_names
+    }
+    sv
+})
+
+# * helpers ####
 
 # load in the gobject S4 object.
 # the contained point-based information will need to be regenerated/reconnected
@@ -428,57 +487,14 @@ loadGiotto <- function(path_to_folder,
 # load and append spatial feature information
 .load_giotto_feature_info <- function(gobject, path_to_folder, verbose = NULL) {
     vmsg(.v = verbose, "2. read Giotto feature information")
-    vmsg(
-        .v = verbose, .is_debug = TRUE, .initial = " ",
-        box_chars()$l, "subdir: /Features/", sep = ""
-    )
+    if (is.null(gobject@feat_info)) return(gobject)
 
-    feats_dir <- file.path(path_to_folder, "Features")
-    manifest <- dir_manifest(feats_dir)
-    basenames <- names(manifest)
-
-    # basenames of .shp files to load
-    shp_files <- basenames[grepl(".shp", basenames)]
-
-    # return early if none, also catches when dir does not exist
-    if (length(shp_files) == 0) {
-        return(gobject)
-    }
-
-    # parse the feature type(s) to load from the .shp basenames
-    feats <- gsub(shp_files,
-        pattern = "_feature_spatVector.shp", replacement = ""
-    )
-
-    # basenames of .txt files to load
-    # These have attribute info names (e.g. feat_ID, feat_ID_uniq)
-    # this is done since serialized SpatVectors may have clipped names.
-    txt_files <- paste0(feats, "_feature_spatVector_names.txt")
-
-    # ordering of files follow feats.
-    # Apply name to make indexing simple and unique
-    names(shp_files) <- names(txt_files) <- feats
-
-    # iterate through features discovered and load/regenerate each
-    # then append the information to the gobject
-    for (feat in feats) {
-        load_shp <- manifest[[shp_files[[feat]]]]
-        load_txt <- manifest[[txt_files[[feat]]]]
-
-        vmsg(
-            .v = verbose, .is_debug = TRUE, .initial = "  ",
-            sprintf("[%s] %s", feat, basename(load_shp))
+    gobject@feat_info <- lapply(gobject@feat_info, function(data) {
+        .load_external(data,
+            dir = path_to_folder,
+            verbose = verbose
         )
-        spatVector <- terra::vect(x = load_shp)
-
-        # read in original column names and assign to SpatVector
-        spatVector_names <- data.table::fread(
-            input = load_txt, header = FALSE
-        )[["V1"]]
-        names(spatVector) <- spatVector_names
-
-        gobject@feat_info[[feat]]@spatVector <- spatVector
-    }
+    })
 
     return(gobject)
 }
@@ -486,184 +502,16 @@ loadGiotto <- function(path_to_folder,
 # load and append to gobject the spatial polygon information
 .load_giotto_spatial_info <- function(gobject, path_to_folder, verbose = NULL) {
     vmsg(.v = verbose, "3. read Giotto spatial information")
-    vmsg(
-        .v = verbose, .is_debug = TRUE, .initial = " ",
-        box_chars()$l, "subdir: /SpatialInfo/", sep = ""
-    )
+    if (is.null(gobject@spatial_info)) return(gobject)
 
-    spat_dir <- file.path(path_to_folder, "SpatialInfo")
-    manifest <- dir_manifest(spat_dir)
-    basenames <- names(manifest)
-
-    # basenames of .shp files to load
-    # there are other .shp files for centroids and overlaps in this dir
-    # so the search term is more specific
-    shp_files <- basenames[grepl("spatVector.shp", basenames)]
-
-    # return early if none, also catches when dir does not exist
-    if (length(shp_files) == 0) {
-        return(gobject)
-    }
-
-    ## 3.1. shapes
-    vmsg(.v = verbose, "3.1 read Giotto spatial shape information")
-
-    # parse the spatial unit(s) to load from the .shp basenames
-    spats <- gsub(shp_files,
-        pattern = "_spatInfo_spatVector.shp", replacement = ""
-    )
-
-    # basenames of .txt files to load
-    # .shp files may clip these normally, so we load them separately
-    txt_files <- paste0(spats, "_spatInfo_spatVector_names.txt")
-
-    # ordering of files follow spats.
-    # Apply name to make indexing simple and unique
-    names(shp_files) <- names(txt_files) <- spats
-
-    # iterate through spat units discovered and load/regen each
-    # then append the info to the gobject
-    for (spat in spats) {
-        load_shp <- manifest[[shp_files[[spat]]]]
-        load_txt <- manifest[[txt_files[[spat]]]]
-
-        vmsg(
-            .v = verbose, .is_debug = TRUE, .initial = "  ",
-            sprintf("[%s] %s", spat, basename(load_shp))
+    gversion <- .gversion(gobject)
+    gobject@spatial_info <- lapply(gobject@spatial_info, function(data) {
+        .load_external(data,
+            dir = path_to_folder,
+            version = gversion,
+            verbose = verbose
         )
-        spatVector <- terra::vect(x = load_shp)
-
-        # read in original column names and assign to spatVector
-        spatVector_names <- data.table::fread(
-            input = load_txt, header = FALSE
-        )[["V1"]]
-        names(spatVector) <- spatVector_names
-
-        gobject@spatial_info[[spat]]@spatVector <- spatVector
-    }
-
-
-    # load centroids of gpoly
-    gobject <- .load_giotto_spatial_info_centroids(
-        gobject = gobject,
-        manifest = manifest,
-        basenames = basenames,
-        spats = spats,
-        verbose = verbose
-    )
-
-    # load overlaps of gpoly
-    gobject <- .load_giotto_spatial_info_overlaps(
-        gobject = gobject,
-        manifest = manifest,
-        verbose = verbose
-    )
-
-    return(gobject)
-}
-
-# load and append to gobject the polygons centroids information
-.load_giotto_spatial_info_centroids <- function(gobject, manifest, basenames, spats, verbose = NULL) {
-    ## 3.2. centroids
-    vmsg(.v = verbose, "3.2 read Giotto spatial centroid information \n")
-
-    # these files are optional, depending on if they have been calculated.
-    # They may not exist
-
-    # build expected filenames as file search terms
-    shp_search <- paste0(spats, "_spatInfo_spatVectorCentroids.shp")
-    txt_search <- paste0(spats, "_spatInfo_spatVectorCentroids_names.txt")
-    # detect existing centroids files
-    shp_files <- basenames[basenames %in% shp_search]
-
-    # return early if none exist
-    if (length(shp_files) == 0) {
-        return(gobject)
-    }
-
-    # apply name on search terms for simple and unique indexing
-    names(shp_search) <- names(txt_search) <- spats
-
-    # iterate through spat_units for data load
-    # skip the spat_unit if file not found
-    for (spat in spats) {
-        load_shp <- manifest[[shp_search[[spat]]]]
-        load_txt <- manifest[[txt_search[[spat]]]]
-
-        if (is.null(load_shp)) next # skip to next spat_unit if none
-        vmsg(
-            .v = verbose, .is_debug = TRUE, .initial = "  ",
-            sprintf("[%s] %s", spat, basename(load_shp))
-        )
-        missing_nametxt <- FALSE
-        if (is.null(load_txt)) {
-            warning(sprintf("[%s] missing centroid attribute names.txt", spat),
-                    call. = FALSE)
-            missing_nametxt <- TRUE
-        }
-
-        # read in centroids
-        spatVector <- terra::vect(load_shp)
-        # read in original column names and assign to spatVector
-        if (!missing_nametxt) {
-            spatVector_names <- data.table::fread(
-                input = load_txt, header = FALSE
-            )[["V1"]]
-            names(spatVector) <- spatVector_names
-        }
-
-        gobject@spatial_info[[spat]]@spatVectorCentroids <- spatVector
-    }
-    return(gobject)
-}
-
-# load and append to gobject the polygons overlaps information
-.load_giotto_spatial_info_overlaps <- function(gobject, manifest, verbose = NULL) {
-    # objects from GiottoClass v0.5 and onwards do not need this for overlaps
-    if ("versions" %in% names(attributes(gobject))) {
-        if (.gversion(gobject) >= "0.5.0") return(gobject)
-    }
-
-    ## 3.3. overlaps
-    vmsg(.v = verbose, "3.3 read Giotto spatial overlap information \n")
-
-    si <- get_polygon_info_list(gobject) # none case taken care of in 3.1
-    spats <- names(si)
-
-    # These files are optional, depending on if they have been calculated.
-    # They may not exist
-    # They are named in "feattype_spatunit_postfix.extension" convention
-
-    for (spat in spats) {
-        feats <- .gpoly_overlap_names(si[[spat]], type = "point")
-        if (is.null(feats)) next # goto next spat_unit if no overlaps
-
-        for (feat in feats) {
-            # format: feattype_spatunit
-            comb <- paste(feat, spat, sep = "_")
-
-            # format: feattype_spatunit_postfix.extension
-            shp_file <- paste0(comb, "_spatInfo_spatVectorOverlaps.shp")
-            txt_file <- paste0(comb, "_spatInfo_spatVectorOverlaps_names.txt")
-            load_shp <- manifest[[shp_file]]
-            load_txt <- manifest[[txt_file]]
-
-            vmsg(
-                .v = verbose, .is_debug = TRUE, .initial = "  ",
-                sprintf("[%s and %s] %s", spat, feat, basename(load_shp))
-            )
-            spatVector <- terra::vect(load_shp)
-
-            # read in original column names
-            spatVector_names <- data.table::fread(
-                input = load_txt, header = FALSE
-            )[["V1"]]
-            names(spatVector) <- spatVector_names
-
-            # append
-            gobject@spatial_info[[spat]]@overlaps[[feat]] <- spatVector
-        }
-    }
+    })
 
     return(gobject)
 }
@@ -715,25 +563,4 @@ loadGiotto <- function(path_to_folder,
     }
 
     return(gobject)
-}
-
-.gpoly_overlap_names <- function(x, type = c("point", "intensity")) {
-    type <- match.arg(type, choices = c("point", "intensity"))
-    ovlps <- overlaps(x)
-    if (is.null(ovlps)) {
-        return(NULL)
-    }
-
-    switch(type,
-        "point" = {
-            res <- names(ovlps)
-            res <- res[res != "intensity"]
-            if (length(res) == 0) res <- NULL
-            return(res)
-        },
-        "intensity" = {
-            res <- names(ovlps$intensity)
-        }
-    )
-    return(res)
 }

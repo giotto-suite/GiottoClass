@@ -1,5 +1,6 @@
 # collate
 #' @include generics.R
+#' @include classes.R
 NULL
 
 # aggregate expression ####
@@ -802,6 +803,7 @@ setMethod(
             )
         )
 
+        # (constructor) see classes-overlaps.R
         .create_overlap_point_dt(x, y, res, feat_ids = feat_ids)
     }
 )
@@ -988,87 +990,7 @@ calculateOverlapRaster <- function(
     }
 }
 
-#' @param overlap_data `data.table` of extracted intensity values per poly_ID
-#' @noRd
-.create_overlap_intensity_dt <- function(overlap_data) {
-    odt <- new("overlapIntensityDT", data = overlap_data)
-    odt@nfeats <- ncol(overlap_data) - 1L
-    odt
-}
 
-#' @param x from data (SpatVector)
-#' @param y to data (SpatVector)
-#' @param overlap_data relationships (data.frame). Expected to be numeric row
-#' indices between x and y
-#' @param keep additional col(s) in `y` to keep
-#' @noRd
-.create_overlap_point_dt <- function(x, y,
-        overlap_data, keep = NULL, feat_ids) {
-    poly <- feat_idx <- feat <- feat_id_index <- NULL # NSE vars
-    # cleanup input overlap_data
-    checkmate::assert_data_frame(overlap_data)
-    data.table::setDT(overlap_data)
-    cnames <- colnames(overlap_data)
-    data.table::setnames(overlap_data,
-        old = c(cnames[[2]], cnames[[1]]),
-        new = c("poly", "feat_idx")
-    )
-    # make relationships table sparse by removing non-overlapped features
-    # these results are indexed by all features, so no need to filter
-    # non-overlapped polys
-    overlap_data <- overlap_data[!is.na(poly)]
-
-    # extract needed info from y
-    keep <- c("feat_ID", "feat_ID_uniq", keep)
-    ytab <- terra::as.data.frame(y[overlap_data$feat_idx, keep])
-
-    # initialize overlap object and needed ids
-    sids <- x$poly_ID
-    fids <- unique(ytab$feat_ID)
-    odt <- new("overlapPointDT",
-        spat_ids = sids,
-        feat_ids = feat_ids,
-        nfeats = as.integer(nrow(y))
-    )
-
-    # Ensure data is stored as integer or integer-based mapping
-    ## - if poly/feat_idx contents are NOT integer coercible, establish a map #
-    if (!overlap_data[, checkmate::test_integerish(head(poly, 100))]) {
-        overlap_data[, poly := match(poly, sids)]
-    }
-    if (!overlap_data[, checkmate::test_integerish(head(feat_idx, 100))]) {
-        overlap_data[, feat_idx := match(feat_idx, fids)]
-    }
-    ## -- if still not integer, coerce to integer --------------------------- #
-    if (!is.integer(overlap_data$poly[1])) {
-        overlap_data[, poly := as.integer(poly)]
-    }
-    if (!is.integer(overlap_data$feat_idx[1])) {
-        overlap_data[, feat_idx := as.integer(feat_idx)]
-    }
-
-    # append y attribute info
-    overlap_data <- cbind(overlap_data, ytab)
-    data.table::setnames(overlap_data,
-        old = c("feat_ID_uniq", "feat_ID"),
-        new = c("feat", "feat_id_index")
-    )
-    if (!is.integer(overlap_data$feat[1])) {
-        overlap_data[, feat := as.integer(feat)]
-    }
-    # add feat_ID map
-    overlap_data[, feat_id_index := match(feat_id_index, odt@feat_ids)]
-    # remove feat_idx which may not be reliable after feature subsets
-    overlap_data[, feat_idx := NULL]
-    # set indices
-    data.table::setkeyv(overlap_data, "feat")
-    data.table::setindexv(overlap_data, "poly")
-    data.table::setcolorder(overlap_data, c("poly", "feat", "feat_id_index"))
-    # add to object
-    odt@data <- overlap_data
-
-    odt
-}
 
 
 
