@@ -176,10 +176,20 @@ setMethod("ext", signature("giottoBinPoints"), function(x, ...) {
 #' compaction when number of spatial points referenced in `@counts` is 1/10 of
 #' that existing in `@spatial`
 #' @export
-setMethod("crop", signature("giottoBinPoints", "giottoPolygon"), function(x, y,
-    ext = FALSE, compact = "auto") {
-    if (isTRUE(ext)) y <- ext(y)
-    else y <- y[]
+setMethod("crop", signature("giottoBinPoints", "ANY"), function(x, y,
+    ext = FALSE, compact = "auto", ...) {
+    if (isTRUE(ext)) {
+        y <- terra::as.polygons(ext(y))
+    } else {
+        y <- y[]
+    }
+    crop(x, y, ext = FALSE, compact = compact, ...)
+})
+setMethod("crop", signature("giottoBinPoints", "SpatVector"), function(x, y,
+    ext = FALSE, compact = "auto", ...) {
+    if (isTRUE(ext)) {
+        return(crop(x, y = terra::as.polygons(ext(y)), compact = compact, ...))
+    }
     keep_spat_idx <- which(terra::relate(x@spatial, y, relation = "intersects"))
     keep_j <- x@pmap[keep_spat_idx]
     keep_count_idx <- which(x@counts$j %in% keep_j)
