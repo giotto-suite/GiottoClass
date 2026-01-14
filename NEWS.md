@@ -2,13 +2,18 @@
 
 ## changes
 - `calculateOverlap()` and `overlapToMatrix()` param harmonization
+- refactor of `saveGiotto()` and `loadGiotto()`
+- code reorganization for `classes.R`
 
 ## new
-- `aggregateFeatures()` wrapper for running `calculateOverlap()` and `overlapToMatrix()`
+- `aggregateFeatures()` giotto object wrapper function for running `calculateOverlap()` and `overlapToMatrix()`
 - `overlapPointDT()` and `overlapIntensityDT()` classes to store overlaps relationships efficiently and help with aggregation pipeline
+- `giottoBinPoints` class for efficient binned spatial points
 
 ## bug fixes
 - `overlaps()` will now properly find image overlaps
+- fix a naming bug when exporting images during save
+
 
 
 # GiottoClass 0.4.12 (2025/12/12)
