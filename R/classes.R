@@ -30,6 +30,9 @@ NULL
 }
 
 .gversion <- function(gobject) {
+    if (is.null(attr(gobject, "versions"))) { # apply default version 0.0.0
+        return(as.package_version("0.0.0")) # untracked
+    }
     gobject@versions$gclass
 }
 
