@@ -186,6 +186,7 @@ setMethod("crop", signature("giottoBinPoints", "giottoPolygon"), function(x, y,
     x[keep_count_idx, compact = compact]
 })
 
+#' @title Head and tail
 #' @name headtail
 #' @description
 #' Get the head (first values) or tail (last values) of an object
