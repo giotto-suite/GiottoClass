@@ -209,6 +209,23 @@ setMethod("tail", signature("giottoBinPoints"), function(x, n = 6L, ...) {
     x[begin:nr]
 })
 
+#' @rdname setGiotto
+#' @export
+setMethod("setGiotto", signature("giotto", "giottoBinPoints"),
+    function(gobject, x, ...) {
+        gobject <- setFeatureInfo(gobject = gobject, x = x, ...)
+        gobject
+})
+
+#' @rdname spatIDs-generic
+#' @export
+setMethod("featIDs", signature(x = "giottoBinPoints"), function(x, uniques = TRUE, ...) {
+    if (uniques) {
+        return(x@fid[unique(x@counts$i)])
+    }
+    x@fid[x@counts$i]
+})
+
 #' @rdname as.data.table
 #' @method as.data.table giottoBinPoints
 #' @export
