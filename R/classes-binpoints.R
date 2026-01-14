@@ -182,6 +182,10 @@ setMethod("crop", signature("giottoBinPoints", "ANY"), function(x, y,
         y <- terra::as.polygons(ext(y))
     } else {
         y <- y[]
+        if (!inherits(y, "SpatVector")) {
+            stop("[crop] y of class ", class(y)[[1L]], " not supported.\n",
+                 call. = FALSE)
+        }
     }
     crop(x, y, ext = FALSE, compact = compact, ...)
 })
