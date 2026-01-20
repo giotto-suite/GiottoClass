@@ -378,31 +378,43 @@ combineFeatureData <- function(gobject,
 
     res_list <- list()
     for (feat in unique(feat_type)) {
+
+        selected_features <- NULL
+        if (!is.null(sel_feats[[feat]])) {
+            selected_features <- sel_feats[[feat]]
+        }
+
+        # feature info
+        feat_info_spatvec <- getFeatureInfo(
+            gobject = gobject,
+            feat_type = feat,
+            return_giottoPoints = TRUE
+        )
+        if (!is.null(selected_features)) {
+            feat_info_spatvec <- feat_info_spatvec[selected_features]
+        }
+        feat_info <- data.table::as.data.table(feat_info_spatvec, geom = "XY")
+
+        if (is.null(spat_unit)) {
+            # return with just TX info if metadata info is not accessible
+            feat_info[, "feat" := feat]
+            feat_info[, "spat_unit" := "NA"]
+            res_list[[feat]] <- feat_info
+            next
+        }
+
+        comb_list <- list()
         for (spat in unique(spat_unit)) {
             # feature meta
             feat_meta <- getFeatureMetadata(
                 gobject = gobject,
-                spat_unit = spat_unit,
+                spat_unit = spat,
                 feat_type = feat,
                 output = "data.table"
             )
 
-            if (!is.null(sel_feats[[feat]])) {
-                selected_features <- sel_feats[[feat]]
+            if (!is.null(selected_features)) {
                 feat_meta <- feat_meta[feat_ID %in% selected_features]
-            }
-
-
-            # feature info
-            feat_info_spatvec <- getFeatureInfo(
-                gobject = gobject,
-                feat_type = feat,
-                return_giottoPoints = FALSE
-            )
-            feat_info <- .spatvector_to_dt(feat_info_spatvec)
-            if (!is.null(sel_feats[[feat]])) {
-                selected_features <- sel_feats[[feat]]
-                feat_info <- feat_info[feat_ID %in% selected_features]
             }
 
             comb_dt <- data.table::merge.data.table(
@@ -413,9 +425,11 @@ combineFeatureData <- function(gobject,
 
             comb_dt[, "feat" := feat]
             comb_dt[, "spat_unit" := spat]
+            comb_list[[spat]] <- comb_dt
         }
+        comb_res <- data.table::rbindlist(comb_list, fill = TRUE)
 
-        res_list[[feat]] <- comb_dt
+        res_list[[feat]] <- comb_res
     }
 
     return(res_list)
