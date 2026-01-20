@@ -243,12 +243,19 @@ setMethod("featIDs", signature(x = "giottoBinPoints"), function(x, uniques = TRU
 #' @rdname as.data.table
 #' @method as.data.table giottoBinPoints
 #' @export
-as.data.table.giottoBinPoints <- function(x, ...) {
-    cn <- colnames(x@counts)
+as.data.table.giottoBinPoints <- function(x, geom, ...) {
+    d <- data.table::copy(x@counts)
+    data.table::setnames(d, old = c("i", "x"), new = c("feat_ID", "count"))
+    if (!missing(geom)) {
+        sv <- x@spatial[match(d$j, x@pmap),]
+        geom_info <- data.table::as.data.table(sv, geom = geom)
+        d <- cbind(d, geom_info)
+    }
+
+    cn <- colnames(d)
     get_cols <- cn[!cn == "j"]
-    d <- x@counts[, get_cols, with = FALSE]
-    d$i <- x@fid[d$i]
-    names(d)[1:2] <- c("feat_ID", "count")
+    d <- d[, get_cols, with = FALSE]
+    d$feat_ID <- x@fid[d$feat_ID]
     d
 }
 
