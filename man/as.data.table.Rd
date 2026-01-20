@@ -10,7 +10,7 @@
 \alias{as.data.frame.overlapIntensityDT}
 \title{Coerce to data.table}
 \usage{
-\method{as.data.table}{giottoBinPoints}(x, ...)
+\method{as.data.table}{giottoBinPoints}(x, geom, ...)
 
 \method{as.data.table}{SpatVector}(
   x,
@@ -32,13 +32,13 @@
 \arguments{
 \item{x}{The object to coerce}
 
-\item{\dots}{additional arguments to pass}
-
-\item{keep.rownames}{This argument is ignored}
-
 \item{geom}{character or NULL. If not NULL, either "XY", "WKT", or "HEX", to
 get the geometry included in coordinates of each point or vertex,
 Well-Known-Text or hexadecimal notation.}
+
+\item{\dots}{additional arguments to pass}
+
+\item{keep.rownames}{This argument is ignored}
 
 \item{include_values}{whether to include attributes information when geom
 is 'XY'}
