@@ -598,8 +598,8 @@ createGiottoObject <- function(expression,
         if (isTRUE(verbose)) wrap_msg("--- finished spatial enrichment ---\n\n")
         ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
     } else {
-        if (isTRUE(verbose)) message("No spatial enrichment results are
-                                    provided")
+        if (isTRUE(verbose)) message(
+        "No spatial enrichment results are provided")
     }
 
 
@@ -3136,7 +3136,7 @@ createGiottoImage <- function(gobject = NULL,
             if (transf == "flip_x_axis") {
                 mg_object <- magick::image_flop(mg_object)
             } else if (transf == "flip_y_axis") {
-                mg_object <- magick::image_flop(mg_object)
+                mg_object <- magick::image_flip(mg_object)
             } else {
                 wrap_msg(transf, " is not a supported transformation, see
                     details")
