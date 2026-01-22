@@ -32,13 +32,11 @@ readExprMatrix <- function(
     # check if path is a character vector and exists
     if (!is.character(path)) stop("path needs to be character vector")
     if (!file.exists(path)) stop("the path: ", path, " does not exist")
-  
-  # check if expression_matrix_class is dbMatrix, if so stop and throw error saying not yet supported
-  if (expression_matrix_class == "dbSparseMatrix"){
-     # Note: Implementation of this feature should be done within {dbMatrix}
-     # See dbMatrix::dbMatrix() function for more info
+
+    expression_matrix_class <- match.arg(expression_matrix_class)
+    if (identical(expression_matrix_class, "dbSparseMatrix")) {
      stop("File conversion to dbMatrix is not yet supported") 
-  }
+    }
   
     data.table::setDTthreads(threads = cores)
 
