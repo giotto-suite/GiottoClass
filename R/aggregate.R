@@ -516,6 +516,16 @@ setMethod(
     feat_subset_ids = deprecated(),
     count_info_column = deprecated(),
     ...) {
+        is_db_x <- inherits(x@spatVector, "dbSpatial")
+        is_db_y <- inherits(y@spatVector, "dbSpatial")
+
+        if (xor(is_db_x, is_db_y)) {
+            stop(
+                "calculateOverlap: mixing dbSpatial-backed and terra-backed inputs is not supported",
+                call. = FALSE
+            )
+        }
+
         # deprecations
         feat_subset_values <- GiottoUtils::deprecate_param(
             feat_subset_ids, feat_subset_values,
@@ -536,6 +546,40 @@ setMethod(
         }
         if (isFALSE(feat_count_column)) {
             feat_count_column <- NULL
+        }
+
+        # ------------------------------------------------------------------
+        # dbSpatial-backed path: keep results dbSpatial-native
+        # ------------------------------------------------------------------
+        if (isTRUE(is_db_x)) {
+            if (!methods::hasMethod(
+                "calculateOverlap",
+                signature = signature(x = "dbSpatial", y = "dbSpatial")
+            )) {
+                stop(
+                    "calculateOverlap: dbSpatial-backed giottoPolygon/giottoPoints requires a calculateOverlap(dbSpatial, dbSpatial) method (load GiottoDB)",
+                    call. = FALSE
+                )
+            }
+
+            # The <dbSpatial,dbSpatial> method is defined in GiottoDB
+            res <- calculateOverlap(
+                x = x@spatVector,
+                y = y@spatVector,
+                poly_subset_ids = poly_subset_ids,
+                feat_subset_column = feat_subset_column,
+                feat_subset_ids = feat_subset_values,
+                count_info_column = feat_count_column,
+                verbose = verbose,
+                ...
+            )
+
+            if (isTRUE(return_gpolygon)) {
+                if (is.null(name_overlap)) name_overlap <- objName(y)
+                x@overlaps[[name_overlap]] <- res
+                return(x)
+            }
+            return(res)
         }
 
         # return an overlap info object
