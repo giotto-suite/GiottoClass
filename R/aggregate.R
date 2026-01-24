@@ -521,7 +521,8 @@ setMethod(
 
         if (xor(is_db_x, is_db_y)) {
             stop(
-                "calculateOverlap: mixing dbSpatial-backed and terra-backed inputs is not supported",
+                "calculateOverlap: dbSpatial-backed and terra-backed inputs ",
+                "are not both supported",
                 call. = FALSE
             )
         }
@@ -557,7 +558,8 @@ setMethod(
                 signature = signature(x = "dbSpatial", y = "dbSpatial")
             )) {
                 stop(
-                    "calculateOverlap: dbSpatial-backed giottoPolygon/giottoPoints requires a calculateOverlap(dbSpatial, dbSpatial) method (load GiottoDB)",
+                    "calculateOverlap: dbSpatial-backed giottoPolygon or ",
+                    "giottoPoints method missing. Load the GiottoDB package.",
                     call. = FALSE
                 )
             }
