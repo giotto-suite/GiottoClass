@@ -553,6 +553,15 @@ setMethod(
         # dbSpatial-backed path: keep results dbSpatial-native
         # ------------------------------------------------------------------
         if (isTRUE(is_db_x)) {
+            # GiottoDB defines the <dbSpatial,dbSpatial> method for this generic
+            if (!base::requireNamespace("GiottoDB", quietly = TRUE)) {
+                stop(
+                    "calculateOverlap: dbSpatial-backed inputs require the ",
+                    "GiottoDB package. Install it, or load it via `library(GiottoDB)`.",
+                    call. = FALSE
+                )
+            }
+
             if (!methods::hasMethod(
                 "calculateOverlap",
                 signature = signature(x = "dbSpatial", y = "dbSpatial")
@@ -570,8 +579,8 @@ setMethod(
                 y = y@spatVector,
                 poly_subset_ids = poly_subset_ids,
                 feat_subset_column = feat_subset_column,
-                feat_subset_ids = feat_subset_values,
-                count_info_column = feat_count_column,
+                feat_subset_values = feat_subset_values,
+                feat_count_column = feat_count_column,
                 verbose = verbose,
                 ...
             )
