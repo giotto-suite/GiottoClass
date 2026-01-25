@@ -42,7 +42,8 @@ Imports:
     reticulate (>= 1.25),
     stats,
     terra (>= 1.8-21)
-Suggests: 
+Suggests:
+    GiottoDB,
     Biobase,
     chihaya,
     DelayedArray,
