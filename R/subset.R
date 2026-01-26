@@ -668,19 +668,33 @@
         if (isTRUE(feat %in% feat_type)) {
             if (verbose) wrap_msg("subset feature info:", feat)
 
-            feat_subset <- .subset_giotto_points_object(
-                gpoints = feat_info[[feat]],
-                feat_ids = feat_ids,
-                x_min = x_min,
-                x_max = x_max,
-                y_min = y_min,
-                y_max = y_max,
-                verbose = verbose
-            )
+            pts <- feat_info[[feat]]
+
+            if (inherits(pts, "giottoBinPoints")) {
+                feat_subset <- .subset_giotto_binpoints_object(
+                    gpoints = pts,
+                    feat_ids = feat_ids,
+                    x_min = x_min,
+                    x_max = x_max,
+                    y_min = y_min,
+                    y_max = y_max
+                )
+            } else if (inherits(pts, "giottoPoints")) {
+                feat_subset <- .subset_giotto_points_object(
+                    gpoints = pts,
+                    feat_ids = feat_ids,
+                    x_min = x_min,
+                    x_max = x_max,
+                    y_min = y_min,
+                    y_max = y_max
+                )
+            } else {
+                stop("unrecognized giotto point subobject")
+            }
 
             res_list[[feat]] <- feat_subset
         } else {
-            res_list[[feat]] <- feat_info[[feat]]
+            res_list[[feat]] <- pts
         }
     }
     return(res_list)
@@ -1917,7 +1931,36 @@ subsetGiottoLocsSubcellular <- function(
 
 
 
+.subset_giotto_binpoints_object <- function(gpoints,
+    feat_ids = NULL,
+    x_min = NULL,
+    x_max = NULL,
+    y_min = NULL,
+    y_max = NULL) {
 
+    # 1. ID based subsetting #
+    # ---------------------- #
+    if (!is.null(feat_ids)) {
+        gpoints  <- gpoints[feat_ids]
+    }
+
+    # 2. Spatial subsetting #
+    # --------------------- #
+    # 2.1 if NO spatial subset information available,
+    # ie: if all spat subset params are NULL, return directly because there are
+    # no following steps
+    bound_params <- list(x_min, x_max, y_min, y_max)
+    if (all(vapply(bound_params, is.null, FUN.VALUE = logical(1L)))) {
+        return(gpoints)
+    }
+    e <- ext(gpoints)[] # get extent as named numeric vector
+    e[["xmin"]] <- max(e[["xmin"]], x_min)
+    e[["xmax"]] <- min(e[["xmax"]], x_max)
+    e[["ymin"]] <- max(e[["ymin"]], y_min)
+    e[["ymax"]] <- min(e[["ymax"]], y_max)
+    e <- ext(e) # create new extent to use
+    crop(gpoints, e)
+}
 
 
 
@@ -1933,8 +1976,7 @@ subsetGiottoLocsSubcellular <- function(
         x_min = NULL,
         x_max = NULL,
         y_min = NULL,
-        y_max = NULL,
-        verbose = FALSE) {
+        y_max = NULL) {
     # data.table vars
     x <- y <- feat_ID <- NULL
 

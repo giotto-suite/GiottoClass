@@ -178,6 +178,7 @@ setMethod("ext", signature("giottoBinPoints"), function(x, ...) {
 #' @export
 setMethod("crop", signature("giottoBinPoints", "ANY"), function(x, y,
     ext = FALSE, compact = "auto", ...) {
+    if (inherits(y, "SpatExtent")) ext <- TRUE
     if (isTRUE(ext)) {
         y <- terra::as.polygons(ext(y))
     } else {
@@ -384,6 +385,7 @@ createGiottoBinPoints <- function(expr_values, spatial_locs,
 
 # determine whether to compact based on bloat ratio
 .gbp_compact_auto <- function(x) {
+    if (nrow(x@counts) == 0L) return(TRUE) # no data left anyways
     bloat_ratio <- length(x@bid) / length(unique(x@counts$j))
     bloat_ratio > 10 # arbitrary setting
 }
