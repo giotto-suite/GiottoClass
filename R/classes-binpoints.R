@@ -241,6 +241,65 @@ setMethod("featIDs", signature(x = "giottoBinPoints"), function(x, uniques = TRU
     x@fid[x@counts$i]
 })
 
+#' @rdname rbind-generic
+#' @export
+setMethod("rbind2", signature("giottoBinPoints", "giottoBinPoints"),
+    function(x, y, ...) {
+        # 1. force compaction on both
+        if (isFALSE(x@compact)) x <- .gbp_compact(x)
+        if (isFALSE(y@compact)) y <- .gbp_compact(y)
+
+        # 2. check conflicting bin IDs
+        conflicts <- y@bid %in% x@bid
+
+        if (any(conflicts)) {
+
+            warning("[rbind] giottoBinPoints have the same bin IDs.",
+                    "\n One set will be renamed.")
+
+            conflict_ids <- y@bid[conflicts]
+            # Rename conflicting IDs in y
+            # pmap and counts$j are integer indices, so they stay valid
+            suffix_num <- 1
+            repeat {
+                candidate_names <- paste0(y@bid[conflicts], "_", suffix_num)
+                # Check against both x@bid and non-conflict y@bid
+                if (!any(candidate_names %in% c(x@bid, y@bid[!conflicts]))) {
+                    y@bid[conflicts] <- candidate_names
+                    break
+                }
+                suffix_num <- suffix_num + 1
+                if (suffix_num > 1000) {
+                    stop("Could not generate unique bin IDs after 1000 attempts")
+                }
+            }
+        }
+
+        # 3. Concatenation (no conflicts now)
+        x_counts <- data.table::copy(x@counts)
+        y_counts <- data.table::copy(y@counts)
+
+        offset <- length(x@bid)
+        y_counts[, j := j + offset]
+
+        # Handle feature IDs - union and remap
+        fid_x <- x@fid
+        fid_y <- y@fid
+        all_fid <- union(fid_x, fid_y)
+        x_counts[, i := match(fid_x[i], all_fid)]
+        y_counts[, i := match(fid_y[i], all_fid)]
+
+        new("giottoBinPoints",
+            spatial = rbind(x@spatial, y@spatial),
+            counts = rbind(x_counts, y_counts),
+            bid = c(x@bid, y@bid),
+            pmap = c(x@pmap, y@pmap + offset),
+            fid = all_fid,
+            feat_type = x@feat_type,  # take from x
+            compact = TRUE
+        )
+    })
+
 #' @rdname as.data.table
 #' @method as.data.table giottoBinPoints
 #' @export
