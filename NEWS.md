@@ -9,6 +9,7 @@
 - `aggregateFeatures()` giotto object wrapper function for running `calculateOverlap()` and `overlapToMatrix()`
 - `overlapPointDT()` and `overlapIntensityDT()` classes to store overlaps relationships efficiently and help with aggregation pipeline
 - `giottoBinPoints` class for efficient binned spatial points
+- `rbind` method for `giottoPoints`
 
 ## bug fixes
 - `overlaps()` will now properly find image overlaps
