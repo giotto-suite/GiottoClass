@@ -3031,8 +3031,11 @@ create_giotto_polygon_object <- function(name = "cell",
 
 #' @title createGiottoImage
 #' @name createGiottoImage
-#' @description Creates a giotto image that can be added to a Giotto object
-#' and/or used to add an image to the spatial plotting functions
+#' @description **SUPERSEDED** *[createGiottoLargeImage()] is preferred for most
+#' uses*. This function may be renamed and/or replaced in the future.
+#'
+#' Creates a [giottoImage] that can be added to a Giotto object and/or used to
+#' add an image to the spatial plotting functions.
 #' @inheritParams data_access_params
 #' @param spatial_locs spatial locations (alternative if \code{gobject = NULL})
 #' @param spat_loc_name name of spatial locations within gobject

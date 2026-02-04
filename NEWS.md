@@ -1,6 +1,7 @@
 # GiottoClass 0.5.0
 
 ## changes
+- added superseded note to `createGiottoImage()` documentation
 - `calculateOverlap()` and `overlapToMatrix()` param harmonization
 - refactor of `saveGiotto()` and `loadGiotto()`
 - code reorganization for `classes.R`
