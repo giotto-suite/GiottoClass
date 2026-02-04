@@ -7,6 +7,7 @@
 \alias{rbind2,featMetaObj,featMetaObj-method}
 \alias{rbind2,spatLocsObj,spatLocsObj-method}
 \alias{rbind2,giottoPolygon,giottoPolygon-method}
+\alias{rbind2,giottoPoints,giottoPoints-method}
 \alias{rbind2,overlapPointDT,overlapPointDT-method}
 \title{Combine objects by rows (Giotto-related)}
 \usage{
@@ -19,6 +20,8 @@
 \S4method{rbind2}{spatLocsObj,spatLocsObj}(x, y, ...)
 
 \S4method{rbind2}{giottoPolygon,giottoPolygon}(x, y, add_list_ID = TRUE, ...)
+
+\S4method{rbind2}{giottoPoints,giottoPoints}(x, y, ...)
 
 \S4method{rbind2}{overlapPointDT,overlapPointDT}(x, y, ...)
 }
@@ -41,6 +44,8 @@ row bind two objects
 \section{Functions}{
 \itemize{
 \item \code{rbind2(x = giottoPolygon, y = giottoPolygon)}: Append giottoPolygon objects
+
+\item \code{rbind2(x = giottoPoints, y = giottoPoints)}: Append giottoPoints objects
 
 }}
 \examples{

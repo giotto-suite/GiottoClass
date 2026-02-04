@@ -90,6 +90,14 @@ setMethod(
     }
 )
 
+#' @describeIn rbind-generic Append giottoPoints objects
+#' @export
+setMethod("rbind2", signature("giottoPoints", "giottoPoints"),
+    function(x, y, ...) {
+        sv <- rbind(x@spatVector, y@spatVector)
+        createGiottoPoints(sv, feat_type = featType(x))
+    })
+
 #' @rdname rbind-generic
 #' @export
 setMethod("rbind2", signature("overlapPointDT", "overlapPointDT"),
@@ -132,7 +140,6 @@ setMethod("rbind", "giottoPolygon", function(..., deparse.level = 1) {
         rbind2(xs[[1L]], do.call(Recall, xs[-1L]))
     }
 })
-
 
 setMethod("rbind", "spatLocsObj", function(..., deparse.level = 1) {
     if (nargs() <= 2L) {
