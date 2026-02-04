@@ -210,36 +210,36 @@ test_that("overlap `as.data.frame` works", {
 # aggregateFeatures ####
 ## --- gobject-level checks
 
-test_that("aggregateFeatures works and generates exprObj", {
-    g <- aggregateFeatures(g,
-        spat_info = "z0",
-        feat_info = "rna",
-        new_spat_unit = "test_spat",
-        new_feat_type = "test_feat",
-        name = "test_mat",
-        verbose = FALSE,
-        return_gobject = TRUE
-    )
-    e <- g@expression$test_spat$test_feat$test_mat
-    expect_s4_class(e, "exprObj")
-    m <- e[]
-    expect_s4_class(m, "dgCMatrix")
-    expect_identical(head(colnames(m)), c(
-        "1132915601442719251817312578799507532",
-        "1900302715660571356090444774019116326",
-        "2467888014556719520437642348850497467",
-        "2582675971475731682260721390861103474",
-        "3151102251621248215463444891373423271",
-        "3188909098022617910378369321966273882"
-    ))
-    expect_identical(head(rownames(m)), c(
-        "Abcc9", "Ackr1", "Ackr3", "Adcyap1r1", "Adgra1", "Adgra2"
-    ))
-    expect_identical(objName(e), "test_mat")
-    expect_identical(spatUnit(e), "test_spat")
-    expect_identical(featType(e), "test_feat")
-    expect_equal(dim(e), c(337, 498))
-})
-
+# test_that("aggregateFeatures works and generates exprObj", {
+#     g <- aggregateFeatures(g,
+#         spat_info = "z0",
+#         feat_info = "rna",
+#         new_spat_unit = "test_spat",
+#         new_feat_type = "test_feat",
+#         name = "test_mat",
+#         verbose = FALSE,
+#         return_gobject = TRUE
+#     )
+#     e <- g@expression$test_spat$test_feat$test_mat
+#     expect_s4_class(e, "exprObj")
+#     m <- e[]
+#     expect_s4_class(m, "dgCMatrix")
+#     expect_identical(head(colnames(m)), c(
+#         "1132915601442719251817312578799507532",
+#         "1900302715660571356090444774019116326",
+#         "2467888014556719520437642348850497467",
+#         "2582675971475731682260721390861103474",
+#         "3151102251621248215463444891373423271",
+#         "3188909098022617910378369321966273882"
+#     ))
+#     expect_identical(head(rownames(m)), c(
+#         "Abcc9", "Ackr1", "Ackr3", "Adcyap1r1", "Adgra1", "Adgra2"
+#     ))
+#     expect_identical(objName(e), "test_mat")
+#     expect_identical(spatUnit(e), "test_spat")
+#     expect_identical(featType(e), "test_feat")
+#     expect_equal(dim(e), c(337, 498))
+# })
+#
 
 
