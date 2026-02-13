@@ -157,6 +157,13 @@ setMethod(
 #' size based on \code{raster_size} param. See details. When `FALSE`, plots via
 #' [terra::plot()]
 #' @param raster_size Default is 600. Only used when \code{raster} is TRUE
+#' @param count `logical`. Show point density using `count` statistic per
+#' rasterized cell. (Default = TRUE) This param affects `col` param
+#' defaults. When TRUE, `col` is `grDevices::hcl.colors(256)`. When `FALSE`,
+#' "black" and "white" are used.
+#' @param sigma `numeric` (default = 2). Amount of smoothing when 
+#' `count = TRUE`. Set `NULL` for no smoothing. 
+#' Larger values can take a while.
 #' @details
 #' *\[giottoPoints raster plotting\]*
 #' Fast plotting of points information by rasterizing the information using
@@ -169,10 +176,6 @@ setMethod(
 #'   * **force_size** logical. `raster_size` param caps at 1:1 with the
 #'   spatial extent, but also with a minimum resulting px dim of 100. To ignore
 #'   these constraints, set `force_size = FALSE`
-#'   * **dens** logical. Show point density using `count` statistic per
-#'   rasterized cell. (Default = FALSE). This param affects `col` param is
-#'   defaults. When TRUE, `col` is `grDevices::hcl.colors(256)`. When `FALSE`,
-#'   "black" and "white" are used.
 #'   * **background** (optional) background color. Usually not used when a
 #'   `col` color mapping is sufficient.
 #'
@@ -184,17 +187,18 @@ setMethod(
 #'
 #' # ----- rasterized plotting ----- #
 #' # plot points binary
-#' plot(gpoints)
+#' plot(gpoints, count = FALSE)
 #' # plotting all features maps colors on an image level
 #' plot(gpoints, col = grDevices::hcl.colors(n = 256)) # only 2 colors are used
 #' plot(gpoints, col = "green", background = "purple")
 #'
 #' # plot points density (by count)
-#' plot(gpoints, dens = TRUE, raster_size = 300)
+#' plot(gpoints, raster_size = 300)
+#' plot(gpoints, raster_size = 300, sigma = 4)
 #'
 #' # force_size = TRUE to ignore default constraints on too big or too small
 #' # (see details)
-#' plot(gpoints, dens = TRUE, raster_size = 80, force_size = TRUE)
+#' plot(gpoints, raster_size = 80, force_size = TRUE)
 #'
 #' # plot specific feature(s)
 #' plot(gpoints, feats = featIDs(gpoints)[seq_len(4)])
@@ -212,14 +216,16 @@ setMethod(
 #' @export
 setMethod(
     "plot", signature(x = "giottoPoints", y = "missing"),
-    function(x, point_size = 0, feats = NULL, raster = TRUE, raster_size = 600, 
-            ...) {
+    function(x, point_size = 0, feats = NULL, raster = TRUE, 
+        raster_size = 600, count = TRUE, sigma = 2,
+        ...) {
         if (length(x@unique_ID_cache) == 0) {
             stop(wrap_txt("No geometries to plot"), call. = FALSE)
         }
         .plot_giotto_points(
             x = x, point_size = point_size, feats = feats,
-            raster = raster, raster_size = raster_size, ...
+            raster = raster, raster_size = raster_size, 
+            count = count, sigma = sigma, ...
         )
     }
 )
@@ -609,32 +615,28 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
     feats = NULL,
     raster = TRUE,
     raster_size = 600L,
+    count,
+    sigma,
     ...) {
-    args_list <- list(feats, asp = 1L, ...)
-
-    # point size
-    if (is.null(args_list$cex)) args_list$cex <- point_size
-
-    # get values to plot
-    args_list$data <- x[]
-
+    # plot paramlist edits
+    if (length(feats) == 1L) {
+        x <- x[feats]
+        feats <- NULL
+    }
+    a <- list(feats, asp = 1L, ...)
+    a$cex <- a$cex %null% point_size
+    a$data <- x[] # get data to plot
 
     # plot
-    if (raster) {
-        package_check(
-            "scattermore",
-            repository = "CRAN",
-            custom_msg = "scattermore must be installed for plotting mode 
-            'raster' = TRUE. To install: install.packages('scattermore')"
-        )
-        args_list$size <- raster_size
-        do.call(".plot_giotto_points_raster", args_list)
+    if (isTRUE(raster)) {
+        a$size <- raster_size
+        a$count <- count
+        a$sigma <- sigma
+        do.call(".plot_giotto_points_raster", a)
     } else {
-        do.call(".plot_giotto_points_vector", args_list)
+        do.call(".plot_giotto_points_vector", a)
     }
 }
-
-
 
 #' @description plot giotto points on a raster
 #' @param data points SpatVector
@@ -642,86 +644,70 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
 #' Rasterized plotting workflow for giottoPoints via scattermore
 #' @param ... additional params to pass
 #' @noRd
-.plot_giotto_points_raster <- function(data, feats = NULL, ...) {
-    args_list <- list(...)
+.plot_giotto_points_raster <- function(data, 
+    feats = NULL,
+    count, sigma, 
+    ...) {
+    a <- list(...)
 
     # raster size
-    if (is.null(args_list$size)) {
-        args_list$size <- c(600, 600)
-    } else if (length(args_list$size) == 1L) {
-        # if size provided as single value, replicate to give a square window
-        args_list$size <- rep(args_list$size, 2L)
+    a$size <- a$size %null% c(600, 600)
+    if (length(a$size) == 1L) {
+        # if size provided as single value, replicate for square window
+        a$size <- rep(a$size, 2L)
     }
-
-    # axis font size
-    if (is.null(args_list$cex.axis)) args_list$cex.axis <- 0.7
-
-    args_list$ann <- FALSE
+    a$cex.axis <- a$cex.axis %null% 0.7 # axis font size
+    a$ann <- FALSE
 
     if (is.null(feats)) {
-        include_values <- FALSE
-    } else {
-        include_values <- TRUE
+        a$count <- count
+        a$sigma <- sigma
+        do.call(.plot_giotto_points_all, args = c(list(x = data), a))
+        return(invisible())
     }
-
-    dataDT <- data.table::as.data.table(
-        x = data,
-        geom = "XY",
-        include_values = include_values
+  
+    .plot_giotto_points_several(
+        data = data,
+        feats = feats,
+        args_list = a
     )
-
-
-    if (length(feats) == 0L) {
-        do.call(.plot_giotto_points_all, args = c(list(x = data), args_list))
-    } else if (length(feats) == 1L) {
-        .plot_giotto_points_one(
-            dataDT = dataDT,
-            feats = feats,
-            args_list = args_list
-        )
-    } else {
-        .plot_giotto_points_several(
-            dataDT = dataDT,
-            feats = feats,
-            args_list = args_list
-        )
-    }
 }
 
 
 #' @description
-#' Quick plotting of SpatVector points information via terra::rasterize(). For
-#' terra `SpatVectors`, this is faster than scattermore plotting.
+#' Quick plotting of SpatVector points information via `terra::rasterize()``.
+#' For terra `SpatVectors`, this is faster than {scattermore} plotting.
 #' @param x input `SpatVector` or `giottoPoints`
 #' @param size numeric. Rasterization major axis pixel length. Automatically
 #' caps at the original extent size AKA full res, but with a minimum px dim
 #' of 100. To ignore these constraints, use `force_size = TRUE`
-#' @param force_size logical. Whether to ignore constrains on `size` param
+#' @param force_size logical. Whether to ignore constraints on `size` param
 #' @param col character vector. Colors to map. Default is
-#' `grDevices::hcl.colors(256)` for `dens = TRUE`, and black and white when
-#' `dens = FALSE`
+#' `grDevices::hcl.colors(256)` for `count = TRUE`, and black and white when
+#' `count = FALSE`
 #' @param background (optional) background color. Usually not used when a `col`
 #' color mapping is sufficient.
-#' @param dens logical. Show point density using `count` statistic per
-#' rasterized cell. (Default = FALSE)
 #' @param ... additonal params to pass to terra::plot()
 #' @keywords internal
 #' @noRd
-.plot_giotto_points_all <- function(
-        x,
+.plot_giotto_points_all <- function(x,
         size = 600,
         force_size = FALSE,
-        dens = FALSE,
+        dens = NULL,
+        count = TRUE,
+        sigma = NULL,
         col = NULL,
         background,
         ...) {
+    checkmate::assert_numeric(sigma, null.ok = TRUE)
+    checkmate::assert_logical(count, null.ok = TRUE)
     pargs <- list(...)
-    rargs <- list()
-    if (!is.null(pargs$ext)) {
-        e <- ext(pargs$ext)
-    } else {
-        e <- ext(x)
+    rargs <- list()      
+    if (!is.null(dens)) {
+        .Deprecated(msg = "'dens' is deprecated, use 'count' instead")
+        count <- dens
     }
+    e <- ext(pargs$ext %null% x)
     e_r <- range(e)
 
     # decide rasterization resolution
@@ -735,17 +721,25 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
     }
 
     # rasterization
-    r <- terra::rast(e, res = res)
-    if (isTRUE(dens)) rargs$fun <- "count"
+    r <- terra::rast(e, res = res) # create raster
+    if (isTRUE(count)) rargs$fun <- "count"
     rargs$y <- r
     rargs$x <- x[]
-    r2 <- do.call(terra::rasterize, args = rargs)
+    r <- do.call(terra::rasterize, args = rargs)
 
+    # smoothing
+    if (!is.null(sigma) && count) {
+        r <- terra::focal(r, 
+            w = terra::focalMat(r, d = sigma, type = "Gauss"), 
+            fun = sum, na.rm = TRUE
+        )
+    }
+  
     # plotting
-    pargs$x <- r2
+    pargs$x <- r
     pargs$legend <- pargs$legend %null% FALSE
     if (is.null(col)) {
-        if (isTRUE(dens)) {
+        if (isTRUE(count)) {
             pal <- grDevices::hcl.colors(n = 256)
         } else {
             pal <- c("black", "white")
@@ -767,35 +761,22 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
     do.call(terra::plot, args = pargs)
 }
 
-
-
-.plot_giotto_points_one <- function(dataDT, feats, args_list) {
-    # NSE vars
-    feat_ID <- NULL
-
-    if (!feats %in% dataDT[, feat_ID]) {
-        .gstop(str_vector(feats), "not found in giottoPoints", .n = 6L)
-    }
-
-    dataDT <- dataDT[feat_ID == feats] # select single feats's data
-    args_list$x <- dataDT$x
-    args_list$y <- dataDT$y
-    args_list$col <- "white"
-
-    plot(0, 0, type = "n", ann = FALSE, axes = FALSE)
-    u <- par("usr") # coordinates of the plot area
-    rect(u[1], u[3], u[2], u[4], col = "black", border = NA)
-    par(new = TRUE)
-
-    do.call(scattermore::scattermoreplot, args_list)
-}
-
-
-
-.plot_giotto_points_several <- function(dataDT, feats, args_list) {
+.plot_giotto_points_several <- function(data, feats, args_list) {
     # NSE vars
     feat_color_idx <- feat_ID <- NULL
+  
+    package_check(
+        "scattermore",
+        repository = "CRAN",
+        custom_msg = "scattermore must be installed for plotting mode 
+        'raster' = TRUE. To install: install.packages('scattermore')"
+    )
 
+    dataDT <- data.table::as.data.table(data,
+        geom = "XY",
+        include_values = !is.null(feats)
+    )
+  
     missing_feats <- feats[!feats %in% dataDT[, feat_ID]]
     if (length(missing_feats) > 0L) {
         .gstop(str_vector(missing_feats), "not found in giottoPoints", .n = 6L)
