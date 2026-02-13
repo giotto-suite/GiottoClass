@@ -616,7 +616,7 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
     raster = TRUE,
     raster_size = 600L,
     count,
-    sigma,
+    sigma = NULL,
     ...) {
     # plot paramlist edits
     if (length(feats) == 1L) {
@@ -646,7 +646,7 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
 #' @noRd
 .plot_giotto_points_raster <- function(data, 
     feats = NULL,
-    count, sigma, 
+    count, sigma = NULL, 
     ...) {
     a <- list(...)
 
