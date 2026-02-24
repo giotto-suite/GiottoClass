@@ -20,6 +20,15 @@ setClassUnion("nullOrLogical", c("NULL", "logical"))
 #' @noRd
 setClassUnion("gIndex", c("numeric", "logical", "character"))
 
+# ** gsource class ####
+#' @name gsource
+#' @title Giotto Sources
+#' @description
+#' Object defining a data backend for a Giotto object. The `gsource`
+#' class is VIRTUAL. Specific backend types should extend from this class.
+#' @export
+setClass("gsource", contains = "VIRTUAL")
+
 # ** giottoSubobject Class ####
 #' @keywords internal
 #' @noRd

@@ -76,7 +76,11 @@ NULL
 #' provided
 #' @param expression_matrix_class class of expression matrix to
 #' use (e.g. 'dgCMatrix', 'DelayedArray')
-#' @param h5_file path to h5 file
+#' @param backend `filepath` or `gsource` (optional, requires {GiottoDisk}). 
+#'   Path to set up a project directory. Does not have to already exist.
+#'   Accepts a `gsource`-inheriting backend manager. If a filepath is given,
+#'   uses a `gDirSource` by default.
+#' @param h5_file deprecated. Use `backend` instead
 #' @param verbose be verbose when building Giotto object
 #' @returns `giotto` object
 #' @section single step creation (conventional):
@@ -219,7 +223,8 @@ createGiottoObject <- function(expression,
     cores = determine_cores(),
     raw_exprs = NULL,
     expression_matrix_class = c("dgCMatrix", "DelayedArray"),
-    h5_file = NULL,
+    backend = NULL,
+    h5_file = deprecated(),
     verbose = FALSE) {
     debug_msg <- FALSE # for reading debug help
     initialize_per_step <- FALSE
@@ -236,13 +241,23 @@ createGiottoObject <- function(expression,
         images <- c(images, largeImages)
     }
 
+    if (is_present(h5_file)) backend <- h5_file
+    if (!is.null(backend)) {
+        package_check("GiottoDisk", repository = "github:drieslab/GiottoDisk")
+        if (is.character(backend)) {
+            backend <- GiottoDisk::gDirSource(path = backend)
+        }
+    } else {
+        backend <- new("gMemSource")
+    }
+
     # create minimum giotto
     gobject <- giotto(
         expression_feat = expression_feat,
         offset_file = offset_file,
         instructions = instructions,
         versions = .versions_info(),
-        h5_file = h5_file
+        source = backend
     )
 
 

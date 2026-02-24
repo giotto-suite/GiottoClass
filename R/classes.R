@@ -41,6 +41,20 @@ NULL
     return(gobject)
 }
 
+.gsource <- function(gobject) {
+    if (is.null(attr(gobject, "source"))) {
+        return(new("gMemSource"))
+    }
+    gobject@source
+}
+
+`.gsource<-` <- function(gobject, value) {
+    if (!inherits(value, "gsource")) {
+        stop("Backend source manager must extend class `gsource`\n", call. = FALSE)
+    }
+    gobject@source <- value
+    gobject
+}
 
 #' @title Update giotto object
 #' @name updateGiottoObject
@@ -126,6 +140,11 @@ updateGiottoObject <- function(gobject) {
     if (.gversion(gobject) < numeric_version("0.4.12")) {
         attr(gobject, "misc") <- list()
     }
+    
+    # GiottoClass 0.5.1 adds @source slot
+    if (.gversion(gobject) < "0.5.1") {
+        gobject <- .update_source_slot(gobject)
+    }
 
     # -------------------------------------------------------------------------#
 
@@ -171,7 +190,7 @@ updateGiottoObject <- function(gobject) {
         ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
     }
 
-    # finally, set updated version number
+    # set updated version number
     .gversion(gobject) <- packageVersion("GiottoClass")
 
     return(gobject)
@@ -220,7 +239,12 @@ updateGiottoObject <- function(gobject) {
     return(x)
 }
 
-
+# for updating pre-0.5.1 objects
+.update_source_slot <- function(x) {
+    checkmate::assert_class(x, "giotto")
+    attr(x, "source") <- new("gMemSource")
+    x
+}
 
 
 
@@ -307,9 +331,9 @@ giotto <- setClass(
         versions = "list",
         join_info = "ANY",
         multiomics = "ANY",
+        source = "gsource",
         h5_file = "ANY",
         misc = "list"
-        # mirai = 'list'
     ),
     prototype = list(
         expression = NULL,
@@ -333,9 +357,9 @@ giotto <- setClass(
         versions = .versions_info(),
         join_info = NULL,
         multiomics = NULL,
+        source = new("gMemSource"),
         h5_file = NULL,
         misc = list()
-        # mirai = list()
     )
 
     # validity = check_giotto_obj

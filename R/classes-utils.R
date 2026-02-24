@@ -1,6 +1,9 @@
 #' @include classes-virtuals.R
 NULL
 
+# ** gMemSource ####
+setClass("gMemSource", contains = "gsource")
+
 # ** affine2d ####
 setClass(
     Class = "affine2d",
