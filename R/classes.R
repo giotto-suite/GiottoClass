@@ -43,7 +43,7 @@ NULL
 
 .gsource <- function(gobject) {
     if (is.null(attr(gobject, "source"))) {
-        return(new("gMemSource"))
+        return(NULL)
     }
     gobject@source
 }
@@ -242,7 +242,8 @@ updateGiottoObject <- function(gobject) {
 # for updating pre-0.5.1 objects
 .update_source_slot <- function(x) {
     checkmate::assert_class(x, "giotto")
-    attr(x, "source") <- new("gMemSource")
+    attr(x, "source") <- list() # init slot
+    x@source <- NULL
     x
 }
 
@@ -331,7 +332,7 @@ giotto <- setClass(
         versions = "list",
         join_info = "ANY",
         multiomics = "ANY",
-        source = "gsource",
+        source = "ANY",
         h5_file = "ANY",
         misc = "list"
     ),
@@ -357,7 +358,7 @@ giotto <- setClass(
         versions = .versions_info(),
         join_info = NULL,
         multiomics = NULL,
-        source = new("gMemSource"),
+        source = NULL,
         h5_file = NULL,
         misc = list()
     )
