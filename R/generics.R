@@ -50,6 +50,14 @@ setGeneric(
 # Some objects may operate base on on-disk files.
 setGeneric("reconnect", function(x, ...) standardGeneric("reconnect"))
 
+# copy() S4 generic ####
+setGeneric("copy",
+    function(x) standardGeneric("copy"),
+    useAsDefault = data.table::copy
+)
+
+# lazy operations ####
+setGeneric("doDeferred", function(x, ...) standardGeneric("doDeferred"))
 
 # Object Characteristics ####
 
@@ -61,29 +69,6 @@ if (!isGeneric("dim")) setOldClass("dim")
 ## colnames and rownames generics ####
 if (!isGeneric("colnames")) setOldClass("colnames")
 if (!isGeneric("rownames")) setOldClass("rownames")
-
-
-# copy() S4 generic ####
-setGeneric("copy",
-    function(x) standardGeneric("copy"),
-    useAsDefault = data.table::copy
-)
-
-
-# lazy operations ####
-setGeneric("doDeferred", function(x, ...) standardGeneric("doDeferred"))
-
-
-
-# spatial operations ####
-setGeneric(
-    "calculateOverlap",
-    function(x, y, ...) standardGeneric("calculateOverlap")
-)
-setGeneric(
-    "overlapToMatrix",
-    function(x, ...) standardGeneric("overlapToMatrix")
-)
 
 #' @title Data Processing
 #' @name processData
@@ -114,6 +99,16 @@ setGeneric("processData", function(x, param, ...) standardGeneric("processData")
 #' @returns Clustering results. Exact outputs may depend on param settings
 #' @export
 setGeneric("clusterData", function(x, param, ...) standardGeneric("clusterData"))
+
+# spatial operations ####
+setGeneric(
+    "calculateOverlap",
+    function(x, y, ...) standardGeneric("calculateOverlap")
+)
+setGeneric(
+    "overlapToMatrix",
+    function(x, ...) standardGeneric("overlapToMatrix")
+)
 
 # Methods and documentations found in methods-spatShift.R
 
