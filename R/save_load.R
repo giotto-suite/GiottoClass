@@ -2,10 +2,14 @@
 
 #' @title saveGiotto
 #' @name saveGiotto
-#' @description Saves a Giotto object to a specific folder structure
+#' @description Saves a Giotto object to a specific folder structure.
+#'   Save location and behavior changes when the managed by a `gsource`
+#'   inheriting project manager (see [GiottoDisk::gsource] and
+#'   [GiottoDisk::`gDirSource-class`] for examples).
 #' @param gobject Giotto object
-#' @param foldername Folder name
+#' @param foldername Folder name (ignored when `gsource` is managed)
 #' @param dir Directory where to create the folder
+#'   (ignored when `gsource` is managed)
 #' @param method method to save main object
 #' @param method_params additional method parameters for RDS or qs
 #' @param overwrite Overwrite existing folders
@@ -40,6 +44,18 @@ saveGiotto <- function(
         include_feat_coord = TRUE,
         verbose = TRUE,
         ...) {
+  
+    if (!is.null(gobject@source)) {
+        return(GiottoDisk::snapshotSave(gobject@source, gobject,
+            method = method,
+            method_params = method_params,
+            overwrite = overwrite,
+            export_image = export_image,
+            verbose = verbose,
+            ...
+        ))
+    }
+  
     # check params
     checkmate::assert_character(foldername)
     checkmate::assert_character(dir)
@@ -207,7 +223,8 @@ loadGiotto <- function(path_to_folder,
     reconnect_giottoImage = TRUE,
     python_path = NULL,
     init_gobject = TRUE,
-    verbose = TRUE) {
+    verbose = TRUE,
+    ...) {
     # data.table vars
     img_type <- NULL
 
@@ -217,33 +234,42 @@ loadGiotto <- function(path_to_folder,
     if (!file.exists(path_to_folder)) {
         stop("path_to_folder does not exist \n")
     }
-
+  
     ## 1. load giotto object
-    gobject <- .load_gobject_core(
-        path_to_folder = path_to_folder,
-        load_params = load_params,
-        verbose = verbose
-    )
+    if (requireNamespace("GiottoDisk", quietly = TRUE)) {
+        src <- GiottoDisk::resolveSource(path_to_folder)
+        gobject <- GiottoDisk::snapshotLoad(src, 
+            load_params = load_params,
+            verbose = verbose,
+            ...
+        )
+    } else {
+        gobject <- .load_gobject_core(
+            path_to_folder = path_to_folder,
+            load_params = load_params,
+            verbose = verbose
+        )
+      
+          ### ### spatial information loading ### ###
+        # terra vector objects are serialized as .shp files.
+        # These .shp files have to be read back in and then the relevant objects
+        # in the giotto object need to be regenerated.
 
-    ### ### spatial information loading ### ###
-    # terra vector objects are serialized as .shp files.
-    # These .shp files have to be read back in and then the relevant objects
-    # in the giotto object need to be regenerated.
-
-    ## 2. read in spatial features
-    gobject <- .load_giotto_feature_info(
-        gobject = gobject,
-        path_to_folder = path_to_folder,
-        verbose = verbose
-    )
+        ## 2. read in spatial features
+        gobject <- .load_giotto_feature_info(
+            gobject = gobject,
+            path_to_folder = path_to_folder,
+            verbose = verbose
+        )
 
 
-    ## 3. read in spatial polygons
-    gobject <- .load_giotto_spatial_info(
-        gobject = gobject,
-        path_to_folder = path_to_folder,
-        verbose = verbose
-    )
+        ## 3. read in spatial polygons
+        gobject <- .load_giotto_spatial_info(
+            gobject = gobject,
+            path_to_folder = path_to_folder,
+            verbose = verbose
+        )
+    }
 
 
     ## 4. images
