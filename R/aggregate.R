@@ -1978,7 +1978,7 @@ setMethod("overlapToMatrix", signature("overlapIntensityDT"),
                 provenance = prov(x)
             )
         )
-
+    })
 
 
 #' @title overlapToMatrixMultiPoly
