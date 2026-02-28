@@ -339,6 +339,9 @@ setMethod(
     verbose = TRUE,
     spatial_info = deprecated(),
     ...) {
+
+        vmsg(.is_debug = TRUE, "[calc_overlap][giotto][missing]...")
+
         # deprecations
         spat_info <- GiottoUtils::deprecate_param(spatial_info, spat_info,
             fun = "calculateOverlap", when = "0.4.7"
@@ -516,6 +519,8 @@ setMethod(
     feat_subset_ids = deprecated(),
     count_info_column = deprecated(),
     ...) {
+        vmsg(.is_debug = TRUE, "[calc_overlap][gpolygon][gpoints]...")
+
         is_db_x <- inherits(x@spatVector, "dbSpatial")
         is_db_y <- inherits(y@spatVector, "dbSpatial")
 
@@ -638,6 +643,7 @@ setMethod(
         return_gpolygon = TRUE,
         verbose = TRUE,
         ...) {
+        vmsg(.is_debug = TRUE, "[calc_overlap][gpolygon][image]...")
         calculateOverlap(
             x = x,
             y = y@raster_object,
@@ -660,6 +666,7 @@ setMethod(
     return_gpolygon = TRUE,
     verbose = TRUE,
     ...) {
+        vmsg(.is_debug = TRUE, "[calc_overlap][gpolygon][affineimage]...")
         aff <- y@affine
         # perform the reverse of the image's affine on the polys
         inv_aff_poly <- affine(x, aff, inv = TRUE)
@@ -691,6 +698,8 @@ setMethod(
     return_gpolygon = TRUE,
     verbose = TRUE,
     ...) {
+        vmsg(.is_debug = TRUE, "[calc_overlap][gpolygon][spatraster]...")
+
         if (is.null(name_overlap)) {
             stop("calculateOverlap: name_overlap must be given", call. = FALSE)
         }
@@ -742,6 +751,8 @@ setMethod(
     ...) {
         checkmate::assert_true(terra::is.polygons(x))
         GiottoUtils::package_check("exactextractr")
+      
+        vmsg(.is_debug = TRUE, "[calc_overlap][spatvector][spatraster]...")
 
         # channel naming (catch if none or too few)
         image_names <- names(y)
@@ -814,6 +825,8 @@ setMethod(
     verbose = TRUE,
     feat_subset_ids = deprecated(),
     count_info_column = deprecated()) {
+          vmsg(.is_debug = TRUE, "[calc_overlap][spatvector][spatvector]...")
+
         method <- match.arg(method, choices = c("vector", "raster"))
         feat_subset_values <- GiottoUtils::deprecate_param(
             feat_subset_ids, feat_subset_values,
@@ -1577,6 +1590,7 @@ setMethod(
     poly_info = deprecated(),
     count_info_column = deprecated(),
     ...) {
+        vmsg(.is_debug = TRUE, "[overlap2mat][giotto]...")
         # deprecations
         spat_info <- GiottoUtils::deprecate_param(poly_info, spat_info,
             fun = "overlapToMatrix", when = "0.4.7"
@@ -1683,6 +1697,7 @@ setMethod(
     feat_count_column = NULL,
     count_info_column = deprecated(),
     ...) {
+        vmsg(.is_debug = TRUE, "[overlap2mat][gpolygon]...")
         # deprecations
         feat_count_column <- GiottoUtils::deprecate_param(
             count_info_column, feat_count_column,
@@ -1741,6 +1756,7 @@ setMethod(
     verbose = TRUE,
     count_info_column = deprecated(),
     ...) {
+        vmsg(.is_debug = TRUE, "[overlap2mat][spatvector]...")
         # deprecations
         feat_count_column <- GiottoUtils::deprecate_param(
             count_info_column, feat_count_column,
@@ -1867,6 +1883,7 @@ setMethod(
     fun = "sum",
     output = c("Matrix", "data.table"),
     aggr_function = deprecated()) {
+        vmsg(.is_debug = TRUE, "[overlap2mat][data.table]...")
 
         fun <- GiottoUtils::deprecate_param(aggr_function, fun,
             fun = "overlapToMatrix", when = "0.4.7"
@@ -1921,6 +1938,7 @@ setMethod("overlapToMatrix", signature("overlapPointDT"),
     feat_count_column = NULL,
     output = c("Matrix", "exprObj"),
     ...) {
+        vmsg(.is_debug = TRUE, "[overlap2mat][overlap_point_dt]...")
         output <- match.arg(tolower(output), choices = c("matrix", "exprobj"))
         m <- as.matrix(x, feat_count_column = feat_count_column, ...)
         if (isTRUE(sort)) m <- .mixedsort_rowcols(m)
@@ -1946,6 +1964,7 @@ setMethod("overlapToMatrix", signature("overlapIntensityDT"),
              sort = TRUE,
              output = c("Matrix", "exprObj"),
              ...) {
+        vmsg(.is_debug = TRUE, "[overlap2mat][overlap_intensity_dt]...")
         output <- match.arg(tolower(output), choices = c("matrix", "exprobj"))
         m <- as.matrix(x, ...)
         if (isTRUE(sort)) m <- .mixedsort_rowcols(m)
@@ -1959,7 +1978,6 @@ setMethod("overlapToMatrix", signature("overlapIntensityDT"),
                 provenance = prov(x)
             )
         )
-})
 
 
 
