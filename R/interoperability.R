@@ -1329,15 +1329,17 @@ giottoToSeuratV4 <- function(
                 assay = assay_use
             )
             if ("normalized" %in% slot_use) {
-                sobj <- Seurat::SetAssayData(sobj,
-                    slot = "data",
+                sobj <- Seurat::SetAssayData(
+                    sobj,
+                    layer = "data",
                     new.data = expr_use[["normalized"]][],
                     assay = assay_use
                 )
             }
             if ("scaled" %in% slot_use) {
-                sobj <- Seurat::SetAssayData(sobj,
-                    slot = "scale.data",
+                sobj <- Seurat::SetAssayData(
+                    sobj,
+                    layer = "scale.data",
                     # does not accept 'dgeMatrix'
                     new.data = as.matrix(expr_use[["scaled"]][]),
                     assay = assay_use
@@ -1369,8 +1371,9 @@ giottoToSeuratV4 <- function(
             sobj[[assay_use]] <- assay_obj
             if ("scaled" %in% slot_use) {
                 data_scale <- as.matrix(expr_use[["scaled"]][])
-                sobj <- Seurat::SetAssayData(sobj,
-                    slot = "scale.data",
+                sobj <- Seurat::SetAssayData(
+                    sobj,
+                    layer = "scale.data",
                     new.data = data_scale,
                     assay = assay_use
                 )
@@ -1552,6 +1555,10 @@ giottoToSeuratV4 <- function(
 #' @param ... additional params to pass to \code{\link{getSpatialLocations}}
 #' @returns Seurat object
 #' @keywords seurat interoperability
+#' @examples
+#' g <- GiottoData::loadGiottoMini("visium")
+#' giottoToSeuratV5(g, tech = "Visium")
+#' 
 #' @export
 giottoToSeuratV5 <- function(gobject,
     spat_unit = NULL,
@@ -2058,25 +2065,29 @@ seuratToGiottoV4 <- function(
         verbose = TRUE) {
     package_check("Seurat")
     if (is.null(Seurat::GetAssayData(
-        object = sobject, slot = "counts",
+        object = sobject, 
+        layer = "counts",
         assay = spatial_assay
     ))) {
         wrap_msg("No raw expression values are provided in spatial_assay")
         return(sobject)
     } else {
         exp <- Seurat::GetAssayData(
-            object = sobject, slot = "counts",
+            object = sobject, 
+            layer = "counts",
             assay = spatial_assay
         )
         if (!is.null(sobject@assays$SCT)) {
             normexp <- Seurat::GetAssayData(
-                object = sobject, slot = "counts",
+                object = sobject, 
+                layer = "counts",
                 assay = "SCT"
             )
         }
         if (!is.null(slot(sobject, "assays")[[spatial_assay]]@data)) {
             normexp <- Seurat::GetAssayData(
-                object = sobject, slot = "data",
+                object = sobject, 
+                layer = "data",
                 assay = spatial_assay
             )
         }
@@ -2310,6 +2321,11 @@ seuratToGiottoV4 <- function(
 #' @returns A Giotto object converted from Seurat object with all computations
 #' stored in it.
 #' @keywords seurat interoperability
+#' @examples
+#' g <- GiottoData::loadGiottoMini("visium")
+#' s <- giottoToSeuratV5(g, tech = "Visium")
+#' seuratToGiottoV5(s, spatial_assay = "rna")
+#' 
 #' @export
 seuratToGiottoV5 <- function(
         sobject,
@@ -2325,52 +2341,41 @@ seuratToGiottoV5 <- function(
     # NSE vars
     sdimy <- NULL
 
-    if (is.null(Seurat::GetAssayData(
-        object = sobject, slot = "counts",
-        assay = spatial_assay
-    ))) {
+    if (is.null(sobject@assays[[spatial_assay]]$counts)) {
         wrap_msg("No raw expression values are provided in spatial_assay")
         return(sobject)
     } else {
         exp <- Seurat::GetAssayData(
-            object = sobject, slot = "counts",
+            object = sobject, 
+            layer = "counts",
             assay = spatial_assay
         )
-        if (!is.null(sobject@assays$SCT)) {
+        
+        if (!is.null(sobject@assays[[spatial_assay]]$data)) {
             normexp <- Seurat::GetAssayData(
-                object = sobject, slot = "counts",
-                assay = "SCT"
+                object = sobject, 
+                layer = "data",
+                assay = spatial_assay
+            )
+        }
+        
+        if(!is.null(sobject@assays[[spatial_assay]]$scale.data)) {
+            scaledexp <- Seurat::GetAssayData(
+                object = sobject, 
+                layer = "scale.data",
+                assay = spatial_assay
             )
         }
 
-        if ("data" %in% slotNames(sobject@assays[[spatial_assay]])) {
-            if (!is.null(slot(sobject, "assays")[[spatial_assay]]@data)) {
-                normexp <- Seurat::GetAssayData(
-                    object = sobject,
-                    slot = "data", assay = spatial_assay
-                )
-            }
-        }
-        if ("layers" %in% slotNames(sobject@assays[[spatial_assay]])) {
-            if (!is.null(slot(sobject, "assays")[[spatial_assay]]@layers)) {
-                normexp <- SeuratObject::LayerData(
-                    object = sobject,
-                    assay = spatial_assay
-                )
-            }
-        }
-
         # Cell Metadata
-        cell_metadata <- sobject@meta.data
         cell_metadata <- data.table::as.data.table(
-            cell_metadata,
+            sobject@meta.data,
             keep.rownames = TRUE
         )
 
         # Feat Metadata
-        feat_metadata <- sobject[[]]
         feat_metadata <- data.table::as.data.table(
-            feat_metadata,
+            sobject[[]],
             keep.rownames = TRUE
         )
 
@@ -2379,8 +2384,7 @@ seuratToGiottoV5 <- function(
         if (sum(vapply(
             dim_reduction,
             function(x) length(sobject@reductions[[x]]),
-            FUN.VALUE = integer(1L)
-        )) == 0) {
+            FUN.VALUE = integer(1L))) == 0) {
             dimReduc_list <- NULL
         } else {
             dimReduc_list <- lapply(dim_reduction, function(x) {
@@ -2415,7 +2419,6 @@ seuratToGiottoV5 <- function(
 
                 return(dimReduc)
             })
-            # names(dimReduc_list) <- dim_reduction
         }
 
         # Spatial Locations
@@ -2462,10 +2465,14 @@ seuratToGiottoV5 <- function(
                 spat_loc <- NULL
             }
         }
-        gobject <- createGiottoObject(exp,
+        
+        # Create Giotto object
+        gobject <- createGiottoObject(
+            exp,
             spatial_locs = spat_loc,
             dimension_reduction = dimReduc_list
         )
+        
         if (exists("normexp") == TRUE) {
             exprObj <- create_expr_obj(
                 name = "normalized",
@@ -2476,52 +2483,70 @@ seuratToGiottoV5 <- function(
             )
             gobject <- set_expression_values(
                 gobject = gobject,
-                values = exprObj, set_defaults = FALSE
+                values = exprObj, 
+                set_defaults = FALSE
             )
-            # Subcellular
-            name <- names(sobject@images)
-            # if (!is.null(subcellular_assay)){
-            if (length(sobject@assays[[subcellular_assay]]) == 1) {
-                spat_coord <- Seurat::GetTissueCoordinates(sobject)
-                if ("cell" %in% colnames(spat_coord)) {
-                    spat_coord$cell_ID <- spat_coord$cell
-                } else {
-                    spat_coord$cell_ID <- rownames(spat_coord)
-                }
-                colnames(spat_coord)[1:2] <- c("sdimx", "sdimy")
-                exp <- exp[, c(intersect(spat_coord$cell_ID, colnames(exp)))]
-                spat_loc <- spat_coord
+        }
+        
+        if (exists("normexp") == TRUE) {
+            exprObj <- create_expr_obj(
+                name = "normalized",
+                exprMat = normexp,
+                spat_unit = "cell",
+                feat_type = "rna",
+                provenance = "cell"
+            )
+            gobject <- set_expression_values(
+                gobject = gobject,
+                values = exprObj, 
+                set_defaults = FALSE
+            )
+        }
+        
+        
+        # Subcellular
+        name <- names(sobject@images)
+        # if (!is.null(subcellular_assay)){
+        if (length(sobject@assays[[subcellular_assay]]) == 1) {
+            spat_coord <- Seurat::GetTissueCoordinates(sobject)
+            if ("cell" %in% colnames(spat_coord)) {
+                spat_coord$cell_ID <- spat_coord$cell
+            } else {
+                spat_coord$cell_ID <- rownames(spat_coord)
             }
-            # }
-            if (!length(sobject@images) == 0) {
-                for (i in names(sobject@images)) {
-                    if ("molecules" %in% names(sobject@images[[i]]) == TRUE) {
-                        if (!length(sobject@images[[i]][["molecules"]]) == 0) {
-                            assay <- names(sobject@assays)
-                            featnames <- rownames(sobject)
-                            mol_spatlocs <- data.table::data.table()
-
-                            for (x in featnames) {
-                                df <- (Seurat::FetchData(
-                                    sobject[[i]][["molecules"]],
-                                    vars = x
-                                ))
-                                mol_spatlocs <- rbind(mol_spatlocs, df)
-                            }
-                            gpoints <- createGiottoPoints(mol_spatlocs,
-                                feat_type = "rna"
-                            )
-                            if (polygon %in% names(sobject@images)) {
-                                message("Creating Giotto polygon object from Seurat segmentation + centroids...")
-                                polygon_info <- .createGiottoPolygonFromSeurat(sobject, image_name = "Xenium")
-                            }
+            colnames(spat_coord)[1:2] <- c("sdimx", "sdimy")
+            exp <- exp[, c(intersect(spat_coord$cell_ID, colnames(exp)))]
+            spat_loc <- spat_coord
+        }
+        # }
+        if (!length(sobject@images) == 0) {
+            for (i in names(sobject@images)) {
+                if ("molecules" %in% names(sobject@images[[i]]) == TRUE) {
+                    if (!length(sobject@images[[i]][["molecules"]]) == 0) {
+                        assay <- names(sobject@assays)
+                        featnames <- rownames(sobject)
+                        mol_spatlocs <- data.table::data.table()
+                        
+                        for (x in featnames) {
+                            df <- (Seurat::FetchData(
+                                sobject[[i]][["molecules"]],
+                                vars = x
+                            ))
+                            mol_spatlocs <- rbind(mol_spatlocs, df)
+                        }
+                        gpoints <- createGiottoPoints(mol_spatlocs,
+                                                      feat_type = "rna"
+                        )
+                        if (polygon %in% names(sobject@images)) {
+                            message("Creating Giotto polygon object from Seurat segmentation + centroids...")
+                            polygon_info <- .createGiottoPolygonFromSeurat(sobject, image_name = "Xenium")
                         }
                     }
                 }
             }
         }
 
-        # Find SueratImages, extract them, and pass to create image
+        # Find SeuratImages, extract them, and pass to create image
         image_list <- list()
         for (i in names(sobject@images)) {
             simg <- sobject[[i]]
