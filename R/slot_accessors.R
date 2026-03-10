@@ -33,7 +33,7 @@
 
 
 
-# %%%%% NOTE: python and instructions accessors are currently in giotto.R %%%%%#
+# NOTE: python and instructions accessors are currently in giotto.R #
 
 
 
