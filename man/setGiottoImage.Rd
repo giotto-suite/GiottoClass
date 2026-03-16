@@ -61,7 +61,7 @@ Other functions to set data in giotto object:
 \code{\link{setExpression}()},
 \code{\link{setFeatureInfo}()},
 \code{\link{setFeatureMetadata}()},
-\code{\link{setGiotto}()},
+\code{\link{setGiotto,giotto,giottoBinPoints-method}},
 \code{\link{setMultiomics}()},
 \code{\link{setNearestNetwork}()},
 \code{\link{setPolygonInfo}()},

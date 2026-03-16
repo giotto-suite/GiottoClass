@@ -141,3 +141,6 @@ setMethod("names<-", signature("processParam"), function(x, value) {
     names(x@param) <- value
     x
 })
+
+#' @rdname names
+setMethod("names", signature("giottoPoints"), function(x) names(x[]))

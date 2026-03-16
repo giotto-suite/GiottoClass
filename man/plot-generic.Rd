@@ -40,7 +40,16 @@
   ...
 )
 
-\S4method{plot}{giottoPoints,missing}(x, point_size = 0, feats = NULL, raster = TRUE, raster_size = 600, ...)
+\S4method{plot}{giottoPoints,missing}(
+  x,
+  point_size = 0,
+  feats = NULL,
+  raster = TRUE,
+  raster_size = 600,
+  count = TRUE,
+  sigma = 2,
+  ...
+)
 
 \S4method{plot}{spatLocsObj,missing}(x, y, ...)
 
@@ -96,6 +105,15 @@ size based on \code{raster_size} param. See details. When \code{FALSE}, plots vi
 
 \item{raster_size}{Default is 600. Only used when \code{raster} is TRUE}
 
+\item{count}{\code{logical}. Show point density using \code{count} statistic per
+rasterized cell. (Default = TRUE) This param affects \code{col} param
+defaults. When TRUE, \code{col} is \code{grDevices::hcl.colors(256)}. When \code{FALSE},
+"black" and "white" are used.}
+
+\item{sigma}{\code{numeric} (default = 2). Amount of smoothing when
+\code{count = TRUE}. Set \code{NULL} for no smoothing.
+Larger values can take a while.}
+
 \item{dims}{dimensions to plot}
 }
 \value{
@@ -118,10 +136,6 @@ plotting with no specific \code{feats} input:
 \item \strong{force_size} logical. \code{raster_size} param caps at 1:1 with the
 spatial extent, but also with a minimum resulting px dim of 100. To ignore
 these constraints, set \code{force_size = FALSE}
-\item \strong{dens} logical. Show point density using \code{count} statistic per
-rasterized cell. (Default = FALSE). This param affects \code{col} param is
-defaults. When TRUE, \code{col} is \code{grDevices::hcl.colors(256)}. When \code{FALSE},
-"black" and "white" are used.
 \item \strong{background} (optional) background color. Usually not used when a
 \code{col} color mapping is sufficient.
 }
@@ -172,17 +186,18 @@ gpoints <- GiottoData::loadSubObjectMini("giottoPoints")
 
 # ----- rasterized plotting ----- #
 # plot points binary
-plot(gpoints)
+plot(gpoints, count = FALSE)
 # plotting all features maps colors on an image level
 plot(gpoints, col = grDevices::hcl.colors(n = 256)) # only 2 colors are used
 plot(gpoints, col = "green", background = "purple")
 
 # plot points density (by count)
-plot(gpoints, dens = TRUE, raster_size = 300)
+plot(gpoints, raster_size = 300)
+plot(gpoints, raster_size = 300, sigma = 4)
 
 # force_size = TRUE to ignore default constraints on too big or too small
 # (see details)
-plot(gpoints, dens = TRUE, raster_size = 80, force_size = TRUE)
+plot(gpoints, raster_size = 80, force_size = TRUE)
 
 # plot specific feature(s)
 plot(gpoints, feats = featIDs(gpoints)[seq_len(4)])

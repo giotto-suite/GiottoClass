@@ -596,16 +596,23 @@ joinGiottoObjects <- function(gobject_list,
         vmsg(.v = verbose, "6. prepare feature information")
 
         for (feat_info in names(gobj@feat_info)) {
-            # spatVector
-            feat_ids_uniq <- gobj@feat_info[[feat_info]]@spatVector$feat_ID_uniq
-            gobj@feat_info[[feat_info]]@spatVector$feat_ID_uniq <- paste0(
-                gname, "-", feat_ids_uniq
-            )
+            featureinfo <- gobj@feat_info[[feat_info]]
 
-            # networks??
-            # TODO
+            if (inherits(featureinfo, "giottoPoints")) {
+                # update feat_ID_uniq in giottoPoints spatial info
+                feat_ids_uniq <- featureinfo@spatVector$feat_ID_uniq
+                featureinfo@spatVector$feat_ID_uniq <- paste0(
+                    gname, "-", feat_ids_uniq
+                )
+            }
+
+            if (inherits(featureinfo, "giottoBinPoints")) {
+                # manually change bin IDs
+                featureinfo@bid <- paste0(gname, "-", featureinfo@bid)
+            }
+
+            gobj@feat_info[[feat_info]] <- featureinfo
         }
-
 
         updated_object_list[[gobj_i]] <- gobj
     }
@@ -743,36 +750,20 @@ joinGiottoObjects <- function(gobject_list,
 
 
     for (feat in first_features) {
-        savelist_vector <- list()
+        feat_obj_list <- lapply(updated_object_list, function(g) {
+            g@feat_info[[feat]]
+        })
 
-        for (gobj_i in seq_along(updated_object_list)) {
-            updated_feat_info <-
-                updated_object_list[[gobj_i]]@feat_info[[feat]]
+        # remove NULLs
+        nullbool <- vapply(feat_obj_list, is.null, FUN.VALUE = logical(1L))
+        feat_obj_list <- feat_obj_list[!nullbool]
 
-            if (!is.null(updated_feat_info)) {
-                spat_point_vector <- updated_feat_info@spatVector
-            } else {
-                spat_point_vector <- NULL
-            }
-
-            savelist_vector[[gobj_i]] <- spat_point_vector
-
-            # TODO: add network
-        }
-
-        comb_spatvectors <- do.call("rbind", savelist_vector)
-
-        if (is.null(comb_spatvectors)) {
-            comb_points <- NULL
+        if (length(feat_obj_list) == 0L) {
+            comb_feat_obj <- NULL
         } else {
-            comb_points <- create_giotto_points_object(
-                feat_type = feat,
-                spatVector = comb_spatvectors,
-                networks = NULL
-            )
+            comb_feat_obj <- Reduce(rbind, feat_obj_list)
         }
-
-        comb_gobject@feat_info[[feat]] <- comb_points
+        comb_gobject@feat_info[[feat]] <- comb_feat_obj
     }
 
 
