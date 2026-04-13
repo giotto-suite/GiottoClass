@@ -1,3 +1,39 @@
+# GiottoClass 0.5.2
+
+## new
+
+- `giotto` class gains a `source` slot for attaching a `gsource`-inheriting
+  backend manager (see {GiottoDisk}).
+- `createGiottoObject()` gains a `backend` param: accepts a filepath or a
+  `gsource` object. A filepath is converted to a `GiottoDisk::gDirSource`
+  automatically. Without a backend, an in-memory `gMemSource` is used.
+- `saveGiotto()` and `loadGiotto()` now delegate to
+  `GiottoDisk::snapshotSave()` / `GiottoDisk::snapshotLoad()` when a
+  `gsource` backend is attached to the object. `foldername` and `dir` params
+  are ignored in that case.
+- On-disk persistence via `GiottoDisk::sourceWrite()` is now triggered inside
+  `set_expression_values()`, `set_polygon_info()`, and `set_feature_info()`
+  when a `gsource` backend is present.
+
+## changes
+
+- `h5_file` param in `createGiottoObject()` is deprecated; use `backend`
+  instead.
+- Removed legacy h5 read/write code from `get_expression_values()` and
+  `set_expression_values()` (superseded by GiottoDisk integration).
+- `overlapInfo` class exported as an extension point.
+- `updateGiottoObject()` now upgrades pre-0.5.1 objects to initialize the
+  new `source` slot.
+
+## internal
+
+- `.gsource()` and `.gsource<-()` internal accessors for the `giotto@source`
+  slot.
+- `.update_source_slot()` internal for migrating older objects.
+- Code reorganization in `generics.R` (no functional changes).
+
+
+
 # GiottoClass 0.5.0
 
 ## changes
