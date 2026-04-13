@@ -17,13 +17,16 @@
 
 ## changes
 
+- `expression_matrix_class` param in `readExprMatrix()` is deprecated.
+  The function now reads directly to `dgCMatrix`.
 - `h5_file` param in `createGiottoObject()` is deprecated; use `backend`
   instead.
 - Removed legacy h5 read/write code from `get_expression_values()` and
   `set_expression_values()` (superseded by GiottoDisk integration).
 - `overlapInfo` class exported as an extension point.
-- `updateGiottoObject()` now upgrades pre-0.5.1 objects to initialize the
+- `updateGiottoObject()` now upgrades pre-0.5.2 objects to initialize the
   new `source` slot.
+- {chihaya} removed from Suggests; {GiottoDisk} added to Suggests.
 
 ## internal
 
