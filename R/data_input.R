@@ -62,38 +62,41 @@ readExprMatrix <- function(
 #' @title Read expression data
 #' @name readExprData
 #' @description Read a nested list of expression data inputs in order to
-#' generate a list of giotto-native exprObj
-#' @param data_list (nested) list of expression input data
-#' @param sparse (boolean, default = TRUE) read matrix data in a sparse manner
+#' generate a list of giotto-native exprObj that are addressed to specific
+#' spat_unit and feat_type based on list naming and defaults.
+#' @param data_list nested `list` of expression input data
+#' @param sparse (`logical`, default = TRUE) read matrix data in a sparse manner
 #' @param cores number of cores to use
 #' @param expression_matrix_class class of expression matrix to
 #' use (e.g. 'dgCMatrix', 'DelayedArray')
 #' @inheritParams read_data_params
 #' @returns exprObj
-#' @details
-#'
-#' mylistA = list('a' = matrix(seq(5)), 'b' = matrix(seq(5)))
-#' depth(mylistA)
-#'
-#' mylistB = list(A = list('a' = matrix(seq(5)), 'b' = matrix(seq(5))),
-#'                B = list('c' = matrix(seq(5)),'d' = matrix(seq(5))))
-#' depth(mylistB)
-#'
-#' mylistC = list('RNA' = list('RAW' = list('cell' = matrix(seq(5)),
-#'                             'nucleus' = matrix(seq(6,10))),
-#'                             'NORM' = list('cell' = matrix(seq(11,15)),
-#'                             'nucleus' = matrix(seq(20,25)))),
-#'                'PROT' = list('RAW' = list('cell' = matrix(seq(16,20)))))
-#' depth(mylistC)
-#'
-#' mymatD = matrix(data = seq(4))
-#'
 #' @examples
-#' x <- matrix(seq_len(100), nrow = 10)
-#' temporal_dir <- tempdir()
-#' write.csv(x, paste0(temporal_dir, "/mymatrix.csv"))
+#' mylistA = list('a' = matrix(seq(5)), 'b' = matrix(seq(5)))
+#' GiottoUtils::depth(mylistA)
 #'
-#' readExprData(paste0(temporal_dir, "/mymatrix.csv"))
+#' mylistB = list(
+#'     A = list('a' = matrix(seq(5)), 'b' = matrix(seq(5))),
+#'     B = list('c' = matrix(seq(5)),'d' = matrix(seq(5)))
+#' )
+#' GiottoUtils::depth(mylistB)
+#'
+#' mylistC = list(
+#'     'RNA' = list(
+#'         'RAW' = list('cell' = matrix(seq(5)),
+#'         'nucleus' = matrix(seq(6,10))),
+#'         'NORM' = list('cell' = matrix(seq(11,15)),
+#'         'nucleus' = matrix(seq(20,25)))
+#'     ),
+#'     'PROT' = list(
+#'         'RAW' = list('cell' = matrix(seq(16,20)))
+#'     )
+#' )
+#' GiottoUtils::depth(mylistC)
+#'
+#' readExprData(mylistA)
+#' readExprData(mylistB)
+#' readExprData(mylistC)
 #' @export
 readExprData <- function(data_list,
     sparse = TRUE,
@@ -352,10 +355,10 @@ readExprData <- function(data_list,
 #'     cell_ID = c("cell_1", "cell_2", "cell_3"),
 #'     annotation = c("cell_type_1", "cell_type_1", "cell_type_2")
 #' )
-#' temporal_dir <- tempdir()
-#' write.csv(df, paste0(temporal_dir, "/metadata.csv"), row.names = FALSE)
+#' f <- tempdir()
+#' write.csv(df, paste0(f, "/metadata.csv"), row.names = FALSE)
 #'
-#' readCellMetadata(paste0(temporal_dir, "/metadata.csv"))
+#' readCellMetadata(paste0(f, "/metadata.csv"))
 #' @export
 readCellMetadata <- function(data_list,
     default_spat_unit = NULL,
@@ -540,10 +543,10 @@ readCellMetadata <- function(data_list,
 #'     feat_ID = c("feat_1", "feat_2", "feat_3"),
 #'     geneID = c("gene_1", "gene_1", "gene_2")
 #' )
-#' temporal_dir <- tempdir()
-#' write.csv(df, paste0(temporal_dir, "/metadata.csv"), row.names = FALSE)
+#' f <- tempdir()
+#' write.csv(df, paste0(f, "/metadata.csv"), row.names = FALSE)
 #'
-#' readFeatMetadata(paste0(temporal_dir, "/metadata.csv"))
+#' readFeatMetadata(paste0(f, "/metadata.csv"))
 #' @export
 readFeatMetadata <- function(data_list,
     default_spat_unit = NULL,
@@ -730,10 +733,10 @@ readFeatMetadata <- function(data_list,
 #'     feat_ID = c("feat_1", "feat_2", "feat_3"),
 #'     sdimx = c(1, 2, 3), sdimy = c(1, 2, 1)
 #' )
-#' temporal_dir <- tempdir()
-#' write.csv(df, paste0(temporal_dir, "/spatlocs.csv"), row.names = FALSE)
+#' f <- tempdir()
+#' write.csv(df, paste0(f, "/spatlocs.csv"), row.names = FALSE)
 #'
-#' readSpatLocsData(paste0(temporal_dir, "/spatlocs.csv"))
+#' readSpatLocsData(paste0(f, "/spatlocs.csv"))
 #' @export
 readSpatLocsData <- function(data_list,
     default_spat_unit = NULL,
