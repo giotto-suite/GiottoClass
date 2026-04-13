@@ -2,6 +2,14 @@
 NULL
 
 # * definitions ####
+
+#' @name overlapInfo-class
+#' @title Geometry Overlap Results
+#' @description
+#' Class for containing results of `calculateOverlap()` outputs. Used as a
+#' thin metadata wrapper to help in passing args to downstream steps
+#' (`overlapToMatrix()`). The base `overlapInfo` class is `VIRTUAL`.
+#' @exportClass overlapInfo
 setClass("overlapInfo",
     contains = c("spatFeatData", "VIRTUAL"),
     slots = list(data = "ANY")

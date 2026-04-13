@@ -10,7 +10,8 @@ loadGiotto(
   reconnect_giottoImage = TRUE,
   python_path = NULL,
   init_gobject = TRUE,
-  verbose = TRUE
+  verbose = TRUE,
+  ...
 )
 }
 \arguments{

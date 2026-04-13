@@ -21,9 +21,10 @@ saveGiotto(
 \arguments{
 \item{gobject}{Giotto object}
 
-\item{foldername}{Folder name}
+\item{foldername}{Folder name (ignored when \code{gsource} is managed)}
 
-\item{dir}{Directory where to create the folder}
+\item{dir}{Directory where to create the folder
+(ignored when \code{gsource} is managed)}
 
 \item{method}{method to save main object}
 
@@ -50,7 +51,10 @@ when saving. Dropping them can improve performance for large datasets.}
 Creates a directory with Giotto object information
 }
 \description{
-Saves a Giotto object to a specific folder structure
+Saves a Giotto object to a specific folder structure.
+Save location and behavior changes when the managed by a \code{gsource}
+inheriting project manager (see \link[GiottoDisk:gsource]{GiottoDisk::gsource} and
+ for examples).
 }
 \details{
 Works together with \code{\link{loadGiotto}} to save and re-load
