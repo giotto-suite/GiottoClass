@@ -11,7 +11,7 @@
 #' @param path `character` path to the expression matrix
 #' @param cores `integerlike` number of cores to use with data.table read
 #' @param transpose `logical` transpose matrix
-#' @param expression_matrix_class deprecated.
+#' @param expression_matrix_class deprecated. See `?createExprObj` for details
 #' @inheritParams data_access_params
 #' @details The expression matrix needs to have both unique column names and
 #' row names
@@ -67,10 +67,7 @@ readExprMatrix <- function(
 #' @param data_list nested `list` of expression input data
 #' @param sparse (`logical`, default = TRUE) read matrix data in a sparse manner
 #' @param cores number of cores to use
-#' @param expression_matrix_class `character` (optional) coerce input to this
-#'   matrix representation. Generally only needed if input is a filepath to
-#'   read in. Leave as `NULL` for no coercion. Accepts: 'dgCMatrix', 
-#'   'DelayedArray'.
+#' @param expression_matrix_class deprecated. See `?createExprObj` for details
 #' @inheritParams read_data_params
 #' @returns exprObj
 #' @examples
@@ -113,8 +110,7 @@ readExprData <- function(data_list,
         cores = cores,
         default_feat_type = default_feat_type,
         verbose = verbose,
-        provenance = provenance,
-        expression_matrix_class = expression_matrix_class
+        provenance = provenance
     )
 }
 
@@ -127,8 +123,7 @@ readExprData <- function(data_list,
     default_spat_unit = NULL,
     default_feat_type = NULL,
     verbose = TRUE,
-    provenance = NULL,
-    expression_matrix_class = NULL) {
+    provenance = NULL) {
     # import box characters
     ch <- box_chars()
 
@@ -316,8 +311,7 @@ readExprData <- function(data_list,
                         } else {
                             provenance
                         }, # assumed
-                        misc = NULL,
-                        expression_matrix_class = expression_matrix_class
+                        misc = NULL
                     )
                 )
             }
