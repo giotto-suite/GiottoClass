@@ -103,7 +103,13 @@ readExprData <- function(data_list,
     default_feat_type = NULL,
     verbose = TRUE,
     provenance = NULL,
-    expression_matrix_class = NULL) {
+    expression_matrix_class = deprecated()) {
+    if (is_present(expression_matrix_class)) {
+        warning(sprintf(
+            "[readExprData] param '%s' is deprecated",
+            "expression_matrix_class"),
+        call. = FALSE)
+    }
     .read_expression_data(
         expr_list = data_list,
         sparse = sparse,
