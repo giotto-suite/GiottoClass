@@ -17,8 +17,14 @@
 
 ## changes
 
-- `expression_matrix_class` param in `readExprMatrix()` is deprecated.
-  The function now reads directly to `dgCMatrix`.
+- `expression_matrix_class` param in `readExprMatrix()`, `readExprData()`, and
+  `createExprObj()` is deprecated. These functions now only build
+  `dgCMatrix`. Pre-built backed matrices (`HDF5Array`, `tiledb_array`,
+  `IterableMatrix`, `dbMatrix`) can be passed directly to `createExprObj()`
+  and will be used as-is.
+- `.evaluate_expr_matrix()` reworked: removes coercion logic in favor of an
+  `accepted_classes` passthrough list; `data.frame` and `matrix` cases are now
+  handled separately.
 - `h5_file` param in `createGiottoObject()` is deprecated; use `backend`
   instead.
 - Removed legacy h5 read/write code from `get_expression_values()` and
