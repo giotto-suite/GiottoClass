@@ -9,26 +9,26 @@ readExprMatrix(
   cores = determine_cores(),
   transpose = FALSE,
   feat_type = "rna",
-  expression_matrix_class = c("dgCMatrix", "DelayedArray", "dbSparseMatrix")
+  expression_matrix_class = deprecated()
 )
 }
 \arguments{
-\item{path}{path to the expression matrix}
+\item{path}{\code{character} path to the expression matrix}
 
-\item{cores}{number of cores to use}
+\item{cores}{\code{integerlike} number of cores to use with data.table read}
 
-\item{transpose}{transpose matrix}
+\item{transpose}{\code{logical} transpose matrix}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 
-\item{expression_matrix_class}{class of expression matrix to
-use (e.g. 'dgCMatrix', 'DelayedArray')}
+\item{expression_matrix_class}{deprecated. See \code{?createExprObj} for details}
 }
 \value{
 sparse matrix
 }
 \description{
-Function to read an expression matrix into a sparse matrix.
+Attempts to read a data.table compatible flat file
+(.csv/.tsv) as \code{dgCMatrix}
 }
 \details{
 The expression matrix needs to have both unique column names and
@@ -36,8 +36,8 @@ row names
 }
 \examples{
 x <- matrix(seq_len(100), nrow = 10)
-temporal_dir <- tempdir()
-write.csv(x, paste0(temporal_dir, "/mymatrix.csv"))
+f <- tempdir()
+write.csv(x, paste0(f, "/mymatrix.csv"))
 
-readExprMatrix(paste0(temporal_dir, "/mymatrix.csv"))
+readExprMatrix(paste0(f, "/mymatrix.csv"))
 }
