@@ -6,40 +6,36 @@
 
 #' @title Read expression matrix
 #' @name readExprMatrix
-#' @description Function to read an expression matrix into a sparse matrix.
-#' @param path path to the expression matrix
-#' @param cores number of cores to use
-#' @param transpose transpose matrix
-#' @param expression_matrix_class class of expression matrix to
-#' use (e.g. 'dgCMatrix', 'DelayedArray')
+#' @description Attempts to read a data.table compatible flat file
+#'   (.csv/.tsv) as `dgCMatrix`
+#' @param path `character` path to the expression matrix
+#' @param cores `integerlike` number of cores to use with data.table read
+#' @param transpose `logical` transpose matrix
+#' @param expression_matrix_class deprecated.
 #' @inheritParams data_access_params
 #' @details The expression matrix needs to have both unique column names and
 #' row names
 #' @returns sparse matrix
 #' @examples
 #' x <- matrix(seq_len(100), nrow = 10)
-#' temporal_dir <- tempdir()
-#' write.csv(x, paste0(temporal_dir, "/mymatrix.csv"))
+#' f <- tempdir()
+#' write.csv(x, paste0(f, "/mymatrix.csv"))
 #'
-#' readExprMatrix(paste0(temporal_dir, "/mymatrix.csv"))
+#' readExprMatrix(paste0(f, "/mymatrix.csv"))
 #' @export
 readExprMatrix <- function(
         path,
         cores = determine_cores(),
         transpose = FALSE,
         feat_type = "rna",
-        expression_matrix_class = c(
-            "dgCMatrix",
-            "DelayedArray",
-            "dbSparseMatrix"
-        )) {
-    # check if path is a character vector and exists
-    if (!is.character(path)) stop("path needs to be character vector")
-    if (!file.exists(path)) stop("the path: ", path, " does not exist")
-
-    expression_matrix_class <- match.arg(expression_matrix_class)
-    if (identical(expression_matrix_class, "dbSparseMatrix")) {
-        stop("File conversion to dbMatrix is not yet supported")
+        expression_matrix_class = deprecated()) {
+    checkmate::assert_file_exists(path)
+    checkmate::assert_flag(transpose)
+    if (is_present(expression_matrix_class)) {
+        warning(sprintf(
+            "[readExprMatrix] param '%s' is deprecated", 
+            "expression_matrix_class"), 
+        call. = FALSE)
     }
 
     data.table::setDTthreads(threads = cores)
@@ -52,31 +48,16 @@ readExprMatrix <- function(
             colClasses = list(character = 1) # enforce first col character
         )
     )$result
-    spM <- Matrix::Matrix(as.matrix(DT[, -1]),
+    spm <- Matrix::Matrix(as.matrix(DT[, -1]),
         dimnames = list(DT[[1]], colnames(DT[, -1])),
         sparse = TRUE
     )
 
-    if (isTRUE(transpose)) {
-        spM <- t_flex(spM)
+    if (transpose) {
+        spm <- t_flex(spm)
     }
-
-    if (expression_matrix_class[1] == "DelayedArray") {
-        spM <- DelayedArray::DelayedArray(spM)
-    }
-
-    return(spM)
+    spm
 }
-
-
-
-
-
-
-
-
-
-
 
 #' @title Read expression data
 #' @name readExprData
