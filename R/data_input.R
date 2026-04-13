@@ -67,8 +67,10 @@ readExprMatrix <- function(
 #' @param data_list nested `list` of expression input data
 #' @param sparse (`logical`, default = TRUE) read matrix data in a sparse manner
 #' @param cores number of cores to use
-#' @param expression_matrix_class class of expression matrix to
-#' use (e.g. 'dgCMatrix', 'DelayedArray')
+#' @param expression_matrix_class `character` (optional) coerce input to this
+#'   matrix representation. Generally only needed if input is a filepath to
+#'   read in. Leave as `NULL` for no coercion. Accepts: 'dgCMatrix', 
+#'   'DelayedArray'.
 #' @inheritParams read_data_params
 #' @returns exprObj
 #' @examples
@@ -104,7 +106,7 @@ readExprData <- function(data_list,
     default_feat_type = NULL,
     verbose = TRUE,
     provenance = NULL,
-    expression_matrix_class = c("dgCMatrix", "DelayedArray")) {
+    expression_matrix_class = NULL) {
     .read_expression_data(
         expr_list = data_list,
         sparse = sparse,
@@ -126,7 +128,7 @@ readExprData <- function(data_list,
     default_feat_type = NULL,
     verbose = TRUE,
     provenance = NULL,
-    expression_matrix_class = c("dgCMatrix", "DelayedArray")) {
+    expression_matrix_class = NULL) {
     # import box characters
     ch <- box_chars()
 
@@ -140,29 +142,24 @@ readExprData <- function(data_list,
         expr_list <- list("raw" = expr_list) # single matrix or path (expected)
     }
 
-
     # Set default feature type if missing
     if (is.null(default_spat_unit)) default_spat_unit <- "cell"
     if (is.null(default_feat_type)) default_feat_type <- "rna"
-
 
     # 1. get depth of list
 
     list_depth <- depth(expr_list)
 
-
-
     # too much information
     if (list_depth > 3L) {
-        stop("Depth of expression list is more than 3, only 3 levels are
-            possible:
-        0)", ch$s, ".
-        1)", ch$s, ch$b, "spatial unit (e.g. cell)
-        2)", ch$s, ch$s, ch$b, "feature (e.g. RNA)
-        3)", ch$s, ch$s, ch$s, ch$b, "data type (e.g. raw)\n")
+        stop(
+            "Depth of expression list is more than 3\n",
+            "  Only 3 levels are possible:\n",
+            "0)", ch$s, ".\n",
+            "1)", ch$s, ch$b, "spatial unit (e.g. cell)\n",
+            "2)", ch$s, ch$s, ch$b, "feature (e.g. RNA)\n",
+            "3)", ch$s, ch$s, ch$s, ch$b, "data type (e.g. raw)\n")
     }
-
-
 
     # list reading
     obj_list <- list()
@@ -173,11 +170,11 @@ readExprData <- function(data_list,
 
     # read nesting
     if (list_depth == 1L) {
-        if (isTRUE(verbose)) message("list depth of 1")
+        vmsg(.v = verbose, .is_debug = TRUE, "list depth of 1")
 
         obj_names <- names(expr_list)
-        if (is.null(obj_names) & isTRUE(verbose)) {
-            wrap_msg("No list names for objects. Setting defaults.")
+        if (is.null(obj_names)) {
+            vmsg(.v = verbose, "No list names for objects. Setting defaults.")
         }
 
         for (obj_i in seq_along(expr_list)) {
@@ -196,7 +193,7 @@ readExprData <- function(data_list,
         spat_unit_list <- rep(default_spat_unit, length(obj_list)) # assume
         feat_type_list <- rep(default_feat_type, length(obj_list)) # assume
     } else if (list_depth == 2L) {
-        if (isTRUE(verbose)) message("list depth of 2")
+        vmsg(.v = verbose, .is_debug = TRUE, "list depth of 2")
 
         feat_type_names <- names(expr_list)
         if (is.null(feat_type_names) & isTRUE(verbose)) {
@@ -232,7 +229,7 @@ readExprData <- function(data_list,
         }
         spat_unit_list <- rep(default_spat_unit, length(obj_list)) # assume
     } else if (list_depth == 3L) {
-        if (isTRUE(verbose)) message("list depth of 3")
+        vmsg(.v = verbose, .is_debug = TRUE, "list depth of 3")
 
         spat_unit_names <- names(expr_list)
         if (is.null(spat_unit_names) & isTRUE(verbose)) {
