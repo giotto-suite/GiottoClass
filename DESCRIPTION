@@ -40,6 +40,7 @@ Imports:
     matrixStats (>= 0.55.0),
     methods,
     reticulate (>= 1.25),
+    ScaledMatrix,
     stats,
     terra (>= 1.8-21)
 Suggests:
@@ -64,7 +65,6 @@ Suggests:
     rmarkdown,
     RTriangle (>= 1.6-0.10),
     S4Vectors,
-    ScaledMatrix,
     scattermore,
     Seurat,
     SeuratObject,

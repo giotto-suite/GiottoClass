@@ -281,11 +281,11 @@ my_rowMeans <- function(x, method = c("arithmic", "geometric"), offset = 0.1) {
 
 #' @title standardise_flex
 #' @name standardise_flex
-#' @description standardizes a matrix
+#' @description Matrix scaling. 
 #' @param x matrix
 #' @param center center data
 #' @param scale scale data
-#' @returns standardized matrix
+#' @returns `ScaledMatrix`
 #' @keywords internal
 #' @examples
 #' m <- matrix(rnorm(100), nrow = 10)
@@ -293,24 +293,5 @@ my_rowMeans <- function(x, method = c("arithmic", "geometric"), offset = 0.1) {
 #' standardise_flex(m)
 #' @export
 standardise_flex <- function(x, center = TRUE, scale = TRUE) {
-    if (inherits(x, "DelayedArray")) {
-        package_check("ScaledMatrix")
-
-        y <- ScaledMatrix::ScaledMatrix(x = x, center = center, scale = scale)
-    } else {
-        if (center & scale) {
-            y <- t_flex(x) - colMeans_flex(x)
-            y <- y / sqrt(rowSums_flex(y^2)) * sqrt((dim(x)[1] - 1))
-            y <- t_flex(y)
-        } else if (center & !scale) {
-            y <- t_flex(x) - colMeans_flex(x)
-            y <- t_flex(y)
-        } else if (!center & scale) {
-            csd <- matrixStats::colSds(x)
-            # csd = DelayedMatrixStats::colSds(x)
-            y <- t_flex(t_flex(x) / csd)
-        } else {
-            y <- x
-        }
-    }
+    ScaledMatrix::ScaledMatrix(x = x, center = center, scale = scale)
 }
