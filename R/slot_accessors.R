@@ -1847,7 +1847,8 @@ set_expression_values <- function(gobject,
     }
 
     ## 7. Write matrix to disk if needed
-    if (!is.null(gobject@source)) {
+    memory_matrix <- c("matrix", "Matrix")
+    if (!is.null(gobject@source) && inherits(values[], memory_matrix)) {
         gsrc <- .gsource(gobject)
         store <- GiottoDisk::sourceWrite(gsrc, values[])
         values@misc$uid <- store@uid
