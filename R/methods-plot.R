@@ -219,6 +219,12 @@ setMethod(
     function(x, point_size = 0, feats = NULL, raster = TRUE, 
         raster_size = 600, count = TRUE, sigma = 2,
         ...) {
+        checkmate::assert_flag(raster)
+        checkmate::assert_flag(count)
+        checkmate::assert_numeric(sigma, len = 1L, null.ok = TRUE)
+        checkmate::assert_numeric(point_size, len = 1L)
+        checkmate::assert_integerish(raster_size)
+        checkmate::assert_character(feats, null.ok = TRUE)
         if (length(x@unique_ID_cache) == 0) {
             stop(wrap_txt("No geometries to plot"), call. = FALSE)
         }
@@ -628,7 +634,7 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
     a$data <- x[] # get data to plot
 
     # plot
-    if (isTRUE(raster)) {
+    if (raster) {
         a$size <- raster_size
         a$count <- count
         a$sigma <- sigma
