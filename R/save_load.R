@@ -234,14 +234,12 @@ loadGiotto <- function(path_to_folder,
     }
   
     ## 1. load giotto object
+    src <- FALSE
     if (requireNamespace("GiottoDisk", quietly = TRUE)) {
+        # detect if managed source. Return FALSE if not, src object if TRUE
         src <- GiottoDisk::resolveSource(path_to_folder)
-        gobject <- GiottoDisk::snapshotLoad(src, 
-            load_params = load_params,
-            verbose = verbose,
-            ...
-        )
-    } else {
+    }
+    if (isFALSE(src)) {
         gobject <- .load_gobject_core(
             path_to_folder = path_to_folder,
             load_params = load_params,
@@ -266,6 +264,12 @@ loadGiotto <- function(path_to_folder,
             gobject = gobject,
             path_to_folder = path_to_folder,
             verbose = verbose
+        )
+    } else {
+        gobject <- GiottoDisk::snapshotLoad(src, 
+            load_params = load_params,
+            verbose = verbose,
+            ...
         )
     }
 
