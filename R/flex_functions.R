@@ -172,7 +172,9 @@ colMeans_flex <- function(mymatrix, ...) {
 t_flex <- function(mymatrix) {
     if (inherits(mymatrix, "DelayedArray")) {
         return(DelayedArray::t(mymatrix))
-    } else if (inherits(mymatrix, "dgCMatrix")) {
+    } else if (inherits(mymatrix, "IterableMatrix")) {
+        return(t(mymatrix))
+    }else if (inherits(mymatrix, "dgCMatrix")) {
         return(Matrix::t(mymatrix)) # replace with sparseMatrixStats
     } else if (inherits(mymatrix, "Matrix")) {
         return(Matrix::t(mymatrix))
