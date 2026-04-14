@@ -6090,10 +6090,11 @@ spatValues <- function(gobject,
             return(NULL)
         }
         if (all(feats %in% featIDs(e))) {
-            vals <- data.table::as.data.table(
-                as.matrix(t_flex(e[][feats, , drop = FALSE])),
-                keep.rownames = TRUE
-            )
+            vals <- e[][feats, , drop = FALSE] |>
+                t_flex() |>
+                methods::as("dgCMatrix") |>
+                as.matrix() |>
+                data.table::as.data.table(keep.rownames = TRUE)
             data.table::setnames(vals, old = "rn", new = "cell_ID")
             vmsg(
                 .v = verbose,
