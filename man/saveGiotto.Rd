@@ -54,7 +54,7 @@ Creates a directory with Giotto object information
 Saves a Giotto object to a specific folder structure.
 Save location and behavior changes when the managed by a \code{gsource}
 inheriting project manager (see \link[GiottoDisk:gsource]{GiottoDisk::gsource} and
- for examples).
+\link[GiottoDisk:gDirSource-class]{GiottoDisk::gDirSource} for examples).
 }
 \details{
 Works together with \code{\link{loadGiotto}} to save and re-load

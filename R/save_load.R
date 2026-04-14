@@ -1,11 +1,9 @@
-
-
 #' @title saveGiotto
 #' @name saveGiotto
 #' @description Saves a Giotto object to a specific folder structure.
 #'   Save location and behavior changes when the managed by a `gsource`
 #'   inheriting project manager (see [GiottoDisk::gsource] and
-#'   [GiottoDisk::`gDirSource-class`] for examples).
+#'   [GiottoDisk::gDirSource-class] for examples).
 #' @param gobject Giotto object
 #' @param foldername Folder name (ignored when `gsource` is managed)
 #' @param dir Directory where to create the folder
