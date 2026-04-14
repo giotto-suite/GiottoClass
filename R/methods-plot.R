@@ -730,7 +730,7 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
     r <- terra::rast(e, res = res) # create raster
     if (isTRUE(count)) rargs$fun <- "count"
     rargs$y <- r
-    rargs$x <- x[]
+    rargs$x <- x
     r <- do.call(terra::rasterize, args = rargs)
 
     # smoothing
