@@ -95,7 +95,7 @@ evaluate_input <- function(type, x, ...) {
 
     accepted_classes <- c(
         "Matrix", "DelayedMatrix", "dbMatrix", "IterableMatrix",
-        "tiledb_array"
+        "tiledb_array", "ScaledMatrix"
     )
   
     # Main decision tree for converting inputmatrix
