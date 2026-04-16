@@ -769,47 +769,11 @@
         verbose = FALSE,
         toplevel_params = 2) {
     # NOTE:
-    # spat_unit = ':all:', but feat_type is hardcoded to 'rna'
+    # spat_unit = ':all:', but feat_type is defaulted to 'rna'
     # This is since most people will be running analyses that look at rna
     # information through the lens of multiple spatial units
 
     # update ID slots now performed by intialization
-
-
-    # mirai::daemons(n = GiottoUtils::determine_cores())
-    #
-    # # mirai cleanup
-    # on.exit({
-    #   mirai::daemons(0) # reset
-    # })
-
-
-
-    # # filter cell_ID and feat_ID
-    # g_cell_IDs = get_cell_id(gobject, spat_unit = spat_unit)
-    # g_feat_IDs = get_feat_id(gobject, feat_type = feat_type)
-
-
-    ## filter index
-    # if(!is.null(cell_ids)) {
-    #   filter_bool_cells = g_cell_IDs %in% cell_ids
-    #   cell_ids = g_cell_IDs[filter_bool_cells]
-    # } else {
-    #   # set cell ids to all if not provided
-    #   filter_bool_cells = g_cell_IDs %in% g_cell_IDs
-    #   cell_ids = g_cell_IDs[filter_bool_cells]
-    # }
-    #
-    # if(!is.null(feat_ids)) {
-    #   filter_bool_feats = g_feat_IDs %in% feat_ids
-    #   feat_ids = g_feat_IDs[filter_bool_feats]
-    # } else {
-    #   # set feat ids to all if not provided
-    #   filter_bool_feats = g_feat_IDs %in% g_feat_IDs
-    #   feat_ids = g_feat_IDs[filter_bool_feats]
-    # }
-
-
 
 
     if (verbose) wrap_msg("completed 1: preparation")
