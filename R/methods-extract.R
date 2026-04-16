@@ -986,8 +986,7 @@ setMethod(
         drop = "missing"
     ),
     function(x, i, j) {
-        sel_bool <- x$feat_ID %in% i
-        x[sel_bool]
+        subset(x, feat_ids = i)
     }
 )
 
@@ -1217,8 +1216,7 @@ setMethod(
         drop = "missing"
     ),
     function(x, i, j) {
-        sel_bool <- x$poly_ID %in% i
-        x[sel_bool]
+        subset(x, cell_ids = i)
     }
 )
 
@@ -1670,6 +1668,57 @@ setMethod(
         }
     }
 )
+
+
+
+# subset() for terraVectData subobjects ####
+
+#' @title Subset terraVectData subobjects
+#' @name subset_terravectdata
+#' @description
+#' Subset `giottoPolygon` and `giottoPoints` by cell or feature IDs.
+#' All relevant slots (geometries, centroids, overlaps) are subsetted
+#' consistently. Intended as a stable integration point for `subsetGiotto`
+#' and extending packages — the `[` methods remain the low-level workhorse
+#' for logical/numeric indexing.
+#' @param x a `giottoPolygon` or `giottoPoints` object
+#' @param cell_ids character. Polygon IDs to keep (for `giottoPolygon`)
+#' @param feat_ids character. Feature IDs to keep
+#' @param feat_type character. Feature type(s) to subset overlaps within.
+#'   Use `":all:"` for all feature types.
+#' @param \dots not used
+#' @returns object of same class as `x`, subsetted
+#' @examples
+#' gpoly <- GiottoData::loadSubObjectMini("giottoPolygon")
+#' subset(gpoly, cell_ids = spatIDs(gpoly)[1:10])
+#' subset(gpoly, cell_ids = spatIDs(gpoly)[1:10], negate = TRUE)
+#'
+#' gpoints <- GiottoData::loadSubObjectMini("giottoPoints")
+#' subset(gpoints, feat_ids = "Adgrl1")
+#' @export
+setMethod("subset", signature("giottoPolygon"), function(x,
+    cell_ids = NULL,
+    feat_ids = NULL,
+    feat_type = NULL,
+    ...) {
+    .subset_giotto_polygon_object(x,
+        cell_ids = cell_ids,
+        feat_ids = feat_ids,
+        feat_type = feat_type
+    )
+})
+
+#' @rdname subset_terravectdata
+#' @export
+setMethod("subset", signature("giottoPoints"), function(x,
+    feat_ids = NULL,
+    negate = FALSE,
+    ...) {
+    if (negate && !is.null(feat_ids)) {
+        feat_ids <- setdiff(featIDs(x, uniques = TRUE), feat_ids)
+    }
+    .subset_giotto_points_object(x, feat_ids = feat_ids)
+})
 
 
 
