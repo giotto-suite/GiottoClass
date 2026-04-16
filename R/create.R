@@ -391,7 +391,7 @@ createGiottoObject <- function(expression,
 
 
         # Set up gobject cell_ID and feat_ID slots based on expression matrices
-        gobject <- init_cell_and_feat_IDs(gobject)
+        gobject <- .init_cell_and_feat_ids(gobject)
         # needed when initialize per step is FALSE
 
         if (verbose) message("--- finished expression data ---\n")

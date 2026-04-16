@@ -407,7 +407,7 @@ setMethod("initialize", signature("giottoAffineImage"), function(.Object, ...) {
     # expression information is PREFERRED for ID initialization.              #
     # subcellular information, being raw data may also be used.               #
 
-    .Object <- init_cell_and_feat_IDs(gobject = .Object)
+    .Object <- .init_cell_and_feat_ids(gobject = .Object)
 
 
 
@@ -631,15 +631,10 @@ setMethod("initialize", signature("giottoAffineImage"), function(.Object, ...) {
 
 # initialize IDs ####
 
-
-#' @title Initialize cell and feature IDs
-#' @name init_cell_and_feat_IDs
-#' @description sets cell and feature IDs based on provided expression data.
-#' Enforces that across a single spatial unit, all expression matrices MUST
-#' have the same set of cell_IDs
-#' @keywords internal
-#' @noRd
-init_cell_and_feat_IDs <- function(gobject) {
+# Set cell and feature IDs based on provided expression data.
+# Enforces that across a single spatial unit, all expression matrices MUST
+# have the same set of cell_IDs
+.init_cell_and_feat_ids <- function(gobject) {
     spat_unit <- feat_type <- name <- NULL
 
     # wipe values
