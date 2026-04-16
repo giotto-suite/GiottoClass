@@ -1629,32 +1629,6 @@ setMethod(
         objName(overlapExprObj) <- name
 
         if (isTRUE(return_gobject)) {
-            centroidsDT <- centroids(gpoly) %>%
-                data.table::as.data.table(geom = "XY")
-            centroidsDT_loc <- centroidsDT[, c("poly_ID", "x", "y")]
-            data.table::setnames(
-                centroidsDT_loc,
-                old = c("poly_ID", "x", "y"),
-                new = c("cell_ID", "sdimx", "sdimy")
-            )
-
-            spatlocs <- createSpatLocsObj(
-                coordinates = centroidsDT_loc,
-                name = name,
-                spat_unit = spat_info,
-                provenance = spat_info,
-                verbose = FALSE
-            )
-
-            ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-            x <- setSpatialLocations(
-                gobject = x,
-                x = spatlocs,
-                initialize = FALSE,
-                verbose = FALSE
-            )
-            ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-
             ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
             x <- setExpression(
                 gobject = x,
