@@ -24,7 +24,10 @@
 #' mean_flex(m)
 #' @export
 mean_flex <- function(x, ...) {
-    if (inherits(x, "HDF5Matrix")) {
+    if (inherits(x, "IterableMatrix")) {
+        s <- sum(colSums(x))
+        return(s / (nrow(x) * ncol(x)))
+    } else if (inherits(x, "HDF5Matrix")) {
         return(Matrix::mean(x, ...))
     } else if (inherits(x, "dgCMatrix")) {
         return(Matrix::mean(x, ...)) # replace with sparseMatrixStats
@@ -51,7 +54,9 @@ mean_flex <- function(x, ...) {
 #' rowSums_flex(m)
 #' @export
 rowSums_flex <- function(mymatrix, ...) {
-    if (inherits(mymatrix, "DelayedArray")) {
+    if (inherits(mymatrix, "IterableMatrix")) {
+        return(rowSums(mymatrix))
+    } else if (inherits(mymatrix, "DelayedArray")) {
         return(DelayedMatrixStats::rowSums2(mymatrix, ...))
     } else if (inherits(mymatrix, "dgCMatrix")) {
         return(Matrix::rowSums(mymatrix, ...)) # replace with sparseMatrixStats
@@ -81,7 +86,9 @@ rowSums_flex <- function(mymatrix, ...) {
 #' rowMeans_flex(m)
 #' @export
 rowMeans_flex <- function(mymatrix, ...) {
-    if (inherits(mymatrix, "DelayedArray")) {
+    if (inherits(mymatrix, "IterableMatrix")) {
+        return(rowMeans(mymatrix))
+    } else if (inherits(mymatrix, "DelayedArray")) {
         return(DelayedMatrixStats::rowMeans2(mymatrix, ...))
     } else if (inherits(mymatrix, "dgCMatrix")) {
         return(Matrix::rowMeans(mymatrix, ...)) # replace with sparseMatrixStats
@@ -111,7 +118,9 @@ rowMeans_flex <- function(mymatrix, ...) {
 #' colSums_flex(m)
 #' @export
 colSums_flex <- function(mymatrix, ...) {
-    if (inherits(mymatrix, "DelayedArray")) {
+    if (inherits(mymatrix, "IterableMatrix")) {
+        return(colSums(mymatrix))
+    } else if (inherits(mymatrix, "DelayedArray")) {
         return(DelayedMatrixStats::colSums2(mymatrix, ...))
     } else if (inherits(mymatrix, "dgCMatrix")) {
         return(Matrix::colSums(mymatrix, ...)) # replace with sparseMatrixStats
@@ -141,7 +150,9 @@ colSums_flex <- function(mymatrix, ...) {
 #' colMeans_flex(m)
 #' @export
 colMeans_flex <- function(mymatrix, ...) {
-    if (inherits(mymatrix, "DelayedArray")) {
+    if (inherits(mymatrix, "IterableMatrix")) {
+        return(colMeans(mymatrix))
+    } else if (inherits(mymatrix, "DelayedArray")) {
         return(DelayedMatrixStats::colMeans2(mymatrix, ...))
     } else if (inherits(mymatrix, "dgCMatrix")) {
         return(Matrix::colMeans(mymatrix, ...)) # replace with sparseMatrixStats
