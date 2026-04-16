@@ -4466,6 +4466,7 @@ setPolygonInfo <- function(gobject,
     verbose = TRUE,
     initialize = TRUE,
     ...) {
+    checkmate::assert_flag(centroids_to_spatlocs)
     # data.table vars
     poly_ID <- y <- NULL
 
@@ -4491,44 +4492,35 @@ setPolygonInfo <- function(gobject,
             polygon_name = name,
             gpolygon = x,
             verbose = verbose,
-            initialize = !isTRUE(centroids_to_spatlocs) &
-                initialize # delay so centroids can be added
+            initialize = !centroids_to_spatlocs && initialize # delay so centroids can be added
         )
 
-        # Attach centroids if found
-        if (inherits(x, "giottoPolygon") & isTRUE(centroids_to_spatlocs)) {
-            if (!is.null(x@spatVectorCentroids)) {
-                centroids <- x@spatVectorCentroids
-                centroidsDT <- .spatvector_to_dt(centroids)
-                centroidsDT_loc <- centroidsDT[, .(poly_ID, x, y)]
-                colnames(centroidsDT_loc) <- c("cell_ID", "sdimx", "sdimy")
-
-                locsObj <- create_spat_locs_obj(
-                    name = "raw",
-                    coordinates = centroidsDT_loc,
-                    spat_unit = x@name, # tag same spat_unit as poly
-                    provenance = x@name,
-                    misc = NULL
-                )
-
-                ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-                .external_accessor_spatloc <- list(
-                    # set spatlocs 'spat_unit' using 'name' if it was EXPLICITLY
-                    # supplied to setPolygonInfo
-                    # otherwise, set spatlocs 'spat_unit' as x@name
-                    nospec_unit = nospec_name,
-                    # set spatlocs name based on locsObj@name
-                    nospec_name = TRUE
-                )
-                gobject <- set_spatial_locations(gobject,
-                    spatlocs = locsObj,
-                    spat_unit = name, # useif explicit here
-                    verbose = verbose,
-                    set_defaults = FALSE,
-                    initialize = initialize
-                )
-                ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-            }
+        # centroids to spatloc
+        if (inherits(x, "giottoPolygon") && centroids_to_spatlocs) {
+            locsObj <- .ctrs_to_spatlocs(x[],
+                name = "raw",
+                spat_unit = x@name, # tag same spat_unit as poly
+                provenance = x@name,
+                misc = NULL
+            )
+          
+            ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+            .external_accessor_spatloc <- list(
+                # set spatlocs 'spat_unit' using 'name' if it was EXPLICITLY
+                # supplied to setPolygonInfo
+                # otherwise, set spatlocs 'spat_unit' as x@name
+                nospec_unit = nospec_name,
+                # set spatlocs name based on locsObj@name
+                nospec_name = TRUE
+            )
+            gobject <- set_spatial_locations(gobject,
+                spatlocs = locsObj,
+                spat_unit = name, # useif explicit here
+                verbose = verbose,
+                set_defaults = FALSE,
+                initialize = initialize
+            )
+            ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
         }
         return(gobject)
     } else if (inherits(x, "list")) {
@@ -4538,7 +4530,6 @@ setPolygonInfo <- function(gobject,
         )) {
             # 3. iteratively set
             for (obj_i in seq_along(x)) {
-                # if(isTRUE(verbose)) message('[', obj_i, ']')
 
                 gobject <- set_polygon_info(
                     gobject = gobject,
@@ -4549,45 +4540,31 @@ setPolygonInfo <- function(gobject,
                 )
 
                 # Attach centroids if found
-                if (inherits(x[[obj_i]], "giottoPolygon") &
-                    isTRUE(centroids_to_spatlocs)) {
-                    if (!is.null(x[[obj_i]]@spatVectorCentroids)) {
-                        centroids <- x[[obj_i]]@spatVectorCentroids
-                        centroidsDT <- .spatvector_to_dt(centroids)
-                        centroidsDT_loc <- centroidsDT[, .(poly_ID, x, y)]
-                        colnames(centroidsDT_loc) <- c(
-                            "cell_ID", "sdimx", "sdimy"
-                        )
-
-                        locsObj <- create_spat_locs_obj(
-                            name = "raw",
-                            coordinates = centroidsDT_loc,
-                            spat_unit = x[[obj_i]]@name,
-                            # tag same spat_unit as poly
-                            provenance = x[[obj_i]]@name,
-                            # TODO change this if polygons get prov
-                            misc = initialize
-                        )
-
-                        ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-                        .external_accessor_spatloc <- list(
-                            # set spatlocs 'spat_unit' using 'name' if it
-                            # was EXPLICITLY
-                            # supplied to setPolygonInfo
-                            # otherwise, set spatlocs 'spat_unit' as x@name
-                            nospec_unit = nospec_name,
-                            # set spatlocs name based on locsObj@name
-                            nospec_name = TRUE
-                        )
-                        gobject <- set_spatial_locations(gobject,
-                            spatlocs = locsObj,
-                            spat_unit = name, # useif explicit here
-                            verbose = verbose,
-                            set_defaults = FALSE,
-                            initialize = initialize
-                        )
-                        ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-                    }
+                if (centroids_to_spatlocs) {
+                    locsObj <- .ctrs_to_spatlocs(x[[obj_i]][],
+                        name = "raw",
+                        spat_unit = x[[obj_i]]@name, # tag same spat_unit as poly
+                        provenance = x[[obj_i]]@name,
+                        misc = NULL
+                    )
+                  
+                    ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+                    .external_accessor_spatloc <- list(
+                        # set spatlocs 'spat_unit' using 'name' if it was EXPLICITLY
+                        # supplied to setPolygonInfo
+                        # otherwise, set spatlocs 'spat_unit' as x@name
+                        nospec_unit = nospec_name,
+                        # set spatlocs name based on locsObj@name
+                        nospec_name = TRUE
+                    )
+                    gobject <- set_spatial_locations(gobject,
+                        spatlocs = locsObj,
+                        spat_unit = name, # useif explicit here
+                        verbose = verbose,
+                        set_defaults = FALSE,
+                        initialize = initialize
+                    )
+                    ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
                 }
             }
             return(gobject)
@@ -4601,6 +4578,17 @@ setPolygonInfo <- function(gobject,
     ))
 }
 
+.ctrs_to_spatlocs <- function(x, ...) {
+    sldf <- x[, "poly_ID"] |>
+        centroids() |>
+        as.data.frame(geom = "XY")
+    data.table::setDT(sldf)
+    data.table::setnames(sldf,
+        old = c("poly_ID", "x", "y"),
+        new = c("cell_ID", "sdimx", "sdimy")
+    )
+    createSpatLocsObj(sldf, ...)
+}
 
 
 
