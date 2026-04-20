@@ -292,11 +292,11 @@ my_rowMeans <- function(x, method = c("arithmic", "geometric"), offset = 0.1) {
 
 #' @title standardise_flex
 #' @name standardise_flex
-#' @description Matrix scaling. 
+#' @description Matrix scaling.
 #' @param x matrix
 #' @param center center data
 #' @param scale scale data
-#' @returns `ScaledMatrix`
+#' @returns `ScaledMatrix` or `IterableMatrix`
 #' @keywords internal
 #' @examples
 #' m <- matrix(rnorm(100), nrow = 10)
@@ -304,5 +304,28 @@ my_rowMeans <- function(x, method = c("arithmic", "geometric"), offset = 0.1) {
 #' standardise_flex(m)
 #' @export
 standardise_flex <- function(x, center = TRUE, scale = TRUE) {
-    ScaledMatrix::ScaledMatrix(x = x, center = center, scale = scale)
+    if (inherits(x, "IterableMatrix")) {
+        if (isTRUE(center)) center <- colSums(x) / nrow(x)
+        if (isTRUE(scale)) scale <- sqrt(BPCells::colVars(x))
+        if (!isFALSE(center)) x <- BPCells::add_cols(x, -center)
+        if (!isFALSE(scale)) x <- BPCells::multiply_cols(x, 1 / scale)
+        return(x)
+    } else if (is.matrix(x) || 
+        inherits(x, "Matrix") ||
+        inherits(x, "DelayedMatrix")) {
+        return(ScaledMatrix::ScaledMatrix(x,
+            center = center, 
+            scale = scale
+        ))
+    } else if (center && scale) {
+        y <- t_flex(x) - colMeans_flex(x)
+        y <- y / sqrt(rowSums_flex(y^2)) * sqrt((dim(x)[1] - 1))
+        return(t_flex(y))
+    } else if (center && !scale) {
+        return(t_flex(t_flex(x) - colMeans_flex(x)))
+    } else if (!center && scale) {
+        return(t_flex(t_flex(x) / matrixStats::colSds(x)))
+    } else {
+        return(x)
+    }
 }
