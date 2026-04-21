@@ -359,7 +359,6 @@ setMethod(
 
 .affine_matrix <- function(x, m, inv = FALSE, pre_multiply = FALSE, ...) {
     x <- as.matrix(x)
-    y <- as.matrix(x)
 
     # translations (if any)
     translation <- NULL

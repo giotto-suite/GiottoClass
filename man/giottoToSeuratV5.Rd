@@ -31,5 +31,10 @@ Converts Giotto object into a Seurat object. This functions
 extracts specific sets of data belonging to specified spatial unit.
 The default values are 'cell' and 'rna' respectively.
 }
+\examples{
+g <- GiottoData::loadGiottoMini("visium")
+giottoToSeuratV5(g, tech = "Visium")
+
+}
 \keyword{interoperability}
 \keyword{seurat}

@@ -13,9 +13,9 @@
 \usage{
 \S4method{crop}{giottoBinPoints,ANY}(x, y, ext = FALSE, compact = "auto", ...)
 
-\S4method{crop}{giottoLargeImage,ANY}(x, y, ...)
+\S4method{crop}{giottoLargeImage,ANY}(x, y, write = FALSE, filename = tempfile(fileext = ".tif"), ...)
 
-\S4method{crop}{giottoAffineImage,ANY}(x, y, ...)
+\S4method{crop}{giottoAffineImage,ANY}(x, y, write = FALSE, filename = tempfile(fileext = ".tif"), ...)
 
 \S4method{crop}{spatLocsObj,ANY}(x, y, ...)
 
@@ -39,18 +39,38 @@ that existing in \verb{@spatial}}
 
 \item{\dots}{additional params to pass to terra::crop}
 
+\item{write}{\code{logical} \if{html}{\out{<images only>}} (default = FALSE). Whether to write and
+materialize the cropped subset to disk. This is overridden when a \code{filename}
+is specifically provided.}
+
+\item{filename}{\code{character} \if{html}{\out{<images only>}} (default is a .tif tempfile).
+This file is not actually written unless the user specifically provides a
+path or \code{write = TRUE}.}
+
 \item{DT}{logical. Use alternative DT subsetting for crop operation}
 
 \item{xmin, xmax, ymin, ymax}{only used if DT = TRUE. Set extent bounds
 independently}
 }
 \value{
-SpatRaster
+object of same class as \code{x}, spatially subsetted
 }
 \description{
-Spatially subset an object x using object y. Giotto spatial
-subobjects respond to \link[terra:crop]{terra::crop}. For \code{giottoPoints} and \code{giottoPolygon},
-an alternative faster crop operation is implemented through \code{data.table}
+Spatially subset an object x using object y. \code{crop()} will only return a
+modified object if the \code{y} extent is smaller than the original in \code{x}.
+For object type specifics, see below.
+\subsection{\code{giottoLargeImage} and \code{giottoAffineImage}}{
+
+When \code{write = FALSE} and a \code{filename} is not specified, \code{\link[terra:window]{terra::window()}}
+will instead be used to create a lazy subset of the image. An independent
+version of the cropped subset will only be created when either of the
+above are provided, at which point it is handled through \code{\link[terra:crop]{terra::crop()}}.
+\code{...} params are only used when materializing the subset.
+}
+
+\subsection{\code{giottoPoints} and \code{giottoPolygon}}{
+
+An alternative faster crop operation is implemented through \code{data.table}
 manipulation of the geometry information and are used by default. This mode
 also only allows rectangular subsetting. Additionally, \code{giottoPolygons} will
 be cropped using their centroids so that the entire polygon is either present
@@ -59,8 +79,16 @@ the polygon that does fall within the selected crop region.
 Set \code{DT = FALSE} in order to use the default style of terra::crop behavior
 that also allows usage of additional params through ...
 }
+}
 \examples{
 g <- GiottoData::loadGiottoMini("visium")
-g_image <- getGiottoImage(g, image_type = "largeImage")
-crop(g_image, g_image)
+img1 <- getGiottoImage(g, name = "image")
+plot(img1)
+
+# modify extent
+e <- ext(img1)
+e <- e - 1000
+
+img2 <- crop(img1, e)s
+plot(img2)
 }

@@ -20,13 +20,38 @@
   x,
   y,
   col,
-  max_intensity,
   mar,
+  ext = NULL,
+  xmin = NULL,
+  xmax = NULL,
+  ymin = NULL,
+  ymax = NULL,
+  legend = NULL,
   asRGB = FALSE,
-  legend = FALSE,
-  axes = TRUE,
-  maxcell = 5e+05,
   smooth = TRUE,
+  axes = !add,
+  plg = list(),
+  maxcell = 5e+05,
+  max_intensity = NULL,
+  range = NULL,
+  fill_range = FALSE,
+  levels = NULL,
+  all_levels = FALSE,
+  breaks = NULL,
+  breakby = "eqint",
+  fun = NULL,
+  colNA = NULL,
+  alpha = NULL,
+  sort = FALSE,
+  reverse = FALSE,
+  grid = FALSE,
+  zebra = FALSE,
+  reset = FALSE,
+  add = FALSE,
+  buffer = FALSE,
+  background = NULL,
+  box = axes,
+  clip = TRUE,
   ...
 )
 
@@ -69,24 +94,84 @@
 \item{col}{character. Colors. The default is
 grDevices::grey.colors(n = 256, start = 0, end = 1, gamma = 1)}
 
-\item{max_intensity}{(optional) value to treat as maximum intensity in
-color scale}
-
 \item{mar}{numeric vector of length 4 to set the margins of the plot
 (to make space for the legend). The default is (3, 5, 1.5, 1)}
+
+\item{ext}{object that works with \code{ext()}. Set the spatial extent of the
+plot.}
+
+\item{xmin, xmax, ymin, ymax}{(optional) \code{numeric}. xy minmax ranges to use
+when plotting. If \code{ext} is also provided, these are applied afterwards.}
+
+\item{legend}{logical or character. If not \code{FALSE} a legend is drawn. The character value can be used to indicate where the legend is to be drawn. For example "topright" or "bottomleft". Use \code{plg} for more refined placement. Not supported for continuous legends (the default for raster data)}
 
 \item{asRGB}{(optional) logical. Force RGB plotting if not automatically
 detected}
 
-\item{legend}{logical or character. If not FALSE a legend is drawn. The
-character value can be used to indicate where the legend is to be drawn.
-For example "topright" or "bottomleft"}
+\item{smooth}{logical. If \code{TRUE} the cell values are smoothed (only if a continuous legend is used)}
 
 \item{axes}{logical. Draw axes?}
 
+\item{plg}{list with parameters for drawing the legend. See the arguments for \code{\link[graphics]{legend}}. 
+ 
+  A legend can be placed with placed by specifying arguments \code{x} and \code{y}. For a continuous legend \code{y} can have two values. \code{x} can also be a SpatExtent. Furthermore, \code{x} can have be a keyword such "topleft" and "bottomright" to place the legend at these locations inside the map rectangle. For a continuous legend, only the placement keywords "left", "right", "top", "bottom", "topright", "bottomright" are recognized; and when using these keywords, the legend is placed outside of the map rectangle. The placement of the legend can be altered with argument \code{nudge} that move the location in the directions specified with one value (x direction) or two values (x, y). For a continuous legend it can also have four values (xmin, xmax, ymin, ymax). When supplying coordinates, use \code{horiz=TRUE} to get a horizontal legend.
+    
+  Additional parameters for continuous legends include: 
+
+  \itemize{
+	\item \code{digits} integer. The number of digits to print after the decimal point
+    \item \code{size} to change the height and/or width; the defaults are \code{c(1,1)} 
+	\item \code{at} to set the location of the tickmarks
+	\item \code{format} as in \code{\link{formatC}} to format the numbers. For example, you can use \code{format="g"} for scientific notation. The default is \code{"f"}
+	\item \code{tick} One of these partially matched values: "through", "in", "middle", "out", or "none", to choose a tickmark placement/length that is different from the default "throughout". 
+	\item \code{tick.length} to change the tickmark length (default = 1). Only relevant when \code{tick} is "throughout" or "out".
+	\item \code{tick.col}, \code{tick.box.col} and \code{tick.lwd} to change the appearance of the tickmarks
+	\item \code{title.srt} to rotate the legend title
+	\item \code{title.x} and \code{title.y} to place the legend title at specific coordinates  
+  }}
+
 \item{maxcell}{positive integer. Maximum number of cells to use for the plot}
 
-\item{smooth}{logical. If TRUE the cell values are smoothed}
+\item{max_intensity}{(optional) value to treat as maximum intensity in
+color scale. Overridden by \code{range} param}
+
+\item{range}{numeric. minimum and maximum values to be used for the continuous legend. You can use \code{NA} for one of these to only set the minimum or maximum value}
+
+\item{fill_range}{logical. If \code{TRUE}, values outside of \code{range} get the colors of the extreme values; otherwise they get colored as \code{NA}}
+
+\item{levels}{character. labels for the legend when \code{type="classes"} }
+
+\item{all_levels}{logical. If \code{TRUE}, the legend shows all levels of a categorical raster, even if they are not present in the data}
+
+\item{breaks}{numeric. Either a single number to indicate the number of breaks desired, or the actual breaks. When providing this argument, the default legend becomes "interval"}
+
+\item{breakby}{character or function. Either "eqint" for equal interval breaks, "cases" for equal quantile breaks. If a function is supplied, it should take a single argument (a vector of values) and create groups}
+
+\item{fun}{function to be called after plotting each SpatRaster layer to add something to each map (such as text, legend, lines). For example, with SpatVector \code{v}, you could do \code{fun=function() lines(v)}. The function may have one argument, representing the layer that is plotted (1 to the number of layers) }
+
+\item{colNA}{character. color for the NA values}
+
+\item{alpha}{Either a single numeric between 0 and 1 to set the transparency for all colors (0 is transparent, 1 is opaque) or a SpatRaster with values between 0 and 1 to set the transparency by cell. To set the transparency for a given color, set it to the colors directly}
+
+\item{sort}{logical. If \code{TRUE} legends with categorical values are sorted. If \code{x} is a \code{SpatVector} you can also supply a vector of the unique values, in the order in which you want them to appear in the legend}
+
+\item{reverse}{logical. If \code{TRUE}, the legend order is reversed}
+
+\item{grid}{logical. If \code{TRUE} grid lines are drawn. Their properties such as type and color can be set with the \code{pax} argument. The grid is drawn first such that it is covered by \code{x}. See \code{\link[terra]{add_grid}} to add grid lines on top of the map}
+
+\item{zebra}{logical. If \code{TRUE} a "zebra-box" is added to the axes (ignored when \code{add=TRUE}). The width of the zebra-box can be set with additional argument \code{zebra.cex}. The colors can be changed with additional argument \code{zebra.col}}
+
+\item{reset}{logical. If \code{TRUE} the margins (see argument \code{mar}) are reset to what they were before calling plot; doing so may affect the display of additional objects that are added to the map (e.g. with  \code{\link[terra]{lines}})}
+
+\item{add}{logical. If \code{TRUE} add the object to the current plot}
+
+\item{buffer}{logical. If \code{TRUE} the plotting area is made slightly larger than the extent of \code{x}}
+
+\item{background}{background color. Default is no color (white)}
+
+\item{box}{logical. Should a box be drawn around the map?}
+
+\item{clip}{logical. Should the axes be clipped to the extent of \code{x}?}
 
 \item{point_size}{size of points when plotting giottoPoints}
 
@@ -149,7 +234,7 @@ through \code{...}
 ... param passes to \code{\link{.plot_giottoimage_mg}}
 
 \item \code{plot(x = giottoLargeImage, y = missing)}: Plot \emph{terra}-based giottoLargeImage object.
-... param passes to \code{\link{.plot_giottolargeimage}}
+... param passes to \code{\link[terra:plot]{terra::plot()}}
 
 \item \code{plot(x = giottoPolygon, y = missing)}: Plot \emph{terra}-based giottoPolygon object.
 ... param passes to \code{\link[terra]{plot}}

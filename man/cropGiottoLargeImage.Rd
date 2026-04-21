@@ -40,5 +40,7 @@ given values
 \examples{
 g <- GiottoData::loadGiottoMini("visium")
 
-cropGiottoLargeImage(g, largeImage_name = "image")
+cropGiottoLargeImage(g, largeImage_name = "image", 
+    crop_extent = ext(c(4000, 5000, -5000, -4000))
+) |> plot()
 }
