@@ -14,7 +14,7 @@ standardise_flex(x, center = TRUE, scale = TRUE)
 \item{scale}{scale data}
 }
 \value{
-\code{ScaledMatrix}
+\code{ScaledMatrix} or \code{IterableMatrix}
 }
 \description{
 Matrix scaling.
