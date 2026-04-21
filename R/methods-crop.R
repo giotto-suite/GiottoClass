@@ -87,12 +87,12 @@ setMethod("crop", signature("giottoAffineImage"), function(x, y,
 
     do_crop <- .crop_check(x@raster_object, img_crop_ext)
     if (!do_crop) return(x)
-  
+
     if (!isTRUE(write) && !hasArg(filename)) {
         terra::window(x[]) <- img_crop_ext
         return(initialize(x))
-    } 
-  
+    }
+
     x[] <- terra::crop(x[], img_crop_ext, filename = filename, ...)
     return(initialize(x))
 })
