@@ -100,7 +100,7 @@ jobs:
             any::SpatialExperiment
             any::STexampleData
             any::SummarizedExperiment
-            github::drieslab/GiottoData
+            github::giotto-suite/GiottoData
 
       - uses: actions/setup-python@v5
         with:
@@ -141,7 +141,7 @@ jobs:
     needs: R-CMD-check
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/drieslab/ci-giottosuite/ci-env
+      image: ghcr.io/giotto-suite/ci-giottosuite/ci-env
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -152,14 +152,14 @@ jobs:
       - name: Set up GitHub token for R
         run: echo "GITHUB_PAT=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
       - name: giotto-deps
-        run: remotes::install_github('drieslab/GiottoUtils', upgrade = 'never')
+        run: remotes::install_github('giotto-suite/GiottoUtils', upgrade = 'never')
         shell: Rscript {0}
       - name: catch R deps not in container
         run: devtools::install_deps()
         shell: Rscript {0}
       - name: Generate coverage report and upload
         run: |
-          remotes::install_github('drieslab/GiottoData', upgrade = 'never', auth_token = Sys.getenv("GITHUB_PAT"))
+          remotes::install_github('giotto-suite/GiottoData', upgrade = 'never', auth_token = Sys.getenv("GITHUB_PAT"))
           covr::codecov(
             quiet = FALSE,
             clean = FALSE,
@@ -176,7 +176,7 @@ jobs:
     needs: R-CMD-check
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/drieslab/ci-giottosuite/ci-env
+      image: ghcr.io/giotto-suite/ci-giottosuite/ci-env
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -187,7 +187,7 @@ jobs:
       - name: Set up GitHub token for R
         run: echo "GITHUB_PAT=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
       - name: giotto-deps
-        run: remotes::install_github('drieslab/GiottoUtils', upgrade = 'never', auth_token = Sys.getenv("GITHUB_PAT"))
+        run: remotes::install_github('giotto-suite/GiottoUtils', upgrade = 'never', auth_token = Sys.getenv("GITHUB_PAT"))
         shell: Rscript {0}
       - name: catch R deps not in container
         run: devtools::install_deps()
@@ -198,7 +198,7 @@ jobs:
           R CMD INSTALL *.tar.gz
       - name: Run BiocCheck
         run: |
-          remotes::install_github('drieslab/GiottoData', upgrade = 'never', auth_token = Sys.getenv("GITHUB_PAT"))
+          remotes::install_github('giotto-suite/GiottoData', upgrade = 'never', auth_token = Sys.getenv("GITHUB_PAT"))
           BiocCheck::BiocCheck()
         shell: Rscript {0}
 
