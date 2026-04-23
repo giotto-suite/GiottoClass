@@ -78,7 +78,7 @@ Suggests:
     testthat (>= 3.0.0),
     qs,
     xml2
-Remotes: drieslab/GiottoUtils
+Remotes: giotto-suite/GiottoUtils
 Config/testthat/edition: 3
 Collate: 
     'classes-virtuals.R'
@@ -158,7 +158,7 @@ Collate:
     'subset.R'
     'suite_reexports.R'
     'zzz.R'
-URL: https://drieslab.github.io/GiottoClass/
+URL: https://giotto-suite.github.io/GiottoClass/
 biocViews: Software, Technology, Spatial
 VignetteBuilder: knitr
-BugReports: https://github.com/drieslab/Giotto/issues
+BugReports: https://github.com/giotto-suite/Giotto/issues
