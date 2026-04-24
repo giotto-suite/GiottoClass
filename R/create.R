@@ -1950,7 +1950,7 @@ createSpatEnrObj <- function(enrichment_data,
     create_spat_enr_obj(
         name = name,
         method = method,
-        enrichDT = enrichment_data,
+        enrichDT = enrichDT,
         spat_unit = spat_unit,
         feat_type = feat_type,
         provenance = provenance,
