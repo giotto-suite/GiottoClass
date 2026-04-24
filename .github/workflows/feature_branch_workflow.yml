@@ -13,7 +13,7 @@ jobs:
       packages: read
       actions: read
     container:
-      image: ghcr.io/drieslab/ci-giottosuite/ci-env
+      image: ghcr.io/giotto-suite/ci-giottosuite/ci-env
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -25,7 +25,7 @@ jobs:
       - name: Set up GitHub token for R
         run: echo "GITHUB_PAT=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
       - name: giotto-deps
-        run: remotes::install_github('drieslab/GiottoUtils', upgrade = 'never', auth_token = Sys.getenv("GITHUB_PAT"))
+        run: remotes::install_github('giotto-suite/GiottoUtils', upgrade = 'never', auth_token = Sys.getenv("GITHUB_PAT"))
         shell: Rscript {0}
       - name: catch R deps not in container
         run: devtools::install_deps()
@@ -36,7 +36,7 @@ jobs:
           R CMD INSTALL *.tar.gz
       - name: Run tests
         run: |
-          remotes::install_github('drieslab/GiottoData', upgrade = 'never', auth_token = Sys.getenv("GITHUB_PAT"))
+          remotes::install_github('giotto-suite/GiottoData', upgrade = 'never', auth_token = Sys.getenv("GITHUB_PAT"))
           library(testthat)
           library(GiottoClass)
           test_dir("tests/testthat")
@@ -51,7 +51,7 @@ jobs:
       actions: read
       security-events: write
     container:
-      image: ghcr.io/drieslab/ci-giottosuite/ci-env
+      image: ghcr.io/giotto-suite/ci-giottosuite/ci-env
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
