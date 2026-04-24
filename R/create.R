@@ -76,10 +76,14 @@ NULL
 #' provided
 #' @param expression_matrix_class class of expression matrix to
 #' use (e.g. 'dgCMatrix', 'DelayedArray')
-#' @param backend `filepath` or `gsource` (optional, requires {GiottoDisk}). 
-#'   Path to set up a project directory. Does not have to already exist.
-#'   Accepts a `gsource`-inheriting backend manager. If a filepath is given,
-#'   uses a `gDirSource` by default.
+#' @param backend backend to use (optional). One of:
+#' 
+#'   * `NULL` - (default) in memory object
+#'   * `filepath` - path at which to set up a project directory. Does not have
+#'     to already exist. Sets the backend manager as `gDirSource` by default.
+#'   * `gsource`-inheriting - A specific backend manager to use
+#' 
+#'   `filepath` and `gsource` both require {GiottoDisk}.
 #' @param h5_file deprecated. Use `backend` instead
 #' @param verbose be verbose when building Giotto object
 #' @returns `giotto` object
@@ -1324,7 +1328,7 @@ createGiottoObjectSubcellular <- function(
 #'   passed.
 #' @param name name of exprObj
 #' @param provenance origin data of expression information (if applicable)
-#' @param misc misc
+#' @param misc misc about the object to attach
 #' @param expression_matrix_class deprecated. Previously wrapped the matrix in
 #'   a `DelayedArray`, which provided no practical on-disk benefit. Pass a
 #'   pre-constructed backed matrix to `expression_data` directly if needed.
