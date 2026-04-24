@@ -28,7 +28,7 @@ passed.}
 
 \item{provenance}{origin data of expression information (if applicable)}
 
-\item{misc}{misc}
+\item{misc}{misc about the object to attach}
 
 \item{expression_matrix_class}{deprecated. Previously wrapped the matrix in
 a \code{DelayedArray}, which provided no practical on-disk benefit. Pass a

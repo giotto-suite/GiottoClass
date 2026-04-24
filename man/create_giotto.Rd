@@ -112,10 +112,15 @@ provided}
 \item{expression_matrix_class}{class of expression matrix to
 use (e.g. 'dgCMatrix', 'DelayedArray')}
 
-\item{backend}{\code{filepath} or \code{gsource} (optional, requires {GiottoDisk}).
-Path to set up a project directory. Does not have to already exist.
-Accepts a \code{gsource}-inheriting backend manager. If a filepath is given,
-uses a \code{gDirSource} by default.}
+\item{backend}{backend to use (optional). One of:
+\itemize{
+\item \code{NULL} - (default) in memory object
+\item \code{filepath} - path at which to set up a project directory. Does not have
+to already exist. Sets the backend manager as \code{gDirSource} by default.
+\item \code{gsource}-inheriting - A specific backend manager to use
+}
+
+\code{filepath} and \code{gsource} both require {GiottoDisk}.}
 
 \item{h5_file}{deprecated. Use \code{backend} instead}
 
