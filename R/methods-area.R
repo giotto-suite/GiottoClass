@@ -60,6 +60,6 @@ setMethod("expanse", signature("giottoPolygon"), function(x, output = c("data.ta
 #' @rdname expanse
 #' @export
 setMethod("area", signature("giottoPolygon"), function(x, ...) {
-    deprecate_warn("0.6.0", "area()", "expanse()")
+    deprecate_warn("0.5.1", "area()", "expanse()")
     expanse(x, ...)
 })
