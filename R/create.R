@@ -1289,20 +1289,42 @@ createGiottoObjectSubcellular <- function(
 
 #' @title Create S4 exprObj
 #' @name createExprObj
-#' @description Create an S4 exprObj
+#' @description Create an `exprObj` (thin metadata wrapper/adapter) for
+#'   Giotto expression value information. `matrix` and tabular formats
+#'   will be coerced to {Matrix} sparse format `dgCMatrix`. For tabular
+#'   inputs, the first column is used as row names.
+#'
+#' ## Alternative and disk-backed formats
+#'
+#' Pre-constructed backed matrices (`HDF5Array`, `dbMatrix`, `tiledb_array`,
+#' `IterableMatrix`) may also be passed directly to `expression_data` and will
+#' be used as-is. If using {GiottoDisk}, expression values will be written to
+#' the configured backend format when set into the `giotto` object, so there
+#' is no need to construct a backed matrix upfront — pass a regular matrix and
+#' let the gsource vault handle persistence.
 #' @inheritParams data_access_params
-#' @param expression_data expression data
+#' @param expression_data expression data. Accepts matrix-like data and
+#'   coercible `data.frame` formats (first column used as row names). A
+#'   filepath to a flat file readable by [data.table::fread()] can also be
+#'   passed.
 #' @param name name of exprObj
 #' @param provenance origin data of expression information (if applicable)
-#' @param misc misc
-#' @param expression_matrix_class class of expression matrix to
-#' use (e.g. 'dgCMatrix', 'DelayedArray', 'dbMatrix')
-#' @returns exprObj
+#' @param misc misc about the object to attach
+#' @param expression_matrix_class deprecated. Previously wrapped the matrix in
+#'   a `DelayedArray` when selected. Moving forward, pass a pre-constructed 
+#'   backed matrix to `expression_data` directly if needed.
+#' @returns `exprObj` wrapping the expression matrix with `spat_unit`,
+#'   `feat_type`, and provenance metadata attached.
 #' @examples
+#' m <- matrix(rpois(100, 1), nrow = 10,
+#'     dimnames = list(paste0("feat", 1:10), paste0("cell", 1:10))
+#' )
+#' createExprObj(m)
+#'
+#' # example 0-dominated sparse matrix
 #' x_expr <- readRDS(system.file("extdata/toy_matrix.RDS",
 #'     package = "GiottoClass"
 #' ))
-#'
 #' createExprObj(expression_data = x_expr)
 #' @export
 createExprObj <- function(
@@ -1312,9 +1334,15 @@ createExprObj <- function(
         feat_type = "rna",
         provenance = NULL,
         misc = NULL,
-        expression_matrix_class = c("dgCMatrix", "DelayedArray", "dbMatrix")) {
+        expression_matrix_class = deprecated()) {
+    if (is_present(expression_matrix_class)) {
+        warning(sprintf(
+            "[createExprObj] param '%s' is deprecated", 
+            "expression_matrix_class"), 
+        call. = FALSE)
+    }
+  
     exprMat <- .evaluate_expr_matrix(expression_data,
-        expression_matrix_class = expression_matrix_class,
         feat_type = feat_type
     )
 
@@ -1328,30 +1356,12 @@ createExprObj <- function(
     )
 }
 
-
-#' @title create_expr_obj
-#' @name create_expr_obj
-#' @param exprMat matrix of expression information
-#' @keywords internal
-#' @returns expr_obj
-#' @examples
-#' x_expr <- readRDS(system.file("extdata/toy_matrix.RDS",
-#'     package = "GiottoClass"
-#' ))
-#'
-#' create_expr_obj(exprMat = x_expr)
-#'
-#' @export
 create_expr_obj <- function(name = "test",
     exprMat = NULL,
     spat_unit = "cell",
     feat_type = "rna",
     provenance = NULL,
     misc = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_expr_obj()",
-        with = "createExprObj()"
-    )
 
     if (is.null(exprMat)) exprMat <- matrix()
 

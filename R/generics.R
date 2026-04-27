@@ -125,7 +125,6 @@ setGeneric("XY<-", function(x, ..., value) standardGeneric("XY<-"))
 setGeneric("settleGeom", function(x, ...) standardGeneric("settleGeom"))
 setGeneric("combineGeom", function(x, ...) standardGeneric("combineGeom"))
 setGeneric("splitGeom", function(x, ...) standardGeneric("splitGeom"))
-setGeneric("area", function(x, ...) standardGeneric("area"))
 
 
 # Methods and documentations found in methods-overlaps.R
