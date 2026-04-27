@@ -291,24 +291,35 @@ my_rowMeans <- function(x, method = c("arithmic", "geometric"), offset = 0.1) {
 #' standardise_flex(m)
 #' @export
 standardise_flex <- function(x, center = TRUE, scale = TRUE) {
-    if (inherits(x, "DelayedArray")) {
-        package_check("ScaledMatrix")
-
-        y <- ScaledMatrix::ScaledMatrix(x = x, center = center, scale = scale)
-    } else {
-        if (center & scale) {
-            y <- t_flex(x) - colMeans_flex(x)
-            y <- y / sqrt(rowSums_flex(y^2)) * sqrt((dim(x)[1] - 1))
-            y <- t_flex(y)
-        } else if (center & !scale) {
-            y <- t_flex(x) - colMeans_flex(x)
-            y <- t_flex(y)
-        } else if (!center & scale) {
-            csd <- matrixStats::colSds(x)
-            # csd = DelayedMatrixStats::colSds(x)
-            y <- t_flex(t_flex(x) / csd)
-        } else {
-            y <- x
+    if (inherits(x, "IterableMatrix")) {
+        need_stats <- (isTRUE(center) || isTRUE(scale))
+        if (need_stats) {
+            stats <- BPCells::matrix_stats(x, col_stats = "variance")$col_stats
         }
+        if (isTRUE(center)) center <- stats["mean", ]
+        if (isTRUE(scale)) scale <- sqrt(stats["variance", ])
+        if (!isFALSE(center)) x <- BPCells::add_cols(x, -center)
+        if (!isFALSE(scale)) x <- BPCells::multiply_cols(x, 1 / scale)
+        return(x)
+    } else if (inherits(x, "DelayedArray")) {
+        package_check("ScaledMatrix")
+        return(ScaledMatrix::ScaledMatrix(x = x, center = center, scale = scale))
+    } else if (is.matrix(x) ||
+        inherits(x, "Matrix") ||
+        inherits(x, "DelayedMatrix")) {
+        return(ScaledMatrix::ScaledMatrix(x,
+            center = center,
+            scale = scale
+        ))
+    } else if (center && scale) {
+        y <- t_flex(x) - colMeans_flex(x)
+        y <- y / sqrt(rowSums_flex(y^2)) * sqrt((dim(x)[1] - 1))
+        return(t_flex(y))
+    } else if (center && !scale) {
+        return(t_flex(t_flex(x) - colMeans_flex(x)))
+    } else if (!center && scale) {
+        return(t_flex(t_flex(x) / matrixStats::colSds(x)))
+    } else {
+        return(x)
     }
 }
