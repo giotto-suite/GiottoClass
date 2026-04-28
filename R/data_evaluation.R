@@ -93,6 +93,10 @@ evaluate_input <- function(type, x, ...) {
         feat_type = "rna") {
     checkmate::assert_flag(sparse)
 
+    if (is.null(inputmatrix)) {
+        return(NULL)
+    }
+
     accepted_classes <- c(
         "Matrix", "DelayedMatrix", "dbMatrix", "IterableMatrix",
         "tiledb_array", "ScaledMatrix"
