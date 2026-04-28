@@ -1341,7 +1341,18 @@ createExprObj <- function(
             "expression_matrix_class"), 
         call. = FALSE)
     }
-  
+
+    if (is.null(expression_data)) {
+        return(create_expr_obj(
+            name = name,
+            exprMat = matrix(),
+            spat_unit = spat_unit,
+            feat_type = feat_type,
+            provenance = provenance,
+            misc = misc
+        ))
+    }
+
     exprMat <- .evaluate_expr_matrix(expression_data,
         feat_type = feat_type
     )
