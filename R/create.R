@@ -1330,8 +1330,8 @@ createGiottoObjectSubcellular <- function(
 #' @param provenance origin data of expression information (if applicable)
 #' @param misc misc about the object to attach
 #' @param expression_matrix_class deprecated. Previously wrapped the matrix in
-#'   a `DelayedArray`, which provided no practical on-disk benefit. Pass a
-#'   pre-constructed backed matrix to `expression_data` directly if needed.
+#'   a `DelayedArray` when selected. Moving forward, pass a pre-constructed 
+#'   backed matrix to `expression_data` directly if needed.
 #' @returns `exprObj` wrapping the expression matrix with `spat_unit`,
 #'   `feat_type`, and provenance metadata attached.
 #' @examples

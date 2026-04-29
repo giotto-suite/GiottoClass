@@ -9,7 +9,7 @@
 #' @importMethodsFrom terra spin flip rescale t
 #' @importMethodsFrom Matrix t dim %*% as.matrix coerce
 #' @importMethodsFrom Matrix colSums rowSums colMeans rowMeans diag summary
-#' @importMethodsFrom terra ext ext<- hull
+#' @importMethodsFrom terra ext ext<- hull expanse area
 #' @importMethodsFrom terra plot wrap zoom crop vect buffer head tail
 #' @importMethodsFrom terra relate
 #' @importMethodsFrom terra union erase intersect symdif snap

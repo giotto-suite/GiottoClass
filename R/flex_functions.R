@@ -305,16 +305,23 @@ my_rowMeans <- function(x, method = c("arithmic", "geometric"), offset = 0.1) {
 #' @export
 standardise_flex <- function(x, center = TRUE, scale = TRUE) {
     if (inherits(x, "IterableMatrix")) {
-        if (isTRUE(center)) center <- colSums(x) / nrow(x)
-        if (isTRUE(scale)) scale <- sqrt(BPCells::colVars(x))
+        need_stats <- (isTRUE(center) || isTRUE(scale))
+        if (need_stats) {
+            stats <- BPCells::matrix_stats(x, col_stats = "variance")$col_stats
+        }
+        if (isTRUE(center)) center <- stats["mean", ]
+        if (isTRUE(scale)) scale <- sqrt(stats["variance", ])
         if (!isFALSE(center)) x <- BPCells::add_cols(x, -center)
         if (!isFALSE(scale)) x <- BPCells::multiply_cols(x, 1 / scale)
         return(x)
-    } else if (is.matrix(x) || 
+    } else if (inherits(x, "DelayedArray")) {
+        package_check("ScaledMatrix")
+        return(ScaledMatrix::ScaledMatrix(x = x, center = center, scale = scale))
+    } else if (is.matrix(x) ||
         inherits(x, "Matrix") ||
         inherits(x, "DelayedMatrix")) {
         return(ScaledMatrix::ScaledMatrix(x,
-            center = center, 
+            center = center,
             scale = scale
         ))
     } else if (center && scale) {
