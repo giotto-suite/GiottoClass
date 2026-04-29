@@ -31,8 +31,8 @@ passed.}
 \item{misc}{misc about the object to attach}
 
 \item{expression_matrix_class}{deprecated. Previously wrapped the matrix in
-a \code{DelayedArray}, which provided no practical on-disk benefit. Pass a
-pre-constructed backed matrix to \code{expression_data} directly if needed.}
+a \code{DelayedArray} when selected. Moving forward, pass a pre-constructed
+backed matrix to \code{expression_data} directly if needed.}
 }
 \value{
 \code{exprObj} wrapping the expression matrix with \code{spat_unit},
