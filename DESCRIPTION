@@ -59,22 +59,15 @@ Suggests:
     remotes,
     reshape2,
     rgl,
-    rhdf5,
     rlang,
     rmarkdown,
     RTriangle (>= 1.6-0.10),
-    S4Vectors,
     ScaledMatrix,
     scattermore,
-    Seurat,
-    SeuratObject,
     sf,
-    SingleCellExperiment,
     sp,
-    SpatialExperiment,
     stars,
     STexampleData,
-    SummarizedExperiment,
     testthat (>= 3.0.0),
     qs,
     xml2
@@ -110,8 +103,8 @@ Collate:
     'gstop.R'
     'images.R'
     'instructions.R'
-    'interoperability.R'
     'join.R'
+    'legacy_migration.R'
     'methods-IDs.R'
     'methods-XY.R'
     'methods-affine.R'
@@ -144,7 +137,6 @@ Collate:
     'methods-wrap.R'
     'methods-zoom.R'
     'provenance.R'
-    'python_bento.R'
     'python_environment.R'
     'save_load.R'
     'slot_check.R'
