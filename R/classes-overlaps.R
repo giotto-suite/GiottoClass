@@ -2,6 +2,7 @@
 NULL
 
 # * definitions ####
+#' @export
 setClass("overlapInfo",
     contains = c("spatFeatData", "VIRTUAL"),
     slots = list(data = "ANY")
