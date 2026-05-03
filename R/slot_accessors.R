@@ -1648,6 +1648,7 @@ setExpression <- function(gobject,
     feat_type = NULL,
     name = "raw",
     provenance = NULL,
+    write = FALSE,
     verbose = TRUE,
     initialize = TRUE,
     ...) {
@@ -1680,7 +1681,8 @@ setExpression <- function(gobject,
             provenance = provenance,
             verbose = verbose,
             set_defaults = FALSE,
-            initialize = initialize
+            initialize = initialize,
+            write = write
         )
         return(gobject)
     } else if (inherits(x, "list")) {
@@ -1691,8 +1693,6 @@ setExpression <- function(gobject,
             # MULTIPLE INPUT
             # 4. iteratively set
             for (obj_i in seq_along(x)) {
-                # if(isTRUE(verbose)) message('[', obj_i, ']')
-
                 gobject <- set_expression_values(
                     gobject = gobject,
                     values = x[[obj_i]],
@@ -1702,7 +1702,8 @@ setExpression <- function(gobject,
                     provenance = provenance,
                     verbose = verbose,
                     set_defaults = FALSE,
-                    initialize = initialize
+                    initialize = initialize,
+                    write = write
                 )
             }
             return(gobject)
@@ -1743,7 +1744,8 @@ set_expression_values <- function(gobject,
     provenance = NULL,
     verbose = TRUE,
     set_defaults = TRUE,
-    initialize = FALSE) {
+    initialize = FALSE,
+    write = TRUE) {
     assert_giotto(gobject)
 
     if (!inherits(values, c("exprObj", "NULL"))) {
@@ -1848,11 +1850,14 @@ set_expression_values <- function(gobject,
 
     ## 7. Write matrix to disk if needed
     memory_matrix <- c("matrix", "Matrix")
-    if (!is.null(gobject@source) && inherits(values[], memory_matrix)) {
+    if (!is.null(gobject@source)) {
         gsrc <- .gsource(gobject)
-        store <- GiottoDisk::sourceWrite(gsrc, values[])
-        values@misc$uid <- store@uid
-        values@exprMat <- GiottoDisk::storeRead(store)
+        mat <- values[]
+        if (inherits(mat, memory_matrix) || isTRUE(write)) {
+            store <- GiottoDisk::sourceWrite(gsrc, mat)
+            values@misc$uid <- store@uid
+            values@exprMat <- GiottoDisk::storeRead(store)
+        }
     }
 
     # Output
