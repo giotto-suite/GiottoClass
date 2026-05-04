@@ -1152,6 +1152,64 @@ setMethod(
     x
 }
 
+# Filter overlapPointDT rows to those whose feat_ID_uniq is in `surviving`.
+# Used after gpoints are spatially cropped to remove stale overlap entries.
+# @param x overlapPointDT
+# @param surviving integer vector of surviving feat_ID_uniq values
+# @noRd
+.subset_overlap_point_dt_feat_uniq <- function(x, surviving) {
+    feat <- feat_id_index <- NULL # NSE vars
+    x@data <- x@data[feat %in% surviving]
+    # drop feat_ids for gene names no longer referenced
+    remaining_idx <- sort(unique(x@data$feat_id_index))
+    if (length(remaining_idx) < length(x@feat_ids)) {
+        x@feat_ids <- x@feat_ids[remaining_idx]
+        x@data[, feat_id_index := match(feat_id_index, remaining_idx)]
+        data.table::setkeyv(x@data, "feat")
+        data.table::setindex(x@data, "poly")
+    }
+    x
+}
+
+# For each giottoPolygon in gobject, drop overlap rows for feat_ID_uniq values
+# that are no longer present in the corresponding giottoPoints after a spatial
+# crop. Only the overlapPointDT entries are affected; intensity overlaps are
+# keyed on poly_ID and are unaffected by transcript-level removal.
+# @param gobject giotto object with already-cropped feat_info
+# @param feat_type character vector of feat_types to clean
+# @noRd
+.clean_overlaps_after_gpoints_crop <- function(gobject, feat_type) {
+    # collect surviving feat_ID_uniq per feat_type from the cropped gpoints
+    surviving_uniq <- lapply(
+        gobject@feat_info[feat_type],
+        function(gpts) {
+            if (!inherits(gpts, "giottoPoints") ||
+                is.null(gpts@spatVector)) return(NULL)
+            gpts@spatVector$feat_ID_uniq
+        }
+    )
+    surviving_uniq <- Filter(Negate(is.null), surviving_uniq)
+    if (length(surviving_uniq) == 0L) return(gobject)
+
+    for (poly_name in names(gobject@spatial_info)) {
+        gpoly <- gobject@spatial_info[[poly_name]]
+        if (is.null(gpoly@overlaps)) next
+
+        changed <- FALSE
+        for (ft in names(surviving_uniq)) {
+            if (!ft %in% names(gpoly@overlaps)) next
+            ovlp <- gpoly@overlaps[[ft]]
+            if (!inherits(ovlp, "overlapPointDT")) next
+            gpoly@overlaps[[ft]] <- .subset_overlap_point_dt_feat_uniq(
+                ovlp, surviving_uniq[[ft]]
+            )
+            changed <- TRUE
+        }
+        if (changed) gobject@spatial_info[[poly_name]] <- gpoly
+    }
+    gobject
+}
+
 .subset_overlap_point_dt_j <- function(x, j) {
     # ---- convert j to numerical index ---- #
     if (is.logical(j)) {
