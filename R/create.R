@@ -1298,10 +1298,7 @@ createGiottoObjectSubcellular <- function(
 #'
 #' Pre-constructed backed matrices (`HDF5Array`, `dbMatrix`, `tiledb_array`,
 #' `IterableMatrix`) may also be passed directly to `expression_data` and will
-#' be used as-is. If using {GiottoDisk}, expression values will be written to
-#' the configured backend format when set into the `giotto` object, so there
-#' is no need to construct a backed matrix upfront — pass a regular matrix and
-#' let the gsource vault handle persistence.
+#' be used as-is.
 #' @inheritParams data_access_params
 #' @param expression_data expression data. Accepts matrix-like data and
 #'   coercible `data.frame` formats (first column used as row names). A
