@@ -73,6 +73,21 @@ setClass(
 #' @exportClass processParam
 setClass("processParam", contains = "VIRTUAL", slots = list(param = "list"))
 
+# ** analyzeParam ####
+
+#' @title Parameter Classes for Data Analysis Operations
+#' @name analyzeParam-class
+#' @aliases analyzeParam
+#' @description
+#' Utility class that defines a data analysis procedure and any params used
+#' in performing it. Packages defining analysis methods will create their own
+#' child classes. These parameter objects are intended to be passed alongside
+#' the data to analyze to [analyzeData()].
+#' @slot param list. Named parameters to use with the intended analysis
+#' operation. These can be accessed and updated using the `$` operator.
+#' @exportClass analyzeParam
+setClass("analyzeParam", contains = "VIRTUAL", slots = list(param = "list"))
+
 
 
 # ** svkey ####

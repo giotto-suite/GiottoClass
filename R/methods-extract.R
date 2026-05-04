@@ -373,6 +373,30 @@ setMethod(
     }
 )
 
+#' @rdname subset_dollar
+#' @section \code{`$`} methods:
+#'   Select param from `analyzeParam` inheriting objects
+#' @export
+setMethod("$", signature("analyzeParam"), function(x, name) {
+    x@param[[name]]
+})
+#' @export
+.DollarNames.analyzeParam <- function(x, pattern) {
+    names(x@param)
+}
+
+#' @rdname replace_dollar
+#' @section \code{`$<-`} methods:
+#'   Set values by param name into `analyzeParam` inheriting objects
+#' @export
+setMethod(
+    "$<-", signature("analyzeParam"),
+    function(x, name, value) {
+        x@param[[name]] <- value
+        return(initialize(x))
+    }
+)
+
 # [ S4 access generic ####
 
 

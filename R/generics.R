@@ -114,6 +114,22 @@ setGeneric("processData", function(x, param, ...) standardGeneric("processData")
 #' @returns Clustering results. Exact outputs may depend on param settings
 #' @export
 setGeneric("clusterData", function(x, param, ...) standardGeneric("clusterData"))
+#' @title Data Analysis
+#' @name analyzeData
+#' @description Generic for analyzing an object containing measured values,
+#' producing computed outputs or summary statistics about the data rather than
+#' transforming it. Specific methods should be defined for this generic to
+#' perform analyses specific to a data class type. No methods are exported
+#' from \pkg{GiottoClass}. The methods, which may differ depending on the
+#' input data, are attached from other packages which focus on analyses and/or
+#' alternative data representations with specific ways to implement those
+#' analyses.
+#' @param x a data object
+#' @param param a [analyzeParam-class] inheriting object
+#' @param ... additional arguments, for use in specific methods
+#' @returns A \code{data.table} of computed values or summary statistics
+#' @export
+setGeneric("analyzeData", function(x, param, ...) standardGeneric("analyzeData"))
 
 # Methods and documentations found in methods-spatShift.R
 

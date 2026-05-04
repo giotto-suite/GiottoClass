@@ -10,6 +10,7 @@
 \alias{$<-,metaData-method}
 \alias{$<-,terraVectData-method}
 \alias{$<-,processParam-method}
+\alias{$<-,analyzeParam-method}
 \title{Replace part of an object with \verb{$<-}}
 \usage{
 \S4method{$}{giotto}(x, name) <- value
@@ -25,6 +26,8 @@
 \S4method{$}{terraVectData}(x, name) <- value
 
 \S4method{$}{processParam}(x, name) <- value
+
+\S4method{$}{analyzeParam}(x, name) <- value
 }
 \arguments{
 \item{x}{Giotto S4 object to replace columns from}
@@ -60,6 +63,9 @@ Set values by colname into giotto S4 spatVector slot.
 
 
 Set values by param name into \code{processParam} inheriting objects
+
+
+Set values by param name into \code{analyzeParam} inheriting objects
 }
 
 \examples{
