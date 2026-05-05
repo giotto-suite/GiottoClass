@@ -398,6 +398,25 @@ joinGiottoObjects <- function(gobject_list,
     ## ----------------------------- ##
 
 
+    ## compute cumulative feat_ID_uniq offsets per (object, feat_type) so that
+    ## gpoints and their associated overlapPointDT feat columns can be shifted
+    ## to non-overlapping integer ranges before merging.
+    feat_uniq_offsets <- vector("list", n_gobjects)
+    for (ft in first_features) {
+        cumulative <- 0L
+        for (gobj_i in seq_len(n_gobjects)) {
+            if (is.null(feat_uniq_offsets[[gobj_i]])) {
+                feat_uniq_offsets[[gobj_i]] <- list()
+            }
+            feat_uniq_offsets[[gobj_i]][[ft]] <- cumulative
+            gpts <- gobject_list[[gobj_i]]@feat_info[[ft]]
+            if (!is.null(gpts) &&
+                inherits(gpts, "giottoPoints") &&
+                !is.null(gpts@spatVector)) {
+                cumulative <- cumulative + nrow(gpts@spatVector)
+            }
+        }
+    }
 
 
 
@@ -572,9 +591,24 @@ joinGiottoObjects <- function(gobject_list,
             }
 
 
-            # overlaps??
+            # overlaps
             vmsg(.v = verbose, "-- 5.3. overlaps")
-            # TODO
+            if (!is.null(gobj@spatial_info[[spat_info]]@overlaps)) {
+                for (ft in names(gobj@spatial_info[[spat_info]]@overlaps)) {
+                    ovlp <- gobj@spatial_info[[spat_info]]@overlaps[[ft]]
+                    if (!inherits(ovlp, "overlapPointDT")) next
+                    # prefix spat_ids to match the updated poly_IDs
+                    ovlp@spat_ids <- paste0(gname, "-", ovlp@spat_ids)
+                    # shift feat_ID_uniq values to non-overlapping range
+                    offset <- feat_uniq_offsets[[gobj_i]][[ft]]
+                    if (!is.null(offset) && offset != 0L) {
+                        feat <- NULL # NSE
+                        ovlp@data <- data.table::copy(ovlp@data)
+                        ovlp@data[, feat := feat + offset]
+                    }
+                    gobj@spatial_info[[spat_info]]@overlaps[[ft]] <- ovlp
+                }
+            }
 
             spatinfo_vector <- c(spatinfo_vector, spat_info)
             all_spatinfo_list[[gobj_i]] <- spatinfo_vector
@@ -588,11 +622,13 @@ joinGiottoObjects <- function(gobject_list,
             featureinfo <- gobj@feat_info[[feat_info]]
 
             if (inherits(featureinfo, "giottoPoints")) {
-                # update feat_ID_uniq in giottoPoints spatial info
-                feat_ids_uniq <- featureinfo@spatVector$feat_ID_uniq
-                featureinfo@spatVector$feat_ID_uniq <- paste0(
-                    gname, "-", feat_ids_uniq
-                )
+                # offset feat_ID_uniq to a non-overlapping integer range,
+                # consistent with the feat column offset applied to overlaps
+                offset <- feat_uniq_offsets[[gobj_i]][[feat_info]]
+                if (!is.null(offset) && offset != 0L) {
+                    featureinfo@spatVector$feat_ID_uniq <-
+                        featureinfo@spatVector$feat_ID_uniq + offset
+                }
             }
 
             if (inherits(featureinfo, "giottoBinPoints")) {
@@ -697,6 +733,7 @@ joinGiottoObjects <- function(gobject_list,
     for (spat_info in available_spat_info) {
         savelist_vector <- list()
         savelist_centroids <- list()
+        overlap_lists <- list() # named by feat_type, each a list of overlapPointDTs
         for (gobj_i in seq_along(updated_object_list)) {
             gpoly <- getPolygonInfo(
                 updated_object_list[[gobj_i]],
@@ -709,7 +746,14 @@ joinGiottoObjects <- function(gobject_list,
             savelist_vector[[gobj_i]] <- spat_information_vector
             savelist_centroids[[gobj_i]] <- spat_information_centroids
 
-            # TODO: add overlaps
+            # collect per-feat_type overlapPointDTs (already offset in prepare)
+            if (!is.null(gpoly@overlaps)) {
+                for (ft in names(gpoly@overlaps)) {
+                    ovlp <- gpoly@overlaps[[ft]]
+                    if (!inherits(ovlp, "overlapPointDT")) next
+                    overlap_lists[[ft]] <- c(overlap_lists[[ft]], list(ovlp))
+                }
+            }
         }
 
 
@@ -717,11 +761,21 @@ joinGiottoObjects <- function(gobject_list,
         comb_spatvectors <- do.call("rbind", savelist_vector)
         comb_spatcentroids <- do.call("rbind", savelist_centroids)
 
+        # combine overlapPointDTs per feat_type; spat remapping handled by
+        # rbind2 since @spat_ids were already prefixed in the prepare step
+        comb_overlaps <- if (length(overlap_lists) > 0L) {
+            lapply(overlap_lists, function(ovlp_list) {
+                Reduce(rbind, ovlp_list)
+            })
+        } else {
+            NULL
+        }
+
         comb_polygon <- create_giotto_polygon_object(
             name = spat_info,
             spatVector = comb_spatvectors,
             spatVectorCentroids = comb_spatcentroids,
-            overlaps = NULL
+            overlaps = comb_overlaps
         )
 
 
