@@ -206,7 +206,7 @@ joinGiottoObjects <- function(gobject_list,
     verbose = FALSE) {
     # NSE vars
     sdimz <- cell_ID <- sdimx <- sdimy <- name <- NULL
-
+    core_units <- c("cell", "spot")
     n_gobjects <- length(gobject_list)
     gobj_idx <- seq_len(n_gobjects)
 
@@ -557,7 +557,18 @@ joinGiottoObjects <- function(gobject_list,
                     set_defaults = FALSE
                 )
 
-                cx[][["list_ID"]] <- gname
+                if (spat_unit %in% core_units) {
+                    if (nrow(cx[]) == 0) {
+                        stop(sprintf("Core spat_unit '%s' has 0 rows, object is invalid.", spat_unit))
+                    }
+                } else {
+                    if (nrow(cx[]) == 0) {
+                        next  # polygon units
+                    }
+                }
+
+                cx[][["list_ID"]] <- rep(gname, nrow(cx[]))
+                #cx[][["list_ID"]] <- gname
                 cx[][["cell_ID"]] <- paste0(gname, "-", cx[][["cell_ID"]])
                 gobj <- setGiotto(gobj, cx,
                     initialize = FALSE, verbose = FALSE
@@ -741,7 +752,11 @@ joinGiottoObjects <- function(gobject_list,
                 return_giottoPolygon = TRUE
             )
             spat_information_vector <- gpoly[]
-            spat_information_centroids <- centroids(gpoly)
+            spat_information_centroids <- tryCatch(
+                centroids(gpoly),
+                error = function(e) NULL
+            )
+            # spat_information_centroids <- centroids(gpoly)
 
             savelist_vector[[gobj_i]] <- spat_information_vector
             savelist_centroids[[gobj_i]] <- spat_information_centroids
