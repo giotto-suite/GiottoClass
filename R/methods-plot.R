@@ -29,21 +29,21 @@ setMethod("plot", signature(x = "giottoImage", y = "missing"),
 # * giottoLargeImage ####
 
 #' @describeIn plot-generic Plot \emph{terra}-based giottoLargeImage object. 
-#' ... param passes to \code{\link{.plot_giottolargeimage}}
+#' ... param passes to [terra::plot()]
 #' @param col character. Colors. The default is 
 #' grDevices::grey.colors(n = 256, start = 0, end = 1, gamma = 1)
+#' @param ext object that works with `ext()`. Set the spatial extent of the
+#'   plot.
 #' @param max_intensity (optional) value to treat as maximum intensity in 
-#' color scale
+#' color scale. Overridden by `range` param
 #' @param mar numeric vector of length 4 to set the margins of the plot 
 #' (to make space for the legend). The default is (3, 5, 1.5, 1)
 #' @param asRGB (optional) logical. Force RGB plotting if not automatically 
 #' detected
-#' @param legend logical or character. If not FALSE a legend is drawn. The 
-#' character value can be used to indicate where the legend is to be drawn. 
-#' For example "topright" or "bottomleft"
-#' @param axes logical. Draw axes?
 #' @param maxcell positive integer. Maximum number of cells to use for the plot
-#' @param smooth logical. If TRUE the cell values are smoothed
+#' @param xmin,xmax,ymin,ymax (optional) `numeric`. xy minmax ranges to use
+#'   when plotting. If `ext` is also provided, these are applied afterwards.
+#' @inheritParams terra::plot
 #' @examples
 #' ######### giottoLargeImage plotting #########
 #' \dontrun{
@@ -58,17 +58,42 @@ setMethod("plot", signature(x = "giottoImage", y = "missing"),
 setMethod(
     "plot",
     signature(x = "giottoLargeImage", y = "missing"),
-    function(x, y, col, max_intensity, mar, asRGB = FALSE, legend = FALSE, 
-            axes = TRUE, maxcell = 5e5, smooth = TRUE, ...) {
-        arglist <- list(
-            giottoLargeImage = x,
-            asRGB = asRGB,
-            legend = legend,
-            axes = axes,
-            maxcell = maxcell,
-            smooth = smooth,
-            ...
-        )
+    function(x, y, col, mar, 
+        ext = NULL,
+        xmin = NULL,
+        xmax = NULL,
+        ymin = NULL,
+        ymax = NULL,
+        legend = NULL,
+        asRGB = FALSE, 
+        smooth = TRUE,
+        axes = !add,
+        plg = list(),
+        maxcell = 5e5,
+        max_intensity = NULL,
+        range = NULL,
+        fill_range = FALSE,
+        levels = NULL,
+        all_levels = FALSE,
+        breaks = NULL,
+        breakby = "eqint",
+        fun = NULL,
+        colNA = NULL,
+        alpha = NULL,
+        sort = FALSE,
+        reverse = FALSE,
+        grid = FALSE,
+        zebra = FALSE,
+        reset = FALSE,
+        add = FALSE,
+        buffer = FALSE,
+        background = NULL,
+        box = axes,
+        clip = TRUE,
+        ...) {
+        y <- NULL # for getting args without missing `y` error
+        arglist <- get_args_list(...)
+        arglist$y <- NULL # remove y entirely
 
         # check for pre-0.1.2 class
         if (is.null(attr(x, "colors"))) {
@@ -78,20 +103,13 @@ setMethod(
             )
         }
 
-        # If no 'col' param, pull from `colors` slot
-        if (missing("col")) {
+        if (missing(col)) {
             arglist$col <- x@colors
-        } else {
-            arglist$col <- col
         }
-        # if no 'max_intensity' param, pull from `max_window` slot
-        if (missing("max_intensity")) {
-            arglist$max_intensity <- x@max_window
-        } else {
-            arglist$max_intensity <- max_intensity
+        if (missing(mar)) {
+            arglist$mar <- c(3, 5, 1.5, 1)
         }
-        # if mar param provided, use it
-        if (!missing("mar")) arglist$mar <- mar
+        arglist$max_intensity <- arglist$max_intensity %null% x@max_window
 
         do.call(.plot_giottolargeimage, args = arglist)
     }
@@ -482,9 +500,7 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
 #' @name .plot_giottolargeimage
 #' @description Plot a \emph{downsampled} version of giottoLargeImage. 
 #' Cropping can increase plot resolution of region of interest.
-#' @param gobject giotto object
-#' @param largeImage_name name of giottoLargeImage
-#' @param giottoLargeImage giottoLargeImage object
+#' @param x `giottoLargeImage`
 #' @param crop_extent (optional) extent object to focus on specific region of 
 #' image
 #' @param xmax_crop,xmin_crop,ymax_crop,ymin_crop (optional) crop min/max x 
@@ -495,7 +511,6 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
 #' detected
 #' @param stretch character. Option to stretch the values to increase 
 #' contrast: "lin" (linear) or "hist" (histogram)
-#' @param axes boolean. Default = TRUE. Whether to draw axes
 #' @param smooth boolean. Default = TRUE. Whether to apply smoothing on the 
 #' image
 #' @param mar plot margins default = c(3,5,1.5,1)
@@ -513,49 +528,39 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
 #' depending on image type
 #' @return plot
 #' @keywords internal
-.plot_giottolargeimage <- function(gobject = NULL,
-    largeImage_name = NULL,
-    giottoLargeImage = NULL,
-    crop_extent = NULL,
-    xmax_crop = NULL,
-    xmin_crop = NULL,
-    ymax_crop = NULL,
-    ymin_crop = NULL,
+.plot_giottolargeimage <- function(x,
+    ext = NULL,
+    xmin = NULL,
+    xmax = NULL,
+    ymin = NULL,
+    ymax = NULL,
     max_intensity = NULL,
     asRGB = FALSE,
-    stretch = NULL,
-    axes = TRUE,
-    smooth = TRUE,
-    mar = c(3, 5, 1.5, 1),
-    legend = FALSE,
-    maxcell = 5e5,
-    col = grDevices::grey.colors(n = 256, start = 0, end = 1, gamma = 1),
-    asp = 1,
     ...) {
-    a <- c(get_args_list(), list(...))
+    a <- list(...)
+    a$axes <- a$axes %null% TRUE
+    a$smooth <- a$smooth %null% TRUE
+    a$mar <- a$mar %null% c(3, 5, 1.5, 1)
+    a$maxcell <- a$maxcell %null% 5e5
+    a$asp <- a$asp %null% 1
 
-    # Get giottoLargeImage and check and perform crop if needed
-    giottoLargeImage <- cropGiottoLargeImage(
-        gobject = gobject,
-        largeImage_name = largeImage_name,
-        giottoLargeImage = giottoLargeImage,
-        crop_extent = crop_extent,
-        xmax_crop = xmax_crop,
-        xmin_crop = xmin_crop,
-        ymax_crop = ymax_crop,
-        ymin_crop = ymin_crop
+    if (!is.null(ext)) {
+        e <- ext(ext)
+    } else {
+        e <- ext(x)
+    }
+    e <- .modify_ext(e,
+        xmin = xmin,
+        xmax = xmax,
+        ymin = ymin,
+        ymax = ymax
     )
-
-    a <- a[!c(names(a) %in% c(
-        "gobject", "largeImage_name", "giottoLargeImage", "crop_extent",
-        "xmax_crop", "xmin_crop", "ymax_crop", "ymin_crop", "asRGB",
-        "max_intensity"
-    ))]
-    a$x <- giottoLargeImage@raster_object
+    terra::window(x[]) <- e
+    a$x <- x[]
 
     # Determine likely image bitdepth
     if (is.null(max_intensity) || is.na(max_intensity)) {
-        bitDepth <- ceiling(log(x = giottoLargeImage@max_intensity, base = 2))
+        bitDepth <- ceiling(log(x = x@max_intensity, base = 2))
         # Assign discovered bitdepth as max_intensity
         max_intensity <- 2^bitDepth - 1
 
@@ -578,8 +583,13 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
 
         do.call(terra::plotRGB, args = a)
     } else {
-        if (is.null(a$stretch)) a$stretch <- "lin"
-        if (!"range" %in% names(a)) a$range <- c(0, max_intensity)
+        a$stretch <- a$stretch %null% "lin"
+        a$legend <- a$legend %null% FALSE
+        default_grey <- grDevices::grey.colors(
+            n = 256, start = 0, end = 1, gamma = 1
+        )
+        a$col <- a$col %null% default_grey
+        a$range <- a$range %null% c(0, max_intensity)
 
         do.call(terra::plot, args = a)
     }

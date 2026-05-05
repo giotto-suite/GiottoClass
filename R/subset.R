@@ -976,6 +976,20 @@
         if (verbose) wrap_msg("completed 11: subsetted spatial feature data")
     }
 
+    ## remove overlap entries for transcripts cropped out by spatial bounds
+    if (!is.null(gobject@spatial_info) &&
+        !is.null(gobject@feat_info) &&
+        any(!vapply(list(x_min, x_max, y_min, y_max), is.null,
+            FUN.VALUE = logical(1L)))) {
+        gobject <- .clean_overlaps_after_gpoints_crop(
+            gobject,
+            feat_type = if (isTRUE(feat_type == ":all:"))
+                names(gobject@feat_info)
+            else
+                feat_type
+        )
+        if (verbose) wrap_msg("completed 11b: cleaned overlaps after gpoints spatial crop")
+    }
 
 
     ## update parameters used ##

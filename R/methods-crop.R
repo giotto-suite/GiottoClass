@@ -2,9 +2,22 @@
 
 #' @name crop
 #' @title Crop to a spatial subset
-#' @description Spatially subset an object x using object y. Giotto spatial
-#' subobjects respond to [terra::crop]. For `giottoPoints` and `giottoPolygon`,
-#' an alternative faster crop operation is implemented through `data.table`
+#' @description
+#' Spatially subset an object x using object y. `crop()` will only return a 
+#' modified object if the `y` extent is smaller than the original in `x`.
+#' For object type specifics, see below.
+#' 
+#' ## `giottoLargeImage` and `giottoAffineImage`
+#' 
+#' When `write = FALSE` and a `filename` is not specified, [terra::window()]
+#' will instead be used to create a lazy subset of the image. An independent
+#' version of the cropped subset will only be created when either of the
+#' above are provided, at which point it is handled through [terra::crop()].
+#' `...` params are only used when materializing the subset.
+#' 
+#' ## `giottoPoints` and `giottoPolygon`
+#' 
+#' An alternative faster crop operation is implemented through `data.table`
 #' manipulation of the geometry information and are used by default. This mode
 #' also only allows rectangular subsetting. Additionally, `giottoPolygons` will
 #' be cropped using their centroids so that the entire polygon is either present
@@ -14,12 +27,25 @@
 #' that also allows usage of additional params through ...
 #' @param x object
 #' @param y any object that has a SpatExtent or returns a SpatExtent
+#' @param write `logical` <images only> (default = FALSE). Whether to write and
+#'   materialize the cropped subset to disk. This is overridden when a `filename` 
+#'   is specifically provided.
+#' @param filename `character` <images only> (default is a .tif tempfile). 
+#'   This file is not actually written unless the user specifically provides a 
+#'   path or `write = TRUE`.
 #' @param \dots additional params to pass to terra::crop
-#' @returns SpatRaster
+#' @returns object of same class as `x`, spatially subsetted  
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
-#' g_image <- getGiottoImage(g, image_type = "largeImage")
-#' crop(g_image, g_image)
+#' img1 <- getGiottoImage(g, name = "image")
+#' plot(img1)
+#' 
+#' # modify extent
+#' e <- ext(img1)
+#' e <- e - 1000
+#' 
+#' img2 <- crop(img1, e)s
+#' plot(img2)
 NULL
 
 
@@ -31,29 +57,43 @@ NULL
 # * giottoLargeImage ####
 #' @rdname crop
 #' @export
-setMethod("crop", signature("giottoLargeImage"), function(x, y, ...) {
+setMethod("crop", signature("giottoLargeImage"), function(x, y,
+    write = FALSE,
+    filename = tempfile(fileext = ".tif"),
+    ...) {
     do_crop <- .crop_check(x, y)
-    if (!do_crop) {
+    if (!do_crop) return(x)
+  
+    if (!isTRUE(write) && !hasArg(filename)) {
+        terra::window(x[]) <- ext(y)
         return(initialize(x))
     }
-    x@raster_object <- terra::crop(x@raster_object, y, ...)
+    
+    x[] <- terra::crop(x[], y, filename = filename, ...)
     return(initialize(x))
 })
 
 # * giottoAffineImage ####
 #' @rdname crop
 #' @export
-setMethod("crop", signature("giottoAffineImage"), function(x, y, ...) {
+setMethod("crop", signature("giottoAffineImage"), function(x, y, 
+    write = FALSE,
+    filename = tempfile(fileext = ".tif"),
+    ...) {
     crop_ext <- ext(y)
     d <- .bound_poly(crop_ext)
     aff <- x@affine
     img_crop_ext <- ext(affine(d, aff, inv = TRUE)) # find extent in img space
 
     do_crop <- .crop_check(x@raster_object, img_crop_ext)
-    if (!do_crop) {
+    if (!do_crop) return(x)
+
+    if (!isTRUE(write) && !hasArg(filename)) {
+        terra::window(x[]) <- img_crop_ext
         return(initialize(x))
     }
-    x@raster_object <- terra::crop(x@raster_object, img_crop_ext)
+
+    x[] <- terra::crop(x[], img_crop_ext, filename = filename, ...)
     return(initialize(x))
 })
 
