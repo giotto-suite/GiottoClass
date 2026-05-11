@@ -238,6 +238,7 @@ setClass("overlapIntensityDT",
         new = c("poly", "feat_id_index")
     )
     data <- data[!is.na(poly) & !is.na(feat),]    # drop NAs
+    if (nrow(data) == 0L) return(NULL)
     # Ensure data is stored as integer-based mapping
     data[, poly := match(poly, odt@spat_ids)]
     data[, feat_id_index := match(feat_id_index, odt@feat_ids)]
