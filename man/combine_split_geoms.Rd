@@ -35,7 +35,7 @@ if not provided.}
 
 \item{dissolve}{logical. Should borders between aggregated geometries be dissolved?}
 
-\item{fun}{function used to aggregate values. Either an actual function, or for the following, their name: "mean", "max", "min", "median", "sum", "modal", "any", "all", "prod", "which.min", "which.max", "table", "sd" (sample standard deviation) and "std" (population standard deviation)}
+\item{fun}{function used to aggregate values. Either an actual function, or for the following, their name: "mean", "max", "min", "median", "sum", "modal", "any", "all", "none", "prod", "which.min", "which.max", "table", "sd" (sample standard deviation) and "std" (population standard deviation)}
 
 \item{...}{additional params to pass to \code{\link[terra:aggregate]{terra::aggregate()}} (and then to
 \code{fun}, such as \code{na.rm=TRUE}) or \code{\link[terra:disaggregate]{terra::disagg()}}}

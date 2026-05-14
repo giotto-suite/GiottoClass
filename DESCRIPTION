@@ -1,6 +1,6 @@
 Package: GiottoClass
 Title: Giotto Suite Object Definitions and Framework
-Version: 0.4.9
+Version: 0.5.1
 Authors@R: c(
 	person("Ruben", "Dries", email = "rubendries@gmail.com",
 		 role = c("aut", "cre"), comment = c(ORCID = "0000-0001-7650-7754")),
@@ -24,9 +24,9 @@ Description: Definitions for the Giotto object and its subobjects.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Depends:
-    R (>= 4.4.1)
+    R (>= 4.5.0)
 Imports:
     checkmate,
     data.table (>= 1.12.2),
@@ -42,7 +42,7 @@ Imports:
     reticulate (>= 1.25),
     stats,
     terra (>= 1.8-21)
-Suggests: 
+Suggests:
     Biobase,
     chihaya,
     DelayedArray,
@@ -77,9 +77,15 @@ Suggests:
     testthat (>= 3.0.0),
     qs,
     xml2
-Remotes: drieslab/GiottoUtils
+Remotes: giotto-suite/GiottoUtils
 Config/testthat/edition: 3
 Collate: 
+    'classes-virtuals.R'
+    'classes-utils.R'
+    'classes-images.R'
+    'classes-overlaps.R'
+    'classes-points.R'
+    'classes-polygons.R'
     'package_imports.R'
     'classes.R'
     'generics.R'
@@ -87,6 +93,7 @@ Collate:
     'aggregate.R'
     'auxilliary.R'
     'buffer.R'
+    'classes-binpoints.R'
     'combine_metadata.R'
     'slot_accessors.R'
     'create.R'
@@ -150,7 +157,7 @@ Collate:
     'subset.R'
     'suite_reexports.R'
     'zzz.R'
-URL: https://drieslab.github.io/GiottoClass/
+URL: https://giotto-suite.github.io/GiottoClass/
 biocViews: Software, Technology, Spatial
 VignetteBuilder: knitr
-BugReports: https://github.com/drieslab/Giotto/issues
+BugReports: https://github.com/giotto-suite/Giotto/issues
