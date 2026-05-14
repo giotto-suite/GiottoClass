@@ -2,12 +2,13 @@
 % Please edit documentation in R/classes-binpoints.R
 \name{headtail}
 \alias{headtail}
-\alias{tail,giottoBinPoints-method}
+\alias{head.giottoBinPoints}
+\alias{tail.giottoBinPoints}
 \title{Head and tail}
 \usage{
-\S4method{head}{giottoBinPoints}(x, n = 6L, ...)
+\method{head}{giottoBinPoints}(x, n = 6L, ...)
 
-\S4method{tail}{giottoBinPoints}(x, n = 6L, ...)
+\method{tail}{giottoBinPoints}(x, n = 6L, ...)
 }
 \arguments{
 \item{x}{object}
