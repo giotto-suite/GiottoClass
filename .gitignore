@@ -10,4 +10,4 @@ codecov.yml
 cell_rna*
 docs
 pkgdown
-.github
+.positai

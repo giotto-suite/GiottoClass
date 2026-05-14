@@ -1,3 +1,46 @@
+# GiottoClass 0.5.1 (2026/05/14)
+
+## changes
+- deprecated `area()` in favor of `expanse()`
+- `createExprObj()` no longer coerces to exotic matrix formats -- `expression_matrix_class` param is deprecated
+  - backed matrices (`HDF5Array`, `dbMatrix`, `IterableMatrix`) must be pre-constructed and directly passed to be used.
+- added superseded note to `createGiottoImage()` documentation
+- `calculateOverlap()` and `overlapToMatrix()` param harmonization
+- refactor of `saveGiotto()` and `loadGiotto()`
+- code reorganization for `classes.R`
+
+## new
+- `aggregateFeatures()` giotto object wrapper function for running `calculateOverlap()` and `overlapToMatrix()`
+- `overlapPointDT()` and `overlapIntensityDT()` classes to store overlaps relationships efficiently and help with aggregation pipeline
+- `giottoBinPoints` class for efficient binned spatial points
+- `rbind` method for `giottoPoints`
+- `affine2d` class is now exported
+
+## bug fixes
+- `overlaps()` will now properly find image overlaps
+- fix a naming bug when exporting images during save
+- `SpatVector` -> `data.table` coercion no longer returns empty when it has no attributes
+
+## enhancements
+- `crop()` for `giottoLargeImage`/`giottoAffineImage` is now lazy by default — uses `terra::window()` instead of materializing a crop unless `write = TRUE` or a `filename` is given
+- `giottoPoints` `plot()` gains a `sigma` param for Gaussian smoothing of rasterized density; `count = TRUE` (replaces `dens` param) is now the default
+- image plotting rework -- more params exposed, better defaults
+
+
+# GiottoClass 0.4.12 (2025/12/12)
+
+## bug fixes
+- `seuratToGiottoV5()`/`giottoToSeuratV5()` updated for `layer` param (replacing `slot`)
+
+## enhancements
+- automatic checking for `"count"` column in feature info
+
+## new
+- `misc` slot for storing unstructured data
+
+## enhancements
+- escape hatch for gobject initialize checking. Set option `"giotto.init_check_severity"` to `"stop"` (default), or `"warning"` depending on needs.
+
 # GiottoClass 0.4.10 (2025/09/30)
 
 ## bug fixes

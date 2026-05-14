@@ -1122,9 +1122,6 @@ stitchGiottoLargeImage <- function(largeImage_list = NULL,
 }
 
 
-
-
-
 #' @title Crop a giotto largeImage object
 #' @name cropGiottoLargeImage
 #' @description Crop a giottoLargeImage based on crop_extent argument or
@@ -1140,7 +1137,9 @@ stitchGiottoLargeImage <- function(largeImage_list = NULL,
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
-#' cropGiottoLargeImage(g, largeImage_name = "image")
+#' cropGiottoLargeImage(g, largeImage_name = "image", 
+#'     crop_extent = ext(c(4000, 5000, -5000, -4000))
+#' ) |> plot()
 #' @export
 cropGiottoLargeImage <- function(gobject = NULL,
     largeImage_name = NULL,
@@ -1152,17 +1151,10 @@ cropGiottoLargeImage <- function(gobject = NULL,
     ymax_crop = NULL,
     ymin_crop = NULL) {
     ## 0. Check inputs
-    if (!is.null(crop_extent)) {
-        if (!inherits(crop_extent, "SpatExtent")) {
-            stop("crop_extent argument only accepts terra extent objects. \n")
-        }
-    }
-    if (!is.null(giottoLargeImage)) {
-        if (!inherits(giottoLargeImage, "giottoLargeImage")) {
-            stop("giottoLargeImage argument only accepts giottoLargeImage
-                objects. \n")
-        }
-    }
+    checkmate::assert_class(giottoLargeImage, 
+        classes = "giottoLargeImage", 
+        null.ok = TRUE
+    )
 
     ## 1. get giottoLargeImage if necessary
     if (is.null(giottoLargeImage)) {
@@ -1177,30 +1169,29 @@ cropGiottoLargeImage <- function(gobject = NULL,
         }
     }
 
-    raster_object <- giottoLargeImage@raster_object
+    raster_object <- giottoLargeImage[]
 
     ## 2. Find crop extent
-    crop_bounds <- c(xmin_crop, xmax_crop, ymin_crop, ymax_crop)
-
     if (!is.null(crop_extent)) {
-        raster_object <- terra::crop(raster_object,
-            crop_extent,
-            snap = "near"
-        )
-    } else if (length(crop_bounds == 4)) {
-        crop_extent <- terra::ext(crop_bounds)
-
-        raster_object <- terra::crop(raster_object,
-            crop_extent,
-            snap = "near"
-        )
-    } else if (length(crop_bounds) > 1) {
-        stop("All four crop bounds must be given.")
+        e <- ext(crop_extent)
+    } else {
+        e <- ext(raster_object)
     }
+
+    e <- .modify_ext(e,
+        xmin = xmin_crop,
+        xmax = xmax_crop,
+        ymin = ymin_crop,
+        ymax = ymax_crop
+    )
+
+    raster_object <- terra::crop(raster_object, e,
+        snap = "near"
+    )
 
     ## 3. Return a cropped giottoLargeImage
     giottoLargeImage@name <- crop_name
-    giottoLargeImage@raster_object <- raster_object
+    giottoLargeImage[] <- raster_object
     giottoLargeImage@extent <- as.vector(terra::ext(raster_object))
     # The only things updated are the raster object itself, the name,
     # and the extent tracking slot.
@@ -2054,13 +2045,12 @@ plotGiottoImage <- function(gobject = NULL,
         .plot_giottoimage_mg(giottoImage = img_obj)
     }
     if (image_type == "largeImage") {
-        .plot_giottolargeimage(
-            giottoLargeImage = img_obj,
-            crop_extent = largeImage_crop_params_list$crop_extent,
-            xmax_crop = largeImage_crop_params_list$xmax_crop,
-            xmin_crop = largeImage_crop_params_list$xmin_crop,
-            ymax_crop = largeImage_crop_params_list$ymax_crop,
-            ymin_crop = largeImage_crop_params_list$ymin_crop,
+        .plot_giottolargeimage(img_obj,
+            ext = largeImage_crop_params_list$crop_extent,
+            xmax = largeImage_crop_params_list$xmax_crop,
+            xmin = largeImage_crop_params_list$xmin_crop,
+            ymax = largeImage_crop_params_list$ymax_crop,
+            ymin = largeImage_crop_params_list$ymin_crop,
             max_intensity = largeImage_max_intensity,
             ...
         )
@@ -2850,7 +2840,7 @@ to_simple_tif <- function(input_file,
             unlink(outpath, force = TRUE) # if overwrite, delete original
         } else {
             stop("File already exists: ", outpath,
-                 "\nSet overwrite = TRUE to replace.\n",
+                "\nSet overwrite = TRUE to replace.\n",
                 call. = FALSE
             )
         }
@@ -2884,11 +2874,11 @@ ometif_to_tif <- to_simple_tif
 #' "integer"). `output = "structure"` can help
 #' with figuring out which is most appropriate.
 #' @param output character. One of "data.frame" to return a data.frame of the
-#' attributes information of the xml node, "xmL" for an \{xml2\} representation
+#' attributes information of the xml node, "xml" for an \{xml2\} representation
 #' of the node, "list" for an R native list (note that many items in the
-#' list may have overlapping names that make indexing difficult), or
+#' list may have overlapping names that make indexing difficult),
 #' "structure" to invisibly return NULL, but print the structure of the XML
-#' document or node.
+#' document/node, or "kv" (extract key/value pairs from OME MapAnnotations).
 #' @returns list/data.frame/XML depending on `output`
 #' @examples
 #' if (FALSE) {
@@ -2911,7 +2901,7 @@ tif_metadata <- function(path,
     node = NULL,
     page = NULL,
     type = c("attribute", "text", "double", "integer"),
-    output = c("data.frame", "xml", "list", "structure")) {
+    output = c("data.frame", "xml", "list", "structure", "kv")) {
     checkmate::assert_file_exists(path)
     package_check(
         pkg_name   = c("tifffile", "imagecodecs", "xml2"),
@@ -2923,7 +2913,7 @@ tif_metadata <- function(path,
     img <- TIF$TiffFile(path)
     on.exit(try(img$close(), silent = TRUE), add = TRUE)
     output <- match.arg(output,
-        choices = c("data.frame", "xml", "list", "structure")
+        choices = c("data.frame", "xml", "list", "structure", "kv")
     )
     type <- match.arg(type,
         choices = c("attribute", "text", "double", "integer")
@@ -2992,12 +2982,14 @@ ometif_metadata <- tif_metadata
         # qptiff: per-page description
         p1 <- as.integer(page)[1]
         x  <- tryCatch(img$pages[[p1 - 1L]]$description, error = function(e) NULL)
+        if (is.null(x) || !nzchar(x)) {
+            x <- tryCatch(img$series[[1]]$pages[[p1 - 1L]]$description, error = function(e) NULL)
+        }
     } else if (img$is_fluoview) x <- img$fluoview_metadata
     else if (img$is_nih) x <- img$nih_metadata
     else if (img$is_astrotiff) x <- img$astrotiff_metadata
     else if (img$is_imagej) x <- img$imagej_metadata
     else if (img$is_lsm) x <- img$lsm_metadata
-    else if (img$is_qpi) x <- img$series[[1]]$pages[[page - 1L]]$description
     else if (img$is_micromanager) x <- img$micromanager_metadata
     else stop("unrecognized tif format\n", call. = FALSE)
 
@@ -3008,6 +3000,20 @@ ometif_metadata <- tif_metadata
     x <- xml2::read_xml(x)
     ns <- xml2::xml_ns(x)
     has_namespace <- length(ns) > 0L
+
+    ## NEW: output = "kv" (read OME MapAnnotation K/Vs) ---
+    if (identical(output, "kv")) {
+        m_nodes <- xml2::xml_find_all(
+            x,
+            ".//*[local-name()='StructuredAnnotations']//*[local-name()='MapAnnotation']/*[local-name()='Value']//*[local-name()='M']"
+        )
+        if (!length(m_nodes)) return(NULL)
+        keys   <- xml2::xml_attr(m_nodes, "K")
+        values <- xml2::xml_text(m_nodes)
+        out <- as.list(values)
+        names(out) <- keys
+        return(out)
+    }
 
     if (!is.null(node)) {
         node_parts <- node
@@ -3068,4 +3074,19 @@ ometif_metadata <- tif_metadata
             return(invisible())
         }
     )
+}
+
+# internals ####
+
+.modify_ext <- function(extent,
+    xmin = NULL,
+    xmax = NULL,
+    ymin = NULL,
+    ymax = NULL
+    ) {
+    if (!is.null(xmin)) terra::xmin(extent) <- xmin
+    if (!is.null(xmax)) terra::xmax(extent) <- xmax
+    if (!is.null(ymin)) terra::ymin(extent) <- ymin
+    if (!is.null(ymax)) terra::ymax(extent) <- ymax
+    extent
 }

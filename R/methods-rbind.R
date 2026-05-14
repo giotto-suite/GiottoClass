@@ -90,6 +90,44 @@ setMethod(
     }
 )
 
+#' @describeIn rbind-generic Append giottoPoints objects
+#' @export
+setMethod("rbind2", signature("giottoPoints", "giottoPoints"),
+    function(x, y, ...) {
+        sv <- rbind(x@spatVector, y@spatVector)
+        createGiottoPoints(sv, feat_type = featType(x))
+    })
+
+#' @rdname rbind-generic
+#' @export
+setMethod("rbind2", signature("overlapPointDT", "overlapPointDT"),
+    function(x, y, ...) {
+        comb_spat <- unique(c(x@spat_ids, y@spat_ids))
+        comb_feat <- unique(c(x@feat_ids, y@feat_ids))
+
+        x_spat_map <- match(x@spat_ids, comb_spat)
+        y_spat_map <- match(y@spat_ids, comb_spat)
+        x_feat_map <- match(x@feat_ids, comb_feat)
+        y_feat_map <- match(y@feat_ids, comb_feat)
+
+        # replace id dictionaries for x (output object)
+        x@spat_ids <- comb_spat
+        x@feat_ids <- comb_feat
+
+        # remap indices
+        x@data[, poly := x_spat_map[poly]]
+        y@data[, poly := y_spat_map[poly]]
+        x@data[, feat_id_index := x_feat_map[feat_id_index]]
+        y@data[, feat_id_index := y_feat_map[feat_id_index]]
+
+        x@data <- rbind(x@data, y@data)
+        x@nfeats <- x@nfeats + y@nfeats
+
+        data.table::setkeyv(x@data, "feat")
+        data.table::setindex(x@data, "poly")
+        x
+    }
+)
 
 
 if (!isGeneric("rbind")) setGeneric("rbind", signature = "...")
@@ -103,7 +141,6 @@ setMethod("rbind", "giottoPolygon", function(..., deparse.level = 1) {
     }
 })
 
-
 setMethod("rbind", "spatLocsObj", function(..., deparse.level = 1) {
     if (nargs() <= 2L) {
         rbind2(...)
@@ -113,7 +150,14 @@ setMethod("rbind", "spatLocsObj", function(..., deparse.level = 1) {
     }
 })
 
-
+setMethod("rbind", "overlapPointDT", function(..., deparse.level = 1) {
+    if (nargs() <= 2L) {
+        rbind2(...)
+    } else {
+        xs <- list(...)
+        rbind2(xs[[1L]], do.call(Recall, xs[-1L]))
+    }
+})
 
 # internals ####
 
@@ -170,10 +214,9 @@ rbind2_giotto_polygon_homo <- function(x, y) {
         )
     }
 
-    if (is.null(slot(x, "overlaps"))) {
-        slot(x, "overlaps") <- slot(y, "overlaps")
-    } else {
-        slot(x, "overlaps") <- rbind(slot(x, "overlaps"), slot(y, "overlaps"))
+    if (!is.null(slot(x, "overlaps")) || !is.null(slot(y, "overlaps"))) {
+        .rbind2_giotto_polygon_overlap_message()
+        slot(x, "overlaps") <- NULL
     }
 
     slot(x, "unique_ID_cache") <- unique(c(spatIDs(x), spatIDs(y)))
@@ -201,7 +244,8 @@ rbind2_giotto_polygon_hetero <- function(x, y, new_name, add_list_ID = TRUE) {
         return(gpoly)
     }
 
-    null_xsv <- null_xsvc <- null_xovlp <- FALSE
+    # init flags
+    null_xsv <- null_xsvc <- FALSE
 
     # Add list_ID
     if (!is.null(slot(x, "spatVector"))) {
@@ -230,19 +274,6 @@ rbind2_giotto_polygon_hetero <- function(x, y, new_name, add_list_ID = TRUE) {
         }
     }
 
-    if (!is.null(slot(x, "overlaps"))) {
-        if (!"list_ID" %in% names(slot(x, "overlaps"))) {
-            slot(x, "overlaps")$list_ID <- slot(x, "name")
-        }
-    } else {
-        null_xovlp <- TRUE
-    }
-    if (!is.null(y@overlaps)) {
-        if (!"list_ID" %in% names(slot(y, "overlaps"))) {
-            slot(y, "overlaps")$list_ID <- slot(y, "name")
-        }
-    }
-
     # Perform rbinds
     if (isTRUE(null_xsv)) {
         new_sv <- slot(y, "spatVector")
@@ -259,18 +290,21 @@ rbind2_giotto_polygon_hetero <- function(x, y, new_name, add_list_ID = TRUE) {
         )
     }
 
-    if (isTRUE(null_xovlp)) {
-        new_ovlp <- slot(y, "overlaps")
-    } else {
-        new_ovlp <- rbind(slot(x, "overlaps"), slot(y, "overlaps"))
+    if (!is.null(slot(x, "overlaps")) || !is.null(slot(y, "overlaps"))) {
+        .rbind2_giotto_polygon_overlap_message()
     }
 
     new_poly <- create_giotto_polygon_object(
         name = new_name,
         spatVector = new_sv,
         spatVectorCentroids = new_svc,
-        overlaps = new_ovlp,
+        overlaps = NULL,
         unique_IDs = unique(c(spatIDs(x), spatIDs(y)))
     )
     new_poly
+}
+
+.rbind2_giotto_polygon_overlap_message <- function() {
+    vmsg("[rbind giottoPolygon] Overlap information removed.
+             Please recalculate with calculateOverlap() if needed.")
 }

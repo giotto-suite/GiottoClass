@@ -617,24 +617,18 @@
             res_list[[spat_info]] <- spat_subset
         } else {
             # even if the spatial info is not one selected directly through
-            # poly_info,
-            # still subset subset any existing feature overlaps matching the
-            # feat_type
-            # for the feat_ids
+            # `poly_info`, still subset any existing feature overlaps matching
+            # the `feat_type` for the `feat_ids`
             if (!is.null(si@overlaps) &&
                 !is.null(feat_ids)) {
                 if (isTRUE(feat_type) == ":all:") {
                     feat_type <- names(si@overlaps)
                 }
 
-                for (feat in names(si@overlaps)) {
-                    if (isTRUE(feat %in% feat_type)) {
-                        feat_id_bool <- terra::as.list(
-                            si@overlaps[[feat]]
-                        )$feat_ID %in% feat_ids
-                        si@overlaps[[feat]] <- si@overlaps[[feat]][feat_id_bool]
-                    }
-                }
+                si <- .subset_overlaps_feat(si,
+                    i = feat_ids,
+                    feat_type = feat_type
+                )
             }
 
             res_list[[spat_info]] <- si
@@ -674,19 +668,33 @@
         if (isTRUE(feat %in% feat_type)) {
             if (verbose) wrap_msg("subset feature info:", feat)
 
-            feat_subset <- .subset_giotto_points_object(
-                gpoints = feat_info[[feat]],
-                feat_ids = feat_ids,
-                x_min = x_min,
-                x_max = x_max,
-                y_min = y_min,
-                y_max = y_max,
-                verbose = verbose
-            )
+            pts <- feat_info[[feat]]
+
+            if (inherits(pts, "giottoBinPoints")) {
+                feat_subset <- .subset_giotto_binpoints_object(
+                    gpoints = pts,
+                    feat_ids = feat_ids,
+                    x_min = x_min,
+                    x_max = x_max,
+                    y_min = y_min,
+                    y_max = y_max
+                )
+            } else if (inherits(pts, "giottoPoints")) {
+                feat_subset <- .subset_giotto_points_object(
+                    gpoints = pts,
+                    feat_ids = feat_ids,
+                    x_min = x_min,
+                    x_max = x_max,
+                    y_min = y_min,
+                    y_max = y_max
+                )
+            } else {
+                stop("unrecognized giotto point subobject")
+            }
 
             res_list[[feat]] <- feat_subset
         } else {
-            res_list[[feat]] <- feat_info[[feat]]
+            res_list[[feat]] <- pts
         }
     }
     return(res_list)
@@ -968,6 +976,20 @@
         if (verbose) wrap_msg("completed 11: subsetted spatial feature data")
     }
 
+    ## remove overlap entries for transcripts cropped out by spatial bounds
+    if (!is.null(gobject@spatial_info) &&
+        !is.null(gobject@feat_info) &&
+        any(!vapply(list(x_min, x_max, y_min, y_max), is.null,
+            FUN.VALUE = logical(1L)))) {
+        gobject <- .clean_overlaps_after_gpoints_crop(
+            gobject,
+            feat_type = if (isTRUE(feat_type == ":all:"))
+                names(gobject@feat_info)
+            else
+                feat_type
+        )
+        if (verbose) wrap_msg("completed 11b: cleaned overlaps after gpoints spatial crop")
+    }
 
 
     ## update parameters used ##
@@ -1715,17 +1737,11 @@ subsetGiottoLocsSubcellular <- function(
                 return(x)
             }
 
-            gpoly_overlap_names <- names(x@overlaps)
-            for (overlap_feat in gpoly_overlap_names) {
-                if (isTRUE(overlap_feat %in% names(cropped_feats))) {
-                    feat_id_bool <- terra::as.list(
-                        x@overlaps[[overlap_feat]]
-                    )$feat_ID %in%
-                        cropped_feats[[overlap_feat]]
-                    x@overlaps[[overlap_feat]] <- x@overlaps[[
-                        overlap_feat
-                    ]][feat_id_bool]
-                }
+            for (ftype in names(cropped_feats)) {
+                x <- .subset_overlaps_feat(x,
+                    i = cropped_feats[[ftype]],
+                    feat_type = ftype
+                )
             }
             x
         })
@@ -1905,38 +1921,60 @@ subsetGiottoLocsSubcellular <- function(
         }
     }
 
-    # cell ID and feat ID subsets
-    if (!is.null(gpolygon@overlaps)) {
-        if (isTRUE(feat_type) == ":all:") feat_type <- names(gpolygon@overlaps)
-
-        for (feat in names(gpolygon@overlaps)) {
-            # TODO check this for intensity image overlaps
-            if (!is.null(cell_ids)) {
-                cell_id_bool <- terra::as.list(
-                    gpolygon@overlaps[[feat]]
-                )$poly_ID %in% cell_ids
-                gpolygon@overlaps[[feat]] <- gpolygon@overlaps[[
-                    feat
-                ]][cell_id_bool]
-            }
-
-            if (!is.null(feat_ids) &&
-                isTRUE(feat %in% feat_type)) {
-                feat_id_bool <- terra::as.list(
-                    gpolygon@overlaps[[feat]]
-                )$feat_ID %in% feat_ids
-                gpolygon@overlaps[[feat]] <- gpolygon@overlaps[[
-                    feat
-                ]][feat_id_bool]
-            }
-        }
+    # overlap subsets
+    if (is.null(overlaps(gpolygon))) {
+        return(gpolygon) # return early if none
     }
-    return(gpolygon)
+
+    if (feat_type == ":all:") {
+        feat_type <- names(gpolygon@overlaps)
+    }
+
+    if (!is.null(cell_ids)) {
+        gpolygon <- .subset_overlaps_poly(gpolygon, i = cell_ids)
+    }
+    if (!is.null(feat_ids)) {
+        gpolygon <- .subset_overlaps_feat(gpolygon,
+            i = feat_ids,
+            feat_type = feat_type
+        )
+    }
+
+    gpolygon
 }
 
 
 
+.subset_giotto_binpoints_object <- function(gpoints,
+    feat_ids = NULL,
+    x_min = NULL,
+    x_max = NULL,
+    y_min = NULL,
+    y_max = NULL) {
 
+    # 1. ID based subsetting #
+    # ---------------------- #
+    if (!is.null(feat_ids)) {
+        gpoints  <- gpoints[feat_ids]
+    }
+
+    # 2. Spatial subsetting #
+    # --------------------- #
+    # 2.1 if NO spatial subset information available,
+    # ie: if all spat subset params are NULL, return directly because there are
+    # no following steps
+    bound_params <- list(x_min, x_max, y_min, y_max)
+    if (all(vapply(bound_params, is.null, FUN.VALUE = logical(1L)))) {
+        return(gpoints)
+    }
+    e <- ext(gpoints)[] # get extent as named numeric vector
+    e[["xmin"]] <- max(e[["xmin"]], x_min)
+    e[["xmax"]] <- min(e[["xmax"]], x_max)
+    e[["ymin"]] <- max(e[["ymin"]], y_min)
+    e[["ymax"]] <- min(e[["ymax"]], y_max)
+    e <- ext(e) # create new extent to use
+    crop(gpoints, e)
+}
 
 
 
@@ -1952,8 +1990,7 @@ subsetGiottoLocsSubcellular <- function(
         x_min = NULL,
         x_max = NULL,
         y_min = NULL,
-        y_max = NULL,
-        verbose = FALSE) {
+        y_max = NULL) {
     # data.table vars
     x <- y <- feat_ID <- NULL
 
