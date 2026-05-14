@@ -11,6 +11,7 @@ seuratToGiottoV5(
   subcellular_assay = "SCT",
   sp_network = NULL,
   nn_network = NULL,
+  polygon = TRUE,
   verbose = TRUE
 )
 }
@@ -29,6 +30,9 @@ fetch from input Seurat object. Default is \code{"c('pca', 'umap')"}.}
 
 \item{nn_network}{nn_network}
 
+\item{polygon}{Logical. If \code{TRUE}, extract segmentation polygons and centroids
+from Seurat image boundaries and convert them to a Giotto polygon object.}
+
 \item{verbose}{logical. Default to TRUE
 object. Default is \code{"Vizgen"}.}
 }
@@ -38,6 +42,12 @@ stored in it.
 }
 \description{
 Convert a Seurat V5 object to a Giotto object
+}
+\examples{
+g <- GiottoData::loadGiottoMini("visium")
+s <- giottoToSeuratV5(g, tech = "Visium")
+seuratToGiottoV5(s, spatial_assay = "rna")
+
 }
 \keyword{interoperability}
 \keyword{seurat}

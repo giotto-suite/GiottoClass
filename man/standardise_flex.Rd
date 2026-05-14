@@ -14,10 +14,10 @@ standardise_flex(x, center = TRUE, scale = TRUE)
 \item{scale}{scale data}
 }
 \value{
-standardized matrix
+\code{ScaledMatrix} or \code{IterableMatrix}
 }
 \description{
-standardizes a matrix
+Matrix scaling.
 }
 \examples{
 m <- matrix(rnorm(100), nrow = 10)

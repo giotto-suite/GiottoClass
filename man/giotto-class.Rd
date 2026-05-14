@@ -83,6 +83,8 @@ protein, metabolites, ... that are provided in the expression slot.}
 \item{\code{multiomics}}{multiomics integration results}
 
 \item{\code{h5_file}}{path to h5 file}
+
+\item{\code{misc}}{miscellaneous or unstructured data}
 }}
 
 \examples{

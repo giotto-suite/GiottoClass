@@ -1,5 +1,6 @@
 # collate
 #' @include generics.R
+#' @include classes.R
 NULL
 
 # aggregate expression ####
@@ -17,6 +18,178 @@ NULL
 
 
 ## calculate overlap between cellular structures and features ####
+
+#' @name aggregateFeatures
+#' @title Aggregate Spatial Features Covered by Polygon Geometries
+#' @description
+#' Aggregate features (either `feat_info` OR `image_names`) with
+#' polygons (`spat_info`). Under the hood, this is performed in two steps:
+#'
+#' 1. Find the overlapped features via the lower-level generic
+#' [calculateOverlap()]
+#' 2. Summarize the overlapped features as a matrix via [overlapToMatrix()]
+#' @param gobject `giotto` object containing spatial data to aggregate.
+#' @param spat_info character. Name of polygon information to use to aggregate
+#' features with.
+#' @param feat_info character. Name of feature point detections to be
+#' aggregated.
+#' @param image_names character. Name of image(s) containing intensity values
+#' to be aggregated.
+#' @param new_spat_unit character (optional). Name of spatial unit to assign
+#' the expression info to. Default is the same as `spat_info`.
+#' @param new_feat_type character (optional). Name of feature type to assign
+#' the expression info to. Default is the same as `feat_info` when used. When
+#' `image_names` is used instead, default is "protein".
+#' @param name character. (default = "raw") Name to assign the output
+#' expresssion values information.
+#' @param poly_subset_ids character vector. (optional) Specific poly_IDs to use
+#' @param feat_subset_column character. (optional) feature info attribute to
+#' subset feature points on when performing overlap calculation.
+#' @param feat_subset_values (optional) values matched against
+#' in `feat_subset_column` in order to subset feature points when performing
+#' overlap calculation.
+#' @param feat_count_column character. (optional) feature info column with counts
+#' information. Useful in cases when more than one detection is reported per
+#' point.
+#' @param fun character (default = "sum"). A function usable by
+#' [exactextractr::exact_extract()] to aggregate image intensity values.
+#' @param return_gobject logical (default = TRUE). Whether to return the
+#' `giotto` object or just the aggregated expression values as `exprObj` class.
+#' @param verbose logical. Whether to be verbose.
+#' @param \dots Additional params to pass to the overlap calculation method.
+#' None implemented for point overlaps. For intensity overlaps, passes to
+#' [exactextractr::exact_extract()] and additionally the function requested
+#' with the `fun` param.
+#' @returns `giotto` when `return_gobject=TRUE`, `exprObj` when
+#' `return_gobject=FALSE`
+#' @details `feat_subset_column`, `feat_subset_values`, and `feat_count_column`
+#' are specific to overlaps on feature points info, and should not be provided
+#' when overlapping image data.
+#' @export
+aggregateFeatures <- function(gobject,
+    spat_info = NULL,
+    feat_info = NULL,
+    image_names = NULL,
+    new_spat_unit = NULL,
+    new_feat_type = NULL,
+    name = "raw",
+    poly_subset_ids = NULL,
+    feat_subset_column = NULL,
+    feat_subset_values = NULL,
+    feat_count_column = NULL,
+    fun = "sum",
+    return_gobject = TRUE,
+    verbose = TRUE,
+    ...
+) {
+    checkmate::assert_character(spat_info, len = 1L, null.ok = TRUE)
+    checkmate::assert_character(feat_info, null.ok = TRUE)
+    checkmate::assert_character(new_spat_unit, len = 1L, null.ok = TRUE)
+    checkmate::assert_character(new_feat_type, len = 1L, null.ok = TRUE)
+    checkmate::assert_character(image_names, null.ok = TRUE)
+    checkmate::assert_character(fun, len = 1L)
+    checkmate::assert_character(name, len = 1L)
+    checkmate::assert_logical(return_gobject)
+    checkmate::assert_character(feat_count_column, null.ok = TRUE)
+
+    # catch improper feature input usage
+    fun_tag <- "[aggregateFeatures] "
+    if (!is.null(feat_info) && !is.null(image_names)) {
+        stop(fun_tag, "Only one of 'feat_info' or 'image_names' may ",
+             "be provided.\n", call. = FALSE)
+    }
+
+    # decide polygons to use
+    spat_info <- spat_info %null% names(gobject@spatial_info)[[1]]
+
+    # decide target spatial unit
+    new_spat_unit <- new_spat_unit %null% spat_info
+    # decide target feature type
+    if (is.null(new_feat_type)) {
+        if (!is.null(feat_info)) new_feat_type <- feat_info
+        if (!is.null(image_names)) new_feat_type <- "protein"
+    }
+
+    # select overlap type (point geoms vs intensity rasters)
+    overlap_type <- if (!is.null(feat_info)) {
+        "point"
+    } else if (!is.null(image_names)) {
+        "intensity"
+    } else {
+        "point" # fallback assumption
+    }
+
+    # calculate overlap --------------------------------------------------- #
+    calculate_overlap_params <- list( # common params
+        x = gobject,
+        spat_info = spat_info,
+        feat_info = feat_info,
+        name_overlap = new_feat_type,
+        poly_subset_ids = poly_subset_ids,
+        return_gobject = TRUE,
+        verbose = verbose,
+        ...
+    )
+
+    # method specific params
+    switch(overlap_type,
+        "point" = {
+            calculate_overlap_params <- c(calculate_overlap_params,
+                list(
+                    feat_subset_column = feat_subset_column,
+                    feat_subset_values = feat_subset_values,
+                    feat_count_column = feat_count_column
+                )
+            )
+        },
+        "intensity" = {
+            calculate_overlap_params <- c(calculate_overlap_params,
+                list(image_names = image_names)
+            )
+        }
+    )
+
+    gobject <- do.call(calculateOverlap, args = calculate_overlap_params)
+
+    # overlap to matrix --------------------------------------------------- #
+
+    overlap_to_matrix_params <- list(
+        x = gobject,
+        name = name,
+        spat_info = spat_info,
+        feat_info = new_feat_type, # this difference is on purpose
+        type = overlap_type,
+        return_gobject = FALSE,
+        verbose = verbose
+    )
+
+    switch(overlap_type,
+        "point" = {
+            overlap_to_matrix_params <- c(overlap_to_matrix_params,
+                list(feat_count_column = feat_count_column)
+            )
+        },
+        "intensity" = {
+            overlap_to_matrix_params <- c(overlap_to_matrix_params,
+                list(fun = fun)
+            )
+        }
+    )
+
+    ex <- do.call(overlapToMatrix, args = overlap_to_matrix_params)
+    # this is moved out of the gobject since overlapToMatrix doesn't have a
+    # way to set the spat unit (if it doesn't match spat_info)
+    spatUnit(ex) <- new_spat_unit
+
+    gobject <- setGiotto(gobject, ex, verbose = verbose)
+    return(gobject)
+}
+
+
+
+
+
+
 
 ### ** raster way ####
 
@@ -60,6 +233,9 @@ polygon_to_raster <- function(polygon, field = NULL) {
 }
 
 
+
+
+
 # calculateOverlap methods ####
 
 
@@ -76,15 +252,19 @@ polygon_to_raster <- function(polygon, field = NULL) {
 #' @param poly_subset_ids character vector. (optional) Specific poly_IDs to use
 #' @param feat_subset_column character. (optional) feature info attribute to
 #' subset feature points on when performing overlap calculation.
-#' @param feat_subset_ids (optional) values matched against
+#' @param feat_subset_values (optional) values matched against
 #' in `feat_subset_column` in order to subset feature points when performing
 #' overlap calculation.
-#' @param count_info_column character. (optional) column with count information.
-#' Useful in cases when more than one detection is reported per point.
+#' @param feat_subset_ids deprecated. Use `feat_subset_values` instead.
+#' @param feat_count_column character. (optional) column with count information.
+#' Useful in cases when more than one detection is reported per point. If a
+#' column called "count" is present in the feature points data, it will be
+#' automatically selected.
 #' @param verbose be verbose
+#' @param count_info_column deprecated. Use `feat_count_column` instead.
 #' @param \dots additional params to pass to methods.
-#' @details `feat_subset_column`, `feat_subset_ids`, and `count_info_column` are
-#' specific to overlaps on feature points info, and should not be provided
+#' @details `feat_subset_column`, `feat_subset_values`, and `feat_count_column`
+#' are specific to overlaps on feature points info, and should not be provided
 #' when overlapping image data. These three params can also be passed to the
 #' `giotto` method through the `...` param when working with overlaps on feature
 #' points info.
@@ -115,7 +295,7 @@ polygon_to_raster <- function(polygon, field = NULL) {
 #' # calculate z1 only
 #' out_z1 <- calculateOverlap(gpoly, gpoints,
 #'     feat_subset_column = "global_z",
-#'     feat_subset_ids = c(1)
+#'     feat_subset_values = c(1)
 #' )
 #' overlaps_z1 <- overlaps(out_z1)
 #' overlaps_z1$rna
@@ -129,7 +309,7 @@ polygon_to_raster <- function(polygon, field = NULL) {
 #' # calculate z0 overlaps and return as gobject
 #' out_g <- calculateOverlap(g,
 #'     feat_subset_column = "global_z",
-#'     feat_subset_ids = 0
+#'     feat_subset_values = 0
 #' )
 #' overlaps(getPolygonInfo(out_g, return_giottoPolygon = TRUE))
 #'
@@ -151,13 +331,22 @@ setMethod(
     "calculateOverlap", signature(x = "giotto", y = "missing"),
     function(x,
     name_overlap = NULL,
-    spatial_info = NULL,
+    spat_info = NULL,
     feat_info = NULL,
     image_names = NULL,
     poly_subset_ids = NULL,
     return_gobject = TRUE,
     verbose = TRUE,
+    spatial_info = deprecated(),
     ...) {
+
+        vmsg(.is_debug = TRUE, "[calc_overlap][giotto][missing]...")
+
+        # deprecations
+        spat_info <- GiottoUtils::deprecate_param(spatial_info, spat_info,
+            fun = "calculateOverlap", when = "0.4.7"
+        )
+
         # 0. guards #
         # --------- #
 
@@ -213,8 +402,8 @@ setMethod(
             if (!is.null(image_names)) name_overlap <- "protein"
         }
 
-        if (is.null(spatial_info)) {
-            spatial_info <- names(x@spatial_info)[[1]]
+        if (is.null(spat_info)) {
+            spat_info <- names(x@spatial_info)[[1]]
         }
 
 
@@ -224,7 +413,7 @@ setMethod(
         #   ---[polys to overlap with]---
         A <- getPolygonInfo(
             gobject = x,
-            polygon_name = spatial_info,
+            polygon_name = spat_info,
             return_giottoPolygon = TRUE
         )
 
@@ -244,8 +433,8 @@ setMethod(
             for (img_name in image_names) {
                 if (!img_name %in% potential_large_image_names) {
                     warning(
-                        "image with the name ", img_name,
-                        " was not found and will be skipped \n"
+                        "[calculateOverlap] image with the name ", img_name,
+                        " was not found and will be skipped \n", call. = FALSE
                     )
                 }
             }
@@ -323,24 +512,110 @@ setMethod(
     name_overlap = NULL,
     poly_subset_ids = NULL,
     feat_subset_column = NULL,
-    feat_subset_ids = NULL,
-    count_info_column = NULL,
+    feat_subset_values = NULL,
+    feat_count_column = NULL,
     return_gpolygon = TRUE,
     verbose = TRUE,
+    feat_subset_ids = deprecated(),
+    count_info_column = deprecated(),
     ...) {
+        vmsg(.is_debug = TRUE, "[calc_overlap][gpolygon][gpoints]...")
+
+        is_db_x <- inherits(x@spatVector, "dbSpatial")
+        is_db_y <- inherits(y@spatVector, "dbSpatial")
+
+        if (xor(is_db_x, is_db_y)) {
+            stop(
+                "calculateOverlap: dbSpatial-backed and terra-backed inputs ",
+                "are not both supported",
+                call. = FALSE
+            )
+        }
+
+        # deprecations
+        feat_subset_values <- GiottoUtils::deprecate_param(
+            feat_subset_ids, feat_subset_values,
+            fun = "calculateOverlap", when = "0.5.0"
+        )
+        feat_count_column <- GiottoUtils::deprecate_param(
+            count_info_column, feat_count_column,
+            fun = "calculateOverlap", when = "0.5.0"
+        )
+
+        # autodetect count columns
+        if ("count" %in% names(y) && is.null(feat_count_column)) {
+            vmsg(.v = verbose,
+                "[overlap] Found column \"count\" in feature info.
+                - Using as `feat_count_column`
+                [!] Set feat_count_column = FALSE to disable.")
+            feat_count_column <- "count"
+        }
+        if (isFALSE(feat_count_column)) {
+            feat_count_column <- NULL
+        }
+
+        # ------------------------------------------------------------------
+        # dbSpatial-backed path: keep results dbSpatial-native
+        # ------------------------------------------------------------------
+        if (isTRUE(is_db_x)) {
+            # GiottoDB defines the <dbSpatial,dbSpatial> method for this generic
+            if (!base::requireNamespace("GiottoDB", quietly = TRUE)) {
+                stop(
+                    "calculateOverlap: dbSpatial-backed inputs require the ",
+                    "GiottoDB package. Install it, or load it via `library(GiottoDB)`.",
+                    call. = FALSE
+                )
+            }
+
+            if (!methods::hasMethod(
+                "calculateOverlap",
+                signature = signature(x = "dbSpatial", y = "dbSpatial")
+            )) {
+                stop(
+                    "calculateOverlap: dbSpatial-backed giottoPolygon or ",
+                    "giottoPoints method missing. Load the GiottoDB package.",
+                    call. = FALSE
+                )
+            }
+
+            # The <dbSpatial,dbSpatial> method is defined in GiottoDB
+            res <- calculateOverlap(
+                x = x@spatVector,
+                y = y@spatVector,
+                poly_subset_ids = poly_subset_ids,
+                feat_subset_column = feat_subset_column,
+                feat_subset_values = feat_subset_values,
+                feat_count_column = feat_count_column,
+                verbose = verbose,
+                ...
+            )
+
+            if (isTRUE(return_gpolygon)) {
+                if (is.null(name_overlap)) name_overlap <- objName(y)
+                x@overlaps[[name_overlap]] <- res
+                return(x)
+            }
+            return(res)
+        }
+
+        # return an overlap info object
         res <- calculateOverlap(
             x = x[],
             y = y[],
             poly_subset_ids = poly_subset_ids,
             feat_subset_column = feat_subset_column,
-            feat_subset_ids = feat_subset_ids,
-            count_info_column = count_info_column,
+            feat_subset_values = feat_subset_values,
+            feat_count_column = feat_count_column,
             verbose = verbose,
             ...
         )
 
         if (isTRUE(return_gpolygon)) {
+            # update schema metadata in overlap object
             if (is.null(name_overlap)) name_overlap <- objName(y)
+            prov(res) <- spatUnit(x)
+            spatUnit(res) <- spatUnit(x)
+            featType(res) <- name_overlap
 
             # ensure centroids calculated
             if (is.null(centroids(x))) {
@@ -368,6 +643,7 @@ setMethod(
         return_gpolygon = TRUE,
         verbose = TRUE,
         ...) {
+        vmsg(.is_debug = TRUE, "[calc_overlap][gpolygon][image]...")
         calculateOverlap(
             x = x,
             y = y@raster_object,
@@ -390,9 +666,12 @@ setMethod(
     return_gpolygon = TRUE,
     verbose = TRUE,
     ...) {
+        vmsg(.is_debug = TRUE, "[calc_overlap][gpolygon][affineimage]...")
         aff <- y@affine
+        # perform the reverse of the image's affine on the polys
+        inv_aff_poly <- affine(x, aff, inv = TRUE)
         res <- calculateOverlap(
-            x = affine(x, aff, inv = TRUE),
+            x = inv_aff_poly,
             y = y@raster_object,
             name_overlap = name_overlap %null% objName(y),
             poly_subset_ids = poly_subset_ids,
@@ -419,10 +698,13 @@ setMethod(
     return_gpolygon = TRUE,
     verbose = TRUE,
     ...) {
+        vmsg(.is_debug = TRUE, "[calc_overlap][gpolygon][spatraster]...")
+
         if (is.null(name_overlap)) {
             stop("calculateOverlap: name_overlap must be given", call. = FALSE)
         }
 
+        # return overlaps information
         res <- calculateOverlap(
             x = x[],
             y = y,
@@ -432,6 +714,11 @@ setMethod(
         )
 
         if (isTRUE(return_gpolygon)) {
+            # update schema metadata in overlap object
+            prov(res) <- spatUnit(x)
+            spatUnit(res) <- spatUnit(x)
+            featType(res) <- name_overlap
+
             # ensure centroids calculated
             if (is.null(centroids(x))) {
                 x <- centroids(x, append_gpolygon = TRUE)
@@ -460,9 +747,12 @@ setMethod(
     function(x, y,
     poly_subset_ids = NULL,
     verbose = TRUE,
+    fun = "sum",
     ...) {
         checkmate::assert_true(terra::is.polygons(x))
         GiottoUtils::package_check("exactextractr")
+      
+        vmsg(.is_debug = TRUE, "[calc_overlap][spatvector][spatraster]...")
 
         # channel naming (catch if none or too few)
         image_names <- names(y)
@@ -471,9 +761,6 @@ setMethod(
             nchannel > 1L && length(unique(image_names)) == 1L) {
             names(y) <- sprintf("channel_%d", seq_len(nchannel))
         }
-
-        # NSE vars
-        coverage_fraction <- NULL
 
         # subset polys if needed
         if (!is.null(poly_subset_ids)) {
@@ -485,54 +772,74 @@ setMethod(
 
         vmsg(.v = verbose, "Start image extract")
 
-        # perform extraction, producing list of results
+        eer_cname_fun <- function( # how to construct output colnames
+            values, # name of value layer
+            weights, # name of weight layer
+            fun_name, # value of fun
+            fun_value, # value associated with fun (quantile/frac/wfrac)
+            nvalues, # number of value layers
+            nweights # number of weight layers
+        ) {
+            values
+        }
+
+        # perform extraction
         extract_res <- exactextractr::exact_extract(
             x = y,
             y = sf_x,
-            include_cols = "poly_ID",
+            append_cols = "poly_ID",
+            fun = fun,
+            colname_fun = eer_cname_fun,
             ...
         )
+        data.table::setDT(extract_res)
+        extract_res <- .create_overlap_intensity_dt(extract_res)
 
         vmsg(.v = verbose, "End image extract")
 
-        # rbind and convert output to data.table
-        dt_exact <- data.table::as.data.table(do.call("rbind", extract_res))
-
-        missing_ids <- setdiff(x$poly_ID, dt_exact$poly_ID)
-        if (length(missing_ids) > 0L) {
-            missing_dt <- data.table::data.table(poly_ID = missing_ids)
-            # fill out missing_dt with 0 values so it can be used to rbind
-            for (col in setdiff(names(dt_exact), names(missing_dt))) {
-                missing_dt[, (col) := 0]
-            }
-            dt_exact <- rbind(dt_exact, missing_dt)
-        }
-
-        # prepare output
-        colnames(dt_exact)[2:(length(image_names) + 1)] <- image_names
-        dt_exact[, coverage_fraction := NULL]
-
-        return(dt_exact)
+        return(extract_res)
     }
 )
 
 
 # * SpatVector SpatVector ####
 #' @rdname calculateOverlap
+#' @param method character. One of `"vector"` or `"raster"`,
+#' (default = `"vector"`). Method for polygon-point feature overlap calculation.
+#' Can also set as an option: `"giotto.overlap_point_method"`
+#'
+#' * `"vector"` uses direct spatial extraction (more accurate to input geometry,
+#' will double count features in overlapping polygon regions for all overlapping
+#' polygons).
+#' * `"raster"` uses rasterization (faster, assigns each feature to only one
+#' polygon even in overlapping regions as a byproduct of the rasterization).
 #' @export
 setMethod(
     "calculateOverlap", signature(x = "SpatVector", y = "SpatVector"),
     function(x, y,
     poly_subset_ids = NULL,
     feat_subset_column = NULL,
-    feat_subset_ids = NULL,
-    count_info_column = NULL,
-    verbose = TRUE) {
+    feat_subset_values = NULL,
+    feat_count_column = NULL,
+    method = getOption("giotto.overlap_point_method", "vector"),
+    verbose = TRUE,
+    feat_subset_ids = deprecated(),
+    count_info_column = deprecated()) {
+          vmsg(.is_debug = TRUE, "[calc_overlap][spatvector][spatvector]...")
+
+        method <- match.arg(method, choices = c("vector", "raster"))
+        feat_subset_values <- GiottoUtils::deprecate_param(
+            feat_subset_ids, feat_subset_values,
+            fun = "calculateOverlap", when = "0.4.7"
+        )
+        feat_count_column <- GiottoUtils::deprecate_param(
+            count_info_column, feat_count_column,
+            fun = "calculateOverlap", when = "0.4.7"
+        )
+
         checkmate::assert_true(terra::is.polygons(x))
         checkmate::assert_true(terra::is.points(y)) # TODO allow another poly?
-        if (!is.null(poly_subset_ids)) {
-            checkmate::assert_character(poly_subset_ids)
-        }
+        checkmate::assert_character(poly_subset_ids, null.ok = TRUE)
 
         # subset points and polys if needed
         # * subset x
@@ -540,25 +847,95 @@ setMethod(
             x <- x[x$poly_ID %in% poly_subset_ids]
         }
 
+        # preserve total all feat ids present
+        feat_ids <- unique(y$feat_ID)
+
         # * subset points if needed
         # e.g. to select transcripts within a z-plane
-        if (!is.null(feat_subset_column) && !is.null(feat_subset_ids)) {
-            bool_vector <- y[[feat_subset_column]][[1]] %in% feat_subset_ids
+        if (!is.null(feat_subset_column) && !is.null(feat_subset_values)) {
+            bool_vector <- y[[feat_subset_column]][[1]] %in% feat_subset_values
             y <- y[bool_vector]
         }
 
-        .calculate_overlap_raster(
-            spatvec = x,
-            pointvec = y,
-            count_info_column = count_info_column,
-            verbose = verbose
+        res <- switch(method,
+            "raster" = .calculate_overlap_raster(
+                spatvec = x,
+                pointvec = y,
+                keep = feat_count_column,
+                verbose = verbose
+            ),
+            "vector" = .calculate_overlap_vector(
+                spatvec = x,
+                pointvec = y,
+                keep = feat_count_column
+            )
         )
+
+        # (constructor) see classes-overlaps.R
+        .create_overlap_point_dt(x, y, res, feat_ids = feat_ids)
     }
 )
 
 
+#' @param spatvec SpatVector polygon
+#' @param pointvec SpatVector points
+#' @param keep other col(s) to keep
+#' @keywords internal
+#' @noRd
+.calculate_overlap_vector <- function(spatvec, pointvec, keep = NULL) {
+    .terra_extract(x = spatvec, y = pointvec, keep = keep)
+}
 
 
+#' @name .calculate_overlap_raster
+#' @title Find feature points overlapped by rasterized polygon.
+#' @description Core workflow function that accepts simple `SpatVector` inputs,
+#' performs rasterization of the polys and then checks for overlaps.
+#' @param spatvec `SpatVector` polygon from a `giottoPolygon` object
+#' @param pointvec `SpatVector` points from a `giottoPoints` object
+#' @param keep column(s) to keep
+#' @param verbose be verbose
+#' @concept overlap
+#' @returns `SpatVector` of overlapped points info
+#' @seealso [calculateOverlapRaster()]
+#' @keywords internal
+.calculate_overlap_raster <- function(spatvec,
+    pointvec,
+    keep = NULL,
+    verbose = TRUE) {
+    # DT vars
+    poly_ID <- poly_i <- ID <- x <- y <- feat_ID <- feat_ID_uniq <- NULL
+    # spatial vector to raster
+    if (verbose) GiottoUtils::wrap_msg("1. convert polygon to raster \n")
+    spatrast_res <- polygon_to_raster(spatvec, field = "poly_ID")
+    spatrast <- spatrast_res[["raster"]]
+    ID_vector <- spatrast_res[["ID_vector"]]
+
+    ## overlap between raster and point
+    if (verbose) GiottoUtils::wrap_msg("2. overlap raster and points \n")
+    .terra_extract(x = spatrast, y = pointvec, keep = keep)
+}
+
+# x is segmentation, y is point
+# keep is additional cols of point metadata to keep
+# assume output first two cols from `terra::extract()` are:
+# (1) point idx, (2) poly idx
+# additional cols (if any) are poly or mask attributes and they will be dropped
+.terra_extract <- function(x, y, keep, ...) {
+    checkmate::assert_character(keep, null.ok = TRUE)
+    res <- terra::extract(x, y, ...)[, 1L:2L]
+    # 2nd cols can have NA values. NAs denote points that are not overlapped
+    res <- res[!is.na(res[[2]]),] # drop NAs (sparsify extracted relations)
+
+    # get any needed attributes for `keep` and append them to relations info
+    if (!is.null(keep)) {
+        feat_keep <- do.call(
+            data.frame, terra::as.list(y[][res[[1]], keep])
+        ) # list of vectors
+        res <- cbind(res, feat_keep)
+    }
+    return(res)
+}
 
 
 #' @title calculateOverlapRaster
@@ -572,10 +949,13 @@ setMethod(
 #' @param poly_ID_names (optional) list of poly_IDs to use
 #' @param feat_info character. name of feature information
 #' @param feat_subset_column feature info column to subset features with
-#' @param feat_subset_ids ids within feature info column to use for subsetting
-#' @param count_info_column column with count information (optional)
+#' @param feat_subset_values value(s) within feature info `feat_subset_column`
+#' to use for subsetting
+#' @param feat_count_column column with count information (optional)
 #' @param return_gobject return giotto object (default: TRUE)
 #' @param verbose be verbose
+#' @param feat_subset_ids deprecated. Use `feat_subset_values` instead.
+#' @param count_info_column deprecated. Use `feat_count_column` instead.
 #' @returns giotto object or spatVector with overlapping information
 #' @details Serial overlapping function.
 #' @concept overlap
@@ -592,10 +972,28 @@ calculateOverlapRaster <- function(
         poly_ID_names = NULL,
         feat_info = NULL,
         feat_subset_column = NULL,
-        feat_subset_ids = NULL,
-        count_info_column = NULL,
+        feat_subset_values = NULL,
+        feat_count_column = NULL,
         return_gobject = TRUE,
-        verbose = TRUE) {
+        verbose = TRUE,
+        feat_subset_ids = deprecated(),
+        count_info_column = deprecated()) {
+    deprecate_warn(
+        when = "0.4.7",
+        what = "calculateOverlapRaster()",
+        with = "aggregateFeatures()",
+        details = "`calculateOverlap()` is another option if only the overlap
+        step is desired."
+    )
+    feat_subset_values <- GiottoUtils::deprecate_param(
+        feat_subset_ids, feat_subset_values,
+        fun = "calculateOverlapRaster", when = "0.4.7"
+    )
+    feat_count_column <- GiottoUtils::deprecate_param(
+        count_info_column, feat_count_column,
+        fun = "calculateOverlapRaster", when = "0.4.7"
+    )
+
     # set defaults if not provided
     if (is.null(feat_info)) {
         feat_info <- names(gobject@feat_info)[[1]]
@@ -635,8 +1033,9 @@ calculateOverlapRaster <- function(
 
     # * subset points if needed
     # e.g. to select transcripts within a z-plane
-    if (!is.null(feat_subset_column) & !is.null(feat_subset_ids)) {
-        bool_vector <- pointvec[[feat_subset_column]][[1]] %in% feat_subset_ids
+    if (!is.null(feat_subset_column) & !is.null(feat_subset_values)) {
+        bool_vector <- pointvec[[feat_subset_column]][[1]] %in%
+            feat_subset_values
         pointvec <- pointvec[bool_vector]
     }
 
@@ -644,7 +1043,7 @@ calculateOverlapRaster <- function(
     overlap_points <- .calculate_overlap_raster(
         spatvec = spatvec,
         pointvec = pointvec,
-        count_info_column = count_info_column,
+        keep = feat_count_column,
         verbose = verbose
     )
 
@@ -660,80 +1059,6 @@ calculateOverlapRaster <- function(
 }
 
 
-
-#' @name .calculate_overlap_raster
-#' @title Find feature points overlapped by rasterized polygon.
-#' @description Core workflow function that accepts simple `SpatVector` inputs,
-#' performs rasterization of the polys and then checks for overlaps.
-#' @param spatvec `SpatVector` polygon from a `giottoPolygon` object
-#' @param pointvec `SpatVector` points from a `giottoPoints` object
-#' @param count_info_column column with count information (optional)
-#' @param verbose be verbose
-#' @concept overlap
-#' @returns `SpatVector` of overlapped points info
-#' @seealso [calculateOverlapRaster()]
-#' @keywords internal
-.calculate_overlap_raster <- function(spatvec,
-    pointvec,
-    count_info_column = NULL,
-    verbose = TRUE) {
-    # DT vars
-    poly_ID <- poly_i <- ID <- x <- y <- feat_ID <- feat_ID_uniq <- NULL
-
-    # spatial vector to raster
-    if (verbose) GiottoUtils::wrap_msg("1. convert polygon to raster \n")
-    spatrast_res <- polygon_to_raster(spatvec, field = "poly_ID")
-    spatrast <- spatrast_res[["raster"]]
-    ID_vector <- spatrast_res[["ID_vector"]]
-
-    ## overlap between raster and point
-    if (verbose) GiottoUtils::wrap_msg("2. overlap raster and points \n")
-    overlap_test <- terra::extract(x = spatrast, y = pointvec)
-
-    # add poly_ID information
-    if (verbose) GiottoUtils::wrap_msg("3. add polygon information \n")
-    overlap_test_dt <- data.table::as.data.table(overlap_test)
-    overlap_test_dt[, poly_ID := ID_vector[poly_i]]
-
-    # add point information
-    if (verbose) GiottoUtils::wrap_msg("4. add points information \n")
-    pointvec_dt <- data.table::as.data.table(pointvec, geom = "XY")
-
-    pointvec_dt_x <- pointvec_dt$x
-    names(pointvec_dt_x) <- pointvec_dt$geom
-    pointvec_dt_y <- pointvec_dt$y
-    names(pointvec_dt_y) <- pointvec_dt$geom
-    pointvec_dt_feat_ID <- pointvec_dt$feat_ID
-    names(pointvec_dt_feat_ID) <- pointvec_dt$geom
-    pointvec_dt_feat_ID_uniq <- pointvec_dt$feat_ID_uniq
-    names(pointvec_dt_feat_ID_uniq) <- pointvec_dt$geom
-
-    overlap_test_dt[, x := pointvec_dt_x[ID]]
-    overlap_test_dt[, y := pointvec_dt_y[ID]]
-    overlap_test_dt[, feat_ID := pointvec_dt_feat_ID[ID]]
-    overlap_test_dt[, feat_ID_uniq := pointvec_dt_feat_ID_uniq[ID]]
-
-    if (!is.null(count_info_column)) {
-        pointvec_dt_count <- pointvec_dt[[count_info_column]]
-        names(pointvec_dt_count) <- pointvec_dt$geom
-        overlap_test_dt[, c(count_info_column) := pointvec_dt_count[ID]]
-    }
-
-    if (verbose) GiottoUtils::wrap_msg("5. create overlap polygon
-                                    information \n")
-    overlap_test_dt_spatvector <- terra::vect(
-        x = as.matrix(overlap_test_dt[, c("x", "y"), with = FALSE]),
-        type = "points",
-        atts = overlap_test_dt[, c(
-            "poly_ID", "feat_ID", "feat_ID_uniq",
-            count_info_column
-        ), with = FALSE]
-    )
-    names(overlap_test_dt_spatvector) <- c(
-        "poly_ID", "feat_ID", "feat_ID_uniq", count_info_column
-    )
-    return(overlap_test_dt_spatvector)
-}
 
 
 
@@ -850,8 +1175,8 @@ calculateOverlapPolygonImages <- function(gobject,
     for (img_name in image_names) {
         if (!img_name %in% potential_large_image_names) {
             warning(
-                "image with the name ", img_name,
-                " was not found and will be skipped \n"
+                "[calculateOverlap] image with the name ", img_name,
+                " was not found and will be skipped \n", call. = FALSE
             )
         }
     }
@@ -865,8 +1190,8 @@ calculateOverlapPolygonImages <- function(gobject,
 
         if (!img_name %in% potential_large_image_names) {
             warning(
-                "image with the name ", img_name,
-                " was not found and will be skipped \n"
+                "[calculateOverlap] image with the name ", img_name,
+                " was not found and will be skipped \n", call. = FALSE
             )
         }
 
@@ -1220,7 +1545,10 @@ calculateOverlapParallel <- function(gobject,
 #' @param x object containing overlaps info. Can be giotto object or SpatVector
 #' points or data.table of overlaps generated from `calculateOverlap`
 #' @param name name for the overlap count matrix
-#' @param count_info_column column with count information
+#' @param feat_count_column column with count information. If a
+#' column called "count" is present in the feature points data, it will be
+#' automatically selected.
+#' @param count_info_column deprecated. Use `feat_count_column` instead.
 #' @param \dots additional params to pass to methods
 #' @concept overlap
 #' @returns giotto object or count matrix
@@ -1241,81 +1569,78 @@ NULL
 
 # * gobject ####
 #' @rdname overlapToMatrix
-#' @param poly_info character. Polygon information to use
+#' @param spat_info character. Polygon information to use
 #' @param feat_info character. Feature information to use
 #' @param type character. Type of overlap data (either 'point' or 'intensity')
 #' @param return_gobject return giotto object (default: TRUE)
 #' @param verbose be verbose
+#' @param poly_info deprecated. Please use spat_info.
 #' @export
 setMethod(
     "overlapToMatrix", signature("giotto"), function(x,
     name = "raw",
-    poly_info = NULL,
+    spat_info = NULL,
     feat_info = NULL,
     type = c("point", "intensity"),
-    count_info_column = NULL,
-    aggr_function = "sum",
+    feat_count_column = NULL,
+    fun = "sum",
     return_gobject = TRUE,
     verbose = TRUE,
+    aggr_function = deprecated(),
+    poly_info = deprecated(),
+    count_info_column = deprecated(),
     ...) {
+        vmsg(.is_debug = TRUE, "[overlap2mat][giotto]...")
+        # deprecations
+        spat_info <- GiottoUtils::deprecate_param(poly_info, spat_info,
+            fun = "overlapToMatrix", when = "0.4.7"
+        )
+        feat_count_column <- GiottoUtils::deprecate_param(
+            count_info_column, feat_count_column,
+            fun = "overlapToMatrix", when = "0.4.7"
+        )
+        fun <- GiottoUtils::deprecate_param(aggr_function, fun,
+            fun = "overlapToMatrix", when = "0.4.7"
+        )
+
         type <- match.arg(type, choices = c("point", "intensity"))
         checkmate::assert_character(name, len = 1L)
-        if (!is.null(count_info_column)) {
-            checkmate::assert_character(count_info_column, len = 1L)
+        if (!is.null(feat_count_column) && !isFALSE(feat_count_column)) {
+            checkmate::assert_character(feat_count_column, len = 1L)
         }
         checkmate::assert_logical(return_gobject)
 
-        poly_info <- set_default_spat_unit(
+        spat_info <- set_default_spat_unit(
             gobject = x,
-            spat_unit = poly_info
+            spat_unit = spat_info
         )
         feat_info <- set_default_feat_type(
             gobject = x,
-            spat_unit = poly_info,
+            spat_unit = spat_info,
             feat_type = feat_info
         )
 
         # get data
         gpoly <- getPolygonInfo(
             gobject = x,
-            polygon_name = poly_info,
+            polygon_name = spat_info,
             return_giottoPolygon = TRUE,
             verbose = verbose
         )
 
         o2m_args <- list(
             x = gpoly,
-            col_names = spatIDs(x, spat_unit = poly_info),
-            row_names = featIDs(x, feat_type = feat_info),
             feat_info = feat_info,
-            count_info_column = count_info_column,
-            aggr_function = aggr_function,
-            # output = 'Matrix', # Do not specify here. methods must return
-            # something that operates similarly to a [matrix]
-            # object by default.
+            feat_count_column = feat_count_column,
+            output = "exprobj",
+            sort = TRUE,
             type = type,
-            verbose = verbose,
             ...
         )
 
         # pass to giottoPolygon method
-        overlapmatrix <- do.call(overlapToMatrix, args = o2m_args)
-
-        # order matrix row/col
-        mat_r_names <- rownames(overlapmatrix)
-        mat_c_names <- colnames(overlapmatrix)
-        overlapmatrix <- overlapmatrix[
-            match(mixedsort(mat_r_names), mat_r_names),
-            match(mixedsort(mat_c_names), mat_c_names)
-        ]
-
-        overlapExprObj <- create_expr_obj(
-            name = name,
-            exprMat = overlapmatrix,
-            spat_unit = poly_info,
-            feat_type = feat_info,
-            provenance = poly_info
-        )
+        overlapExprObj <- do.call(overlapToMatrix, args = o2m_args)
+        objName(overlapExprObj) <- name
 
         if (isTRUE(return_gobject)) {
             centroidsDT <- centroids(gpoly) %>%
@@ -1330,8 +1655,8 @@ setMethod(
             spatlocs <- createSpatLocsObj(
                 coordinates = centroidsDT_loc,
                 name = name,
-                spat_unit = poly_info,
-                provenance = poly_info,
+                spat_unit = spat_info,
+                provenance = spat_info,
                 verbose = FALSE
             )
 
@@ -1363,15 +1688,22 @@ setMethod(
 
 # * giottoPolygon ####
 #' @rdname overlapToMatrix
-#' @param output data format/class to return the results as
+#' @param output data format/class to return the results as. Default is "Matrix"
 #' @export
 setMethod(
     "overlapToMatrix", signature("giottoPolygon"), function(x,
     feat_info = "rna",
     type = c("point", "intensity"),
-    count_info_column = NULL,
-    output = c("Matrix", "data.table"),
+    feat_count_column = NULL,
+    count_info_column = deprecated(),
     ...) {
+        vmsg(.is_debug = TRUE, "[overlap2mat][gpolygon]...")
+        # deprecations
+        feat_count_column <- GiottoUtils::deprecate_param(
+            count_info_column, feat_count_column,
+            fun = "overlapToMatrix", when = "0.4.7"
+        )
+
         type <- match.arg(type, choices = c("point", "intensity"))
 
         overlaps_data <- switch(type,
@@ -1389,14 +1721,13 @@ setMethod(
 
         argslist <- list(
             x = overlaps_data,
-            count_info_column = count_info_column,
-            output = output,
+            feat_count_column = feat_count_column,
             ...
         )
 
         # remove args not accepted by specific method
         if (type == "intensity") {
-            argslist$count_info_column <- NULL
+            argslist$feat_count_column <- NULL
             argslist$col_names <- NULL
             argslist$row_names <- NULL
             argslist$verbose <- NULL
@@ -1420,10 +1751,18 @@ setMethod(
     "overlapToMatrix", signature("SpatVector"), function(x,
     col_names = NULL,
     row_names = NULL,
-    count_info_column = NULL,
+    feat_count_column = NULL,
     output = c("Matrix", "data.table"),
     verbose = TRUE,
+    count_info_column = deprecated(),
     ...) {
+        vmsg(.is_debug = TRUE, "[overlap2mat][spatvector]...")
+        # deprecations
+        feat_count_column <- GiottoUtils::deprecate_param(
+            count_info_column, feat_count_column,
+            fun = "overlapToMatrix", when = "0.4.7"
+        )
+
         output <- match.arg(
             toupper(output),
             choices = c("MATRIX", "DATA.TABLE")
@@ -1439,20 +1778,32 @@ setMethod(
 
 
         # 2. Perform aggregation to counts DT
-        if (!is.null(count_info_column)) { # if there is a counts col
+        # autodetect counts col
+        if ("count" %in% names(dtoverlap) && is.null(feat_count_column)) {
+            vmsg(.v = verbose,
+                 "[overlap] Found column \"count\" in feature info.
+                - Using as `feat_count_column`
+                [!] Set feat_count_column = FALSE to disable.")
+            feat_count_column <- "count"
+        }
+        if (isFALSE(feat_count_column)) {
+            feat_count_column <- NULL
+        }
 
-            if (!count_info_column %in% colnames(dtoverlap)) {
-                .gstop("count_info_column ", count_info_column,
+        if (!is.null(feat_count_column)) { # if there is a counts col selected
+
+            if (!feat_count_column %in% colnames(dtoverlap)) {
+                .gstop("feat_count_column ", feat_count_column,
                     " does not exist",
                     .n = 2L
                 )
             }
 
             # aggregate counts of features
-            dtoverlap[, c(count_info_column) := as.numeric(
-                get(count_info_column)
+            dtoverlap[, c(feat_count_column) := as.numeric(
+                get(feat_count_column)
             )]
-            aggr_dtoverlap <- dtoverlap[, base::sum(get(count_info_column)),
+            aggr_dtoverlap <- dtoverlap[, base::sum(get(feat_count_column)),
                 by = c("poly_ID", "feat_ID")
             ]
             data.table::setnames(aggr_dtoverlap, "V1", "N")
@@ -1523,12 +1874,21 @@ setMethod(
 # * data.frame ####
 # images
 #' @rdname overlapToMatrix
-#' @param aggr_function function to aggregate image information (default = sum)
+#' @param fun character. Function to aggregate image information
+#' (default = "sum")
+#' @param aggr_function deprecated. Use `fun` instead.
 #' @export
 setMethod(
     "overlapToMatrix", signature("data.table"), function(x,
-    aggr_function = "sum",
-    output = c("Matrix", "data.table")) {
+    fun = "sum",
+    output = c("Matrix", "data.table"),
+    aggr_function = deprecated()) {
+        vmsg(.is_debug = TRUE, "[overlap2mat][data.table]...")
+
+        fun <- GiottoUtils::deprecate_param(aggr_function, fun,
+            fun = "overlapToMatrix", when = "0.4.7"
+        )
+
         output <- match.arg(
             toupper(output),
             choices = c("MATRIX", "DATA.TABLE")
@@ -1543,7 +1903,7 @@ setMethod(
             variable.name = "feat_ID"
         )
 
-        aggr_fun <- get(aggr_function)
+        aggr_fun <- get(fun)
         aggr_comb <- melt_image_info[, aggr_fun(value),
             by = .(poly_ID, feat_ID)
         ]
@@ -1565,8 +1925,60 @@ setMethod(
     }
 )
 
+# * overlapPointDT ####
 
+#' @rdname overlapToMatrix
+#' @param sort logical (default = TRUE). Whether to perform a mixed sort on
+#' output matrix row and col names.
+#' @export
+setMethod("overlapToMatrix", signature("overlapPointDT"),
+    function(x,
+    name = "raw",
+    sort = TRUE,
+    feat_count_column = NULL,
+    output = c("Matrix", "exprObj"),
+    ...) {
+        vmsg(.is_debug = TRUE, "[overlap2mat][overlap_point_dt]...")
+        output <- match.arg(tolower(output), choices = c("matrix", "exprobj"))
+        m <- as.matrix(x, feat_count_column = feat_count_column, ...)
+        if (isTRUE(sort)) m <- .mixedsort_rowcols(m)
+        switch(output,
+            "matrix" = m,
+            "exprobj" = createExprObj(
+                expression_data = m,
+                name = name,
+                spat_unit = spatUnit(x),
+                feat_type = featType(x),
+                provenance = prov(x)
+            )
+        )
+})
 
+# * overlapIntensityDT ####
+
+#' @rdname overlapToMatrix
+#' @export
+setMethod("overlapToMatrix", signature("overlapIntensityDT"),
+    function(x,
+             name = "raw",
+             sort = TRUE,
+             output = c("Matrix", "exprObj"),
+             ...) {
+        vmsg(.is_debug = TRUE, "[overlap2mat][overlap_intensity_dt]...")
+        output <- match.arg(tolower(output), choices = c("matrix", "exprobj"))
+        m <- as.matrix(x, ...)
+        if (isTRUE(sort)) m <- .mixedsort_rowcols(m)
+        switch(output,
+            "matrix" = m,
+            "exprobj" = createExprObj(
+                expression_data = m,
+                name = name,
+                spat_unit = spatUnit(x),
+                feat_type = featType(x),
+                provenance = prov(x)
+            )
+        )
+    })
 
 
 #' @title overlapToMatrixMultiPoly
@@ -1691,7 +2103,16 @@ overlapToMatrixMultiPoly <- function(gobject,
 }
 
 
-
+.mixedsort_rowcols <- function(x) {
+    # order matrix row/col
+    mat_r_names <- rownames(x)
+    mat_c_names <- colnames(x)
+    x[
+        match(mixedsort(mat_r_names), mat_r_names),
+        match(mixedsort(mat_c_names), mat_c_names),
+        drop = FALSE
+    ]
+}
 
 
 #' @title overlapImagesToMatrix
@@ -1720,6 +2141,15 @@ overlapImagesToMatrix <- function(gobject,
     image_names = NULL,
     spat_locs_name = "raw",
     return_gobject = TRUE) {
+
+    deprecate_warn(
+        when = "0.4.7",
+        what = "overlapImagesToMatrix()",
+        with = "aggregateFeatures()",
+        details = "`overlapToMatrix()` is another option if only the matrix
+        construction from overlaps information step is desired."
+    )
+
     # data.table vars
     value <- poly_ID <- feat_ID <- x <- y <- NULL
 
@@ -2276,24 +2706,24 @@ aggregateStacksPolygonOverlaps <- function(gobject,
 
     for (i in seq_len(length(spat_units))) {
         spat_unit <- spat_units[i]
-        vecDT <- gobject@spatial_info[[spat_unit]]@overlaps[[feat_type]]
+        ovlp <- getPolygonInfo(gobject,
+            polygon_name = spat_unit,
+            polygon_overlap = feat_type
+        )
+        # vecDT <- gobject@spatial_info[[spat_unit]]@overlaps[[feat_type]]
 
-        if (!is.null(vecDT)) {
-            vecDT <- .spatvector_to_dt(vecDT)
-            vecDT[, "stack" := i]
-            polygon_list[[spat_unit]] <- vecDT
+        if (!is.null(ovlp)) {
+            ovlp@data[, "stack" := i]
+            polygon_list[[spat_unit]] <- ovlp
         }
     }
 
     if (length(polygon_list) == 0) {
         wrap_msg("No feature overlaps found for stack aggregation \n")
     } else {
-        polygon_DT <- data.table::rbindlist(polygon_list)
-        polygon <- .dt_to_spatvector_points(
-            dt = polygon_DT,
-            include_values = TRUE
-        )
-        gobject@spatial_info[[new_spat_unit]]@overlaps[[feat_type]] <- polygon
+        comb_ovlp <- do.call(rbind, polygon_list)
+        gobject@spatial_info[[new_spat_unit]]@overlaps[[feat_type]] <-
+            comb_ovlp
     }
 
     return(gobject)
