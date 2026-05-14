@@ -19,7 +19,6 @@
 ## bug fixes
 - `overlaps()` will now properly find image overlaps
 - fix a naming bug when exporting images during save
-- `seuratToGiottoV5()`/`giottoToSeuratV5()` updated for `layer` param (replacing `slot`)
 - `SpatVector` -> `data.table` coercion no longer returns empty when it has no attributes
 
 ## enhancements
@@ -30,9 +29,11 @@
 
 # GiottoClass 0.4.12 (2025/12/12)
 
+## bug fixes
+- `seuratToGiottoV5()`/`giottoToSeuratV5()` updated for `layer` param (replacing `slot`)
+
 ## enhancements
 - automatic checking for `"count"` column in feature info
-
 
 ## new
 - `misc` slot for storing unstructured data

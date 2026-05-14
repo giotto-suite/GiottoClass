@@ -43,7 +43,6 @@ Imports:
     stats,
     terra (>= 1.8-21)
 Suggests:
-    GiottoDB,
     Biobase,
     chihaya,
     DelayedArray,
