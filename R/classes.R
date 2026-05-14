@@ -1,378 +1,15 @@
 #' @include package_imports.R
+#' @include classes-virtuals.R
+#' @include classes-polygons.R
+#' @include classes-points.R
+#' @include classes-overlaps.R
+#' @include classes-images.R
+#' @include classes-utils.R
 NULL
 
-# OLDCLASS ####
-setOldClass("giottoInstructions")
 
-# MISC ####
-## * Define class unions ####
 
-setClassUnion("nullOrChar", c("NULL", "character"))
-setClassUnion("nullOrList", c("NULL", "list"))
-setClassUnion("nullOrInstructions", c("nullOrList", "giottoInstructions"))
-setClassUnion("nullOrDatatable", c("NULL", "data.table"))
-setClassUnion("nullOrLogical", c("NULL", "logical"))
-# see zzz.R for allMatrix
 
-#' @title gIndex
-#' @description
-#' class for handling indices similar to `index` class from \pkg{Matrix}
-#' simple class union (setClassUnion) of "numeric", "logical" and "character".
-#' @keywords internal
-#' @noRd
-setClassUnion("gIndex", c("numeric", "logical", "character"))
-
-# VIRTUAL CLASSES ####
-
-
-# ** giottoSubobject Class ####
-#' @keywords internal
-#' @noRd
-setClass(
-    "giottoSubobject",
-    contains = "VIRTUAL"
-)
-
-# ** gdtData Class ####
-#' @description
-#' umbrella class for referring to Giotto's normal data.table-based slots for
-#' extraction purposes
-#' @keywords internal
-#' @noRd
-setClass(
-    "gdtData",
-    contains = "VIRTUAL"
-)
-
-
-# ** nameData Class ####
-#' @keywords internal
-#' @noRd
-setClass("nameData",
-    contains = "VIRTUAL",
-    slots = list(name = "character"),
-    prototype = prototype(name = NA_character_)
-)
-
-# ** exprData Class ####
-#' Basic class for classes with expression information
-#' @keywords internal
-#' @noRd
-setClass("exprData",
-    contains = "VIRTUAL",
-    slots = list(exprMat = "ANY"),
-    prototype = prototype(exprMat = NULL)
-)
-
-
-
-# ** coordData Class ####
-#' Basic class for classes with coordinate information
-#'
-#' @description
-#' coordDataDT is the specific flavor that deals with objects where the
-#' coordinate information is stored within data.table objects and should work
-#' similarly to data.table when interacting with some basic generic operators
-#' for data retreival and setting.
-#'
-#' @keywords internal
-#' @noRd
-setClass("coordDataDT",
-    contains = c("VIRTUAL", "gdtData"),
-    slots = list(coordinates = "data.table"),
-    prototype = prototype(coordinates = data.table::data.table())
-)
-
-
-
-
-
-# setClass('coordDataMT',
-#          slots = list(coordinates = 'matrix'),
-#          prototype = prototype(coordinates = matrix()))
-
-
-# ** metaData Class ####
-#' Basic class for classes with metadata information
-#'
-#' @description
-#' Classes that inherit from this class will contain a metadata slot that
-#' stores information in a data.table and should work similarly to data.table
-#' when interacting with some basic generic operators for data retrieval and
-#' setting
-#' @keywords internal
-#' @noRd
-setClass("metaData",
-    contains = c("VIRTUAL", "gdtData"),
-    slots = list(
-        metaDT = "data.table",
-        col_desc = "character"
-    ),
-    prototype = methods::prototype(
-        metaDT = data.table::data.table(),
-        col_desc = NA_character_
-    )
-)
-
-
-
-
-
-# ** enrData ####
-#' enrData
-#' @keywords internal
-#' @noRd
-setClass("enrData",
-    contains = c("VIRTUAL", "gdtData"),
-    slots = list(
-        method = "character",
-        enrichDT = "nullOrDatatable"
-    ),
-    prototype = methods::prototype(
-        method = NA_character_,
-        enrichDT = NULL
-    )
-)
-
-
-
-
-
-# ** nnData ####
-#' @keywords internal
-#' @noRd
-setClass("nnData",
-    contains = "VIRTUAL",
-    slots = list(
-        nn_type = "character",
-        igraph = "ANY"
-    ),
-    prototype = methods::prototype(
-        nn_type = NA_character_,
-        igraph = NULL
-    )
-)
-
-
-# ** spatNetData ####
-#' @keywords internal
-#' @noRd
-setClass("spatNetData",
-    contains = "VIRTUAL",
-    slots = list(
-        method = "character",
-        parameters = "ANY",
-        outputObj = "ANY",
-        networkDT = "nullOrDatatable",
-        networkDT_before_filter = "nullOrDatatable",
-        cellShapeObj = "ANY"
-    ),
-    prototype = methods::prototype(
-        method = NA_character_,
-        parameters = NULL,
-        outputObj = NULL,
-        networkDT = NULL,
-        networkDT_before_filter = NULL,
-        cellShapeObj = NULL
-    )
-)
-
-
-
-
-# ** spatGridData ####
-#' @keywords internal
-#' @noRd
-setClass("spatGridData",
-    contains = "VIRTUAL",
-    slots = list(
-        method = "character",
-        parameters = "ANY",
-        gridDT = "nullOrDatatable"
-    ),
-    prototype = prototype(
-        method = NA_character_,
-        parameters = NULL,
-        gridDT = NULL
-    )
-)
-
-
-
-
-
-# ** provData Class ####
-#' Basic class for classes with provenance information.
-#'
-#' @description
-#' This kind of information is necessary when generating data that is
-#' aggregated from multiple original sources of raw information. This could
-#' refer to situations such as when producing cellxfeature expression matrices
-#' from subcellular transcript information and polygons that are provided as
-#' multiple z layers. Provenance is Giotto's method of mapping this aggregated
-#' information back to the original z layers that were used in its generation.
-#'
-#' @keywords internal
-#' @noRd
-setClass("provData",
-    contains = "VIRTUAL",
-    slots = list(provenance = "ANY"),
-    prototype = prototype(provenance = NULL)
-)
-
-
-
-# ** spatData Class ####
-#' Basic class for classes with spatial information
-#'
-#' @description
-#' Classes that inherit from this class will contain a spat_unit slot that
-#' describes which spatial unit the data belongs to. This is most relevant
-#' to aggregated information. Subcellular information such as poly data
-#' in \code{spatial_info} slot essentially define their own spatial units.
-#' Within slots that deal with classes that contain spatData,
-#' there is a nesting structure that first nests by spatial unit.
-#' @keywords internal
-#' @noRd
-setClass("spatData",
-    contains = c("provData", "VIRTUAL"),
-    slots = list(spat_unit = "character"), # not allowed to be NULL
-    prototype = prototype(spat_unit = NA_character_)
-)
-
-
-
-# ** featData Class ####
-#' @title Basic class for classes with feature information
-#'
-#' @description
-#' Features in Giotto are a blanket term for any features that are detected,
-#' covering modalities such as, but not limited to rna, protein, ATAC, and
-#' even QC probes. Classes that inherit from this class will contain a
-#' feat_type slot that describes which feature type the data is. Within slots
-#' that deal with classes that contain featData, there is a nesting structure
-#' that usually first nests by spatial unit and then by feature type.
-#' @keywords internal
-#' @noRd
-setClass("featData",
-    contains = "VIRTUAL",
-    slots = list(feat_type = "character"), # not allowed to be NULL
-    prototype = prototype(feat_type = NA_character_)
-)
-
-
-
-# ** miscData Class ####
-#' @title Basic class for additional miscellaneous information
-#'
-#' @description
-#' Classes (such as dimObj) that can hold information from multiple types of
-#' methods use the misc slot to hold additional information specific to each
-#' method. Information may be stored within as S3 structures.
-#' @returns slot for miscellaneous information
-#' @examples
-#' g <- GiottoData::loadSubObjectMini("dimObj")
-#'
-#' slot(g, "misc")
-setClass("miscData",
-    contains = "VIRTUAL",
-    slots = list(misc = "ANY"),
-    prototype = prototype(misc = NULL)
-)
-
-
-# ** terraVectData Class ####
-#' @title Basic class for terra SpatVector-based objects
-#' @description
-#' Classes that inherit from this class will contain a spatVector slot meant to
-#' hold and work with terra SpatVector objects
-#' @returns object with spatVector slot
-terraVectData <- setClass(
-    "terraVectData",
-    contains = "VIRTUAL",
-    slots = list(spatVector = "ANY"),
-    prototype = prototype(spatVector = NULL)
-)
-
-
-
-# UTILITY ####
-
-# ** affine2d ####
-setClass(
-    Class = "affine2d",
-    slots = list(
-        anchor = "ANY",
-        affine = "matrix",
-        order = "character",
-        rotate = "numeric",
-        shear = "numeric",
-        scale = "numeric",
-        translate = "numeric"
-    ),
-    prototype = list(
-        anchor = c(-180, 180, -90, 90),
-        affine = diag(rep(1, 2L)),
-        order = c("rotate", "shear", "scale", "translate"),
-        rotate = 0,
-        shear = c(0, 0),
-        scale = c(1, 1),
-        translate = c(0, 0)
-    )
-)
-
-# ** processParam ####
-
-#' @title Parameter Classes for Data Processing Operations
-#' @name processParam-class
-#' @aliases processParam
-#' @description
-#' Utility class that defines a data processing procedure and any params used
-#' in performing it. Packages defining processing methods will create their own
-#' child classes. These parameter objects are intended to be passed alongside
-#' the data to process to [processData()].
-#' @slot param list. Named parameters to use with the intended processing
-#' operation. These can be accessed and updated using the `$` operator.
-#' @exportClass processParam
-setClass("processParam", contains = "VIRTUAL", slots = list(param = "list"))
-
-
-
-# ** svkey ####
-
-#' @name svkey-class
-#' @title Spatial Value Key
-#' @description
-#' A metaprogramming object that references a set of information to get
-#' from a `giotto` object when used as `svkey@get(gobject)`.
-#' Referenced data will be retrieved as a `data.table` via [spatValues()]
-#' @keywords internal
-setClass("svkey",
-    slots = list(
-        feats = "character",
-        spat_unit = "nullOrChar",
-        feat_type = "nullOrChar",
-        expression_values = "nullOrChar",
-        spat_loc_name = "nullOrChar",
-        spat_enr_name = "nullOrChar",
-        poly_info = "nullOrChar",
-        dim_reduction_to_use = "nullOrChar",
-        dim_reduction_name = "nullOrChar",
-        verbose = "nullOrLogical",
-        get = "function"
-    )
-)
-
-# SUBCLASSES ####
-
-# ** spatFeatData ####
-#' @description Superclass for classes that contain both spatial and feature
-#' data
-#' @keywords internal
-#' @noRd
-setClass("spatFeatData",
-    contains = c("spatData", "featData", "VIRTUAL")
-)
 
 
 
@@ -393,6 +30,9 @@ setClass("spatFeatData",
 }
 
 .gversion <- function(gobject) {
+    if (is.null(attr(gobject, "versions"))) { # apply default version 0.0.0
+        return(as.package_version("0.0.0")) # untracked
+    }
     gobject@versions$gclass
 }
 
@@ -488,6 +128,92 @@ updateGiottoObject <- function(gobject) {
     }
 
     # -------------------------------------------------------------------------#
+
+    # subobject updates
+    if (!is.null(attr(gobject, "feat_info"))) {
+        info_list <- get_feature_info_list(gobject)
+        # update S4 object if needed
+        info_list <- lapply(info_list, function(info) {
+            try_val <- try(validObject(info), silent = TRUE)
+            if (inherits(try_val, "try-error")) {
+                info <- updateGiottoPointsObject(info)
+            }
+            return(info)
+        })
+        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+        gobject <- setFeatureInfo(
+            gobject = gobject,
+            x = info_list,
+            verbose = FALSE,
+            initialize = FALSE
+        )
+        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+    }
+    # GiottoClass 0.5.0: feat_ID_uniq on giottoPoints changes from string
+    # (e.g. "gobject1-1") to sequential integer. Polygon overlap SpatVectors
+    # referencing the old strings must be remapped using the gpoints SpatVector
+    # as the authoritative lookup before updateGiottoPolygonObject converts them.
+    if (.gversion(gobject) < numeric_version("0.5.0") &&
+        !is.null(attr(gobject, "feat_info"))) {
+        feat_uniq_maps <- list()
+        for (ft in names(gobject@feat_info)) {
+            gpts <- gobject@feat_info[[ft]]
+            if (!inherits(gpts, "giottoPoints") ||
+                is.null(gpts@spatVector)) next
+            fid <- gpts@spatVector$feat_ID_uniq
+            if (!is.character(fid)) next
+            feat_uniq_maps[[ft]] <- setNames(
+                seq_len(nrow(gpts@spatVector)), fid
+            )
+        }
+        if (length(feat_uniq_maps) > 0L) {
+            # remap overlap SpatVectors before they are converted
+            if (!is.null(attr(gobject, "spatial_info"))) {
+                for (poly_name in names(gobject@spatial_info)) {
+                    gpoly <- gobject@spatial_info[[poly_name]]
+                    if (is.null(gpoly@overlaps)) next
+                    changed <- FALSE
+                    for (ft in names(feat_uniq_maps)) {
+                        ovlp <- gpoly@overlaps[[ft]]
+                        if (!inherits(ovlp, "SpatVector")) next
+                        ovlp$feat_ID_uniq <-
+                            feat_uniq_maps[[ft]][ovlp$feat_ID_uniq]
+                        gpoly@overlaps[[ft]] <- ovlp
+                        changed <- TRUE
+                    }
+                    if (changed) gobject@spatial_info[[poly_name]] <- gpoly
+                }
+            }
+            # reset gpoints feat_ID_uniq to sequential integers
+            for (ft in names(feat_uniq_maps)) {
+                gpts <- gobject@feat_info[[ft]]
+                gpts@spatVector$feat_ID_uniq <- seq_len(nrow(gpts@spatVector))
+                gobject@feat_info[[ft]] <- gpts
+            }
+        }
+    }
+
+    if (!is.null(attr(gobject, "spatial_info"))) {
+        info_list <- get_polygon_info_list(gobject)
+        # update S4 object if needed
+        info_list <- lapply(info_list, function(info) {
+            try_val <- try(validObject(info), silent = TRUE)
+            if (inherits(try_val, "try-error") ||
+                .gversion(gobject) < "0.5.0") {
+                info <- updateGiottoPolygonObject(info)
+            }
+            return(info)
+        })
+        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+        gobject <- setPolygonInfo(
+            gobject = gobject,
+            x = info_list,
+            verbose = FALSE,
+            centroids_to_spatlocs = FALSE,
+            initialize = FALSE
+        )
+        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+    }
 
     # finally, set updated version number
     .gversion(gobject) <- packageVersion("GiottoClass")
@@ -1353,431 +1079,6 @@ setClass("spatEnrObj",
     )
 )
 
-
-
-
-
-# SUBCELLULAR ####
-
-## giottoPolygon class ####
-
-# * definition ####
-# giottoPolygon class
-
-#' @title S4 giotto polygon Class
-#' @description Giotto class to store and operate on polygon-like data
-#' @concept giotto polygon class
-#' @slot name name of polygon shapes
-#' @slot spatVector terra spatVector to store polygon shapes
-#' @slot spatVectorCentroids centroids of polygon shapes
-#' @slot overlaps information about overlapping points and polygons
-#' @slot unique_ID_cache cached unique spatial IDs that should match the
-#' spatVector slot
-#' @details holds polygon data
-#' @returns giottoPolygon
-#' @examples
-#' giottoPolygon()
-#' @export
-giottoPolygon <- setClass(
-    Class = "giottoPolygon",
-    contains = c("nameData", "terraVectData", "giottoSubobject"),
-    slots = c(
-        spatVectorCentroids = "ANY",
-        overlaps = "ANY",
-        unique_ID_cache = "character"
-    ),
-    prototype = list(
-        spatVectorCentroids = NULL,
-        overlaps = NULL,
-        unique_ID_cache = NA_character_
-    )
-)
-
-
-
-
-#' @title Update giotto polygon object
-#' @name updateGiottoPolygonObject
-#' @param gpoly giotto polygon object
-#' @returns GiottoPolygonObject
-#' @examples
-#' g <- GiottoData::loadSubObjectMini("giottoPolygon")
-#'
-#' updateGiottoPolygonObject(g)
-#' @export
-updateGiottoPolygonObject <- function(gpoly) {
-    if (!inherits(gpoly, "giottoPolygon")) {
-        stop("This function is only for giottoPoints")
-    }
-
-    # 3.2.X adds cacheing of IDs
-    if (is.null(attr(gpoly, "unique_ID_cache"))) {
-        attr(gpoly, "unique_ID_cache") <- unique(
-            as.list(gpoly@spatVector)$poly_ID
-        )
-    }
-
-    gpoly
-}
-
-
-
-
-
-
-# for use with wrap() generic
-setClass("packedGiottoPolygon",
-    contains = c("nameData", "giottoSubobject"),
-    slots = c(
-        packed_spatVector = "ANY",
-        packed_spatVectorCentroids = "ANY",
-        packed_overlaps = "ANY",
-        unique_ID_cache = "character"
-    ),
-    prototype = list(
-        packed_spatVector = NULL,
-        packed_spatVectorCentroids = NULL,
-        packed_overlaps = NULL,
-        unique_ID_cache = NA_character_
-    )
-)
-
-
-
-
-
-
-## giottoPoints class ####
-
-
-## * definition ####
-# giottoPoints class
-
-#' @title S4 giotto points Class
-#' @description Giotto class to store and operate on points data
-#' @concept giotto points class
-#' @slot feat_type name of feature type
-#' @slot spatVector terra spatVector to store point shapes
-#' @slot networks feature networks
-#' @slot unique_ID_cache cached unique feature IDs that should match the
-#' spatVector slot
-#' @details Contains vector-type feature data
-#' @returns giottoPoints
-#' @examples
-#' giottoPoints()
-#' @export
-giottoPoints <- setClass(
-    Class = "giottoPoints",
-    contains = c("featData", "terraVectData", "giottoSubobject"),
-    slots = c(
-        networks = "ANY",
-        unique_ID_cache = "character"
-    ),
-    prototype = list(
-        networks = NULL,
-        unique_ID_cache = NA_character_
-    )
-)
-
-
-
-
-#' @title Update giotto points object
-#' @name updateGiottoPointsObject
-#' @param gpoints giotto points object
-#' @returns GiottoPointsObject
-#' @examples
-#' g <- GiottoData::loadSubObjectMini("giottoPoints")
-#'
-#' updateGiottoPointsObject(g)
-#' @export
-updateGiottoPointsObject <- function(gpoints) {
-    if (!inherits(gpoints, "giottoPoints")) {
-        stop("This function is only for giottoPoints")
-    }
-
-    # 3.2.X adds cacheing of IDs
-    if (is.null(attr(gpoints, "unique_ID_cache"))) {
-        attr(gpoints, "unique_ID_cache") <- unique(
-            as.list(gpoints@spatVector)$feat_ID
-        )
-    }
-
-    gpoints
-}
-
-
-
-
-
-
-
-
-
-
-
-# for use with wrap() generic
-setClass(
-    "packedGiottoPoints",
-    slots = c(
-        feat_type = "character",
-        packed_spatVector = "ANY",
-        networks = "ANY",
-        unique_ID_cache = "character"
-    ),
-    prototype = list(
-        feat_type = NA_character_,
-        packed_spatVector = NULL,
-        networks = NULL,
-        unique_ID_cache = NA_character_
-    )
-)
-
-
-
-
-
-
-
-
-
-## featureNetwork class ####
-
-
-## * definition ####
-# featureNetwork class
-
-
-#' @title S4 giotto feature network Class
-#' @description Giotto class to store and operate on feature network
-#' @concept giotto points network class
-#' @slot name name of feature network
-#' @slot network_datatable feature network in data.table format
-#' @slot network_lookup_id table mapping numeric network ID to unique
-#' feature numerical IDs
-#' @slot full fully connected network
-#' @details contains feature network information
-#' @returns featureNetwork
-#' @examples
-#' featureNetwork()
-#' @export
-featureNetwork <- setClass(
-    Class = "featureNetwork",
-    contains = c("nameData", "giottoSubobject"),
-    slots = c(
-        network_datatable = "ANY",
-        network_lookup_id = "ANY",
-        full = "ANY"
-    ),
-    prototype = list(
-        network_datatable = NULL,
-        network_lookup_id = NULL,
-        full = NULL
-    )
-)
-
-
-# IMAGES ####
-
-## giottoImage class ####
-
-# * definition ####
-# giottoImage class
-
-#' @title S4 giottoImage Class
-#' @description Framework of giotto object to store and work with spatial
-#' expression data
-#' @concept giotto image object
-#' @slot name name of Giotto image
-#' @slot mg_object magick image object
-#' @slot minmax minimum and maximum of associated spatial location coordinates
-#' @slot boundaries x and y coordinate adjustments (default to 0)
-#' @slot scale_factor image scaling relative to spatial locations
-#' @slot resolution spatial location units covered per pixel
-#' @slot file_path file path to the image if given
-#' @slot OS_platform Operating System to run Giotto analysis on
-#' @details
-#' \[\strong{mg_object}\] Core object is any image that can be read by the
-#' magick package
-#'
-#' \[\strong{boundaries}\] Boundary adjustments can be used to manually or
-#' automatically through a script adjust the image with the spatial data.
-#'
-#' @returns giottoImage
-#' @examples
-#' giottoImage()
-#' @export
-giottoImage <- setClass(
-    Class = "giottoImage",
-    slots = c(
-        name = "character",
-        mg_object = "ANY",
-        minmax = "ANY",
-        boundaries = "ANY",
-        scale_factor = "ANY",
-        resolution = "ANY",
-        file_path = "ANY",
-        OS_platform = "ANY"
-    ),
-    prototype = list(
-        name = "test",
-        mg_object = NULL,
-        minmax = NULL,
-        boundaries = NULL,
-        scale_factor = NULL,
-        resolution = NULL,
-        file_path = NULL,
-        OS_platform = NULL
-    )
-)
-
-
-
-
-
-
-## giottoLargeImage class ####
-
-
-## * definition ####
-# giottoLargeImage class
-
-#' @title S4 giottoLargeImage Class
-#' @description Image class for Giotto that uses \pkg{terra} `SpatRaster` as
-#' a backend. If images are loaded from a file on disk then they are worked
-#' with lazily, where only the values needed at any moment are loaded/sampled
-#' into memory. Since `SpatRaster` objects are C pointers, `giottoLargeImage`
-#' and inheriting classes need to run `reconnect()` after loading from a
-#' saved object.
-#' @concept giotto object image
-#' @slot name name of large Giotto image
-#' @slot raster_object terra `SpatRaster` object
-#' @slot extent tracks the extent of the raster object. Note that most
-#' processes should rely on the extent of the raster object instead of this.
-#' @slot overall_extent terra extent object covering the original extent of
-#' image
-#' @slot scale_factor image scaling relative to spatial locations
-#' @slot resolution spatial location units covered per pixel
-#' @slot max_intensity approximate maximum value
-#' @slot min_intensity approximate minimum value
-#' @slot max_window value to set as maximum intensity in color scaling
-#' @slot colors color mappings in hex codes
-#' @slot is_int values are integers
-#' @slot file_path file path to the image if given
-#' @slot OS_platform Operating System to run Giotto analysis on
-#' @returns giottoLargeImage
-#' @examples
-#' giottoLargeImage()
-#'
-#' @export giottoLargeImage
-#' @exportClass giottoLargeImage
-giottoLargeImage <- setClass(
-    Class = "giottoLargeImage",
-    contains = "giottoSubobject",
-    slots = c(
-        name = "ANY",
-        raster_object = "ANY",
-        extent = "ANY", # REMOVE?
-        overall_extent = "ANY", # REMOVE? New slot px_dims as replacement?
-        scale_factor = "ANY",
-        resolution = "ANY",
-        max_intensity = "numeric",
-        min_intensity = "numeric",
-        max_window = "numeric", # NEW
-        colors = "character", # NEW
-        is_int = "ANY",
-        file_path = "ANY",
-        OS_platform = "ANY"
-    ),
-    prototype = list(
-        name = NULL,
-        raster_object = NULL,
-        extent = NULL,
-        overall_extent = NULL,
-        scale_factor = NULL,
-        resolution = NULL,
-        max_intensity = NA_real_,
-        min_intensity = NA_real_,
-        max_window = NA_real_,
-        colors = grDevices::grey.colors(n = 256, start = 0, end = 1, gamma = 1),
-        is_int = NULL,
-        file_path = NULL,
-        OS_platform = NULL
-    )
-)
-
-#' @title S4 giottoAffineImage Class
-#' @description
-#' Class extending `giottoLargeImage`. When `shear()` or `spin()` operations
-#' are performed on a `giottoLargeImage`, this class is instantiated. It
-#' provides a way of storing the affine transformation and also lazily
-#' performing it when required for a plotting preview. It is possible to force
-#' the deferred affine transform using `doDeferred()` and return a processed
-#' `giottoLargeImage`.
-#' @slot affine contains `affine2d` object allowing lazily performed spatial
-#' transforms
-#' @slot funs list of functions associated with the object. Primarily to
-#' perform the delayed/lazy operation
-#' @returns `giottoAffineImage`
-setClass(
-    "giottoAffineImage",
-    contains = c("giottoLargeImage"),
-    slots = c(
-        affine = "affine2d",
-        funs = "list"
-    )
-)
-
-
-
-
-
-# function for updating image objects if structure definitions have changed
-.update_giotto_image <- function(x) {
-    if (inherits(x, "giottoLargeImage")) {
-        # 0.1.2 release adds colors & max_window slots
-        if (is.null(attr(x, "colors"))) {
-            attr(x, "colors") <- grDevices::grey.colors(
-                n = 256, start = 0,
-                end = 1, gamma = 1
-            )
-        }
-        if (is.null(attr(x, "max_window"))) {
-            # get a max intensity value
-            if (!is.null(x@max_intensity)) {
-                x@max_intensity <- .spatraster_intensity_range(
-                    x@raster_object
-                )[["max"]]
-            }
-
-            attr(x, "max_window") <- .bitdepth(
-                x@max_intensity,
-                return_max = TRUE
-            )
-        }
-
-        # 0.1.x release adds giottoImageStack
-        # deprecate
-    }
-    return(x)
-}
-
-
-
-## giottoImageStack class ####
-
-## * definition ####
-# giottoImageStack class
-
-# giottoImageStack <- setClass(
-#   Class = "giottoImageStack",
-#
-#   slots = c(
-#     name = 'character',
-#     images = 'giottoLargeImage',
-#     weight = 'numeric'
-#   )
-# )
 
 
 

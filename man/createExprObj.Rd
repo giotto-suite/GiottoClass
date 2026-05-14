@@ -11,11 +11,14 @@ createExprObj(
   feat_type = "rna",
   provenance = NULL,
   misc = NULL,
-  expression_matrix_class = c("dgCMatrix", "DelayedArray", "dbMatrix")
+  expression_matrix_class = deprecated()
 )
 }
 \arguments{
-\item{expression_data}{expression data}
+\item{expression_data}{expression data. Accepts matrix-like data and
+coercible \code{data.frame} formats (first column used as row names). A
+filepath to a flat file readable by \code{\link[data.table:fread]{data.table::fread()}} can also be
+passed.}
 
 \item{name}{name of exprObj}
 
@@ -25,21 +28,37 @@ createExprObj(
 
 \item{provenance}{origin data of expression information (if applicable)}
 
-\item{misc}{misc}
+\item{misc}{misc about the object to attach}
 
-\item{expression_matrix_class}{class of expression matrix to
-use (e.g. 'dgCMatrix', 'DelayedArray', 'dbMatrix')}
+\item{expression_matrix_class}{deprecated. Previously wrapped the matrix in
+a \code{DelayedArray} when selected. Moving forward, pass a pre-constructed
+backed matrix to \code{expression_data} directly if needed.}
 }
 \value{
-exprObj
+\code{exprObj} wrapping the expression matrix with \code{spat_unit},
+\code{feat_type}, and provenance metadata attached.
 }
 \description{
-Create an S4 exprObj
+Create an \code{exprObj} (thin metadata wrapper/adapter) for
+Giotto expression value information. \code{matrix} and tabular formats
+will be coerced to {Matrix} sparse format \code{dgCMatrix}. For tabular
+inputs, the first column is used as row names.
+\subsection{Alternative and disk-backed formats}{
+
+Pre-constructed backed matrices (\code{HDF5Array}, \code{dbMatrix}, \code{tiledb_array},
+\code{IterableMatrix}) may also be passed directly to \code{expression_data} and will
+be used as-is.
+}
 }
 \examples{
+m <- matrix(rpois(100, 1), nrow = 10,
+    dimnames = list(paste0("feat", 1:10), paste0("cell", 1:10))
+)
+createExprObj(m)
+
+# example 0-dominated sparse matrix
 x_expr <- readRDS(system.file("extdata/toy_matrix.RDS",
     package = "GiottoClass"
 ))
-
 createExprObj(expression_data = x_expr)
 }

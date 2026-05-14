@@ -4995,7 +4995,7 @@ setFeatureInfo <- function(gobject,
 
     # NATIVE INPUT TYPES
     # 2. if input is giottoPoints or NULL, pass to internal
-    if (is.null(x) || inherits(x, "giottoPoints")) {
+    if (is.null(x) || inherits(x, c("giottoPoints", "giottoBinPoints"))) {
         # pass to internal
         gobject <- set_feature_info(
             gobject = gobject,
@@ -5009,7 +5009,10 @@ setFeatureInfo <- function(gobject,
     } else if (inherits(x, "list")) {
         # check list items are native
         if (all(
-            vapply(x, inherits, "giottoPoints", FUN.VALUE = logical(1L))
+            vapply(x,
+                inherits, c("giottoPoints", "giottoBinPoints"),
+                FUN.VALUE = logical(1L)
+            )
         )) {
             # MULTIPLE INPUT
             # 3. iteratively set
@@ -5031,7 +5034,8 @@ setFeatureInfo <- function(gobject,
 
     # catch
     stop(wrap_txt("Only giottoPoints or lists of giottoPoints accepted.
-                For raw or external data, please first use readFeatureInfo()"))
+        For raw or external data, please first use readFeatureInfo()")
+    )
 }
 
 
@@ -5071,7 +5075,10 @@ set_feature_info <- function(gobject,
     # 0. stop if not native formats
     if (inherits(gpoints, "list")) {
         if (!all(
-            vapply(gpoints, inherits, "giottoPoints", FUN.VALUE = logical(1L))
+            vapply(gpoints,
+                inherits, c("giottoPoints", "giottoBinPoints"),
+                FUN.VALUE = logical(1L)
+            )
         )) {
             stop(wrap_txt("If providing a list to internal setter, only lists
                 of", "giottoPoints objects are permitted",
@@ -5079,7 +5086,9 @@ set_feature_info <- function(gobject,
             ))
         }
     }
-    if (!inherits(gpoints, c("giottoPoints", "NULL", "list"))) {
+    if (!inherits(gpoints,
+            c("giottoPoints", "giottoBinPoints", "NULL", "list"))
+    ) {
         stop(wrap_txt(deparse(substitute(gpoints)), "is not giottoPoints (set),
                 list of giottoPoints (set), or NULL (remove)"))
     }

@@ -1122,9 +1122,6 @@ stitchGiottoLargeImage <- function(largeImage_list = NULL,
 }
 
 
-
-
-
 #' @title Crop a giotto largeImage object
 #' @name cropGiottoLargeImage
 #' @description Crop a giottoLargeImage based on crop_extent argument or
@@ -1140,7 +1137,9 @@ stitchGiottoLargeImage <- function(largeImage_list = NULL,
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
-#' cropGiottoLargeImage(g, largeImage_name = "image")
+#' cropGiottoLargeImage(g, largeImage_name = "image", 
+#'     crop_extent = ext(c(4000, 5000, -5000, -4000))
+#' ) |> plot()
 #' @export
 cropGiottoLargeImage <- function(gobject = NULL,
     largeImage_name = NULL,
@@ -1152,17 +1151,10 @@ cropGiottoLargeImage <- function(gobject = NULL,
     ymax_crop = NULL,
     ymin_crop = NULL) {
     ## 0. Check inputs
-    if (!is.null(crop_extent)) {
-        if (!inherits(crop_extent, "SpatExtent")) {
-            stop("crop_extent argument only accepts terra extent objects. \n")
-        }
-    }
-    if (!is.null(giottoLargeImage)) {
-        if (!inherits(giottoLargeImage, "giottoLargeImage")) {
-            stop("giottoLargeImage argument only accepts giottoLargeImage
-                objects. \n")
-        }
-    }
+    checkmate::assert_class(giottoLargeImage, 
+        classes = "giottoLargeImage", 
+        null.ok = TRUE
+    )
 
     ## 1. get giottoLargeImage if necessary
     if (is.null(giottoLargeImage)) {
@@ -1177,30 +1169,29 @@ cropGiottoLargeImage <- function(gobject = NULL,
         }
     }
 
-    raster_object <- giottoLargeImage@raster_object
+    raster_object <- giottoLargeImage[]
 
     ## 2. Find crop extent
-    crop_bounds <- c(xmin_crop, xmax_crop, ymin_crop, ymax_crop)
-
     if (!is.null(crop_extent)) {
-        raster_object <- terra::crop(raster_object,
-            crop_extent,
-            snap = "near"
-        )
-    } else if (length(crop_bounds == 4)) {
-        crop_extent <- terra::ext(crop_bounds)
-
-        raster_object <- terra::crop(raster_object,
-            crop_extent,
-            snap = "near"
-        )
-    } else if (length(crop_bounds) > 1) {
-        stop("All four crop bounds must be given.")
+        e <- ext(crop_extent)
+    } else {
+        e <- ext(raster_object)
     }
+
+    e <- .modify_ext(e,
+        xmin = xmin_crop,
+        xmax = xmax_crop,
+        ymin = ymin_crop,
+        ymax = ymax_crop
+    )
+
+    raster_object <- terra::crop(raster_object, e,
+        snap = "near"
+    )
 
     ## 3. Return a cropped giottoLargeImage
     giottoLargeImage@name <- crop_name
-    giottoLargeImage@raster_object <- raster_object
+    giottoLargeImage[] <- raster_object
     giottoLargeImage@extent <- as.vector(terra::ext(raster_object))
     # The only things updated are the raster object itself, the name,
     # and the extent tracking slot.
@@ -2054,13 +2045,12 @@ plotGiottoImage <- function(gobject = NULL,
         .plot_giottoimage_mg(giottoImage = img_obj)
     }
     if (image_type == "largeImage") {
-        .plot_giottolargeimage(
-            giottoLargeImage = img_obj,
-            crop_extent = largeImage_crop_params_list$crop_extent,
-            xmax_crop = largeImage_crop_params_list$xmax_crop,
-            xmin_crop = largeImage_crop_params_list$xmin_crop,
-            ymax_crop = largeImage_crop_params_list$ymax_crop,
-            ymin_crop = largeImage_crop_params_list$ymin_crop,
+        .plot_giottolargeimage(img_obj,
+            ext = largeImage_crop_params_list$crop_extent,
+            xmax = largeImage_crop_params_list$xmax_crop,
+            xmin = largeImage_crop_params_list$xmin_crop,
+            ymax = largeImage_crop_params_list$ymax_crop,
+            ymin = largeImage_crop_params_list$ymin_crop,
             max_intensity = largeImage_max_intensity,
             ...
         )
@@ -3084,4 +3074,19 @@ ometif_metadata <- tif_metadata
             return(invisible())
         }
     )
+}
+
+# internals ####
+
+.modify_ext <- function(extent,
+    xmin = NULL,
+    xmax = NULL,
+    ymin = NULL,
+    ymax = NULL
+    ) {
+    if (!is.null(xmin)) terra::xmin(extent) <- xmin
+    if (!is.null(xmax)) terra::xmax(extent) <- xmax
+    if (!is.null(ymin)) terra::ymin(extent) <- ymin
+    if (!is.null(ymax)) terra::ymax(extent) <- ymax
+    extent
 }

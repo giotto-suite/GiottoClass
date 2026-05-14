@@ -43,5 +43,11 @@ stored in it.
 \description{
 Convert a Seurat V5 object to a Giotto object
 }
+\examples{
+g <- GiottoData::loadGiottoMini("visium")
+s <- giottoToSeuratV5(g, tech = "Visium")
+seuratToGiottoV5(s, spatial_assay = "rna")
+
+}
 \keyword{interoperability}
 \keyword{seurat}

@@ -28,11 +28,20 @@ readExprMatrix <- function(
         cores = determine_cores(),
         transpose = FALSE,
         feat_type = "rna",
-        expression_matrix_class = c("dgCMatrix", "DelayedArray"),
-        ...) {
+        expression_matrix_class = c(
+            "dgCMatrix",
+            "DelayedArray",
+            "dbSparseMatrix"
+        )) {
     # check if path is a character vector and exists
     if (!is.character(path)) stop("path needs to be character vector")
     if (!file.exists(path)) stop("the path: ", path, " does not exist")
+
+    expression_matrix_class <- match.arg(expression_matrix_class)
+    if (identical(expression_matrix_class, "dbSparseMatrix")) {
+        stop("File conversion to dbMatrix is not yet supported")
+    }
+
     data.table::setDTthreads(threads = cores)
 
     # read and convert
