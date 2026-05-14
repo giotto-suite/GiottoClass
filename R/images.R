@@ -1122,9 +1122,6 @@ stitchGiottoLargeImage <- function(largeImage_list = NULL,
 }
 
 
-
-
-
 #' @title Crop a giotto largeImage object
 #' @name cropGiottoLargeImage
 #' @description Crop a giottoLargeImage based on crop_extent argument or
@@ -1140,7 +1137,9 @@ stitchGiottoLargeImage <- function(largeImage_list = NULL,
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
-#' cropGiottoLargeImage(g, largeImage_name = "image")
+#' cropGiottoLargeImage(g, largeImage_name = "image", 
+#'     crop_extent = ext(c(4000, 5000, -5000, -4000))
+#' ) |> plot()
 #' @export
 cropGiottoLargeImage <- function(gobject = NULL,
     largeImage_name = NULL,
@@ -1152,17 +1151,10 @@ cropGiottoLargeImage <- function(gobject = NULL,
     ymax_crop = NULL,
     ymin_crop = NULL) {
     ## 0. Check inputs
-    if (!is.null(crop_extent)) {
-        if (!inherits(crop_extent, "SpatExtent")) {
-            stop("crop_extent argument only accepts terra extent objects. \n")
-        }
-    }
-    if (!is.null(giottoLargeImage)) {
-        if (!inherits(giottoLargeImage, "giottoLargeImage")) {
-            stop("giottoLargeImage argument only accepts giottoLargeImage
-                objects. \n")
-        }
-    }
+    checkmate::assert_class(giottoLargeImage, 
+        classes = "giottoLargeImage", 
+        null.ok = TRUE
+    )
 
     ## 1. get giottoLargeImage if necessary
     if (is.null(giottoLargeImage)) {
@@ -1177,30 +1169,29 @@ cropGiottoLargeImage <- function(gobject = NULL,
         }
     }
 
-    raster_object <- giottoLargeImage@raster_object
+    raster_object <- giottoLargeImage[]
 
     ## 2. Find crop extent
-    crop_bounds <- c(xmin_crop, xmax_crop, ymin_crop, ymax_crop)
-
     if (!is.null(crop_extent)) {
-        raster_object <- terra::crop(raster_object,
-            crop_extent,
-            snap = "near"
-        )
-    } else if (length(crop_bounds == 4)) {
-        crop_extent <- terra::ext(crop_bounds)
-
-        raster_object <- terra::crop(raster_object,
-            crop_extent,
-            snap = "near"
-        )
-    } else if (length(crop_bounds) > 1) {
-        stop("All four crop bounds must be given.")
+        e <- ext(crop_extent)
+    } else {
+        e <- ext(raster_object)
     }
+
+    e <- .modify_ext(e,
+        xmin = xmin_crop,
+        xmax = xmax_crop,
+        ymin = ymin_crop,
+        ymax = ymax_crop
+    )
+
+    raster_object <- terra::crop(raster_object, e,
+        snap = "near"
+    )
 
     ## 3. Return a cropped giottoLargeImage
     giottoLargeImage@name <- crop_name
-    giottoLargeImage@raster_object <- raster_object
+    giottoLargeImage[] <- raster_object
     giottoLargeImage@extent <- as.vector(terra::ext(raster_object))
     # The only things updated are the raster object itself, the name,
     # and the extent tracking slot.
@@ -2054,13 +2045,12 @@ plotGiottoImage <- function(gobject = NULL,
         .plot_giottoimage_mg(giottoImage = img_obj)
     }
     if (image_type == "largeImage") {
-        .plot_giottolargeimage(
-            giottoLargeImage = img_obj,
-            crop_extent = largeImage_crop_params_list$crop_extent,
-            xmax_crop = largeImage_crop_params_list$xmax_crop,
-            xmin_crop = largeImage_crop_params_list$xmin_crop,
-            ymax_crop = largeImage_crop_params_list$ymax_crop,
-            ymin_crop = largeImage_crop_params_list$ymin_crop,
+        .plot_giottolargeimage(img_obj,
+            ext = largeImage_crop_params_list$crop_extent,
+            xmax = largeImage_crop_params_list$xmax_crop,
+            xmin = largeImage_crop_params_list$xmin_crop,
+            ymax = largeImage_crop_params_list$ymax_crop,
+            ymin = largeImage_crop_params_list$ymin_crop,
             max_intensity = largeImage_max_intensity,
             ...
         )
@@ -2786,9 +2776,8 @@ setMethod(
 #' when image formats are unsupported by terra. This is implementation may
 #' change in the future. Currently tested to work with `.ome.tif` and `qptiff`
 #' @param input_file character. Filepath to tif to convert
-#' @param output_dir character. Directory to write .tif to. Defaults to a new
-#' folder in the directory called `"tif_exports"`
-#' @param page numeric. Which page of the tif to open (if needed). If provided,
+#' @param output_dir character. Output directory (default: "<dir>/tif_exports")
+#' @param page integer or NULL. 1-based page index; NULL means first page,
 #' a "_%04d" formatted suffix will be added to the output filename.
 #' @param overwrite logical. Default = FALSE. Whether to overwrite if the
 #' filename already exists.
@@ -2797,9 +2786,8 @@ setMethod(
 #' @export
 to_simple_tif <- function(input_file,
     output_dir = file.path(dirname(input_file), "tif_exports"),
-    page,
+    page = NULL,
     overwrite = FALSE) {
-    a <- list(input_file = input_file)
 
     # get tifffile py
     package_check(
@@ -2818,45 +2806,49 @@ to_simple_tif <- function(input_file,
     }
 
     # tif page
-    if (!missing(page)) {
-        a$page <- as.integer(page)
-        fname_page <- sprintf("_%04d", a$page)
+    # Page handling: omitted or NULL -> first page
+    if (is.null(page)) {
+        page_1based <- 1L
     } else {
-        a$page <- 1L # default to page 1
-        fname_page <- ""
+        checkmate::assert_integerish(
+            page, lower = 1,
+            any.missing = FALSE, len = 1)
+        page_1based <- as.integer(page)
     }
-    a$page <- a$page - 1L # zero indexed
+    page_0based <- page_1based - 1L
+    fname_page  <- sprintf("_page%04d", page_1based)
 
-    fext_pattern <- ".ome.tif$" # default
-    if (all(c("ome", "tif") %in% file_extension(input_file))) {
-        fext_pattern <- ".ome.tif$"
-    }
-    if ("qptiff" %in% file_extension(input_file)) {
-        fext_pattern <- ".qptiff$"
+    # Case-insensitive extension handling (.ome.tif/.ome.tiff/.qptiff/.tif/.tiff)
+    in_base <- basename(input_file)
+    if (grepl("(?i)\\.ome\\.tif{1,2}$", in_base, perl = TRUE)) {
+        fext_pattern <- "(?i)\\.ome\\.tif{1,2}$"
+    } else if (grepl("(?i)\\.qptiff$", in_base, perl = TRUE)) {
+        fext_pattern <- "(?i)\\.qptiff$"
+    } else if (grepl("(?i)\\.tif{1,2}$", in_base, perl = TRUE)) {
+        fext_pattern <- "(?i)\\.tif{1,2}$"
+    } else {
+        stop("Unrecognized TIF extension: ", in_base, call. = FALSE)
     }
 
-    # decide output filename
-    fname <- sub(
-        pattern = fext_pattern, replacement = "",
-        x = basename(input_file)
-    )
-    fpath <- file.path(
-        output_dir, paste0(fname, fname_page, ".tif")
-    )
-    a$output_file <- fpath
+    # Output filename
+    fname   <- sub(fext_pattern, "", in_base, perl = TRUE)
+    outpath <- file.path(output_dir, paste0(fname, fname_page, ".tif"))
 
     # handle overwrites
-    if (file.exists(fpath)) {
+    if (file.exists(outpath)) {
         if (isTRUE(overwrite)) {
-            unlink(fpath, force = TRUE) # if overwrite, delete original
+            unlink(outpath, force = TRUE) # if overwrite, delete original
         } else {
-            stop(fpath, "already exists. Set overwrite = TRUE to replace.\n",
+            stop("File already exists: ", outpath,
+                "\nSet overwrite = TRUE to replace.\n",
                 call. = FALSE
             )
         }
     }
-    do.call(py_tif_convert, args = a)
-    return(invisible(fpath))
+    # Convert (Python expects 0-based page)
+    py_tif_convert(input_file = input_file, output_file = outpath, page = page_0based)
+
+    invisible(outpath)
 }
 
 #' @describeIn to_simple_tif deprecated.
@@ -2870,23 +2862,24 @@ ometif_to_tif <- to_simple_tif
 #' @title Read Metadata of a Specialized tif
 #' @description Use the python package tifffile to get the the XML metadata
 #' of a .tif file. The R package \{xml2\} is then used to work with it to
-#' retrieve specific nodes in the xml data and extract data.
+#' retrieve specific nodes in the xml data and extract data
+#' (JPEG2000, multi-file pyramids).
 #' @param path character. filepath to tif image
 #' @param node character vector. Specific xml node to get. More terms can be
 #' added to get a node from a specific hierarchy.
-#' @param page numeric. Specific page to get metadata from. Currently only used
+#' @param page numeric or NULL. Specific page to get metadata from. Currently only used
 #' for `.qptiff`.
 #' @param type character. Type of data to extract. Only affects
 #' `output = data.frame` (Matches to one of "attribute", "text", "double",
 #' "integer"). `output = "structure"` can help
 #' with figuring out which is most appropriate.
 #' @param output character. One of "data.frame" to return a data.frame of the
-#' attributes information of the xml node, "xmL" for an \{xml2\} representation
+#' attributes information of the xml node, "xml" for an \{xml2\} representation
 #' of the node, "list" for an R native list (note that many items in the
-#' list may have overlapping names that make indexing difficult), or
+#' list may have overlapping names that make indexing difficult),
 #' "structure" to invisibly return NULL, but print the structure of the XML
-#' document or node.
-#' @returns list of image metadata information
+#' document/node, or "kv" (extract key/value pairs from OME MapAnnotations).
+#' @returns list/data.frame/XML depending on `output`
 #' @examples
 #' if (FALSE) {
 #' # check structure of metadata
@@ -2908,17 +2901,19 @@ tif_metadata <- function(path,
     node = NULL,
     page = NULL,
     type = c("attribute", "text", "double", "integer"),
-    output = c("data.frame", "xml", "list", "structure")) {
+    output = c("data.frame", "xml", "list", "structure", "kv")) {
     checkmate::assert_file_exists(path)
     package_check(
-        pkg_name = c("tifffile", "xml2"),
-        repository = c("pip:tifffile", "CRAN:xml2")
+        pkg_name   = c("tifffile", "imagecodecs", "xml2"),
+        repository = c("pip:tifffile", "pip:imagecodecs", "CRAN:xml2")
     )
 
     TIF <- reticulate::import("tifffile", convert = TRUE, delay_load = TRUE)
+    reticulate::import("imagecodecs", delay_load = TRUE)
     img <- TIF$TiffFile(path)
+    on.exit(try(img$close(), silent = TRUE), add = TRUE)
     output <- match.arg(output,
-        choices = c("data.frame", "xml", "list", "structure")
+        choices = c("data.frame", "xml", "list", "structure", "kv")
     )
     type <- match.arg(type,
         choices = c("attribute", "text", "double", "integer")
@@ -2939,23 +2934,28 @@ ometif_metadata <- tif_metadata
 
 
 .tif_metadata_extract <- function(img, node, page = NULL, type, output) {
-    npages <- length(img$series[[1L]]$pages)
-    if (is.null(page)) page <- seq_len(npages)
+    npages <- tryCatch(length(img$pages), error = function(e) NA_integer_)
+    if (is.na(npages)) {
+        npages <- length(img$series[[1L]]$pages)
+    }
     # ensure pages are in subscript bounds
+    if (is.null(page)) page <- seq_len(npages)
+    page <- page[!is.na(page) & page >= 1]
+    if (length(page) == 0L) {
+        stop("No valid page indices after filtering.", call. = FALSE)
+    }
     if (any(page > npages)) {
-        oob_bool <- page > npages
-        oob_pages <- page[oob_bool]
-        warning(
-            sprintf("pages %s do not exist",
-                    paste(collapse = ", ", oob_pages)
-            ), call. = FALSE
-        )
-        page <- page[!oob_bool]
+        oob <- page[page > npages]
+        warning(sprintf("pages %s do not exist", paste(oob, collapse = ", ")), call. = FALSE)
+        page <- page[page <= npages]
+        if (length(page) == 0L) {
+            stop("No valid page indices after filtering.", call. = FALSE)
+        }
     }
     # if multiple pages, lapply recurse
-    if (length(page) > 1L && img$is_qpi) {
+    if (length(page) > 1L && isTRUE(img$is_qpi)) {
         reslist <- lapply(page, function(p) {
-            data <- .tif_metadata_extract(
+            .tif_metadata_extract(
                 img = img,
                 node = node,
                 page = p,
@@ -2963,7 +2963,7 @@ ometif_metadata <- tif_metadata
                 output = output
             )
         })
-        if (inherits(reslist[[1]], "data.frame")) {
+        if (length(reslist) && inherits(reslist[[1]], "data.frame")) {
             reslist <- Reduce(rbind, reslist)
         }
         return(reslist)
@@ -2971,55 +2971,98 @@ ometif_metadata <- tif_metadata
 
 
 
-    if (img$is_ome) x <- img$ome_metadata
-    else if (img$is_fluoview) x <- img$fluoview_metadata
+    # Select XML text source
+    if (isTRUE(img$is_ome)) {
+        x <- img$ome_metadata
+        if (is.null(x) || !nzchar(x)) {
+            p1 <- as.integer(page)[1]
+            x  <- tryCatch(img$pages[[p1 - 1L]]$description, error = function(e) NULL)
+        }
+    } else if (isTRUE(img$is_qpi)) {
+        # qptiff: per-page description
+        p1 <- as.integer(page)[1]
+        x  <- tryCatch(img$pages[[p1 - 1L]]$description, error = function(e) NULL)
+        if (is.null(x) || !nzchar(x)) {
+            x <- tryCatch(img$series[[1]]$pages[[p1 - 1L]]$description, error = function(e) NULL)
+        }
+    } else if (img$is_fluoview) x <- img$fluoview_metadata
     else if (img$is_nih) x <- img$nih_metadata
     else if (img$is_astrotiff) x <- img$astrotiff_metadata
     else if (img$is_imagej) x <- img$imagej_metadata
     else if (img$is_lsm) x <- img$lsm_metadata
-    else if (img$is_qpi) x <- img$series[[1]]$pages[[page - 1L]]$description
     else if (img$is_micromanager) x <- img$micromanager_metadata
     else stop("unrecognized tif format\n", call. = FALSE)
+
+    if (is.null(x) || !nzchar(x)) {
+        stop("No XML metadata found in file (empty description/OME-XML).", call. = FALSE)
+    }
 
     x <- xml2::read_xml(x)
     ns <- xml2::xml_ns(x)
     has_namespace <- length(ns) > 0L
 
+    ## NEW: output = "kv" (read OME MapAnnotation K/Vs) ---
+    if (identical(output, "kv")) {
+        m_nodes <- xml2::xml_find_all(
+            x,
+            ".//*[local-name()='StructuredAnnotations']//*[local-name()='MapAnnotation']/*[local-name()='Value']//*[local-name()='M']"
+        )
+        if (!length(m_nodes)) return(NULL)
+        keys   <- xml2::xml_attr(m_nodes, "K")
+        values <- xml2::xml_text(m_nodes)
+        out <- as.list(values)
+        names(out) <- keys
+        return(out)
+    }
+
     if (!is.null(node)) {
-        node <- paste(node, collapse = "/")
+        node_parts <- node
+        node_path  <- paste(node_parts, collapse = "/")
         if (has_namespace) {
-            x <- xml2::xml_find_all(
-                x, sprintf("//d1:%s", node),
-                ns = xml2::xml_ns(x)
+            x_try <- xml2::xml_find_all(
+                x, sprintf("//d1:%s", node_path),
+                ns = ns
             )
         } else {
-            x <- xml2::xml_find_all(
-                x, sprintf("//%s", node)
+            x_try <- xml2::xml_find_all(
+                x, sprintf("//%s", node_path)
             )
         }
+
+        # 2) if nothing found, retry with a namespace-agnostic XPath
+        if (length(x_try) == 0L) {
+            ln <- paste(sprintf("*[local-name()='%s']", node_parts), collapse = "/")
+            x  <- xml2::xml_find_all(x, paste0("//", ln))
+        } else {
+            x <- x_try
+        }
     }
+    # choose a single column label for scalar returns
+    node_label <- if (is.null(node)) "value" else tail(node_parts, 1)
 
     switch(output,
         "data.frame" = {
             switch(type,
                 "attribute" = {
-                    x <- Reduce("rbind", xml2::xml_attrs(x))
+                    attrs <- xml2::xml_attrs(x)
+                    if (!length(attrs)) return(data.frame())
+                    x <- Reduce("rbind", attrs)
                     rownames(x) <- NULL
                     return(as.data.frame(x))
                 },
                 "text" = {
                     x <- (as.data.frame(xml2::xml_text(x)))
-                    colnames(x) <- node
+                    colnames(x) <- node_label
                     return(x)
                 },
                 "double" = {
                     x <- (as.data.frame(xml2::xml_double(x)))
-                    colnames(x) <- node
+                    colnames(x) <- node_label
                     return(x)
                 },
                 "integer" = {
                     x <- (as.data.frame(xml2::xml_integer(x)))
-                    colnames(x) <- node
+                    colnames(x) <- node_label
                     return(x)
                 }
             )
@@ -3033,3 +3076,17 @@ ometif_metadata <- tif_metadata
     )
 }
 
+# internals ####
+
+.modify_ext <- function(extent,
+    xmin = NULL,
+    xmax = NULL,
+    ymin = NULL,
+    ymax = NULL
+    ) {
+    if (!is.null(xmin)) terra::xmin(extent) <- xmin
+    if (!is.null(xmax)) terra::xmax(extent) <- xmax
+    if (!is.null(ymin)) terra::ymin(extent) <- ymin
+    if (!is.null(ymax)) terra::ymax(extent) <- ymax
+    extent
+}

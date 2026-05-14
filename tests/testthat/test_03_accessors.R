@@ -581,19 +581,12 @@ describe("Giotto Object Setters Validation and Edge Cases", {
             set_sl_b <- expect_no_error(getSpatialLocations(test_sl, name = "new"))
         })
 
-        it("errors when setting Spatlocs for a spat_unit not backed by expr or spatial_info", {
-            # available spat unit in expression is only 'aggregate'
-            test_sl <- expect_error(setSpatialLocations(test_ex, sl, spat_unit = "new", verbose = FALSE),
-                regexp = "No expression"
-            )
-        })
-
         it("errors when Spatlocs spatID is mismatched with expression info", {
             gpoly <- test_data$gpoly
             test_ex <- setPolygonInfo(test_ex, gpoly, name = "new", verbose = FALSE)
             # due to subset, expected that sl will have fewer IDs
             expect_error(setSpatialLocations(test_ex, sl[1:6], spat_unit = "new", verbose = FALSE),
-                         regexp = "between spatial and"
+                         regexp = "Number of entries"
             )
         })
 

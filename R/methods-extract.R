@@ -1059,17 +1059,209 @@ setMethod(
         if (is.null(x@overlaps)) {
             return(x)
         } # if no overlaps, skip following
-
-        for (feat in names(x@overlaps)) {
-            cell_id_bool <- terra::as.list(
-                x@overlaps[[feat]]
-            )$poly_ID %in% x@unique_ID_cache
-            x@overlaps[[feat]] <- x@overlaps[[feat]][cell_id_bool]
-        }
-
+        x <- .subset_overlaps_poly(x, i = i)
         x
     }
 )
+
+#' @description
+#' Perform a feature subset to keep only those features referenced by `i`
+#' across all `feat_type` requested.
+#' ** If subsetting for paired sets of `i` and `feat_type`, then this function
+#'    should be looped.
+#' @param x giottoPolygon to use
+#' @param i features (within `feat_type`) to keep
+#' (character, numeric, or logical)
+#' @param feat_type feature types to subset features within
+#' @examples
+#' # this is pseudocode #
+#' overlaps(gpoly)
+#' gpoly <- .subset_overlaps_feat(gpoly, c("Selplg", "Mlc1"), "rna")
+#' overlaps(gpoly)
+#' @noRd
+.subset_overlaps_feat <- function(x, i, feat_type) {
+    if (length(x@overlaps) == 0L) return(x) # return early if no overlaps
+    checkmate::assert_character(feat_type)
+    is_pnt_feat <- feat_type %in% names(x@overlaps)
+    is_int_feat <- feat_type %in% names(x@overlaps$intensity)
+    # return early if no relevant feat_types
+    if (sum(is_pnt_feat, is_int_feat) == 0) return(x)
+
+    .do_subset <- function(o, ftypes) {
+        for (feat in ftypes) {
+            if (!inherits(o[[feat]], "overlapInfo")) {
+                warning("[subset overlaps feats] unrecognized overlap type")
+            }
+            o[[feat]] <- o[[feat]][, i, ids = FALSE]
+        }
+        o
+    }
+
+    if (any(is_pnt_feat)) { # point overlaps
+        x@overlaps <- .do_subset(x@overlaps,
+            ftypes = feat_type[is_pnt_feat]
+        )
+    }
+    if (any(is_int_feat)) { # intensity overlaps
+        x@overlaps$intensity <- .do_subset(x@overlaps$intensity,
+            ftypes = feat_type[is_int_feat]
+        )
+    }
+
+    x
+}
+
+#' @param x giottoPolygon to use
+#' @param i polys to keep (character, numeric, or logical)
+#' @examples
+#' # this is pseudocode #
+#' overlaps(gpoly)
+#' gpoly <- .subset_overlaps_poly(gpoly, 1:10)
+#' overlaps(gpoly)
+#' @noRd
+.subset_overlaps_poly <- function(x, i) {
+    if (length(x@overlaps) == 0L) return(x) # return early if no overlaps
+    for (feat in names(x@overlaps)) {
+        if (feat == "intensity") {
+            for (feat_intensity in names(x@overlaps$intensity)) {
+                x@overlaps$intensity[[feat_intensity]] <-
+                    x@overlaps$intensity[[feat_intensity]][i]
+            }
+            next
+        }
+        x@overlaps[[feat]] <- x@overlaps[[feat]][i, ids = FALSE]
+    }
+    x
+}
+
+# i should be poly ids to keep
+.subset_overlap_point_dt_i <- function(x, i) {
+    if (is.numeric(i) || is.logical(i)) {
+        i <- x@spat_ids[i]
+    }
+
+    poly <- NULL # NSE vars
+    idx <- match(i, x@spat_ids) # poly indices to keep
+    idx <- idx[!is.na(idx)] # drop unmatched NAs
+    x@spat_ids <- x@spat_ids[x@spat_ids %in% i] # replace spatial ids
+
+    x@data <- x@data[poly %in% idx]
+    x@data[, poly := match(poly, idx)]
+    data.table::setkeyv(x@data, "feat")
+    data.table::setindex(x@data, "poly")
+    x
+}
+
+# Filter overlapPointDT rows to those whose feat_ID_uniq is in `surviving`.
+# Used after gpoints are spatially cropped to remove stale overlap entries.
+# @param x overlapPointDT
+# @param surviving integer vector of surviving feat_ID_uniq values
+# @noRd
+.subset_overlap_point_dt_feat_uniq <- function(x, surviving) {
+    feat <- feat_id_index <- NULL # NSE vars
+    x@data <- x@data[feat %in% surviving]
+    # drop feat_ids for gene names no longer referenced
+    remaining_idx <- sort(unique(x@data$feat_id_index))
+    if (length(remaining_idx) < length(x@feat_ids)) {
+        x@feat_ids <- x@feat_ids[remaining_idx]
+        x@data[, feat_id_index := match(feat_id_index, remaining_idx)]
+        data.table::setkeyv(x@data, "feat")
+        data.table::setindex(x@data, "poly")
+    }
+    x
+}
+
+# For each giottoPolygon in gobject, drop overlap rows for feat_ID_uniq values
+# that are no longer present in the corresponding giottoPoints after a spatial
+# crop. Only the overlapPointDT entries are affected; intensity overlaps are
+# keyed on poly_ID and are unaffected by transcript-level removal.
+# @param gobject giotto object with already-cropped feat_info
+# @param feat_type character vector of feat_types to clean
+# @noRd
+.clean_overlaps_after_gpoints_crop <- function(gobject, feat_type) {
+    # collect surviving feat_ID_uniq per feat_type from the cropped gpoints
+    surviving_uniq <- lapply(
+        gobject@feat_info[feat_type],
+        function(gpts) {
+            if (!inherits(gpts, "giottoPoints") ||
+                is.null(gpts@spatVector)) return(NULL)
+            gpts@spatVector$feat_ID_uniq
+        }
+    )
+    surviving_uniq <- Filter(Negate(is.null), surviving_uniq)
+    if (length(surviving_uniq) == 0L) return(gobject)
+
+    for (poly_name in names(gobject@spatial_info)) {
+        gpoly <- gobject@spatial_info[[poly_name]]
+        if (is.null(gpoly@overlaps)) next
+
+        changed <- FALSE
+        for (ft in names(surviving_uniq)) {
+            if (!ft %in% names(gpoly@overlaps)) next
+            ovlp <- gpoly@overlaps[[ft]]
+            if (!inherits(ovlp, "overlapPointDT")) next
+            gpoly@overlaps[[ft]] <- .subset_overlap_point_dt_feat_uniq(
+                ovlp, surviving_uniq[[ft]]
+            )
+            changed <- TRUE
+        }
+        if (changed) gobject@spatial_info[[poly_name]] <- gpoly
+    }
+    gobject
+}
+
+.subset_overlap_point_dt_j <- function(x, j) {
+    # ---- convert j to numerical index ---- #
+    if (is.logical(j)) {
+        if (length(j) != length(x@feat_ids)) {
+            # recycle logical if needed
+            j <- rep(j, length.out = length(x@feat_ids))
+        }
+        j <- which(j)
+    }
+    if (is.character(j)) {
+        j <- match(j, x@feat_ids)
+    }
+
+    x@feat_ids <- x@feat_ids[j] # replace feature ids
+
+    # subset on feat_id_index matches
+    x@data <- x@data[feat_id_index %in% j]
+    x@data[, feat_id_index := match(feat_id_index, j)]
+    data.table::setkeyv(x@data, "feat")
+    data.table::setindex(x@data, "poly")
+    x
+}
+
+.subset_overlap_intensity_dt_i <- function(x, i) {
+    if (is.character(i)) {
+        x@data <- x@data[match(i, poly_ID)]
+        return(x)
+    }
+
+    poly_ID <- NULL # NSE vars
+    nr <- nrow(x@data)
+    if (is.logical(i) && length(i) != nr) {
+        i <- rep(i, length.out = nr) # manual logical recycling for DT
+    }
+    x@data <- x@data[i,]
+    x
+}
+
+.subset_overlap_intensity_dt_j <- function(x, j) {
+    # convert j to char col reference
+    if (is.numeric(j)) {
+        j <- j + 1L
+    } else if (is.logical(j)) {
+        j <- c(TRUE, j)
+    }
+    if (!is.character(j)) {
+        j <- colnames(x@data)[j]
+    }
+    j <- unique(c("poly_ID", j))
+    x@data <- x@data[, .SD, .SDcols = j]
+    x
+}
 
 # this behavior is different from normal spatvectors
 # SpatVector defaults to col subsetting when character is provided to i
@@ -1141,6 +1333,147 @@ setMethod(
         x
     }
 )
+
+
+
+
+# * overlapPointDT ####
+
+#' @rdname overlapPointDT-class
+#' @export
+setMethod("[",
+    signature(
+        x = "overlapPointDT",
+        i = "gIndex",
+        j = "missing",
+        drop = "missing"
+    ), function(x, i, j, ..., use_names = FALSE, ids = TRUE, drop) {
+        if (!isTRUE(ids)) {
+            res <- .subset_overlap_point_dt_i(x, i)
+            return(res)
+        }
+        .select_overlap_point_dt_i(x, i, use_names = use_names)
+    }
+)
+
+#' @rdname overlapPointDT-class
+#' @export
+setMethod("[",
+    signature(
+        x = "overlapPointDT",
+        i = "missing",
+        j = "gIndex",
+        drop = "missing"
+    ), function(x, i, j, ..., use_names = FALSE, ids = TRUE, drop) {
+        if (!isTRUE(ids)) {
+            res <- .subset_overlap_point_dt_j(x, j)
+            return(res)
+        }
+        .select_overlap_point_dt_j(x, j, use_names = use_names)
+    }
+)
+
+#' @rdname overlapPointDT-class
+#' @export
+setMethod("[",
+    signature(
+        x = "overlapPointDT",
+        i = "gIndex",
+        j = "gIndex",
+        drop = "missing"
+    ),
+    function(x, i, j, ..., use_names = FALSE, drop) {
+        x <- .subset_overlap_point_dt_j(x, j)
+        .subset_overlap_point_dt_i(x, i)
+    }
+)
+
+.select_overlap_point_dt_i <- function(x, i, use_names = FALSE) {
+    # coerce inputs to numeric poly indexing
+    if (is.character(i)) {
+        i <- unique(i)
+        i <- match(i, x@spat_ids)
+    } else if (is.logical(i)) {
+        npoly <- length(x@spat_ids)
+        if (length(i) != npoly) {
+            i <- rep(i, length.out = npoly)
+        }
+        i <- which(i)
+    }
+    # numeric indexing only below
+    if (isTRUE(use_names)) {
+        return(x@feat_ids[x@data[poly %in% i, feat_id_index]])
+    }
+    x@data[poly %in% i, feat]
+}
+
+.select_overlap_point_dt_j <- function(x, j, use_names = FALSE) {
+    # coerce inputs to numeric feat_id_index
+    if (is.character(j)) {
+        j <- unique(j)
+        j <- match(j, x@feat_ids)
+    } else if (is.logical(j)) {
+        nfeat <- length(x@feat_ids)
+        if (length(j) != nfeat) {
+            j <- rep(j, length.out = nfeat)
+        }
+        j <- which(j)
+    }
+    # numeric indexing only below
+    pids <- x@data[feat_id_index %in% j, unique(poly)]
+    if (isTRUE(use_names)) {
+        return(x@spat_ids[pids])
+    }
+    pids
+}
+
+# * overlapIntensityDT ####
+
+setMethod("[",
+    signature(
+        x = "overlapIntensityDT",
+        i = "missing",
+        j = "missing",
+        drop = "missing"
+    ),
+    function(x, i, j, ..., drop) {
+        x@data
+    }
+)
+
+setMethod("[",
+    signature(
+        x = "overlapIntensityDT",
+        i = "gIndex",
+        j = "missing",
+        drop = "missing"
+    ),
+    function(x, i, j, ..., drop) {
+        .subset_overlap_intensity_dt_i(x, i)
+    }
+)
+
+setMethod("[",
+    signature(x = "overlapIntensityDT",
+              i = "missing",
+              j = "gIndex",
+              drop = "missing"),
+    function(x, i, j, ..., drop) {
+    .subset_overlap_intensity_dt_j(x, j)
+})
+
+setMethod("[",
+          signature(x = "overlapIntensityDT",
+                    i = "gIndex",
+                    j = "gIndex",
+                    drop = "missing"),
+function(x, i, j, ..., drop) {
+    .subset_overlap_intensity_dt_j(x, j)
+    .subset_overlap_intensity_dt_i(x, i)
+})
+
+
+
 
 # * giottoLargeImage ####
 #' @rdname subset_bracket

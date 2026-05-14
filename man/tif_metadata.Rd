@@ -10,7 +10,7 @@ tif_metadata(
   node = NULL,
   page = NULL,
   type = c("attribute", "text", "double", "integer"),
-  output = c("data.frame", "xml", "list", "structure")
+  output = c("data.frame", "xml", "list", "structure", "kv")
 )
 
 ometif_metadata(
@@ -18,7 +18,7 @@ ometif_metadata(
   node = NULL,
   page = NULL,
   type = c("attribute", "text", "double", "integer"),
-  output = c("data.frame", "xml", "list", "structure")
+  output = c("data.frame", "xml", "list", "structure", "kv")
 )
 }
 \arguments{
@@ -27,7 +27,7 @@ ometif_metadata(
 \item{node}{character vector. Specific xml node to get. More terms can be
 added to get a node from a specific hierarchy.}
 
-\item{page}{numeric. Specific page to get metadata from. Currently only used
+\item{page}{numeric or NULL. Specific page to get metadata from. Currently only used
 for \code{.qptiff}.}
 
 \item{type}{character. Type of data to extract. Only affects
@@ -36,19 +36,20 @@ for \code{.qptiff}.}
 with figuring out which is most appropriate.}
 
 \item{output}{character. One of "data.frame" to return a data.frame of the
-attributes information of the xml node, "xmL" for an \{xml2\} representation
+attributes information of the xml node, "xml" for an \{xml2\} representation
 of the node, "list" for an R native list (note that many items in the
-list may have overlapping names that make indexing difficult), or
+list may have overlapping names that make indexing difficult),
 "structure" to invisibly return NULL, but print the structure of the XML
-document or node.}
+document/node, or "kv" (extract key/value pairs from OME MapAnnotations).}
 }
 \value{
-list of image metadata information
+list/data.frame/XML depending on \code{output}
 }
 \description{
 Use the python package tifffile to get the the XML metadata
 of a .tif file. The R package \{xml2\} is then used to work with it to
-retrieve specific nodes in the xml data and extract data.
+retrieve specific nodes in the xml data and extract data
+(JPEG2000, multi-file pyramids).
 }
 \section{Functions}{
 \itemize{

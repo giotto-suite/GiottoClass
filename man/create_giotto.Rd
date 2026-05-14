@@ -156,7 +156,7 @@ creation section and examples)}.
 \item Via technology specific convenience functions \emph{(exported from \{Giotto\})}
 }
 
-See \url{https://drieslab.github.io/Giotto_website/articles/object_creation.html}
+See \url{https://giotto-suite.github.io/Giotto_website/articles/object_creation.html}
 for more information. The details sections here also expand on the above
 options.
 }
@@ -254,7 +254,7 @@ Giotto::createGiottoVisiumHDObject()
 Giotto::createGiottoCosMxObject()
 }
 
-Also see \url{https://drieslab.github.io/Giotto_website/articles/import_utilities.html}
+Also see \url{https://giotto-suite.github.io/Giotto_website/articles/import_utilities.html}
 for technology-specific import utilities that can be used with the piecewise
 \code{giotto} object assembly method.
 }

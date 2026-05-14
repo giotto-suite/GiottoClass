@@ -5,70 +5,65 @@
 \title{.plot_giottolargeimage}
 \usage{
 .plot_giottolargeimage(
-  gobject = NULL,
-  largeImage_name = NULL,
-  giottoLargeImage = NULL,
-  crop_extent = NULL,
-  xmax_crop = NULL,
-  xmin_crop = NULL,
-  ymax_crop = NULL,
-  ymin_crop = NULL,
+  x,
+  ext = NULL,
+  xmin = NULL,
+  xmax = NULL,
+  ymin = NULL,
+  ymax = NULL,
   max_intensity = NULL,
   asRGB = FALSE,
-  stretch = NULL,
-  axes = TRUE,
-  smooth = TRUE,
-  mar = c(3, 5, 1.5, 1),
-  legend = FALSE,
-  maxcell = 5e+05,
-  col = grDevices::grey.colors(n = 256, start = 0, end = 1, gamma = 1),
-  asp = 1,
   ...
 )
 }
 \arguments{
-\item{gobject}{giotto object}
+\item{x}{\code{giottoLargeImage}}
 
-\item{largeImage_name}{name of giottoLargeImage}
+\item{max_intensity}{(optional) value to treat as maximum intensity in
+color scale}
 
-\item{giottoLargeImage}{giottoLargeImage object}
+\item{asRGB}{(optional) logical. Force RGB plotting if not automatically
+detected}
 
-\item{crop_extent}{(optional) extent object to focus on specific region of image}
+\item{...}{additional params to pass to terra::plot or terra::plotRGB
+depending on image type}
 
-\item{xmax_crop, xmin_crop, ymax_crop, ymin_crop}{(optional) crop min/max x and y bounds}
+\item{crop_extent}{(optional) extent object to focus on specific region of
+image}
 
-\item{max_intensity}{(optional) value to treat as maximum intensity in color scale}
+\item{xmax_crop, xmin_crop, ymax_crop, ymin_crop}{(optional) crop min/max x
+and y bounds}
 
-\item{asRGB}{(optional) logical. Force RGB plotting if not automatically detected}
+\item{stretch}{character. Option to stretch the values to increase
+contrast: "lin" (linear) or "hist" (histogram)}
 
-\item{stretch}{character. Option to stretch the values to increase contrast: "lin"
-linear or "hist" (histogram)}
-
-\item{axes}{boolean. Default = TRUE. Whether to draw axes}
-
-\item{smooth}{boolean. default = TRUE. whether to apply smoothing on the image}
+\item{smooth}{boolean. Default = TRUE. Whether to apply smoothing on the
+image}
 
 \item{mar}{plot margins default = c(3,5,1.5,1)}
 
 \item{legend}{whether to plot legend of color scale (grayscale only).
 default = FALSE}
 
-\item{maxcell}{positive integer. Maximum number of image cells to use for the plot}
+\item{maxcell}{positive integer. Maximum number of image cells to use for
+the plot}
 
 \item{col}{character. Colors for single channel images. The default is
-grDevices::grey.colors(n = 256, start = 0, end = 1, gamma = 1). It can also be a
-data.frame with two columns (value, color) to get a "classes" type legend or with
-three columns (from, to, color) to get an "interval" type legend}
+grDevices::grey.colors(n = 256, start = 0, end = 1, gamma = 1). It can also
+be a data.frame with two columns (value, color) to get a "classes" type
+legend or with three columns (from, to, color) to get an "interval" type
+legend}
 
-\item{asp}{numeric. (default = 1) specific aspect ratio to use}
-
-\item{...}{additional params to pass to terra::plot or terra::plotRGB depending
-depending on image type}
+\item{asp}{numeric (default = 1). Specific aspect ratio to use}
 }
 \value{
 plot
 }
 \description{
-Plot a \emph{downsampled} version of giottoLargeImage. Cropping can increase plot resolution of region of interest.
+Renders a \code{giottoLargeImage} by setting a lazy spatial window
+to the requested extent, inferring bit depth from \code{max_intensity} to set
+the display range, then dispatching to \code{terra::plotRGB()} for
+multi-layer/RGB images or \code{terra::plot()} for single-channel images with
+a linear-stretched greyscale palette.
 }
 \keyword{internal}

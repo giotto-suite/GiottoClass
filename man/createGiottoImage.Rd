@@ -74,8 +74,11 @@ spatial anchors when doing adjustments}
 a giottoImage object
 }
 \description{
-Creates a giotto image that can be added to a Giotto object
-and/or used to add an image to the spatial plotting functions
+\strong{SUPERSEDED} \emph{\code{\link[=createGiottoLargeImage]{createGiottoLargeImage()}} is preferred for most
+uses}. This function may be renamed and/or replaced in the future.
+
+Creates a \link{giottoImage} that can be added to a Giotto object and/or used to
+add an image to the spatial plotting functions.
 }
 \details{
 image_transformations: transformation options from magick library
