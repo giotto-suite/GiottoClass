@@ -179,7 +179,7 @@ setMethod(
 #' rasterized cell. (Default = TRUE) This param affects `col` param
 #' defaults. When TRUE, `col` is `grDevices::hcl.colors(256)`. When `FALSE`,
 #' "black" and "white" are used.
-#' @param sigma `numeric` (default = 2). Amount of smoothing when 
+#' @param sigma `numeric` (default = NULL). Amount of smoothing when 
 #' `count = TRUE`. Set `NULL` for no smoothing. 
 #' Larger values can take a while.
 #' @details
@@ -235,7 +235,7 @@ setMethod(
 setMethod(
     "plot", signature(x = "giottoPoints", y = "missing"),
     function(x, point_size = 0, feats = NULL, raster = TRUE, 
-        raster_size = 600, count = TRUE, sigma = 2,
+        raster_size = 600, count = TRUE, sigma = NULL,
         ...) {
         if (length(x@unique_ID_cache) == 0) {
             stop(wrap_txt("No geometries to plot"), call. = FALSE)
@@ -498,8 +498,11 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
 
 #' @title .plot_giottolargeimage
 #' @name .plot_giottolargeimage
-#' @description Plot a \emph{downsampled} version of giottoLargeImage. 
-#' Cropping can increase plot resolution of region of interest.
+#' @description Renders a `giottoLargeImage` by setting a lazy spatial window
+#'   to the requested extent, inferring bit depth from `max_intensity` to set
+#'   the display range, then dispatching to `terra::plotRGB()` for
+#'   multi-layer/RGB images or `terra::plot()` for single-channel images with
+#'   a linear-stretched greyscale palette.
 #' @param x `giottoLargeImage`
 #' @param crop_extent (optional) extent object to focus on specific region of 
 #' image

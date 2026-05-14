@@ -72,7 +72,7 @@
   raster = TRUE,
   raster_size = 600,
   count = TRUE,
-  sigma = 2,
+  sigma = NULL,
   ...
 )
 
@@ -195,7 +195,7 @@ rasterized cell. (Default = TRUE) This param affects \code{col} param
 defaults. When TRUE, \code{col} is \code{grDevices::hcl.colors(256)}. When \code{FALSE},
 "black" and "white" are used.}
 
-\item{sigma}{\code{numeric} (default = 2). Amount of smoothing when
+\item{sigma}{\code{numeric} (default = NULL). Amount of smoothing when
 \code{count = TRUE}. Set \code{NULL} for no smoothing.
 Larger values can take a while.}
 
