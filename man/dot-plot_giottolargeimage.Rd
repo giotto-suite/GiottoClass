@@ -60,7 +60,10 @@ legend}
 plot
 }
 \description{
-Plot a \emph{downsampled} version of giottoLargeImage.
-Cropping can increase plot resolution of region of interest.
+Renders a \code{giottoLargeImage} by setting a lazy spatial window
+to the requested extent, inferring bit depth from \code{max_intensity} to set
+the display range, then dispatching to \code{terra::plotRGB()} for
+multi-layer/RGB images or \code{terra::plot()} for single-channel images with
+a linear-stretched greyscale palette.
 }
 \keyword{internal}

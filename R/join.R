@@ -399,9 +399,6 @@ joinGiottoObjects <- function(gobject_list,
 
 
 
-
-
-
     ## 1. update giotto objects ##
     ## ------------------------ ##
     vmsg(.v = verbose, "start updating objects")
@@ -588,7 +585,6 @@ joinGiottoObjects <- function(gobject_list,
             featureinfo <- gobj@feat_info[[feat_info]]
 
             if (inherits(featureinfo, "giottoPoints")) {
-                # update feat_ID_uniq in giottoPoints spatial info
                 feat_ids_uniq <- featureinfo@spatVector$feat_ID_uniq
                 featureinfo@spatVector$feat_ID_uniq <- paste0(
                     gname, "-", feat_ids_uniq
@@ -623,6 +619,25 @@ joinGiottoObjects <- function(gobject_list,
 
 
 
+
+    ## warn about data dropped during join ##
+    .any_in_glist <- function(glist, accessor) {
+        any(vapply(glist, function(g) !is.null(accessor(g)), FUN.VALUE = logical(1L)))
+    }
+    dropped <- c(
+        if (.any_in_glist(gobject_list, function(g) {
+            for (gp in g@spatial_info) if (!is.null(gp@overlaps)) return(TRUE)
+            NULL
+        })) "overlaps",
+        if (.any_in_glist(gobject_list, function(g) g@spatial_network)) "spatial networks",
+        if (.any_in_glist(gobject_list, function(g) g@nn_network)) "nearest-neighbor networks"
+    )
+    if (length(dropped) > 0L) {
+        warning(wrap_txt(
+            "The following were dropped during join and must be recalculated:",
+            paste(dropped, collapse = ", ")
+        ))
+    }
 
     ## 3. merge updated data  ##
     ## ------------------------ ##

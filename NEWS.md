@@ -5,8 +5,9 @@
 - `giotto` class gains a `source` slot for attaching a `gsource`-inheriting
   backend manager (see {GiottoDisk}).
 - `createGiottoObject()` gains a `backend` param: accepts a filepath or a
-  `gsource` object. A filepath is converted to a `GiottoDisk::gDirSource`
-  automatically. Without a backend, an in-memory `gMemSource` is used.
+  `gsource` object.
+    - filepath is converted to a `GiottoDisk::gDirSource` automatically.
+    - if `backend = NULL` -- the usual in-memory path is used.
 - `saveGiotto()` and `loadGiotto()` now delegate to
   `GiottoDisk::snapshotSave()` / `GiottoDisk::snapshotLoad()` when a
   `gsource` backend is attached to the object. `foldername` and `dir` params
@@ -17,35 +18,19 @@
 
 ## changes
 
-- `expression_matrix_class` param in `readExprMatrix()`, `readExprData()`, and
-  `createExprObj()` is deprecated. These functions now only build
-  `dgCMatrix`. Pre-built backed matrices (`HDF5Array`, `tiledb_array`,
-  `IterableMatrix`, `dbMatrix`) can be passed directly to `createExprObj()`
-  and will be used as-is.
-- `.evaluate_expr_matrix()` reworked: removes coercion logic in favor of an
-  `accepted_classes` passthrough list; `data.frame` and `matrix` cases are now
-  handled separately.
 - `h5_file` param in `createGiottoObject()` is deprecated; use `backend`
   instead.
-- Removed legacy h5 read/write code from `get_expression_values()` and
-  `set_expression_values()` (superseded by GiottoDisk integration).
 - `overlapInfo` class exported as an extension point.
 - `updateGiottoObject()` now upgrades pre-0.6.0 objects to initialize the
   new `source` slot.
-- {chihaya} removed from Suggests; {GiottoDisk} added to Suggests.
-
-## internal
-
-- `.gsource()` and `.gsource<-()` internal accessors for the `giotto@source`
-  slot.
-- `.update_source_slot()` internal for migrating older objects.
-- Code reorganization in `generics.R` (no functional changes).
 
 
-
-# GiottoClass 0.5.0
+# GiottoClass 0.5.1 (2026/05/14)
 
 ## changes
+- deprecated `area()` in favor of `expanse()`
+- `createExprObj()` no longer coerces to exotic matrix formats -- `expression_matrix_class` param is deprecated
+  - backed matrices (`HDF5Array`, `dbMatrix`, `IterableMatrix`) must be pre-constructed and directly passed to be used.
 - added superseded note to `createGiottoImage()` documentation
 - `calculateOverlap()` and `overlapToMatrix()` param harmonization
 - refactor of `saveGiotto()` and `loadGiotto()`
@@ -56,18 +41,26 @@
 - `overlapPointDT()` and `overlapIntensityDT()` classes to store overlaps relationships efficiently and help with aggregation pipeline
 - `giottoBinPoints` class for efficient binned spatial points
 - `rbind` method for `giottoPoints`
+- `affine2d` class is now exported
 
 ## bug fixes
 - `overlaps()` will now properly find image overlaps
 - fix a naming bug when exporting images during save
+- `SpatVector` -> `data.table` coercion no longer returns empty when it has no attributes
 
+## enhancements
+- `crop()` for `giottoLargeImage`/`giottoAffineImage` is now lazy by default — uses `terra::window()` instead of materializing a crop unless `write = TRUE` or a `filename` is given
+- `giottoPoints` `plot()` gains a `sigma` param for Gaussian smoothing of rasterized density; `count = TRUE` (replaces `dens` param) is now the default
+- image plotting rework -- more params exposed, better defaults
 
 
 # GiottoClass 0.4.12 (2025/12/12)
 
+## bug fixes
+- `seuratToGiottoV5()`/`giottoToSeuratV5()` updated for `layer` param (replacing `slot`)
+
 ## enhancements
 - automatic checking for `"count"` column in feature info
-
 
 ## new
 - `misc` slot for storing unstructured data
