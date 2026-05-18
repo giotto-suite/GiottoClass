@@ -5001,6 +5001,19 @@ setFeatureInfo <- function(gobject,
 
 
 
+# Detect a 0-feature giottoPoints. Cheap path via cached IDs; falls back to
+# nrow when the cache is empty/unpopulated (which may query disk for a
+# parquetGeomBase-backed gpoints).
+.gpoints_is_empty <- function(x) {
+    if (is.null(x)) return(FALSE)
+    cache <- methods::slot(x, "unique_ID_cache")
+    if (length(cache) > 0L) return(FALSE)
+    n <- try(nrow(x), silent = TRUE)
+    if (inherits(n, "try-error")) return(TRUE)
+    is.na(n) || n == 0L
+}
+
+
 #' @title Set feature info
 #' @name set_feature_info
 #' @description Set giotto polygon spatVector for features
@@ -5118,6 +5131,28 @@ set_feature_info <- function(gobject,
             featType(gpoints[[gp_name]]) <- gp_name
         }
 
+        # drop empty gpoints (e.g. split_keyword with no matches). Avoids
+        # creating placeholder feat_info / feat_metadata entries that
+        # `initialize()` would otherwise propagate and that downstream
+        # would need `sliceGiotto` to clean up.
+        empty_bool <- vapply(gpoints, .gpoints_is_empty,
+            FUN.VALUE = logical(1L))
+        if (any(empty_bool)) {
+            warning(wrap_txt(
+                "Skipping empty giottoPoints (0 features) for feat_type(s):",
+                paste(gp_names[empty_bool], collapse = ", ")
+            ), call. = FALSE)
+            gpoints <- gpoints[!empty_bool]
+            gp_names <- gp_names[!empty_bool]
+        }
+        if (length(gpoints) == 0L) {
+            if (isTRUE(initialize)) {
+                return(initialize(gobject))
+            } else {
+                return(gobject)
+            }
+        }
+
         # replacements warning already given during extract points list
         # (external setter) remove items to replace
         for (gp_name in gp_names) {
@@ -5135,6 +5170,19 @@ set_feature_info <- function(gobject,
     # 4. import data from S4 if available
     # NOTE: modifies feat_type/gpoints
     gpoints <- read_s4_nesting(gpoints)
+
+    # 4.1 drop empty gpoints (see list branch comment)
+    if (.gpoints_is_empty(gpoints)) {
+        warning(wrap_txt(
+            "Skipping empty giottoPoints (0 features) for feat_type:",
+            feat_type
+        ), call. = FALSE)
+        if (isTRUE(initialize)) {
+            return(initialize(gobject))
+        } else {
+            return(gobject)
+        }
+    }
 
 
     ## 5. check if specified name has already been used
