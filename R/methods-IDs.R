@@ -153,15 +153,24 @@ setMethod(
 setMethod(
     "spatIDs", signature(x = "giottoPolygon"),
     function(x, use_cache = TRUE, uniques = TRUE, ...) {
+        checkmate::assert_flag(uniques)
+        checkmate::assert_flag(use_cache)
         if (!all(is.na(x@unique_ID_cache)) &&
-            isTRUE(use_cache) &&
-            isTRUE(uniques)) {
+            use_cache &&
+            uniques) {
             return(as.character(x@unique_ID_cache))
         }
 
-        # getting as list first is more performant
-        out <- as.character(terra::as.list(x@spatVector)$poly_ID)
-        if (isTRUE(uniques)) out <- unique(out)
+        if (inherits(x@spatVector, "SpatVector")) {
+            # getting as list first is more performant
+            out <- terra::as.list(x@spatVector)$poly_ID
+            if (uniques) out <- unique(out)
+        } else {
+            uid <- x@spatVector[, "poly_ID"]
+            if (uniques) uid <- unique(uid)
+            out <- as.vector(uid)[[1L]]
+        }
+        out <- as.character(out)
         return(out)
     }
 )
@@ -278,18 +287,28 @@ setMethod(
 setMethod(
     "featIDs", signature(x = "giottoPoints"),
     function(x, use_cache = TRUE, uniques = TRUE, ...) {
+        checkmate::assert_flag(uniques)
+        checkmate::assert_flag(use_cache)
         if (!all(is.na(x@unique_ID_cache)) &&
-            isTRUE(use_cache) &&
-            isTRUE(uniques)) {
+            use_cache &&
+            uniques) {
             return(as.character(x@unique_ID_cache))
         }
 
-        # getting as list is more performant than directly using `$`
-        out <- as.character(terra::as.list(x@spatVector)$feat_ID)
-        if (isTRUE(uniques)) out <- unique(out)
+        if (inherits(x@spatVector, "SpatVector")) {
+            # getting as list is more performant than directly using `$`
+            out <- terra::as.list(x@spatVector)$feat_ID
+            if (uniques) out <- unique(out)
+        } else {
+            uid <- x@spatVector[, "feat_ID"]
+            if (uniques) uid <- unique(uid)
+            out <- as.vector(uid)[[1L]]
+        }
+        out <- as.character(out)
         return(out)
     }
 )
+
 #' @rdname spatIDs-generic
 #' @export
 setMethod(

@@ -769,47 +769,11 @@
         verbose = FALSE,
         toplevel_params = 2) {
     # NOTE:
-    # spat_unit = ':all:', but feat_type is hardcoded to 'rna'
+    # spat_unit = ':all:', but feat_type is defaulted to 'rna'
     # This is since most people will be running analyses that look at rna
     # information through the lens of multiple spatial units
 
     # update ID slots now performed by intialization
-
-
-    # mirai::daemons(n = GiottoUtils::determine_cores())
-    #
-    # # mirai cleanup
-    # on.exit({
-    #   mirai::daemons(0) # reset
-    # })
-
-
-
-    # # filter cell_ID and feat_ID
-    # g_cell_IDs = get_cell_id(gobject, spat_unit = spat_unit)
-    # g_feat_IDs = get_feat_id(gobject, feat_type = feat_type)
-
-
-    ## filter index
-    # if(!is.null(cell_ids)) {
-    #   filter_bool_cells = g_cell_IDs %in% cell_ids
-    #   cell_ids = g_cell_IDs[filter_bool_cells]
-    # } else {
-    #   # set cell ids to all if not provided
-    #   filter_bool_cells = g_cell_IDs %in% g_cell_IDs
-    #   cell_ids = g_cell_IDs[filter_bool_cells]
-    # }
-    #
-    # if(!is.null(feat_ids)) {
-    #   filter_bool_feats = g_feat_IDs %in% feat_ids
-    #   feat_ids = g_feat_IDs[filter_bool_feats]
-    # } else {
-    #   # set feat ids to all if not provided
-    #   filter_bool_feats = g_feat_IDs %in% g_feat_IDs
-    #   feat_ids = g_feat_IDs[filter_bool_feats]
-    # }
-
-
 
 
     if (verbose) wrap_msg("completed 1: preparation")
@@ -976,6 +940,20 @@
         if (verbose) wrap_msg("completed 11: subsetted spatial feature data")
     }
 
+    ## remove overlap entries for transcripts cropped out by spatial bounds
+    if (!is.null(gobject@spatial_info) &&
+        !is.null(gobject@feat_info) &&
+        any(!vapply(list(x_min, x_max, y_min, y_max), is.null,
+            FUN.VALUE = logical(1L)))) {
+        gobject <- .clean_overlaps_after_gpoints_crop(
+            gobject,
+            feat_type = if (isTRUE(feat_type == ":all:"))
+                names(gobject@feat_info)
+            else
+                feat_type
+        )
+        if (verbose) wrap_msg("completed 11b: cleaned overlaps after gpoints spatial crop")
+    }
 
 
     ## update parameters used ##
@@ -1881,16 +1859,24 @@ subsetGiottoLocsSubcellular <- function(
         cell_ids = NULL,
         feat_ids = NULL,
         feat_type = NULL) {
-    # cell ID only subsets
+
+    is_sv <- inherits(gpolygon@spatVector, "SpatVector")
+
+    # cell ID subsetting
     if (!is.null(cell_ids)) {
         if (!is.null(gpolygon@spatVector)) {
-            poly_IDs <- spatIDs(gpolygon, uniques = FALSE)
-            cell_id_bool <- poly_IDs %in% cell_ids
-            gpolygon@spatVector <- gpolygon@spatVector[cell_id_bool]
-            gpolygon@unique_ID_cache <- unique(poly_IDs[cell_id_bool])
-            # update cache
-
-            # warning if all values are removed
+            if (is_sv) {
+                poly_IDs <- spatIDs(gpolygon, uniques = FALSE)
+                cell_id_bool <- poly_IDs %in% cell_ids
+                gpolygon@spatVector <- gpolygon@spatVector[cell_id_bool]
+            } else {
+                gpolygon@spatVector <- subset(
+                    gpolygon@spatVector, poly_ID %in% cell_ids
+                )
+                
+            }
+          
+            gpolygon@unique_ID_cache <- intersect(gpolygon@unique_ID_cache, cell_ids)
             if (length(gpolygon@unique_ID_cache) == 0) {
                 warning(wrap_txt(
                     paste0("[", objName(gpolygon), "]"),
@@ -1900,15 +1886,19 @@ subsetGiottoLocsSubcellular <- function(
         }
 
         if (!is.null(gpolygon@spatVectorCentroids)) {
-            # assume identical ordering
-            gpolygon@spatVectorCentroids <- gpolygon@spatVectorCentroids[
-                cell_id_bool
-            ]
+            if (is_sv) {
+                gpolygon@spatVectorCentroids <-
+                    gpolygon@spatVectorCentroids[cell_id_bool]
+            } else {
+                gpolygon@spatVectorCentroids <- subset(
+                    gpolygon@spatVectorCentroids, poly_ID %in% cell_ids
+                )
+            }
         }
     }
 
-    # overlap subsets
-    if (is.null(overlaps(gpolygon))) {
+    # overlap subsets (experimental/optional)
+    if (is.null(overlaps(gpolygon)) || !is_sv) {
         return(gpolygon) # return early if none
     }
 
@@ -1985,12 +1975,20 @@ subsetGiottoLocsSubcellular <- function(
         return(gpoints) # return without change since there is no points info
     }
 
+    is_sv <- inherits(gpoints@spatVector, "SpatVector")
 
     # 1. ID based subsetting #
     # ---------------------- #
     if (!is.null(feat_ids)) {
-        feat_id_bool <- featIDs(gpoints, uniques = FALSE) %in% feat_ids
-        gpoints@spatVector <- gpoints@spatVector[feat_id_bool]
+        if (is_sv) {
+            feat_id_bool <- featIDs(gpoints, uniques = FALSE) %in% feat_ids
+            gpoints@spatVector <- gpoints@spatVector[feat_id_bool]
+        } else {
+            gpoints@spatVector <- subset(
+                gpoints@spatVector, feat_ID %in% feat_ids
+            )
+        }
+        gpoints@unique_ID_cache <- intersect(gpoints@unique_ID_cache, feat_ids)
     }
 
     # 2. Spatial subsetting #
@@ -2003,26 +2001,25 @@ subsetGiottoLocsSubcellular <- function(
         is.null,
         FUN.VALUE = logical(1L)
     ))) {
-        # even if no spatial subsetting happened, if ID subsetting occurred, the
-        # unique_ID_cache needs to be updated
-        gpoints@unique_ID_cache <- featIDs(
-            gpoints,
-            use_cache = FALSE, uniques = TRUE
-        )
         return(gpoints)
     }
 
-    # 2.2 otherwise use DT crop method
-    gpoints <- crop(gpoints,
-        xmin = x_min, xmax = x_max,
-        ymin = y_min, ymax = y_max,
-        DT = TRUE
-    )
-    # unique_ID_cache needs to be updated
-    gpoints@unique_ID_cache <- featIDs(
-        gpoints,
-        use_cache = FALSE, uniques = TRUE
-    )
+    # 2.2 otherwise crop
+    if (is_sv) {
+        gpoints <- crop(gpoints,
+            xmin = x_min, xmax = x_max,
+            ymin = y_min, ymax = y_max,
+            DT = TRUE
+        )
+    } else {
+        e <- terra::ext(
+            x_min %||% -Inf, x_max %||% Inf,
+            y_min %||% -Inf, y_max %||% Inf
+        )
+        gpoints@spatVector <- crop(gpoints@spatVector, e)
+    }
+    # unique_ID_cache needs to be updated after spatial subset
+    gpoints@unique_ID_cache <- featIDs(gpoints, use_cache = FALSE, uniques = TRUE)
 
     return(gpoints)
 }
@@ -2040,49 +2037,3 @@ subsetGiottoLocsSubcellular <- function(
     return(ex_mat)
 }
 
-
-
-
-
-# # used with cell_ids subsetting
-# # ensure that the polygons to be subset match the spat_unit or provenance of
-# # aggregate information that it is paired with during the subset
-# # TODO expand this to test more than just expression and spatlocs
-# poly_provenance_whitelist = function(gobject, spat_unit) {
-#
-#   if (isTRUE(spat_unit == ":all:")) spat_unit = NULL
-#   avail_ex = list_expression(
-#     gobject = gobject,
-#     spat_unit = spat_unit
-#   )
-#   avail_sl = list_spatial_locations(
-#     gobject = gobject,
-#     spat_unit = spat_unit
-#   )
-#
-#   prov_ex = lapply(seq(nrow(avail_ex)), function(ex_i) {
-#     ex = getExpression(
-#       gobject = gobject,
-#       spat_unit = avail_ex[ex_i]$spat_unit,
-#       feat_type = avail_ex[ex_i]$feat_type,
-#       values = avail_ex[ex_i]$name,
-#       output = 'exprObj'
-#     )
-#
-#     c(spatUnit(ex), prov(ex))
-#   })
-#   prov_sl = lapply(seq(nrow(avail_sl)), function(sl_i) {
-#     sl = getSpatialLocations(
-#       gobject = gobject,
-#       spat_unit = avail_sl[sl_i]$spat_unit,
-#       name = avail_sl[sl_i]$name,
-#       output = 'spatLocsObj'
-#     )
-#
-#     c(spatUnit(sl), prov(sl))
-#   })
-#
-#   c(prov_ex, prov_sl) %>%
-#     unlist(recursive = TRUE) %>%
-#     unique()
-# }

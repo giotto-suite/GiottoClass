@@ -112,10 +112,15 @@ provided}
 \item{expression_matrix_class}{class of expression matrix to
 use (e.g. 'dgCMatrix', 'DelayedArray')}
 
-\item{backend}{\code{filepath} or \code{gsource} (optional, requires {GiottoDisk}).
-Path to set up a project directory. Does not have to already exist.
-Accepts a \code{gsource}-inheriting backend manager. If a filepath is given,
-uses a \code{gDirSource} by default.}
+\item{backend}{backend to use (optional). One of:
+\itemize{
+\item \code{NULL} - (default) in memory object
+\item \code{filepath} - path at which to set up a project directory. Does not have
+to already exist. Sets the backend manager as \code{gDirSource} by default.
+\item \code{gsource}-inheriting - A specific backend manager to use
+}
+
+\code{filepath} and \code{gsource} both require {GiottoDisk}.}
 
 \item{h5_file}{deprecated. Use \code{backend} instead}
 
@@ -162,7 +167,7 @@ creation section and examples)}.
 \item Via technology specific convenience functions \emph{(exported from \{Giotto\})}
 }
 
-See \url{https://drieslab.github.io/Giotto_website/articles/object_creation.html}
+See \url{https://giotto-suite.github.io/Giotto_website/articles/object_creation.html}
 for more information. The details sections here also expand on the above
 options.
 }
@@ -260,7 +265,7 @@ Giotto::createGiottoVisiumHDObject()
 Giotto::createGiottoCosMxObject()
 }
 
-Also see \url{https://drieslab.github.io/Giotto_website/articles/import_utilities.html}
+Also see \url{https://giotto-suite.github.io/Giotto_website/articles/import_utilities.html}
 for technology-specific import utilities that can be used with the piecewise
 \code{giotto} object assembly method.
 }

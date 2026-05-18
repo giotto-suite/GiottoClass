@@ -5,39 +5,19 @@
 \title{.plot_giottolargeimage}
 \usage{
 .plot_giottolargeimage(
-  gobject = NULL,
-  largeImage_name = NULL,
-  giottoLargeImage = NULL,
-  crop_extent = NULL,
-  xmax_crop = NULL,
-  xmin_crop = NULL,
-  ymax_crop = NULL,
-  ymin_crop = NULL,
+  x,
+  ext = NULL,
+  xmin = NULL,
+  xmax = NULL,
+  ymin = NULL,
+  ymax = NULL,
   max_intensity = NULL,
   asRGB = FALSE,
-  stretch = NULL,
-  axes = TRUE,
-  smooth = TRUE,
-  mar = c(3, 5, 1.5, 1),
-  legend = FALSE,
-  maxcell = 5e+05,
-  col = grDevices::grey.colors(n = 256, start = 0, end = 1, gamma = 1),
-  asp = 1,
   ...
 )
 }
 \arguments{
-\item{gobject}{giotto object}
-
-\item{largeImage_name}{name of giottoLargeImage}
-
-\item{giottoLargeImage}{giottoLargeImage object}
-
-\item{crop_extent}{(optional) extent object to focus on specific region of
-image}
-
-\item{xmax_crop, xmin_crop, ymax_crop, ymin_crop}{(optional) crop min/max x
-and y bounds}
+\item{x}{\code{giottoLargeImage}}
 
 \item{max_intensity}{(optional) value to treat as maximum intensity in
 color scale}
@@ -45,10 +25,17 @@ color scale}
 \item{asRGB}{(optional) logical. Force RGB plotting if not automatically
 detected}
 
+\item{...}{additional params to pass to terra::plot or terra::plotRGB
+depending on image type}
+
+\item{crop_extent}{(optional) extent object to focus on specific region of
+image}
+
+\item{xmax_crop, xmin_crop, ymax_crop, ymin_crop}{(optional) crop min/max x
+and y bounds}
+
 \item{stretch}{character. Option to stretch the values to increase
 contrast: "lin" (linear) or "hist" (histogram)}
-
-\item{axes}{boolean. Default = TRUE. Whether to draw axes}
 
 \item{smooth}{boolean. Default = TRUE. Whether to apply smoothing on the
 image}
@@ -68,15 +55,15 @@ legend or with three columns (from, to, color) to get an "interval" type
 legend}
 
 \item{asp}{numeric (default = 1). Specific aspect ratio to use}
-
-\item{...}{additional params to pass to terra::plot or terra::plotRGB
-depending on image type}
 }
 \value{
 plot
 }
 \description{
-Plot a \emph{downsampled} version of giottoLargeImage.
-Cropping can increase plot resolution of region of interest.
+Renders a \code{giottoLargeImage} by setting a lazy spatial window
+to the requested extent, inferring bit depth from \code{max_intensity} to set
+the display range, then dispatching to \code{terra::plotRGB()} for
+multi-layer/RGB images or \code{terra::plot()} for single-channel images with
+a linear-stretched greyscale palette.
 }
 \keyword{internal}

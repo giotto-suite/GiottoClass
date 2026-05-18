@@ -12,6 +12,7 @@ setExpression(
   feat_type = NULL,
   name = "raw",
   provenance = NULL,
+  write = FALSE,
   verbose = TRUE,
   initialize = TRUE,
   ...

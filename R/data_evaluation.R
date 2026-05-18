@@ -78,6 +78,9 @@ evaluate_input <- function(type, x, ...) {
 #' @param inputmatrix inputmatrix to evaluate
 #' @param sparse create sparse matrix (default = TRUE)
 #' @param cores how many cores to use
+#' @param expression_matrix_class `character` (optional). Matrix
+#'   representation to convert to. If left as NULL, no conversions will
+#'   be attempted
 #' @details The inputmatrix can be a matrix, sparse matrix, data.frame,
 #' data.table or path to any of these.
 #' @keywords internal
@@ -87,86 +90,67 @@ evaluate_input <- function(type, x, ...) {
         inputmatrix,
         sparse = TRUE,
         cores = determine_cores(),
-        feat_type = "rna",
-        expression_matrix_class = c("dgCMatrix", "DelayedArray", "dbMatrix")) {
-    target_class <- match.arg(
-        expression_matrix_class[1],
-        c("dgCMatrix", "DelayedArray", "dbMatrix")
-    )
+        feat_type = "rna") {
+    checkmate::assert_flag(sparse)
 
-    # Return early if inputmatrix is already of the target class
-    if (!inherits(inputmatrix, "character") &&
-        inherits(inputmatrix, target_class)) {
-        return(inputmatrix)
+    if (is.null(inputmatrix)) {
+        return(NULL)
     }
 
+    accepted_classes <- c(
+        "Matrix", "DelayedMatrix", "dbMatrix", "IterableMatrix",
+        "tiledb_array", "ScaledMatrix"
+    )
+  
     # Main decision tree for converting inputmatrix
-    if (inherits(inputmatrix, "character") && length(inputmatrix) == 1) {
+    mymatrix <- if (is.character(inputmatrix)) {
+        if (length(inputmatrix) > 1L) {
+           stop("Only single paths allowed for matrix filepath",
+           " readin")
+        }
         inputmatrix <- path.expand(inputmatrix)
-        mymatrix <- readExprMatrix(
+        readExprMatrix(
             path = inputmatrix,
             cores = cores,
-            expression_matrix_class = target_class,
             feat_type = feat_type
         )
-    } else if (target_class == "dbMatrix") {
-        .gstop(
-            "Automatic conversion to 'dbMatrix' is not supported within ",
-            "createExprObj(). Please provide a pre-constructed ",
-            "'dbMatrix' object instead. See ?dbMatrix for details."
+    } else if (inherits(inputmatrix, accepted_classes)) {
+        inputmatrix
+    } else if (inherits(inputmatrix, "data.frame")) {
+        matrix_args <- list(
+            as.matrix(inputmatrix[, -1]),
+            dimnames = list(
+                inputmatrix[[1]],
+                colnames(inputmatrix[, -1])
+            )
         )
-    } else if (target_class == "DelayedArray") {
-        mymatrix <- DelayedArray::DelayedArray(inputmatrix)
-    } else if (inherits(inputmatrix, "Matrix")) {
-        mymatrix <- inputmatrix
-    } else if (inherits(inputmatrix, "DelayedMatrix")) {
-        mymatrix <- inputmatrix
-    } else if (inherits(inputmatrix, "data.table")) {
-        if (sparse == TRUE) {
-            # force sparse class
-            mymatrix <- Matrix::Matrix(as.matrix(inputmatrix[, -1]),
-                dimnames = list(
-                    inputmatrix[[1]],
-                    colnames(inputmatrix[, -1])
-                ), sparse = TRUE
-            )
-        } else {
-            # let Matrix decide
-            mymatrix <- Matrix::Matrix(as.matrix(inputmatrix[, -1]),
-                dimnames = list(
-                    inputmatrix[[1]],
-                    colnames(inputmatrix[, -1])
-                )
-            )
-        }
-    } else if (inherits(inputmatrix, what = c("data.frame", "matrix"))) {
-        mymatrix <- methods::as(as.matrix(inputmatrix), "sparseMatrix")
+        if (sparse) matrix_args$sparse <- TRUE
+        do.call(Matrix::Matrix, matrix_args)
+    } else if (inherits(inputmatrix, "matrix")) {
+        methods::as(inputmatrix, "sparseMatrix")
     } else if (inherits(inputmatrix, "exprObj")) {
         inputmatrix[] <- .evaluate_expr_matrix(
             inputmatrix[],
-            sparse = sparse, cores = cores,
-            expression_matrix_class = target_class
+            sparse = sparse,
+            cores = cores
         )
-        mymatrix <- inputmatrix
+        inputmatrix
     } else {
-        .gstop(
-            "expression input needs to be a path to matrix-like data or an",
-            "object of class 'Matrix', 'data.table', 'data.frame', 'matrix'",
-            "'DelayedMatrix' or 'dbSparseMatrix'."
+        stop(
+            "expression input needs to be a filepath to read or a",
+            "matrix-like or data.frame-like class",
+            call. = FALSE
         )
     }
-
 
     # check rownames and colnames
     if (any(duplicated(rownames(mymatrix)))) {
         stop("row names contains duplicates, please remove or rename")
     }
-
     if (any(duplicated(colnames(mymatrix)))) {
         stop("column names contains duplicates, please remove or rename")
     }
-
-
+  
     return(mymatrix)
 }
 

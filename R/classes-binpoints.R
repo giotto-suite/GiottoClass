@@ -209,20 +209,20 @@ setMethod("crop", signature("giottoBinPoints", "SpatVector"), function(x, y,
 #' @param n `integerlike` how many to get
 #' @param ... additional arguments to pass to other methods
 #' @returns the same class as `x`
-#' @export
-setMethod("head", signature("giottoBinPoints"), function(x, n = 6L, ...) {
+#' @exportS3Method utils::head
+head.giottoBinPoints <- function(x, n = 6L, ...) {
     n <- min(nrow(x), n)
     x[seq_len(n)]
-})
+}
 
 #' @rdname headtail
-#' @export
-setMethod("tail", signature("giottoBinPoints"), function(x, n = 6L, ...) {
+#' @exportS3Method utils::tail
+tail.giottoBinPoints <- function(x, n = 6L, ...) {
     nr <- nrow(x)
     begin <- nr - n + 1L
     begin <- max(1, begin)
     x[begin:nr]
-})
+}
 
 #' @rdname setGiotto
 #' @export

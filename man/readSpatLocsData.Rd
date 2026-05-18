@@ -35,8 +35,8 @@ df <- data.frame(
     feat_ID = c("feat_1", "feat_2", "feat_3"),
     sdimx = c(1, 2, 3), sdimy = c(1, 2, 1)
 )
-temporal_dir <- tempdir()
-write.csv(df, paste0(temporal_dir, "/spatlocs.csv"), row.names = FALSE)
+f <- tempdir()
+write.csv(df, paste0(f, "/spatlocs.csv"), row.names = FALSE)
 
-readSpatLocsData(paste0(temporal_dir, "/spatlocs.csv"))
+readSpatLocsData(paste0(f, "/spatlocs.csv"))
 }

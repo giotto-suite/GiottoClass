@@ -5,16 +5,16 @@
 
 <!-- badges: start -->
 
-![Version](https://img.shields.io/github/r-package/v/drieslab/GiottoClass)
+![Version](https://img.shields.io/github/r-package/v/giotto-suite/GiottoClass)
 [![Lifecycle:
 stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
-[![codecov](https://codecov.io/gh/drieslab/GiottoClass/branch/dev/graph/badge.svg)](https://app.codecov.io/gh/drieslab/GiottoClass?branch=dev)
+[![codecov](https://codecov.io/gh/giotto-suite/GiottoClass/branch/dev/graph/badge.svg)](https://app.codecov.io/gh/giotto-suite/GiottoClass?branch=dev)
 [![R CMD
-check](https://img.shields.io/github/actions/workflow/status/drieslab/GiottoClass/staging_branch_workflow.yml?branch=staging&label=R%20CMD%20check)](https://github.com/drieslab/GiottoClass/actions/workflows/staging_branch_workflow.yml)
+check](https://img.shields.io/github/actions/workflow/status/giotto-suite/GiottoClass/staging_branch_workflow.yml?branch=staging&label=R%20CMD%20check)](https://github.com/giotto-suite/GiottoClass/actions/workflows/staging_branch_workflow.yml)
 [![GitHub
-issues](https://img.shields.io/github/issues/drieslab/Giotto)](https://github.com/drieslab/Giotto/issues)
+issues](https://img.shields.io/github/issues/giotto-suite/Giotto)](https://github.com/giotto-suite/Giotto/issues)
 [![GitHub
-pulls](https://img.shields.io/github/issues-pr/drieslab/GiottoClass)](https://github.com/drieslab/GiottoClass/pulls)
+pulls](https://img.shields.io/github/issues-pr/giotto-suite/GiottoClass)](https://github.com/giotto-suite/GiottoClass/pulls)
 <!-- badges: end -->
 
 This package contains the Giotto object and subobject class definitions
@@ -31,5 +31,5 @@ You can install GiottoClass like:
 
 ``` r
 library(devtools)
-install_github('drieslab/GiottoClass')
+install_github('giotto-suite/GiottoClass')
 ```

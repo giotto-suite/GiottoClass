@@ -6,40 +6,36 @@
 
 #' @title Read expression matrix
 #' @name readExprMatrix
-#' @description Function to read an expression matrix into a sparse matrix.
-#' @param path path to the expression matrix
-#' @param cores number of cores to use
-#' @param transpose transpose matrix
-#' @param expression_matrix_class class of expression matrix to
-#' use (e.g. 'dgCMatrix', 'DelayedArray')
+#' @description Attempts to read a data.table compatible flat file
+#'   (.csv/.tsv) as `dgCMatrix`
+#' @param path `character` path to the expression matrix
+#' @param cores `integerlike` number of cores to use with data.table read
+#' @param transpose `logical` transpose matrix
+#' @param expression_matrix_class deprecated. See `?createExprObj` for details
 #' @inheritParams data_access_params
 #' @details The expression matrix needs to have both unique column names and
 #' row names
 #' @returns sparse matrix
 #' @examples
 #' x <- matrix(seq_len(100), nrow = 10)
-#' temporal_dir <- tempdir()
-#' write.csv(x, paste0(temporal_dir, "/mymatrix.csv"))
+#' f <- tempdir()
+#' write.csv(x, paste0(f, "/mymatrix.csv"))
 #'
-#' readExprMatrix(paste0(temporal_dir, "/mymatrix.csv"))
+#' readExprMatrix(paste0(f, "/mymatrix.csv"))
 #' @export
 readExprMatrix <- function(
         path,
         cores = determine_cores(),
         transpose = FALSE,
         feat_type = "rna",
-        expression_matrix_class = c(
-            "dgCMatrix",
-            "DelayedArray",
-            "dbSparseMatrix"
-        )) {
-    # check if path is a character vector and exists
-    if (!is.character(path)) stop("path needs to be character vector")
-    if (!file.exists(path)) stop("the path: ", path, " does not exist")
-
-    expression_matrix_class <- match.arg(expression_matrix_class)
-    if (identical(expression_matrix_class, "dbSparseMatrix")) {
-        stop("File conversion to dbMatrix is not yet supported")
+        expression_matrix_class = deprecated()) {
+    checkmate::assert_file_exists(path)
+    checkmate::assert_flag(transpose)
+    if (is_present(expression_matrix_class)) {
+        warning(sprintf(
+            "[readExprMatrix] param '%s' is deprecated", 
+            "expression_matrix_class"), 
+        call. = FALSE)
     }
 
     data.table::setDTthreads(threads = cores)
@@ -52,67 +48,54 @@ readExprMatrix <- function(
             colClasses = list(character = 1) # enforce first col character
         )
     )$result
-    spM <- Matrix::Matrix(as.matrix(DT[, -1]),
+    spm <- Matrix::Matrix(as.matrix(DT[, -1]),
         dimnames = list(DT[[1]], colnames(DT[, -1])),
         sparse = TRUE
     )
 
-    if (isTRUE(transpose)) {
-        spM <- t_flex(spM)
+    if (transpose) {
+        spm <- t_flex(spm)
     }
-
-    if (expression_matrix_class[1] == "DelayedArray") {
-        spM <- DelayedArray::DelayedArray(spM)
-    }
-
-    return(spM)
+    spm
 }
-
-
-
-
-
-
-
-
-
-
 
 #' @title Read expression data
 #' @name readExprData
 #' @description Read a nested list of expression data inputs in order to
-#' generate a list of giotto-native exprObj
-#' @param data_list (nested) list of expression input data
-#' @param sparse (boolean, default = TRUE) read matrix data in a sparse manner
+#' generate a list of giotto-native exprObj that are addressed to specific
+#' spat_unit and feat_type based on list naming and defaults.
+#' @param data_list nested `list` of expression input data
+#' @param sparse (`logical`, default = TRUE) read matrix data in a sparse manner
 #' @param cores number of cores to use
-#' @param expression_matrix_class class of expression matrix to
-#' use (e.g. 'dgCMatrix', 'DelayedArray')
+#' @param expression_matrix_class deprecated. See `?createExprObj` for details
 #' @inheritParams read_data_params
 #' @returns exprObj
-#' @details
-#'
-#' mylistA = list('a' = matrix(seq(5)), 'b' = matrix(seq(5)))
-#' depth(mylistA)
-#'
-#' mylistB = list(A = list('a' = matrix(seq(5)), 'b' = matrix(seq(5))),
-#'                B = list('c' = matrix(seq(5)),'d' = matrix(seq(5))))
-#' depth(mylistB)
-#'
-#' mylistC = list('RNA' = list('RAW' = list('cell' = matrix(seq(5)),
-#'                             'nucleus' = matrix(seq(6,10))),
-#'                             'NORM' = list('cell' = matrix(seq(11,15)),
-#'                             'nucleus' = matrix(seq(20,25)))),
-#'                'PROT' = list('RAW' = list('cell' = matrix(seq(16,20)))))
-#' depth(mylistC)
-#'
-#' mymatD = matrix(data = seq(4))
-#'
 #' @examples
-#' x <- matrix(seq_len(100), nrow = 10)
-#' temporal_dir <- tempdir()
-#' write.csv(x, paste0(temporal_dir, "/mymatrix.csv"))
+#' mylistA = list('a' = matrix(seq(5)), 'b' = matrix(seq(5)))
+#' GiottoUtils::depth(mylistA)
 #'
-#' readExprData(paste0(temporal_dir, "/mymatrix.csv"))
+#' mylistB = list(
+#'     A = list('a' = matrix(seq(5)), 'b' = matrix(seq(5))),
+#'     B = list('c' = matrix(seq(5)),'d' = matrix(seq(5)))
+#' )
+#' GiottoUtils::depth(mylistB)
+#'
+#' mylistC = list(
+#'     'RNA' = list(
+#'         'RAW' = list('cell' = matrix(seq(5)),
+#'         'nucleus' = matrix(seq(6,10))),
+#'         'NORM' = list('cell' = matrix(seq(11,15)),
+#'         'nucleus' = matrix(seq(20,25)))
+#'     ),
+#'     'PROT' = list(
+#'         'RAW' = list('cell' = matrix(seq(16,20)))
+#'     )
+#' )
+#' GiottoUtils::depth(mylistC)
+#'
+#' readExprData(mylistA)
+#' readExprData(mylistB)
+#' readExprData(mylistC)
 #' @export
 readExprData <- function(data_list,
     sparse = TRUE,
@@ -120,15 +103,20 @@ readExprData <- function(data_list,
     default_feat_type = NULL,
     verbose = TRUE,
     provenance = NULL,
-    expression_matrix_class = c("dgCMatrix", "DelayedArray")) {
+    expression_matrix_class = deprecated()) {
+    if (is_present(expression_matrix_class)) {
+        warning(sprintf(
+            "[readExprData] param '%s' is deprecated",
+            "expression_matrix_class"),
+        call. = FALSE)
+    }
     .read_expression_data(
         expr_list = data_list,
         sparse = sparse,
         cores = cores,
         default_feat_type = default_feat_type,
         verbose = verbose,
-        provenance = provenance,
-        expression_matrix_class = expression_matrix_class
+        provenance = provenance
     )
 }
 
@@ -141,8 +129,7 @@ readExprData <- function(data_list,
     default_spat_unit = NULL,
     default_feat_type = NULL,
     verbose = TRUE,
-    provenance = NULL,
-    expression_matrix_class = c("dgCMatrix", "DelayedArray")) {
+    provenance = NULL) {
     # import box characters
     ch <- box_chars()
 
@@ -156,29 +143,24 @@ readExprData <- function(data_list,
         expr_list <- list("raw" = expr_list) # single matrix or path (expected)
     }
 
-
     # Set default feature type if missing
     if (is.null(default_spat_unit)) default_spat_unit <- "cell"
     if (is.null(default_feat_type)) default_feat_type <- "rna"
-
 
     # 1. get depth of list
 
     list_depth <- depth(expr_list)
 
-
-
     # too much information
     if (list_depth > 3L) {
-        stop("Depth of expression list is more than 3, only 3 levels are
-            possible:
-        0)", ch$s, ".
-        1)", ch$s, ch$b, "spatial unit (e.g. cell)
-        2)", ch$s, ch$s, ch$b, "feature (e.g. RNA)
-        3)", ch$s, ch$s, ch$s, ch$b, "data type (e.g. raw)\n")
+        stop(
+            "Depth of expression list is more than 3\n",
+            "  Only 3 levels are possible:\n",
+            "0)", ch$s, ".\n",
+            "1)", ch$s, ch$b, "spatial unit (e.g. cell)\n",
+            "2)", ch$s, ch$s, ch$b, "feature (e.g. RNA)\n",
+            "3)", ch$s, ch$s, ch$s, ch$b, "data type (e.g. raw)\n")
     }
-
-
 
     # list reading
     obj_list <- list()
@@ -189,11 +171,11 @@ readExprData <- function(data_list,
 
     # read nesting
     if (list_depth == 1L) {
-        if (isTRUE(verbose)) message("list depth of 1")
+        vmsg(.v = verbose, .is_debug = TRUE, "list depth of 1")
 
         obj_names <- names(expr_list)
-        if (is.null(obj_names) & isTRUE(verbose)) {
-            wrap_msg("No list names for objects. Setting defaults.")
+        if (is.null(obj_names)) {
+            vmsg(.v = verbose, "No list names for objects. Setting defaults.")
         }
 
         for (obj_i in seq_along(expr_list)) {
@@ -212,7 +194,7 @@ readExprData <- function(data_list,
         spat_unit_list <- rep(default_spat_unit, length(obj_list)) # assume
         feat_type_list <- rep(default_feat_type, length(obj_list)) # assume
     } else if (list_depth == 2L) {
-        if (isTRUE(verbose)) message("list depth of 2")
+        vmsg(.v = verbose, .is_debug = TRUE, "list depth of 2")
 
         feat_type_names <- names(expr_list)
         if (is.null(feat_type_names) & isTRUE(verbose)) {
@@ -248,7 +230,7 @@ readExprData <- function(data_list,
         }
         spat_unit_list <- rep(default_spat_unit, length(obj_list)) # assume
     } else if (list_depth == 3L) {
-        if (isTRUE(verbose)) message("list depth of 3")
+        vmsg(.v = verbose, .is_debug = TRUE, "list depth of 3")
 
         spat_unit_names <- names(expr_list)
         if (is.null(spat_unit_names) & isTRUE(verbose)) {
@@ -335,8 +317,7 @@ readExprData <- function(data_list,
                         } else {
                             provenance
                         }, # assumed
-                        misc = NULL,
-                        expression_matrix_class = expression_matrix_class
+                        misc = NULL
                     )
                 )
             }
@@ -371,10 +352,10 @@ readExprData <- function(data_list,
 #'     cell_ID = c("cell_1", "cell_2", "cell_3"),
 #'     annotation = c("cell_type_1", "cell_type_1", "cell_type_2")
 #' )
-#' temporal_dir <- tempdir()
-#' write.csv(df, paste0(temporal_dir, "/metadata.csv"), row.names = FALSE)
+#' f <- tempdir()
+#' write.csv(df, paste0(f, "/metadata.csv"), row.names = FALSE)
 #'
-#' readCellMetadata(paste0(temporal_dir, "/metadata.csv"))
+#' readCellMetadata(paste0(f, "/metadata.csv"))
 #' @export
 readCellMetadata <- function(data_list,
     default_spat_unit = NULL,
@@ -559,10 +540,10 @@ readCellMetadata <- function(data_list,
 #'     feat_ID = c("feat_1", "feat_2", "feat_3"),
 #'     geneID = c("gene_1", "gene_1", "gene_2")
 #' )
-#' temporal_dir <- tempdir()
-#' write.csv(df, paste0(temporal_dir, "/metadata.csv"), row.names = FALSE)
+#' f <- tempdir()
+#' write.csv(df, paste0(f, "/metadata.csv"), row.names = FALSE)
 #'
-#' readFeatMetadata(paste0(temporal_dir, "/metadata.csv"))
+#' readFeatMetadata(paste0(f, "/metadata.csv"))
 #' @export
 readFeatMetadata <- function(data_list,
     default_spat_unit = NULL,
@@ -749,10 +730,10 @@ readFeatMetadata <- function(data_list,
 #'     feat_ID = c("feat_1", "feat_2", "feat_3"),
 #'     sdimx = c(1, 2, 3), sdimy = c(1, 2, 1)
 #' )
-#' temporal_dir <- tempdir()
-#' write.csv(df, paste0(temporal_dir, "/spatlocs.csv"), row.names = FALSE)
+#' f <- tempdir()
+#' write.csv(df, paste0(f, "/spatlocs.csv"), row.names = FALSE)
 #'
-#' readSpatLocsData(paste0(temporal_dir, "/spatlocs.csv"))
+#' readSpatLocsData(paste0(f, "/spatlocs.csv"))
 #' @export
 readSpatLocsData <- function(data_list,
     default_spat_unit = NULL,

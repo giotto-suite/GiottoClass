@@ -1,11 +1,9 @@
-
-
 #' @title saveGiotto
 #' @name saveGiotto
 #' @description Saves a Giotto object to a specific folder structure.
 #'   Save location and behavior changes when the managed by a `gsource`
 #'   inheriting project manager (see [GiottoDisk::gsource] and
-#'   [GiottoDisk::`gDirSource-class`] for examples).
+#'   [GiottoDisk::gDirSource-class] for examples).
 #' @param gobject Giotto object
 #' @param foldername Folder name (ignored when `gsource` is managed)
 #' @param dir Directory where to create the folder
@@ -236,14 +234,12 @@ loadGiotto <- function(path_to_folder,
     }
   
     ## 1. load giotto object
+    src <- FALSE
     if (requireNamespace("GiottoDisk", quietly = TRUE)) {
+        # detect if managed source. Return FALSE if not, src object if TRUE
         src <- GiottoDisk::resolveSource(path_to_folder)
-        gobject <- GiottoDisk::snapshotLoad(src, 
-            load_params = load_params,
-            verbose = verbose,
-            ...
-        )
-    } else {
+    }
+    if (isFALSE(src)) {
         gobject <- .load_gobject_core(
             path_to_folder = path_to_folder,
             load_params = load_params,
@@ -268,6 +264,12 @@ loadGiotto <- function(path_to_folder,
             gobject = gobject,
             path_to_folder = path_to_folder,
             verbose = verbose
+        )
+    } else {
+        gobject <- GiottoDisk::snapshotLoad(src, 
+            load_params = load_params,
+            verbose = verbose,
+            ...
         )
     }
 

@@ -24,7 +24,10 @@
 #' mean_flex(m)
 #' @export
 mean_flex <- function(x, ...) {
-    if (inherits(x, "HDF5Matrix")) {
+    if (inherits(x, "IterableMatrix")) {
+        s <- sum(colSums(x))
+        return(s / (nrow(x) * ncol(x)))
+    } else if (inherits(x, "HDF5Matrix")) {
         return(Matrix::mean(x, ...))
     } else if (inherits(x, "dgCMatrix")) {
         return(Matrix::mean(x, ...)) # replace with sparseMatrixStats
@@ -51,7 +54,9 @@ mean_flex <- function(x, ...) {
 #' rowSums_flex(m)
 #' @export
 rowSums_flex <- function(mymatrix, ...) {
-    if (inherits(mymatrix, "DelayedArray")) {
+    if (inherits(mymatrix, "IterableMatrix")) {
+        return(rowSums(mymatrix))
+    } else if (inherits(mymatrix, "DelayedArray")) {
         return(DelayedMatrixStats::rowSums2(mymatrix, ...))
     } else if (inherits(mymatrix, "dgCMatrix")) {
         return(Matrix::rowSums(mymatrix, ...)) # replace with sparseMatrixStats
@@ -81,7 +86,9 @@ rowSums_flex <- function(mymatrix, ...) {
 #' rowMeans_flex(m)
 #' @export
 rowMeans_flex <- function(mymatrix, ...) {
-    if (inherits(mymatrix, "DelayedArray")) {
+    if (inherits(mymatrix, "IterableMatrix")) {
+        return(rowMeans(mymatrix))
+    } else if (inherits(mymatrix, "DelayedArray")) {
         return(DelayedMatrixStats::rowMeans2(mymatrix, ...))
     } else if (inherits(mymatrix, "dgCMatrix")) {
         return(Matrix::rowMeans(mymatrix, ...)) # replace with sparseMatrixStats
@@ -111,7 +118,9 @@ rowMeans_flex <- function(mymatrix, ...) {
 #' colSums_flex(m)
 #' @export
 colSums_flex <- function(mymatrix, ...) {
-    if (inherits(mymatrix, "DelayedArray")) {
+    if (inherits(mymatrix, "IterableMatrix")) {
+        return(colSums(mymatrix))
+    } else if (inherits(mymatrix, "DelayedArray")) {
         return(DelayedMatrixStats::colSums2(mymatrix, ...))
     } else if (inherits(mymatrix, "dgCMatrix")) {
         return(Matrix::colSums(mymatrix, ...)) # replace with sparseMatrixStats
@@ -141,7 +150,9 @@ colSums_flex <- function(mymatrix, ...) {
 #' colMeans_flex(m)
 #' @export
 colMeans_flex <- function(mymatrix, ...) {
-    if (inherits(mymatrix, "DelayedArray")) {
+    if (inherits(mymatrix, "IterableMatrix")) {
+        return(colMeans(mymatrix))
+    } else if (inherits(mymatrix, "DelayedArray")) {
         return(DelayedMatrixStats::colMeans2(mymatrix, ...))
     } else if (inherits(mymatrix, "dgCMatrix")) {
         return(Matrix::colMeans(mymatrix, ...)) # replace with sparseMatrixStats
@@ -172,7 +183,9 @@ colMeans_flex <- function(mymatrix, ...) {
 t_flex <- function(mymatrix) {
     if (inherits(mymatrix, "DelayedArray")) {
         return(DelayedArray::t(mymatrix))
-    } else if (inherits(mymatrix, "dgCMatrix")) {
+    } else if (inherits(mymatrix, "IterableMatrix")) {
+        return(t(mymatrix))
+    }else if (inherits(mymatrix, "dgCMatrix")) {
         return(Matrix::t(mymatrix)) # replace with sparseMatrixStats
     } else if (inherits(mymatrix, "Matrix")) {
         return(Matrix::t(mymatrix))
@@ -279,11 +292,11 @@ my_rowMeans <- function(x, method = c("arithmic", "geometric"), offset = 0.1) {
 
 #' @title standardise_flex
 #' @name standardise_flex
-#' @description standardizes a matrix
+#' @description Matrix scaling.
 #' @param x matrix
 #' @param center center data
 #' @param scale scale data
-#' @returns standardized matrix
+#' @returns `ScaledMatrix` or `IterableMatrix`
 #' @keywords internal
 #' @examples
 #' m <- matrix(rnorm(100), nrow = 10)
@@ -291,24 +304,34 @@ my_rowMeans <- function(x, method = c("arithmic", "geometric"), offset = 0.1) {
 #' standardise_flex(m)
 #' @export
 standardise_flex <- function(x, center = TRUE, scale = TRUE) {
-    if (inherits(x, "DelayedArray")) {
-        package_check("ScaledMatrix")
-
-        y <- ScaledMatrix::ScaledMatrix(x = x, center = center, scale = scale)
-    } else {
-        if (center & scale) {
-            y <- t_flex(x) - colMeans_flex(x)
-            y <- y / sqrt(rowSums_flex(y^2)) * sqrt((dim(x)[1] - 1))
-            y <- t_flex(y)
-        } else if (center & !scale) {
-            y <- t_flex(x) - colMeans_flex(x)
-            y <- t_flex(y)
-        } else if (!center & scale) {
-            csd <- matrixStats::colSds(x)
-            # csd = DelayedMatrixStats::colSds(x)
-            y <- t_flex(t_flex(x) / csd)
-        } else {
-            y <- x
+    if (inherits(x, "IterableMatrix")) {
+        if (isTRUE(center) || isTRUE(scale)) {
+            stats <- BPCells::matrix_stats(x, row_stats = "variance")$row_stats
         }
+        if (isTRUE(center)) center <- stats["mean", ]
+        if (isTRUE(scale)) scale <- sqrt(stats["variance", ])
+        if (!isFALSE(center)) x <- BPCells::add_rows(x, -center)
+        if (!isFALSE(scale)) x <- BPCells::multiply_rows(x, 1 / scale)
+        return(x)
+    } else if (inherits(x, "DelayedArray")) {
+        package_check("ScaledMatrix")
+        return(ScaledMatrix::ScaledMatrix(x = x, center = center, scale = scale))
+    } else if (is.matrix(x) ||
+        inherits(x, "Matrix") ||
+        inherits(x, "DelayedMatrix")) {
+        return(ScaledMatrix::ScaledMatrix(x,
+            center = center,
+            scale = scale
+        ))
+    } else if (center && scale) {
+        y <- t_flex(x) - colMeans_flex(x)
+        y <- y / sqrt(rowSums_flex(y^2)) * sqrt((dim(x)[1] - 1))
+        return(t_flex(y))
+    } else if (center && !scale) {
+        return(t_flex(t_flex(x) - colMeans_flex(x)))
+    } else if (!center && scale) {
+        return(t_flex(t_flex(x) / matrixStats::colSds(x)))
+    } else {
+        return(x)
     }
 }

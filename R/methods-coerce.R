@@ -654,6 +654,7 @@ setMethod(
 
     if (isTRUE(include_values)) {
         DT_values <- data.table::as.data.table(terra::values(spatvector))
+        if (ncol(DT_values) == 0L) return(DT_geom) # no attributes — geometry only
         DT_values[, geom := seq_len(nrow(DT_values))]
         DT_full <- data.table::merge.data.table(DT_geom, DT_values, by = "geom")
         return(DT_full)

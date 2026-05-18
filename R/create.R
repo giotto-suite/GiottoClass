@@ -32,7 +32,7 @@ NULL
 #' creation section and examples)_.
 #' * Via technology specific convenience functions _(exported from \{Giotto\})_
 #'
-#' See \url{https://drieslab.github.io/Giotto_website/articles/object_creation.html}
+#' See \url{https://giotto-suite.github.io/Giotto_website/articles/object_creation.html}
 #' for more information. The details sections here also expand on the above
 #' options.
 #' @param gpolygons giotto polygons
@@ -76,10 +76,14 @@ NULL
 #' provided
 #' @param expression_matrix_class class of expression matrix to
 #' use (e.g. 'dgCMatrix', 'DelayedArray')
-#' @param backend `filepath` or `gsource` (optional, requires {GiottoDisk}). 
-#'   Path to set up a project directory. Does not have to already exist.
-#'   Accepts a `gsource`-inheriting backend manager. If a filepath is given,
-#'   uses a `gDirSource` by default.
+#' @param backend backend to use (optional). One of:
+#' 
+#'   * `NULL` - (default) in memory object
+#'   * `filepath` - path at which to set up a project directory. Does not have
+#'     to already exist. Sets the backend manager as `gDirSource` by default.
+#'   * `gsource`-inheriting - A specific backend manager to use
+#' 
+#'   `filepath` and `gsource` both require {GiottoDisk}.
 #' @param h5_file deprecated. Use `backend` instead
 #' @param verbose be verbose when building Giotto object
 #' @returns `giotto` object
@@ -171,7 +175,7 @@ NULL
 #' Giotto::createGiottoCosMxObject()
 #' }
 #'
-#' Also see \url{https://drieslab.github.io/Giotto_website/articles/import_utilities.html}
+#' Also see \url{https://giotto-suite.github.io/Giotto_website/articles/import_utilities.html}
 #' for technology-specific import utilities that can be used with the piecewise
 #' `giotto` object assembly method.
 #'
@@ -247,8 +251,6 @@ createGiottoObject <- function(expression,
         if (is.character(backend)) {
             backend <- GiottoDisk::gDirSource(path = backend)
         }
-    } else {
-        backend <- new("gMemSource")
     }
 
     # create minimum giotto
@@ -391,7 +393,7 @@ createGiottoObject <- function(expression,
 
 
         # Set up gobject cell_ID and feat_ID slots based on expression matrices
-        gobject <- init_cell_and_feat_IDs(gobject)
+        gobject <- .init_cell_and_feat_ids(gobject)
         # needed when initialize per step is FALSE
 
         if (verbose) message("--- finished expression data ---\n")
@@ -1304,20 +1306,42 @@ createGiottoObjectSubcellular <- function(
 
 #' @title Create S4 exprObj
 #' @name createExprObj
-#' @description Create an S4 exprObj
+#' @description Create an `exprObj` (thin metadata wrapper/adapter) for
+#'   Giotto expression value information. `matrix` and tabular formats
+#'   will be coerced to {Matrix} sparse format `dgCMatrix`. For tabular
+#'   inputs, the first column is used as row names.
+#'
+#' ## Alternative and disk-backed formats
+#'
+#' Pre-constructed backed matrices (`HDF5Array`, `dbMatrix`, `tiledb_array`,
+#' `IterableMatrix`) may also be passed directly to `expression_data` and will
+#' be used as-is. If using {GiottoDisk}, expression values will be written to
+#' the configured backend format when set into the `giotto` object, so there
+#' is no need to construct a backed matrix upfront — pass a regular matrix and
+#' let the gsource vault handle persistence.
 #' @inheritParams data_access_params
-#' @param expression_data expression data
+#' @param expression_data expression data. Accepts matrix-like data and
+#'   coercible `data.frame` formats (first column used as row names). A
+#'   filepath to a flat file readable by [data.table::fread()] can also be
+#'   passed.
 #' @param name name of exprObj
 #' @param provenance origin data of expression information (if applicable)
-#' @param misc misc
-#' @param expression_matrix_class class of expression matrix to
-#' use (e.g. 'dgCMatrix', 'DelayedArray', 'dbMatrix')
-#' @returns exprObj
+#' @param misc misc about the object to attach
+#' @param expression_matrix_class deprecated. Previously wrapped the matrix in
+#'   a `DelayedArray` when selected. Moving forward, pass a pre-constructed 
+#'   backed matrix to `expression_data` directly if needed.
+#' @returns `exprObj` wrapping the expression matrix with `spat_unit`,
+#'   `feat_type`, and provenance metadata attached.
 #' @examples
+#' m <- matrix(rpois(100, 1), nrow = 10,
+#'     dimnames = list(paste0("feat", 1:10), paste0("cell", 1:10))
+#' )
+#' createExprObj(m)
+#'
+#' # example 0-dominated sparse matrix
 #' x_expr <- readRDS(system.file("extdata/toy_matrix.RDS",
 #'     package = "GiottoClass"
 #' ))
-#'
 #' createExprObj(expression_data = x_expr)
 #' @export
 createExprObj <- function(
@@ -1327,9 +1351,15 @@ createExprObj <- function(
         feat_type = "rna",
         provenance = NULL,
         misc = NULL,
-        expression_matrix_class = c("dgCMatrix", "DelayedArray", "dbMatrix")) {
+        expression_matrix_class = deprecated()) {
+    if (is_present(expression_matrix_class)) {
+        warning(sprintf(
+            "[createExprObj] param '%s' is deprecated", 
+            "expression_matrix_class"), 
+        call. = FALSE)
+    }
+  
     exprMat <- .evaluate_expr_matrix(expression_data,
-        expression_matrix_class = expression_matrix_class,
         feat_type = feat_type
     )
 
@@ -1343,30 +1373,12 @@ createExprObj <- function(
     )
 }
 
-
-#' @title create_expr_obj
-#' @name create_expr_obj
-#' @param exprMat matrix of expression information
-#' @keywords internal
-#' @returns expr_obj
-#' @examples
-#' x_expr <- readRDS(system.file("extdata/toy_matrix.RDS",
-#'     package = "GiottoClass"
-#' ))
-#'
-#' create_expr_obj(exprMat = x_expr)
-#'
-#' @export
 create_expr_obj <- function(name = "test",
     exprMat = NULL,
     spat_unit = "cell",
     feat_type = "rna",
     provenance = NULL,
     misc = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_expr_obj()",
-        with = "createExprObj()"
-    )
 
     if (is.null(exprMat)) exprMat <- matrix()
 
@@ -1422,22 +1434,11 @@ createCellMetaObj <- function(metadata,
     )
 }
 
-
-#' @title create_cell_meta_obj
-#' @name create_cell_meta_obj
-#' @keywords internal
-#' @returns cell_meta_obj
-#'
-#' @export
 create_cell_meta_obj <- function(metaDT = NULL,
     col_desc = NA_character_,
     spat_unit = "cell",
     feat_type = "rna",
     provenance = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_cell_meta_obj()",
-        with = "createCellMetaObj()"
-    )
 
     if (is.null(col_desc)) col_desc <- NA_character_
 
@@ -1501,21 +1502,11 @@ createFeatMetaObj <- function(metadata,
     )
 }
 
-
-#' @title create_feat_meta_obj
-#' @name create_feat_meta_obj
-#' @keywords internal
-#' @returns feat_meta_obj
-#' @export
 create_feat_meta_obj <- function(metaDT = NULL,
     col_desc = NA_character_,
     spat_unit = "cell",
     feat_type = "rna",
     provenance = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_feat_meta_obj()",
-        with = "createFeatMetaObj()"
-    )
 
     if (is.null(col_desc)) col_desc <- NA_character_
 
@@ -1533,10 +1524,6 @@ create_feat_meta_obj <- function(metaDT = NULL,
         feat_type = feat_type
     ))
 }
-
-
-
-
 
 
 
@@ -1586,12 +1573,6 @@ createDimObj <- function(coordinates,
     )
 }
 
-
-#' @title create_dim_obj
-#' @name create_dim_obj
-#' @keywords internal
-#' @returns dim_obj
-#' @export
 create_dim_obj <- function(name = "test",
     reduction = "cells",
     reduction_method = NA_character_,
@@ -1601,10 +1582,6 @@ create_dim_obj <- function(name = "test",
     provenance = NULL,
     misc = NULL,
     my_rownames = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_dim_obj()",
-        with = "createDimObj()"
-    )
 
     if (is.null(reduction_method)) reduction_method <- NA_character_
 
@@ -1683,12 +1660,6 @@ createNearestNetObj <- function(name = "test",
     )
 }
 
-
-#' @title create_nn_net_obj
-#' @name create_nn_net_obj
-#' @keywords internal
-#' @returns nn_net_obj
-#' @export
 create_nn_net_obj <- function(name = "test",
     nn_type = NA_character_,
     igraph = NULL,
@@ -1696,10 +1667,6 @@ create_nn_net_obj <- function(name = "test",
     feat_type = "rna",
     provenance = NULL,
     misc = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_nn_net_obj()",
-        with = "createNearestNetObj()"
-    )
 
     if (is.null(nn_type)) nn_type <- NA_character_
 
@@ -1784,21 +1751,11 @@ createSpatLocsObj <- function(coordinates,
     )
 }
 
-
-#' @title create_spat_locs_obj
-#' @name create_spat_locs_obj
-#' @keywords internal
-#' @returns spat_locs_obj
-#' @export
 create_spat_locs_obj <- function(name = "test",
     coordinates = NULL,
     spat_unit = "cell",
     provenance = NULL,
     misc = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_spat_locs_obj()",
-        with = "createSpatLocsObj()"
-    )
 
     # DT vars
     cell_ID <- NULL
@@ -1885,12 +1842,6 @@ createSpatNetObj <- function(network,
     )
 }
 
-
-#' @title create_spat_net_obj
-#' @name create_spat_net_obj
-#' @keywords internal
-#' @returns spat_net_obj
-#' @export
 create_spat_net_obj <- function(name = "test",
     method = NA_character_,
     parameters = NULL,
@@ -1902,10 +1853,6 @@ create_spat_net_obj <- function(name = "test",
     spat_unit = "cell",
     provenance = NULL,
     misc = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_spat_net_obj()",
-        with = "createSpatNetObj()"
-    )
 
     if (is.null(method)) method <- NA_character_
 
@@ -1965,7 +1912,7 @@ createSpatEnrObj <- function(enrichment_data,
     create_spat_enr_obj(
         name = name,
         method = method,
-        enrichDT = enrichment_data,
+        enrichDT = enrichDT,
         spat_unit = spat_unit,
         feat_type = feat_type,
         provenance = provenance,
@@ -1973,12 +1920,6 @@ createSpatEnrObj <- function(enrichment_data,
     )
 }
 
-
-#' @title create_spat_enr_obj
-#' @name create_spat_enr_obj
-#' @keywords internal
-#' @returns spat_enr_obj
-#' @export
 create_spat_enr_obj <- function(name = "test",
     method = NA_character_,
     enrichDT = NULL,
@@ -1986,10 +1927,6 @@ create_spat_enr_obj <- function(name = "test",
     feat_type = "rna",
     provenance = NULL,
     misc = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_spat_enr_obj()",
-        with = "createSpatEnrObj()"
-    )
 
     if (is.null(method)) method <- NA_character_
 
@@ -2053,11 +1990,6 @@ create_spat_grid_obj <- function(name = "test",
         misc = misc
     ))
 }
-
-
-
-
-
 
 
 #' @title Create feature network object

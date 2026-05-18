@@ -2,6 +2,40 @@
 NULL
 
 # ** affine2d ####
+
+#' @title Affine Transform Object
+#' @name affine2d-class
+#' @aliases affine2d
+#' @description
+#' Container for accumulating 2D affine transformations. Simple spatial
+#' transforms ([spatShift()], [spin()], [rescale()], [flip()], [t()],
+#' [shear()]) can be chained on an \code{affine2d} to build up a combined
+#' transform, which is then applied to spatial objects in a single step via
+#' [affine()].
+#'
+#' Create an identity \code{affine2d} with \code{affine()} (no arguments).
+#' Before chaining centroid-relative operations (\code{spin()},
+#' \code{rescale()}) without explicit \code{x0}/\code{y0}, set
+#' \code{ext(aff) <- ext(your_object)} so the pivot point matches your data.
+#'
+#' The combined linear transform is stored as a 3x3 homogeneous matrix in
+#' \code{@@affine}. Translations are encoded in column 3 (rows 1-2). The
+#' convention is post-multiply: \code{xy_out = xy_in \%*\% A}.
+#'
+#' @slot anchor numeric(4). Anchoring spatial extent
+#'   (\code{xmin, xmax, ymin, ymax}). Set via \code{ext(aff) <-} to match
+#'   the data extent. Used as the centroid pivot for [spin()] and [rescale()]
+#'   when \code{x0}/\code{y0} are not supplied, and for translation
+#'   calculation during transform composition.
+#' @slot affine matrix. 3x3 homogeneous transform matrix encoding the
+#'   combined linear + translation transform.
+#' @slot order character. Records the order in which component operations
+#'   were applied.
+#' @slot rotate numeric(1). Accumulated rotation angle in radians.
+#' @slot shear numeric(2). Accumulated shear factors \code{(x, y)}.
+#' @slot scale numeric(2). Accumulated scale factors \code{(x, y)}.
+#' @slot translate numeric(2). Accumulated translation \code{(x, y)}.
+#' @exportClass affine2d
 setClass(
     Class = "affine2d",
     slots = list(

@@ -34,8 +34,8 @@ df <- data.frame(
     cell_ID = c("cell_1", "cell_2", "cell_3"),
     annotation = c("cell_type_1", "cell_type_1", "cell_type_2")
 )
-temporal_dir <- tempdir()
-write.csv(df, paste0(temporal_dir, "/metadata.csv"), row.names = FALSE)
+f <- tempdir()
+write.csv(df, paste0(f, "/metadata.csv"), row.names = FALSE)
 
-readCellMetadata(paste0(temporal_dir, "/metadata.csv"))
+readCellMetadata(paste0(f, "/metadata.csv"))
 }
