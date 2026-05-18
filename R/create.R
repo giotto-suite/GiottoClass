@@ -251,8 +251,6 @@ createGiottoObject <- function(expression,
         if (is.character(backend)) {
             backend <- GiottoDisk::gDirSource(path = backend)
         }
-    } else {
-        backend <- new("gMemSource")
     }
 
     # create minimum giotto
