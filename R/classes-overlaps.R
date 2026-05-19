@@ -2,6 +2,14 @@
 NULL
 
 # * definitions ####
+
+#' @name overlapInfo-class
+#' @title Geometry Overlap Results
+#' @description
+#' Class for containing results of `calculateOverlap()` outputs. Used as a
+#' thin metadata wrapper to help in passing args to downstream steps
+#' (`overlapToMatrix()`). The base `overlapInfo` class is `VIRTUAL`.
+#' @exportClass overlapInfo
 setClass("overlapInfo",
     contains = c("spatFeatData", "VIRTUAL"),
     slots = list(data = "ANY")
@@ -238,6 +246,7 @@ setClass("overlapIntensityDT",
         new = c("poly", "feat_id_index")
     )
     data <- data[!is.na(poly) & !is.na(feat),]    # drop NAs
+    if (nrow(data) == 0L) return(NULL)
     # Ensure data is stored as integer-based mapping
     data[, poly := match(poly, odt@spat_ids)]
     data[, feat_id_index := match(feat_id_index, odt@feat_ids)]

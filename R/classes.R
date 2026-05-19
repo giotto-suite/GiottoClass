@@ -41,6 +41,20 @@ NULL
     return(gobject)
 }
 
+.gsource <- function(gobject) {
+    if (is.null(attr(gobject, "source"))) {
+        return(NULL)
+    }
+    gobject@source
+}
+
+`.gsource<-` <- function(gobject, value) {
+    if (!inherits(value, "gsource")) {
+        stop("Backend source manager must extend class `gsource`\n", call. = FALSE)
+    }
+    gobject@source <- value
+    gobject
+}
 
 #' @title Update giotto object
 #' @name updateGiottoObject
@@ -126,6 +140,11 @@ updateGiottoObject <- function(gobject) {
     if (.gversion(gobject) < numeric_version("0.4.12")) {
         attr(gobject, "misc") <- list()
     }
+    
+    # GiottoClass 0.5.1 adds @source slot
+    if (.gversion(gobject) < "0.5.1") {
+        gobject <- .update_source_slot(gobject)
+    }
 
     # -------------------------------------------------------------------------#
 
@@ -149,6 +168,50 @@ updateGiottoObject <- function(gobject) {
         )
         ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
     }
+    # GiottoClass 0.5.0: feat_ID_uniq on giottoPoints changes from string
+    # (e.g. "gobject1-1") to sequential integer. Polygon overlap SpatVectors
+    # referencing the old strings must be remapped using the gpoints SpatVector
+    # as the authoritative lookup before updateGiottoPolygonObject converts them.
+    if (.gversion(gobject) < numeric_version("0.5.0") &&
+        !is.null(attr(gobject, "feat_info"))) {
+        feat_uniq_maps <- list()
+        for (ft in names(gobject@feat_info)) {
+            gpts <- gobject@feat_info[[ft]]
+            if (!inherits(gpts, "giottoPoints") ||
+                is.null(gpts@spatVector)) next
+            fid <- gpts@spatVector$feat_ID_uniq
+            if (!is.character(fid)) next
+            feat_uniq_maps[[ft]] <- setNames(
+                seq_len(nrow(gpts@spatVector)), fid
+            )
+        }
+        if (length(feat_uniq_maps) > 0L) {
+            # remap overlap SpatVectors before they are converted
+            if (!is.null(attr(gobject, "spatial_info"))) {
+                for (poly_name in names(gobject@spatial_info)) {
+                    gpoly <- gobject@spatial_info[[poly_name]]
+                    if (is.null(gpoly@overlaps)) next
+                    changed <- FALSE
+                    for (ft in names(feat_uniq_maps)) {
+                        ovlp <- gpoly@overlaps[[ft]]
+                        if (!inherits(ovlp, "SpatVector")) next
+                        ovlp$feat_ID_uniq <-
+                            feat_uniq_maps[[ft]][ovlp$feat_ID_uniq]
+                        gpoly@overlaps[[ft]] <- ovlp
+                        changed <- TRUE
+                    }
+                    if (changed) gobject@spatial_info[[poly_name]] <- gpoly
+                }
+            }
+            # reset gpoints feat_ID_uniq to sequential integers
+            for (ft in names(feat_uniq_maps)) {
+                gpts <- gobject@feat_info[[ft]]
+                gpts@spatVector$feat_ID_uniq <- seq_len(nrow(gpts@spatVector))
+                gobject@feat_info[[ft]] <- gpts
+            }
+        }
+    }
+
     if (!is.null(attr(gobject, "spatial_info"))) {
         info_list <- get_polygon_info_list(gobject)
         # update S4 object if needed
@@ -171,7 +234,7 @@ updateGiottoObject <- function(gobject) {
         ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
     }
 
-    # finally, set updated version number
+    # set updated version number
     .gversion(gobject) <- packageVersion("GiottoClass")
 
     return(gobject)
@@ -220,7 +283,13 @@ updateGiottoObject <- function(gobject) {
     return(x)
 }
 
-
+# for updating pre-0.5.1 objects
+.update_source_slot <- function(x) {
+    checkmate::assert_class(x, "giotto")
+    attr(x, "source") <- list() # init slot
+    x@source <- NULL
+    x
+}
 
 
 
@@ -307,9 +376,9 @@ giotto <- setClass(
         versions = "list",
         join_info = "ANY",
         multiomics = "ANY",
+        source = "ANY",
         h5_file = "ANY",
         misc = "list"
-        # mirai = 'list'
     ),
     prototype = list(
         expression = NULL,
@@ -333,9 +402,9 @@ giotto <- setClass(
         versions = .versions_info(),
         join_info = NULL,
         multiomics = NULL,
+        source = NULL,
         h5_file = NULL,
         misc = list()
-        # mirai = list()
     )
 
     # validity = check_giotto_obj

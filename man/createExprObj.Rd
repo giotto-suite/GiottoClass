@@ -47,7 +47,10 @@ inputs, the first column is used as row names.
 
 Pre-constructed backed matrices (\code{HDF5Array}, \code{dbMatrix}, \code{tiledb_array},
 \code{IterableMatrix}) may also be passed directly to \code{expression_data} and will
-be used as-is.
+be used as-is. If using {GiottoDisk}, expression values will be written to
+the configured backend format when set into the \code{giotto} object, so there
+is no need to construct a backed matrix upfront — pass a regular matrix and
+let the gsource vault handle persistence.
 }
 }
 \examples{

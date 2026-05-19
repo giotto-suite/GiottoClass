@@ -89,6 +89,6 @@ plot(img1)
 e <- ext(img1)
 e <- e - 1000
 
-img2 <- crop(img1, e)s
+img2 <- crop(img1, e)
 plot(img2)
 }

@@ -33,7 +33,7 @@
 
 
 
-# %%%%% NOTE: python and instructions accessors are currently in giotto.R %%%%%#
+# NOTE: python and instructions accessors are currently in giotto.R #
 
 
 
@@ -1566,26 +1566,6 @@ get_expression_values <- function(
     # Get info from slot nesting
     expr_vals <- gobject@expression[[spat_unit]][[feat_type]][[values]]
 
-    # Read matrix from h5 file if needed
-    if (!is.null(slot(gobject, "h5_file"))) {
-        matrix_path <- expr_vals[]
-
-        if (grepl("scaled", matrix_path)) {
-            expression_matrix <- HDF5Array::HDF5Array(
-                filepath = slot(gobject, "h5_file"),
-                name = matrix_path,
-                as.sparse = TRUE
-            )
-        } else {
-            expression_matrix <- chihaya::loadDelayed(
-                file = slot(gobject, "h5_file"),
-                path = matrix_path
-            )
-        }
-
-        slot(expr_vals, "exprMat") <- expression_matrix
-    }
-
     # Output
     if (output == "exprObj") {
         return(expr_vals)
@@ -1668,6 +1648,7 @@ setExpression <- function(gobject,
     feat_type = NULL,
     name = "raw",
     provenance = NULL,
+    write = FALSE,
     verbose = TRUE,
     initialize = TRUE,
     ...) {
@@ -1700,7 +1681,8 @@ setExpression <- function(gobject,
             provenance = provenance,
             verbose = verbose,
             set_defaults = FALSE,
-            initialize = initialize
+            initialize = initialize,
+            write = write
         )
         return(gobject)
     } else if (inherits(x, "list")) {
@@ -1711,8 +1693,6 @@ setExpression <- function(gobject,
             # MULTIPLE INPUT
             # 4. iteratively set
             for (obj_i in seq_along(x)) {
-                # if(isTRUE(verbose)) message('[', obj_i, ']')
-
                 gobject <- set_expression_values(
                     gobject = gobject,
                     values = x[[obj_i]],
@@ -1722,7 +1702,8 @@ setExpression <- function(gobject,
                     provenance = provenance,
                     verbose = verbose,
                     set_defaults = FALSE,
-                    initialize = initialize
+                    initialize = initialize,
+                    write = write
                 )
             }
             return(gobject)
@@ -1763,7 +1744,8 @@ set_expression_values <- function(gobject,
     provenance = NULL,
     verbose = TRUE,
     set_defaults = TRUE,
-    initialize = FALSE) {
+    initialize = FALSE,
+    write = TRUE) {
     assert_giotto(gobject)
 
     if (!inherits(values, c("exprObj", "NULL"))) {
@@ -1866,44 +1848,16 @@ set_expression_values <- function(gobject,
         )
     }
 
-    ## 7. Write matrix to h5_file if needed
-    if (!is.null(slot(gobject, "h5_file"))) {
-        expression_matrix <- slot(values, "exprMat")
-
-        h5_file <- slot(gobject, "h5_file")
-        internal_path <- paste0(feat_type, "_", name)
-        # internal_path_dimnames = paste0(internal_path,"_dimnames")
-
-        if (file.exists(h5_file)) {
-            list_names <- HDF5Array::h5ls(file = h5_file)
-            while (internal_path %in% list_names[["name"]]) {
-                # rhdf5::h5delete(file = h5_file, name = internal_path)
-                internal_path <- paste0(internal_path, "_subset")
-                # internal_path_dimnames = paste0(internal_path,"_dimnames")
-            }
+    ## 7. Write matrix to disk if needed
+    memory_matrix <- c("matrix", "Matrix")
+    if (!is.null(gobject@source)) {
+        gsrc <- .gsource(gobject)
+        mat <- values[]
+        if (inherits(mat, memory_matrix) || isTRUE(write)) {
+            store <- GiottoDisk::sourceWrite(gsrc, mat)
+            values@misc$uid <- store@uid
+            values@exprMat <- GiottoDisk::storeRead(store)
         }
-
-        if (!inherits(expression_matrix, "DelayedArray")) {
-            chihaya::saveDelayed(
-                x = DelayedArray::DelayedArray(expression_matrix),
-                file = h5_file,
-                path = internal_path
-            )
-        } else if (inherits(expression_matrix, "ScaledMatrix")) {
-            expression_matrix <- HDF5Array::writeHDF5Array(expression_matrix,
-                filepath = h5_file,
-                name = internal_path,
-                with.dimnames = TRUE
-            )
-        } else {
-            chihaya::saveDelayed(
-                x = expression_matrix,
-                file = h5_file,
-                path = internal_path
-            )
-        }
-
-        slot(values, "exprMat") <- internal_path
     }
 
     # Output
@@ -1914,10 +1868,6 @@ set_expression_values <- function(gobject,
         return(gobject)
     }
 }
-
-
-
-
 
 
 ## multiomics slot ####
@@ -4521,6 +4471,7 @@ setPolygonInfo <- function(gobject,
     verbose = TRUE,
     initialize = TRUE,
     ...) {
+    checkmate::assert_flag(centroids_to_spatlocs)
     # data.table vars
     poly_ID <- y <- NULL
 
@@ -4546,44 +4497,35 @@ setPolygonInfo <- function(gobject,
             polygon_name = name,
             gpolygon = x,
             verbose = verbose,
-            initialize = !isTRUE(centroids_to_spatlocs) &
-                initialize # delay so centroids can be added
+            initialize = !centroids_to_spatlocs && initialize # delay so centroids can be added
         )
 
-        # Attach centroids if found
-        if (inherits(x, "giottoPolygon") & isTRUE(centroids_to_spatlocs)) {
-            if (!is.null(x@spatVectorCentroids)) {
-                centroids <- x@spatVectorCentroids
-                centroidsDT <- .spatvector_to_dt(centroids)
-                centroidsDT_loc <- centroidsDT[, .(poly_ID, x, y)]
-                colnames(centroidsDT_loc) <- c("cell_ID", "sdimx", "sdimy")
-
-                locsObj <- create_spat_locs_obj(
-                    name = "raw",
-                    coordinates = centroidsDT_loc,
-                    spat_unit = x@name, # tag same spat_unit as poly
-                    provenance = x@name,
-                    misc = NULL
-                )
-
-                ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-                .external_accessor_spatloc <- list(
-                    # set spatlocs 'spat_unit' using 'name' if it was EXPLICITLY
-                    # supplied to setPolygonInfo
-                    # otherwise, set spatlocs 'spat_unit' as x@name
-                    nospec_unit = nospec_name,
-                    # set spatlocs name based on locsObj@name
-                    nospec_name = TRUE
-                )
-                gobject <- set_spatial_locations(gobject,
-                    spatlocs = locsObj,
-                    spat_unit = name, # useif explicit here
-                    verbose = verbose,
-                    set_defaults = FALSE,
-                    initialize = initialize
-                )
-                ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-            }
+        # centroids to spatloc
+        if (inherits(x, "giottoPolygon") && centroids_to_spatlocs) {
+            locsObj <- .ctrs_to_spatlocs(x[],
+                name = "raw",
+                spat_unit = x@name, # tag same spat_unit as poly
+                provenance = x@name,
+                misc = NULL
+            )
+          
+            ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+            .external_accessor_spatloc <- list(
+                # set spatlocs 'spat_unit' using 'name' if it was EXPLICITLY
+                # supplied to setPolygonInfo
+                # otherwise, set spatlocs 'spat_unit' as x@name
+                nospec_unit = nospec_name,
+                # set spatlocs name based on locsObj@name
+                nospec_name = TRUE
+            )
+            gobject <- set_spatial_locations(gobject,
+                spatlocs = locsObj,
+                spat_unit = name, # useif explicit here
+                verbose = verbose,
+                set_defaults = FALSE,
+                initialize = initialize
+            )
+            ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
         }
         return(gobject)
     } else if (inherits(x, "list")) {
@@ -4593,7 +4535,6 @@ setPolygonInfo <- function(gobject,
         )) {
             # 3. iteratively set
             for (obj_i in seq_along(x)) {
-                # if(isTRUE(verbose)) message('[', obj_i, ']')
 
                 gobject <- set_polygon_info(
                     gobject = gobject,
@@ -4604,45 +4545,31 @@ setPolygonInfo <- function(gobject,
                 )
 
                 # Attach centroids if found
-                if (inherits(x[[obj_i]], "giottoPolygon") &
-                    isTRUE(centroids_to_spatlocs)) {
-                    if (!is.null(x[[obj_i]]@spatVectorCentroids)) {
-                        centroids <- x[[obj_i]]@spatVectorCentroids
-                        centroidsDT <- .spatvector_to_dt(centroids)
-                        centroidsDT_loc <- centroidsDT[, .(poly_ID, x, y)]
-                        colnames(centroidsDT_loc) <- c(
-                            "cell_ID", "sdimx", "sdimy"
-                        )
-
-                        locsObj <- create_spat_locs_obj(
-                            name = "raw",
-                            coordinates = centroidsDT_loc,
-                            spat_unit = x[[obj_i]]@name,
-                            # tag same spat_unit as poly
-                            provenance = x[[obj_i]]@name,
-                            # TODO change this if polygons get prov
-                            misc = initialize
-                        )
-
-                        ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-                        .external_accessor_spatloc <- list(
-                            # set spatlocs 'spat_unit' using 'name' if it
-                            # was EXPLICITLY
-                            # supplied to setPolygonInfo
-                            # otherwise, set spatlocs 'spat_unit' as x@name
-                            nospec_unit = nospec_name,
-                            # set spatlocs name based on locsObj@name
-                            nospec_name = TRUE
-                        )
-                        gobject <- set_spatial_locations(gobject,
-                            spatlocs = locsObj,
-                            spat_unit = name, # useif explicit here
-                            verbose = verbose,
-                            set_defaults = FALSE,
-                            initialize = initialize
-                        )
-                        ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-                    }
+                if (centroids_to_spatlocs) {
+                    locsObj <- .ctrs_to_spatlocs(x[[obj_i]][],
+                        name = "raw",
+                        spat_unit = x[[obj_i]]@name, # tag same spat_unit as poly
+                        provenance = x[[obj_i]]@name,
+                        misc = NULL
+                    )
+                  
+                    ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+                    .external_accessor_spatloc <- list(
+                        # set spatlocs 'spat_unit' using 'name' if it was EXPLICITLY
+                        # supplied to setPolygonInfo
+                        # otherwise, set spatlocs 'spat_unit' as x@name
+                        nospec_unit = nospec_name,
+                        # set spatlocs name based on locsObj@name
+                        nospec_name = TRUE
+                    )
+                    gobject <- set_spatial_locations(gobject,
+                        spatlocs = locsObj,
+                        spat_unit = name, # useif explicit here
+                        verbose = verbose,
+                        set_defaults = FALSE,
+                        initialize = initialize
+                    )
+                    ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
                 }
             }
             return(gobject)
@@ -4656,6 +4583,17 @@ setPolygonInfo <- function(gobject,
     ))
 }
 
+.ctrs_to_spatlocs <- function(x, ...) {
+    sldf <- x[, "poly_ID"] |>
+        centroids() |>
+        as.data.frame(geom = "XY")
+    data.table::setDT(sldf)
+    data.table::setnames(sldf,
+        old = c("poly_ID", "x", "y"),
+        new = c("cell_ID", "sdimx", "sdimy")
+    )
+    createSpatLocsObj(sldf, ...)
+}
 
 
 
@@ -4771,6 +4709,15 @@ set_polygon_info <- function(gobject,
                             replaced with new giotto polygon \n')
                 }
             }
+  
+            # Write to disk if needed
+            if (!is.null(gobject@source)) {
+                gsrc <- .gsource(gobject)
+                if (!inherits(gpolygon[[gp_name]][], "dataStore")) {
+                    store <- GiottoDisk::sourceWrite(gsrc, gpolygon[[gp_name]][])
+                    gpolygon[[gp_name]][] <- store
+                }
+            }
 
             # set items
             gobject@spatial_info[[gp_name]] <- gpolygon[[gp_name]]
@@ -4806,6 +4753,15 @@ set_polygon_info <- function(gobject,
             "Setting polygon info [", objName(gpolygon), "] ",
             sep = ""
         )
+    }
+  
+    # Write to disk if needed
+    if (!is.null(gobject@source)) {
+        gsrc <- .gsource(gobject)
+        if (!inherits(gpolygon[], "dataStore")) {
+            store <- GiottoDisk::sourceWrite(gsrc, gpolygon[])
+            gpolygon[] <- store
+        }
     }
 
     gobject@spatial_info[[name]] <- gpolygon
@@ -5045,6 +5001,19 @@ setFeatureInfo <- function(gobject,
 
 
 
+# Detect a 0-feature giottoPoints. Cheap path via cached IDs; falls back to
+# nrow when the cache is empty/unpopulated (which may query disk for a
+# parquetGeomBase-backed gpoints).
+.gpoints_is_empty <- function(x) {
+    if (is.null(x)) return(FALSE)
+    cache <- methods::slot(x, "unique_ID_cache")
+    if (length(cache) > 0L) return(FALSE)
+    n <- try(nrow(x), silent = TRUE)
+    if (inherits(n, "try-error")) return(TRUE)
+    is.na(n) || n == 0L
+}
+
+
 #' @title Set feature info
 #' @name set_feature_info
 #' @description Set giotto polygon spatVector for features
@@ -5162,6 +5131,28 @@ set_feature_info <- function(gobject,
             featType(gpoints[[gp_name]]) <- gp_name
         }
 
+        # drop empty gpoints (e.g. split_keyword with no matches). Avoids
+        # creating placeholder feat_info / feat_metadata entries that
+        # `initialize()` would otherwise propagate and that downstream
+        # would need `sliceGiotto` to clean up.
+        empty_bool <- vapply(gpoints, .gpoints_is_empty,
+            FUN.VALUE = logical(1L))
+        if (any(empty_bool)) {
+            warning(wrap_txt(
+                "Skipping empty giottoPoints (0 features) for feat_type(s):",
+                paste(gp_names[empty_bool], collapse = ", ")
+            ), call. = FALSE)
+            gpoints <- gpoints[!empty_bool]
+            gp_names <- gp_names[!empty_bool]
+        }
+        if (length(gpoints) == 0L) {
+            if (isTRUE(initialize)) {
+                return(initialize(gobject))
+            } else {
+                return(gobject)
+            }
+        }
+
         # replacements warning already given during extract points list
         # (external setter) remove items to replace
         for (gp_name in gp_names) {
@@ -5180,6 +5171,19 @@ set_feature_info <- function(gobject,
     # NOTE: modifies feat_type/gpoints
     gpoints <- read_s4_nesting(gpoints)
 
+    # 4.1 drop empty gpoints (see list branch comment)
+    if (.gpoints_is_empty(gpoints)) {
+        warning(wrap_txt(
+            "Skipping empty giottoPoints (0 features) for feat_type:",
+            feat_type
+        ), call. = FALSE)
+        if (isTRUE(initialize)) {
+            return(initialize(gobject))
+        } else {
+            return(gobject)
+        }
+    }
+
 
     ## 5. check if specified name has already been used
     potential_names <- names(gobject@feat_info)
@@ -5196,6 +5200,15 @@ set_feature_info <- function(gobject,
             "Setting feature info [", featType(gpoints), "] ",
             sep = ""
         )
+    }
+
+     ## 7. Write to disk if needed
+    if (!is.null(gobject@source)) {
+        gsrc <- .gsource(gobject)
+        if (!inherits(gpoints[], "dataStore")) {
+            store <- GiottoDisk::sourceWrite(gsrc, gpoints[])
+            gpoints[] <- store
+        }
     }
 
     gobject@feat_info[[feat_type]] <- gpoints
@@ -6118,10 +6131,11 @@ spatValues <- function(gobject,
             return(NULL)
         }
         if (all(feats %in% featIDs(e))) {
-            vals <- data.table::as.data.table(
-                as.matrix(t_flex(e[][feats, , drop = FALSE])),
-                keep.rownames = TRUE
-            )
+            vals <- e[][feats, , drop = FALSE] |>
+                t_flex() |>
+                methods::as("dgCMatrix") |>
+                as.matrix() |>
+                data.table::as.data.table(keep.rownames = TRUE)
             data.table::setnames(vals, old = "rn", new = "cell_ID")
             vmsg(
                 .v = verbose,

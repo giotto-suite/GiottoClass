@@ -1,6 +1,36 @@
-# GiottoClass 0.5.0
+# GiottoClass 0.6.0
+
+## new
+
+- `giotto` class gains a `source` slot for attaching a `gsource`-inheriting
+  backend manager (see {GiottoDisk}).
+- `createGiottoObject()` gains a `backend` param: accepts a filepath or a
+  `gsource` object.
+    - filepath is converted to a `GiottoDisk::gDirSource` automatically.
+    - if `backend = NULL` -- the usual in-memory path is used.
+- `saveGiotto()` and `loadGiotto()` now delegate to
+  `GiottoDisk::snapshotSave()` / `GiottoDisk::snapshotLoad()` when a
+  `gsource` backend is attached to the object. `foldername` and `dir` params
+  are ignored in that case.
+- On-disk persistence via `GiottoDisk::sourceWrite()` is now triggered inside
+  `set_expression_values()`, `set_polygon_info()`, and `set_feature_info()`
+  when a `gsource` backend is present.
 
 ## changes
+
+- `h5_file` param in `createGiottoObject()` is deprecated; use `backend`
+  instead.
+- `overlapInfo` class exported as an extension point.
+- `updateGiottoObject()` now upgrades pre-0.6.0 objects to initialize the
+  new `source` slot.
+
+
+# GiottoClass 0.5.1 (2026/05/14)
+
+## changes
+- deprecated `area()` in favor of `expanse()`
+- `createExprObj()` no longer coerces to exotic matrix formats -- `expression_matrix_class` param is deprecated
+  - backed matrices (`HDF5Array`, `dbMatrix`, `IterableMatrix`) must be pre-constructed and directly passed to be used.
 - added superseded note to `createGiottoImage()` documentation
 - `calculateOverlap()` and `overlapToMatrix()` param harmonization
 - refactor of `saveGiotto()` and `loadGiotto()`
@@ -11,18 +41,26 @@
 - `overlapPointDT()` and `overlapIntensityDT()` classes to store overlaps relationships efficiently and help with aggregation pipeline
 - `giottoBinPoints` class for efficient binned spatial points
 - `rbind` method for `giottoPoints`
+- `affine2d` class is now exported
 
 ## bug fixes
 - `overlaps()` will now properly find image overlaps
 - fix a naming bug when exporting images during save
+- `SpatVector` -> `data.table` coercion no longer returns empty when it has no attributes
 
+## enhancements
+- `crop()` for `giottoLargeImage`/`giottoAffineImage` is now lazy by default — uses `terra::window()` instead of materializing a crop unless `write = TRUE` or a `filename` is given
+- `giottoPoints` `plot()` gains a `sigma` param for Gaussian smoothing of rasterized density; `count = TRUE` (replaces `dens` param) is now the default
+- image plotting rework -- more params exposed, better defaults
 
 
 # GiottoClass 0.4.12 (2025/12/12)
 
+## bug fixes
+- `seuratToGiottoV5()`/`giottoToSeuratV5()` updated for `layer` param (replacing `slot`)
+
 ## enhancements
 - automatic checking for `"count"` column in feature info
-
 
 ## new
 - `misc` slot for storing unstructured data

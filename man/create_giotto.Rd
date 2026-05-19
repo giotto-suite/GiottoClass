@@ -29,7 +29,8 @@ createGiottoObject(
   cores = determine_cores(),
   raw_exprs = NULL,
   expression_matrix_class = c("dgCMatrix", "DelayedArray"),
-  h5_file = NULL,
+  backend = NULL,
+  h5_file = deprecated(),
   verbose = FALSE
 )
 
@@ -111,7 +112,17 @@ provided}
 \item{expression_matrix_class}{class of expression matrix to
 use (e.g. 'dgCMatrix', 'DelayedArray')}
 
-\item{h5_file}{path to h5 file}
+\item{backend}{backend to use (optional). One of:
+\itemize{
+\item \code{NULL} - (default) in memory object
+\item \code{filepath} - path at which to set up a project directory. Does not have
+to already exist. Sets the backend manager as \code{gDirSource} by default.
+\item \code{gsource}-inheriting - A specific backend manager to use
+}
+
+\code{filepath} and \code{gsource} both require {GiottoDisk}.}
+
+\item{h5_file}{deprecated. Use \code{backend} instead}
 
 \item{verbose}{be verbose when building Giotto object}
 

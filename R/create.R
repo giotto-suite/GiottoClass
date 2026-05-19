@@ -76,7 +76,15 @@ NULL
 #' provided
 #' @param expression_matrix_class class of expression matrix to
 #' use (e.g. 'dgCMatrix', 'DelayedArray')
-#' @param h5_file path to h5 file
+#' @param backend backend to use (optional). One of:
+#' 
+#'   * `NULL` - (default) in memory object
+#'   * `filepath` - path at which to set up a project directory. Does not have
+#'     to already exist. Sets the backend manager as `gDirSource` by default.
+#'   * `gsource`-inheriting - A specific backend manager to use
+#' 
+#'   `filepath` and `gsource` both require {GiottoDisk}.
+#' @param h5_file deprecated. Use `backend` instead
 #' @param verbose be verbose when building Giotto object
 #' @returns `giotto` object
 #' @section single step creation (conventional):
@@ -219,7 +227,8 @@ createGiottoObject <- function(expression,
     cores = determine_cores(),
     raw_exprs = NULL,
     expression_matrix_class = c("dgCMatrix", "DelayedArray"),
-    h5_file = NULL,
+    backend = NULL,
+    h5_file = deprecated(),
     verbose = FALSE) {
     debug_msg <- FALSE # for reading debug help
     initialize_per_step <- FALSE
@@ -236,13 +245,21 @@ createGiottoObject <- function(expression,
         images <- c(images, largeImages)
     }
 
+    if (is_present(h5_file)) backend <- h5_file
+    if (!is.null(backend)) {
+        package_check("GiottoDisk", repository = "github:drieslab/GiottoDisk")
+        if (is.character(backend)) {
+            backend <- GiottoDisk::gDirSource(path = backend)
+        }
+    }
+
     # create minimum giotto
     gobject <- giotto(
         expression_feat = expression_feat,
         offset_file = offset_file,
         instructions = instructions,
         versions = .versions_info(),
-        h5_file = h5_file
+        source = backend
     )
 
 
@@ -376,7 +393,7 @@ createGiottoObject <- function(expression,
 
 
         # Set up gobject cell_ID and feat_ID slots based on expression matrices
-        gobject <- init_cell_and_feat_IDs(gobject)
+        gobject <- .init_cell_and_feat_ids(gobject)
         # needed when initialize per step is FALSE
 
         if (verbose) message("--- finished expression data ---\n")
@@ -1298,7 +1315,10 @@ createGiottoObjectSubcellular <- function(
 #'
 #' Pre-constructed backed matrices (`HDF5Array`, `dbMatrix`, `tiledb_array`,
 #' `IterableMatrix`) may also be passed directly to `expression_data` and will
-#' be used as-is.
+#' be used as-is. If using {GiottoDisk}, expression values will be written to
+#' the configured backend format when set into the `giotto` object, so there
+#' is no need to construct a backed matrix upfront — pass a regular matrix and
+#' let the gsource vault handle persistence.
 #' @inheritParams data_access_params
 #' @param expression_data expression data. Accepts matrix-like data and
 #'   coercible `data.frame` formats (first column used as row names). A
@@ -1414,22 +1434,11 @@ createCellMetaObj <- function(metadata,
     )
 }
 
-
-#' @title create_cell_meta_obj
-#' @name create_cell_meta_obj
-#' @keywords internal
-#' @returns cell_meta_obj
-#'
-#' @export
 create_cell_meta_obj <- function(metaDT = NULL,
     col_desc = NA_character_,
     spat_unit = "cell",
     feat_type = "rna",
     provenance = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_cell_meta_obj()",
-        with = "createCellMetaObj()"
-    )
 
     if (is.null(col_desc)) col_desc <- NA_character_
 
@@ -1493,21 +1502,11 @@ createFeatMetaObj <- function(metadata,
     )
 }
 
-
-#' @title create_feat_meta_obj
-#' @name create_feat_meta_obj
-#' @keywords internal
-#' @returns feat_meta_obj
-#' @export
 create_feat_meta_obj <- function(metaDT = NULL,
     col_desc = NA_character_,
     spat_unit = "cell",
     feat_type = "rna",
     provenance = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_feat_meta_obj()",
-        with = "createFeatMetaObj()"
-    )
 
     if (is.null(col_desc)) col_desc <- NA_character_
 
@@ -1525,10 +1524,6 @@ create_feat_meta_obj <- function(metaDT = NULL,
         feat_type = feat_type
     ))
 }
-
-
-
-
 
 
 
@@ -1578,12 +1573,6 @@ createDimObj <- function(coordinates,
     )
 }
 
-
-#' @title create_dim_obj
-#' @name create_dim_obj
-#' @keywords internal
-#' @returns dim_obj
-#' @export
 create_dim_obj <- function(name = "test",
     reduction = "cells",
     reduction_method = NA_character_,
@@ -1593,10 +1582,6 @@ create_dim_obj <- function(name = "test",
     provenance = NULL,
     misc = NULL,
     my_rownames = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_dim_obj()",
-        with = "createDimObj()"
-    )
 
     if (is.null(reduction_method)) reduction_method <- NA_character_
 
@@ -1675,12 +1660,6 @@ createNearestNetObj <- function(name = "test",
     )
 }
 
-
-#' @title create_nn_net_obj
-#' @name create_nn_net_obj
-#' @keywords internal
-#' @returns nn_net_obj
-#' @export
 create_nn_net_obj <- function(name = "test",
     nn_type = NA_character_,
     igraph = NULL,
@@ -1688,10 +1667,6 @@ create_nn_net_obj <- function(name = "test",
     feat_type = "rna",
     provenance = NULL,
     misc = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_nn_net_obj()",
-        with = "createNearestNetObj()"
-    )
 
     if (is.null(nn_type)) nn_type <- NA_character_
 
@@ -1776,21 +1751,11 @@ createSpatLocsObj <- function(coordinates,
     )
 }
 
-
-#' @title create_spat_locs_obj
-#' @name create_spat_locs_obj
-#' @keywords internal
-#' @returns spat_locs_obj
-#' @export
 create_spat_locs_obj <- function(name = "test",
     coordinates = NULL,
     spat_unit = "cell",
     provenance = NULL,
     misc = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_spat_locs_obj()",
-        with = "createSpatLocsObj()"
-    )
 
     # DT vars
     cell_ID <- NULL
@@ -1877,12 +1842,6 @@ createSpatNetObj <- function(network,
     )
 }
 
-
-#' @title create_spat_net_obj
-#' @name create_spat_net_obj
-#' @keywords internal
-#' @returns spat_net_obj
-#' @export
 create_spat_net_obj <- function(name = "test",
     method = NA_character_,
     parameters = NULL,
@@ -1894,10 +1853,6 @@ create_spat_net_obj <- function(name = "test",
     spat_unit = "cell",
     provenance = NULL,
     misc = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_spat_net_obj()",
-        with = "createSpatNetObj()"
-    )
 
     if (is.null(method)) method <- NA_character_
 
@@ -1965,12 +1920,6 @@ createSpatEnrObj <- function(enrichment_data,
     )
 }
 
-
-#' @title create_spat_enr_obj
-#' @name create_spat_enr_obj
-#' @keywords internal
-#' @returns spat_enr_obj
-#' @export
 create_spat_enr_obj <- function(name = "test",
     method = NA_character_,
     enrichDT = NULL,
@@ -1978,10 +1927,6 @@ create_spat_enr_obj <- function(name = "test",
     feat_type = "rna",
     provenance = NULL,
     misc = NULL) {
-    deprecate_soft("3.3.0",
-        what = "create_spat_enr_obj()",
-        with = "createSpatEnrObj()"
-    )
 
     if (is.null(method)) method <- NA_character_
 
@@ -2045,11 +1990,6 @@ create_spat_grid_obj <- function(name = "test",
         misc = misc
     ))
 }
-
-
-
-
-
 
 
 #' @title Create feature network object
