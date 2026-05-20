@@ -115,6 +115,22 @@ setGeneric("clusterData", function(x, param, ...) standardGeneric("clusterData")
 #' @returns A \code{data.table} of computed values or summary statistics
 #' @export
 setGeneric("analyzeData", function(x, param, ...) standardGeneric("analyzeData"))
+#' @title Data Filter
+#' @name filterData
+#' @description Generic for filtering an object containing measured values,
+#' producing a selection (typically a list of IDs to keep) rather than
+#' transformed data or summary statistics. Specific methods should be
+#' defined for this generic to perform filtering specific to a data class
+#' type. No methods are exported from \pkg{GiottoClass}. The methods, which
+#' may differ depending on the input data, are attached from other packages
+#' which focus on filtering and/or alternative data representations with
+#' specific ways to implement those filters.
+#' @param x a data object
+#' @param param a [filterParam-class] inheriting object
+#' @param ... additional arguments, for use in specific methods
+#' @returns A selection (typically a list of character ID vectors)
+#' @export
+setGeneric("filterData", function(x, param, ...) standardGeneric("filterData"))
 
 # spatial operations ####
 setGeneric(

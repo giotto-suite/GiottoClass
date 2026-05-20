@@ -12,6 +12,7 @@
 \alias{$,affine2d-method}
 \alias{$,processParam-method}
 \alias{$,analyzeParam-method}
+\alias{$,filterParam-method}
 \title{Subset part of an object with \code{$}}
 \usage{
 \S4method{$}{giotto}(x, name)
@@ -31,6 +32,8 @@
 \S4method{$}{processParam}(x, name)
 
 \S4method{$}{analyzeParam}(x, name)
+
+\S4method{$}{filterParam}(x, name)
 }
 \arguments{
 \item{x}{Giotto S4 object to extract columns from}
@@ -75,6 +78,9 @@ Select param from \code{processParam} inheriting objects
 
 
 Select param from \code{analyzeParam} inheriting objects
+
+
+Select param from \code{filterParam} inheriting objects
 }
 
 \examples{

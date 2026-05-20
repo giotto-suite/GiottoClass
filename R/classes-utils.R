@@ -88,6 +88,23 @@ setClass("processParam", contains = "VIRTUAL", slots = list(param = "list"))
 #' @exportClass analyzeParam
 setClass("analyzeParam", contains = "VIRTUAL", slots = list(param = "list"))
 
+# ** filterParam ####
+
+#' @title Parameter Classes for Data Filter Operations
+#' @name filterParam-class
+#' @aliases filterParam
+#' @description
+#' Utility class that defines a data filter procedure and any params used
+#' in performing it. Packages defining filter methods will create their own
+#' child classes. These parameter objects are intended to be passed alongside
+#' the data to filter to [filterData()]. Filter methods return a selection
+#' (typically `list(feats_keep, cells_keep)` of character IDs) rather than
+#' transformed data, distinguishing them from [processData()].
+#' @slot param list. Named parameters to use with the intended filter
+#' operation. These can be accessed and updated using the `$` operator.
+#' @exportClass filterParam
+setClass("filterParam", contains = "VIRTUAL", slots = list(param = "list"))
+
 
 
 # ** svkey ####

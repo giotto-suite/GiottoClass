@@ -397,6 +397,30 @@ setMethod(
     }
 )
 
+#' @rdname subset_dollar
+#' @section \code{`$`} methods:
+#'   Select param from `filterParam` inheriting objects
+#' @export
+setMethod("$", signature("filterParam"), function(x, name) {
+    x@param[[name]]
+})
+#' @export
+.DollarNames.filterParam <- function(x, pattern) {
+    names(x@param)
+}
+
+#' @rdname replace_dollar
+#' @section \code{`$<-`} methods:
+#'   Set values by param name into `filterParam` inheriting objects
+#' @export
+setMethod(
+    "$<-", signature("filterParam"),
+    function(x, name, value) {
+        x@param[[name]] <- value
+        return(initialize(x))
+    }
+)
+
 # [ S4 access generic ####
 
 
