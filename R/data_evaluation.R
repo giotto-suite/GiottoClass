@@ -99,7 +99,11 @@ evaluate_input <- function(type, x, ...) {
 
     accepted_classes <- c(
         "Matrix", "DelayedMatrix", "dbMatrix", "IterableMatrix",
-        "tiledb_array", "ScaledMatrix"
+        "tiledb_array", "ScaledMatrix",
+        # GiottoDisk's streaming expression backend; passed through
+        # unchanged so exprObj-wrapping in normalizeGiotto / convenience
+        # readers preserves the lazy parquet recipe.
+        "parquetExprStore"
     )
   
     # Main decision tree for converting inputmatrix
