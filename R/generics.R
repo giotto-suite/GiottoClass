@@ -131,6 +131,25 @@ setGeneric("analyzeData", function(x, param, ...) standardGeneric("analyzeData")
 #' @returns A selection (typically a list of character ID vectors)
 #' @export
 setGeneric("filterData", function(x, param, ...) standardGeneric("filterData"))
+#' @title Data Reduction
+#' @name reduceData
+#' @description Generic for reducing an object containing measured values
+#' to a lower-dimensional decomposition or embedding (PCA, UMAP, tSNE,
+#' ...), distinct from [processData()] (same-shape transform),
+#' [analyzeData()] (summary stats), and [filterData()] (selection).
+#' Specific methods should be defined for this generic to perform
+#' reductions specific to a data class type. No methods are exported from
+#' \pkg{GiottoClass}. The methods, which may differ depending on the input
+#' data, are attached from other packages which focus on reduction methods
+#' and/or alternative data representations with specific ways to implement
+#' those reductions.
+#' @param x a data object
+#' @param param a [reduceParam-class] inheriting object
+#' @param ... additional arguments, for use in specific methods
+#' @returns A decomposition (typically a list of matrices/vectors,
+#' e.g. `list(u, d, v, sdev, eigenvalues)` for PCA)
+#' @export
+setGeneric("reduceData", function(x, param, ...) standardGeneric("reduceData"))
 
 # spatial operations ####
 setGeneric(

@@ -12,6 +12,7 @@
 \alias{$<-,processParam-method}
 \alias{$<-,analyzeParam-method}
 \alias{$<-,filterParam-method}
+\alias{$<-,reduceParam-method}
 \title{Replace part of an object with \verb{$<-}}
 \usage{
 \S4method{$}{giotto}(x, name) <- value
@@ -31,6 +32,8 @@
 \S4method{$}{analyzeParam}(x, name) <- value
 
 \S4method{$}{filterParam}(x, name) <- value
+
+\S4method{$}{reduceParam}(x, name) <- value
 }
 \arguments{
 \item{x}{Giotto S4 object to replace columns from}
@@ -72,6 +75,9 @@ Set values by param name into \code{analyzeParam} inheriting objects
 
 
 Set values by param name into \code{filterParam} inheriting objects
+
+
+Set values by param name into \code{reduceParam} inheriting objects
 }
 
 \examples{

@@ -105,6 +105,25 @@ setClass("analyzeParam", contains = "VIRTUAL", slots = list(param = "list"))
 #' @exportClass filterParam
 setClass("filterParam", contains = "VIRTUAL", slots = list(param = "list"))
 
+# ** reduceParam ####
+
+#' @title Parameter Classes for Data Reduction Operations
+#' @name reduceParam-class
+#' @aliases reduceParam
+#' @description
+#' Utility class that defines a dimensionality-reduction or decomposition
+#' procedure and any params used in performing it. Packages defining
+#' reduction methods (PCA, UMAP, tSNE, ...) will create their own child
+#' classes. These parameter objects are intended to be passed alongside the
+#' data to reduce to [reduceData()]. Reduction methods return a decomposition
+#' (typically a list of matrices/vectors such as `list(u, d, v, ...)`),
+#' distinguishing them from [processData()] (same-shape transform),
+#' [analyzeData()] (summary stats), and [filterData()] (selection).
+#' @slot param list. Named parameters to use with the intended reduction
+#' operation. These can be accessed and updated using the `$` operator.
+#' @exportClass reduceParam
+setClass("reduceParam", contains = "VIRTUAL", slots = list(param = "list"))
+
 
 
 # ** svkey ####
