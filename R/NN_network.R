@@ -427,6 +427,85 @@ setMethod("createNetwork", signature("matrix", "missing"),
 )
 
 
+# Higher-level dispatches ####
+
+#' @rdname createNetwork
+setMethod("createNetwork", signature("spatLocsObj", "networkParam"),
+    function(x, param, node_ids = NULL, ...) {
+        sl_dt <- x[]
+        coord_cols <- intersect(c("sdimx", "sdimy", "sdimz"), names(sl_dt))
+        coords <- as.matrix(sl_dt[, coord_cols, with = FALSE])
+        if (is.null(node_ids) && "cell_ID" %in% names(sl_dt)) {
+            node_ids <- sl_dt$cell_ID
+        }
+        createNetwork(coords, param, node_ids = node_ids, ...)
+    }
+)
+
+#' @rdname createNetwork
+#' @param dimensions_to_use integer vector; columns of the `dimObj` matrix
+#'   to keep when building the network. `NULL` (default) keeps all.
+setMethod("createNetwork", signature("dimObj", "networkParam"),
+    function(x, param, dimensions_to_use = NULL, ...) {
+        mat <- x[]
+        if (!is.null(dimensions_to_use)) {
+            dimensions_to_use <- dimensions_to_use[
+                dimensions_to_use %in% seq_len(ncol(mat))
+            ]
+            mat <- mat[, dimensions_to_use, drop = FALSE]
+        }
+        createNetwork(mat, param, ...)
+    }
+)
+
+#' @rdname createNetwork
+#' @param spat_unit spatial unit (`giotto` method)
+#' @param feat_type feature type (`giotto` method, NN networks)
+#' @param dim_reduction_to_use name of the reduction family to pull from the
+#'   `giotto` object (default `"pca"`). NN networks only.
+#' @param dim_reduction_name specific reduction name. NN networks only.
+#' @param spat_loc_name spatial-locations name. Delaunay only.
+setMethod("createNetwork", signature("giotto", "NNNetworkParam"),
+    function(x, param,
+            spat_unit = NULL, feat_type = NULL,
+            dim_reduction_to_use = "pca", dim_reduction_name = NULL,
+            dimensions_to_use = seq_len(10L), ...) {
+        spat_unit <- set_default_spat_unit(x, spat_unit = spat_unit)
+        feat_type <- set_default_feat_type(x,
+            spat_unit = spat_unit, feat_type = feat_type
+        )
+        if (is.null(dim_reduction_name)) {
+            dim_reduction_name <- if (feat_type == "rna") {
+                dim_reduction_to_use
+            } else {
+                paste0(feat_type, ".", dim_reduction_to_use)
+            }
+        }
+        dim_obj <- get_dimReduction(x,
+            spat_unit = spat_unit, feat_type = feat_type,
+            reduction = "cells", reduction_method = dim_reduction_to_use,
+            name = dim_reduction_name, output = "dimObj"
+        )
+        createNetwork(dim_obj, param,
+            dimensions_to_use = dimensions_to_use, ...)
+    }
+)
+
+#' @rdname createNetwork
+setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
+    function(x, param,
+            spat_unit = NULL, spat_loc_name = "raw", ...) {
+        spat_unit <- set_default_spat_unit(x, spat_unit = spat_unit)
+        sl <- get_spatial_locations(x,
+            spat_unit = spat_unit,
+            spat_loc_name = spat_loc_name,
+            output = "spatLocsObj"
+        )
+        createNetwork(sl, param, ...)
+    }
+)
+
+
 # x input is a matrix
 .net_dt_knn <- function(
         x, k = 30L, include_weight = TRUE, include_distance = TRUE,

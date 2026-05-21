@@ -6,6 +6,10 @@
 \alias{createNetwork,matrix,sNNNetworkParam-method}
 \alias{createNetwork,matrix,delaunayNetworkParam-method}
 \alias{createNetwork,matrix,missing-method}
+\alias{createNetwork,spatLocsObj,networkParam-method}
+\alias{createNetwork,dimObj,networkParam-method}
+\alias{createNetwork,giotto,NNNetworkParam-method}
+\alias{createNetwork,giotto,delaunayNetworkParam-method}
 \title{Create a Network}
 \usage{
 createNetwork(x, param, ...)
@@ -29,6 +33,23 @@ createNetwork(x, param, ...)
   backend = NULL,
   ...
 )
+
+\S4method{createNetwork}{spatLocsObj,networkParam}(x, param, node_ids = NULL, ...)
+
+\S4method{createNetwork}{dimObj,networkParam}(x, param, dimensions_to_use = NULL, ...)
+
+\S4method{createNetwork}{giotto,NNNetworkParam}(
+  x,
+  param,
+  spat_unit = NULL,
+  feat_type = NULL,
+  dim_reduction_to_use = "pca",
+  dim_reduction_name = NULL,
+  dimensions_to_use = seq_len(10L),
+  ...
+)
+
+\S4method{createNetwork}{giotto,delaunayNetworkParam}(x, param, spat_unit = NULL, spat_loc_name = "raw", ...)
 }
 \arguments{
 \item{x}{a data object (matrix, \linkS4class{spatLocsObj}, \linkS4class{dimObj},
@@ -37,6 +58,20 @@ createNetwork(x, param, ...)
 \item{param}{a \linkS4class{networkParam}-inheriting object}
 
 \item{...}{additional arguments, for use in specific methods}
+
+\item{dimensions_to_use}{integer vector; columns of the \code{dimObj} matrix
+to keep when building the network. \code{NULL} (default) keeps all.}
+
+\item{spat_unit}{spatial unit (\code{giotto} method)}
+
+\item{feat_type}{feature type (\code{giotto} method, NN networks)}
+
+\item{dim_reduction_to_use}{name of the reduction family to pull from the
+\code{giotto} object (default \code{"pca"}). NN networks only.}
+
+\item{dim_reduction_name}{specific reduction name. NN networks only.}
+
+\item{spat_loc_name}{spatial-locations name. Delaunay only.}
 }
 \value{
 A network. Concrete type depends on the Param's \code{output} slot
