@@ -124,6 +124,24 @@ setClass("filterParam", contains = "VIRTUAL", slots = list(param = "list"))
 #' @exportClass reduceParam
 setClass("reduceParam", contains = "VIRTUAL", slots = list(param = "list"))
 
+# ** networkParam ####
+
+#' @title Parameter Classes for Network Construction
+#' @name networkParam-class
+#' @aliases networkParam
+#' @description
+#' Utility class that defines a network-construction procedure (kNN, sNN,
+#' Delaunay, ...) and any params used in performing it. Packages defining
+#' network methods will create their own child classes. These parameter
+#' objects are intended to be passed alongside data to [createNetwork()].
+#' Network constructors return a graph (edges and optionally weights /
+#' distances), distinguishing them from analysis-stage operations such as
+#' [processData()], [filterData()], [reduceData()], and [analyzeData()].
+#' @slot param list. Named parameters to use with the intended network
+#' operation. Accessed and updated via the `$` operator.
+#' @exportClass networkParam
+setClass("networkParam", contains = "VIRTUAL", slots = list(param = "list"))
+
 
 
 # ** svkey ####
