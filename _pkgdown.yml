@@ -222,6 +222,7 @@ reference:
   - subsetGiottoLocs
   - subsetGiottoLocsMulti
   - subsetGiottoLocsSubcellular
+  - headtail
 - title: Join and Split
   desc: Joining and Splitting Giotto Objects
 - contents:
@@ -265,6 +266,7 @@ reference:
   - aggregateStacksLocations
   - aggregateStacksPolygonOverlaps
   - aggregateStacksPolygons
+  - aggregateFeatures
   - combineToMultiPolygon
 - subtitle: Feature
   desc: Calculate spatial features overlapped by polygons
@@ -321,6 +323,7 @@ reference:
   desc: Spatial manipulation and terra-based functions
 - contents:
   - ext
+  - expanse
   - XY
   - flip
   - crop
