@@ -363,21 +363,20 @@ createNetwork <- function(
     )
 
     geometry_obj <- list("delaunay_simplex_mat" = delaunay_simplex_mat)
-    edge_combs <- combn(x = ncol(delaunay_simplex_mat), m = 2L)
-    delaunay_edges <- data.table::as.data.table(apply(
-        edge_combs,
-        MARGIN = 1L, function(comb) delaunay_simplex_mat[, comb]
-    ))
 
-    ### making sure of no duplication ###
-    delaunay_edges_dedup <- unique(delaunay_edges)
-    igraph_obj <- igraph::graph_from_edgelist(as.matrix(delaunay_edges_dedup))
-    adj_obj <- igraph::as_adjacency_matrix(igraph_obj)
-    igraph_obj2 <- igraph::graph.adjacency(adj_obj)
-    delaunay_edges_dedup2 <- igraph::get.data.frame(igraph_obj2)
-    delaunay_network_dt <- data.table::as.data.table(delaunay_edges_dedup2)
-    delaunay_network_dt[, from := as.integer(from)]
-    delaunay_network_dt[, to := as.integer(to)]
+    # expand each simplex into its (d+1 choose 2) edges
+    edge_combs <- combn(x = ncol(delaunay_simplex_mat), m = 2L)
+    from_idx <- as.vector(delaunay_simplex_mat[, edge_combs[1L, ]])
+    to_idx <- as.vector(delaunay_simplex_mat[, edge_combs[2L, ]])
+
+    # canonicalize as undirected pairs (from < to), then dedupe
+    swap <- from_idx > to_idx
+    tmp <- from_idx[swap]
+    from_idx[swap] <- to_idx[swap]
+    to_idx[swap] <- tmp
+    delaunay_network_dt <- unique(data.table::data.table(
+        from = from_idx, to = to_idx
+    ))
     data.table::setorder(delaunay_network_dt, from, to)
 
     # needed for filtering
