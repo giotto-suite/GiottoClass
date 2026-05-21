@@ -1,173 +1,6 @@
 ## Spatial structure helper functions ####
 
 
-#' @title convert_to_full_spatial_network
-#' @name convert_to_full_spatial_network
-#' @description Convert to a full spatial network, ie ensuring that all edges
-#' that may currently only be represented as \eqn{a} -> \eqn{b} also have the
-#' reverse \eqn{b} -> \eqn{a}. The entries are then made unique, after which all
-#' interactions are ranked by distance, where rank increases from smaller to
-#' larger distances. This rank is appended to the `data.table` as a `rank_int`
-#' column. Another `rnk_src_trgt` column is added with the IDs of \eqn{a} and
-#' \eqn{b} pasted together
-#' @param reduced_spatial_network_DT reduced spatial network in `data.table`
-#' format
-#' @returns data.table
-#' @keywords internal
-#' @examples
-#' g <- GiottoData::loadGiottoMini("visium")
-#' spat_net <- getSpatialNetwork(g, output = "networkDT")
-#'
-#' spat_net_full <- convert_to_full_spatial_network(spat_net)
-#' @export
-convert_to_full_spatial_network <- function(reduced_spatial_network_DT) {
-    # data.table variables
-    distance <- rank_int <- NULL
-
-    # find location coordinates cols
-    coordinates <- grep("sdim", colnames(reduced_spatial_network_DT),
-        value = TRUE
-    )
-
-    # convert names from sdimx_being and sdimy_begin to source_x and source_y
-    begin_coordinates <- grep("begin", coordinates, value = TRUE)
-    new_begin_coordinates <- gsub(
-        x = begin_coordinates, pattern = "_begin",
-        replacement = ""
-    )
-    new_begin_coordinates <- gsub(
-        x = new_begin_coordinates, pattern = "sdim",
-        replacement = "source_"
-    )
-
-    # convert names from sdimx_end and sdimy_end to target_x and target_y
-    end_coordinates <- grep("end", coordinates, value = TRUE)
-    new_end_coordinates <- gsub(
-        x = end_coordinates, pattern = "_end",
-        replacement = ""
-    )
-    new_end_coordinates <- gsub(
-        x = new_end_coordinates, pattern = "sdim",
-        replacement = "target_"
-    )
-
-    # create normal source --> target
-    part1 <- data.table::copy(reduced_spatial_network_DT)
-    part1 <- part1[, c(
-        "from", "to", begin_coordinates, end_coordinates,
-        "distance", "weight"
-    ), with = FALSE]
-    colnames(part1) <- c(
-        "source", "target", new_begin_coordinates,
-        new_end_coordinates, "distance", "weight"
-    )
-
-    # revert order target (now source) --> source (now target)
-    part2 <- data.table::copy(reduced_spatial_network_DT[, c(
-        "to", "from",
-        end_coordinates, begin_coordinates, "distance", "weight"
-    ),
-    with = FALSE
-    ])
-    colnames(part2) <- c(
-        "source", "target", new_begin_coordinates,
-        new_end_coordinates, "distance", "weight"
-    )
-
-    # combine and remove duplicates
-    full_spatial_network_DT <- rbind(part1, part2)
-    full_spatial_network_DT <- unique(full_spatial_network_DT)
-
-    # create ranking of interactions by distance per source
-    # the lower the ranking, the shorter the distance
-    data.table::setorder(full_spatial_network_DT, source, distance)
-    full_spatial_network_DT[, rank_int := seq_len(.N), by = "source"]
-
-    # create unified column for source and target as rnk_src_trgt
-    full_spatial_network_DT <- dt_sort_combine_two_columns(
-        full_spatial_network_DT, "source", "target", "rnk_src_trgt"
-    )
-
-    return(full_spatial_network_DT)
-}
-
-#' @title convert_to_reduced_spatial_network
-#' @name convert_to_reduced_spatial_network
-#' @description Convert to a reduced spatial network. Specifically, removes
-#' the duplicated connections so that only \eqn{a} -> \eqn{b} interactions
-#' remain.
-#' @param full_spatial_network_DT full spatial network in data.table format
-#' @returns data.table
-#' @keywords internal
-#' @examples
-#' g <- GiottoData::loadGiottoMini("visium")
-#' spat_net <- getSpatialNetwork(g, output = "networkDT")
-#' spat_net_full <- convert_to_full_spatial_network(spat_net)
-#'
-#' convert_to_reduced_spatial_network(spat_net_full)
-#' @export
-convert_to_reduced_spatial_network <- function(full_spatial_network_DT) {
-    # data.table variables
-    rnk_src_trgt <- NULL
-
-    # remove duplicates
-    reduced_spatial_network_DT <- full_spatial_network_DT[
-        !duplicated(rnk_src_trgt)
-    ]
-    reduced_spatial_network_DT[, c("rank_int", "rnk_src_trgt") := NULL]
-    # don't make sense in a reduced network
-
-    # TODO moving forward, coords info start/end may not be included 24.02.12
-    has_coords <- any(grepl(
-        "source_|target_",
-        x = colnames(reduced_spatial_network_DT)
-    ))
-
-    if (!has_coords) {
-        data.table::setnames(
-            reduced_spatial_network_DT,
-            old = c("source", "target"),
-            new = c("from", "to")
-        )
-        return(reduced_spatial_network_DT)
-    }
-
-    # return col names to sdimx/sdimy naming scheme
-    # convert to names for a reduced network
-    source_coordinates <- grep("source_",
-        colnames(reduced_spatial_network_DT),
-        value = TRUE
-    )
-    new_source_coordinates <- gsub(
-        x = source_coordinates, pattern = "source_",
-        replacement = "sdim"
-    )
-    new_source_coordinates <- paste0(new_source_coordinates, "_begin")
-
-    target_coordinates <- grep("target_", colnames(reduced_spatial_network_DT),
-        value = TRUE
-    )
-    new_target_coordinates <- gsub(
-        x = target_coordinates, pattern = "target_",
-        replacement = "sdim"
-    )
-    new_target_coordinates <- paste0(new_target_coordinates, "_end")
-
-    reduced_spatial_network_DT <- reduced_spatial_network_DT[,
-        c(
-            "source", "target", source_coordinates, target_coordinates,
-            "distance", "weight"
-        ),
-        with = FALSE
-    ]
-    colnames(reduced_spatial_network_DT) <- c(
-        "from", "to",
-        new_source_coordinates, new_target_coordinates,
-        "distance", "weight"
-    )
-    return(reduced_spatial_network_DT)
-}
-
 
 
 #' @title Calculate spatial network distance and weight
@@ -276,24 +109,28 @@ get_distance <- function(networkDT,
 #' @returns data.table
 .filter_network <- function(networkDT = NULL,
     maximum_distance = NULL,
-    minimum_k = NULL) {
+    minimum_k = 0L) {
     # data.table variables
-    distance <- rank_int <- NULL
+    distance <- rank_from <- rank_to <- from <- to <- NULL
 
-    temp_fullnetwork <- convert_to_full_spatial_network(networkDT)
+    if (is.null(maximum_distance)) return(networkDT)
 
-    ## filter based on distance or minimum number of neighbors
-    if (isTRUE(maximum_distance == "auto")) {
-        temp_fullnetwork <- temp_fullnetwork[
-            distance <= grDevices::boxplot.stats(temp_fullnetwork$distance)$stats[5] | rank_int <= minimum_k
-        ]
-    } else if (!is.null(maximum_distance)) {
-        temp_fullnetwork <- temp_fullnetwork[distance <= maximum_distance |
-            rank_int <= minimum_k]
-    }
-    networkDT <- convert_to_reduced_spatial_network(temp_fullnetwork)
+    dt <- data.table::copy(networkDT)
 
-    return(networkDT)
+    # per-side distance rank — lets the `minimum_k` floor apply
+    # symmetrically (each node retains at least k neighbours) without
+    # expanding the canonical (from < to) representation.
+    data.table::setorder(dt, from, distance)
+    dt[, rank_from := seq_len(.N), by = "from"]
+    data.table::setorder(dt, to, distance)
+    dt[, rank_to := seq_len(.N), by = "to"]
+
+    cutoff <- if (isTRUE(maximum_distance == "auto")) {
+        grDevices::boxplot.stats(dt$distance)$stats[5]
+    } else maximum_distance
+
+    dt <- dt[distance <= cutoff | rank_from <= minimum_k | rank_to <= minimum_k]
+    dt[, c("rank_from", "rank_to") := NULL][]
 }
 
 
@@ -832,38 +669,44 @@ annotateSpatialNetwork <- function(gobject,
         output = "networkDT"
     )
 
-
-
-    if (create_full_network == TRUE) {
-        spatial_network <- convert_to_full_spatial_network(spatial_network)
-
-        # convert to names for a reduced network
-        source_coordinates <- grep("source_", colnames(spatial_network),
-            value = TRUE
-        )
-        new_source_coordinates <- gsub(
-            x = source_coordinates,
-            pattern = "source_", replacement = "sdim"
-        )
-        new_source_coordinates <- paste0(new_source_coordinates, "_begin")
-
-        target_coordinates <- grep("target_", colnames(spatial_network),
-            value = TRUE
-        )
-        new_target_coordinates <- gsub(
-            x = target_coordinates,
-            pattern = "target_", replacement = "sdim"
-        )
-        new_target_coordinates <- paste0(new_target_coordinates, "_end")
-
-        data.table::setnames(spatial_network,
-            old = c("source", "target", source_coordinates, target_coordinates),
-            new = c(
-                "from", "to", new_source_coordinates,
-                new_target_coordinates
-            )
-        )
+    if (isTRUE(create_full_network)) {
+        # expand canonical (from, to) to both directions
+        rev <- data.table::copy(spatial_network)
+        data.table::setnames(rev, c("from", "to"), c("to", "from"))
+        spatial_network <- unique(rbind(spatial_network, rev))
     }
+
+    # Attach sdim*_begin / sdim*_end coords from spatLocsObj. Networks
+    # no longer cache coords (as of 0.6.0), so we join them here for
+    # downstream consumers that draw line segments. These are read from
+    # the live spatLocsObj so any spatial transforms automatically
+    # propagate.
+    sl_dt <- getSpatialLocations(gobject,
+        spat_unit = spat_unit, output = "data.table"
+    )
+    coord_cols <- intersect(c("sdimx", "sdimy", "sdimz"), names(sl_dt))
+    sl_keys <- sl_dt[, c("cell_ID", coord_cols), with = FALSE]
+    begin_cols <- paste0(coord_cols, "_begin")
+    end_cols <- paste0(coord_cols, "_end")
+
+    spatial_network <- merge(
+        spatial_network,
+        data.table::setnames(
+            data.table::copy(sl_keys),
+            c("cell_ID", coord_cols),
+            c("from", begin_cols)
+        ),
+        by = "from"
+    )
+    spatial_network <- merge(
+        spatial_network,
+        data.table::setnames(
+            data.table::copy(sl_keys),
+            c("cell_ID", coord_cols),
+            c("to", end_cols)
+        ),
+        by = "to"
+    )
 
 
 

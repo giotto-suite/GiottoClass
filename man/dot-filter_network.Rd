@@ -4,7 +4,7 @@
 \alias{.filter_network}
 \title{Filter spatial network}
 \usage{
-.filter_network(networkDT = NULL, maximum_distance = NULL, minimum_k = NULL)
+.filter_network(networkDT = NULL, maximum_distance = NULL, minimum_k = 0L)
 }
 \arguments{
 \item{networkDT}{spatial network in data.table format}

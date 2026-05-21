@@ -3541,22 +3541,12 @@ set_NearestNetwork <- function(gobject,
 get_spatialNetwork <- function(gobject,
     spat_unit = NULL,
     name = NULL,
-    output = c(
-        "spatialNetworkObj",
-        "networkDT",
-        "networkDT_before_filter",
-        "outputObj"
-    ),
+    output = c("spatialNetworkObj", "igraph", "networkDT", "unfiltered", "outputObj"),
     set_defaults = TRUE,
     copy_obj = TRUE,
     verbose = TRUE,
     simplify = TRUE) {
-    output <- match.arg(output, choices = c(
-        "spatialNetworkObj",
-        "networkDT",
-        "networkDT_before_filter",
-        "outputObj"
-    ))
+    output <- match.arg(output, choices = c("spatialNetworkObj", "igraph", "networkDT", "unfiltered", "outputObj"))
     all_su <- identical(spat_unit, ":all:")
 
     # spatial unit defaults
@@ -3627,24 +3617,28 @@ get_spatialNetwork <- function(gobject,
     if (!inherits(out, "list")) out <- list(out)
     names(out) <- NULL # remove names
 
-    # process for output
+    # process for output. spatialNetworkObj@network is now an igraph
+    # (canonical as of GiottoClass 0.6.0) so copy_obj is no longer
+    # meaningful for the network contents — igraph is copy-on-modify.
+    # NOTE: accessor_rework branch will need to pull these changes
+    # when it merges; expect minor conflicts here.
     out <- lapply(out, function(x) {
-        if (isTRUE(copy_obj)) {
-            x[] <- data.table::copy(x[])
-            if (!is.null(x@unfiltered)) {
-                x@unfiltered <- data.table::copy(
-                    x@unfiltered
+        as_dt <- function(g) {
+            if (inherits(g, "igraph")) {
+                data.table::as.data.table(
+                    igraph::as_data_frame(g, what = "edges")
                 )
+            } else {
+                g
             }
         }
-
-        res <- switch(output,
+        switch(output,
             "spatialNetworkObj" = x,
-            "networkDT" = x[],
-            "unfiltered" = x@unfiltered,
+            "igraph" = x[],
+            "networkDT" = as_dt(x[]),
+            "unfiltered" = as_dt(x@unfiltered),
             "outputObj" = x@outputObj
         )
-        return(res)
     })
     if (isTRUE(simplify)) out <- .simplify_list(out)
     return(out)
@@ -3677,12 +3671,7 @@ get_spatialNetwork <- function(gobject,
 getSpatialNetwork <- function(gobject,
     spat_unit = NULL,
     name = NULL,
-    output = c(
-        "spatialNetworkObj",
-        "networkDT",
-        "networkDT_before_filter",
-        "outputObj"
-    ),
+    output = c("spatialNetworkObj", "igraph", "networkDT", "unfiltered", "outputObj"),
     set_defaults = TRUE,
     copy_obj = TRUE,
     verbose = TRUE,
@@ -3713,22 +3702,12 @@ getSpatialNetwork <- function(gobject,
 #' @noRd
 get_spatial_network_list <- function(gobject,
     spat_unit = NULL,
-    output = c(
-        "spatialNetworkObj",
-        "networkDT",
-        "networkDT_before_filter",
-        "outputObj"
-    ),
+    output = c("spatialNetworkObj", "igraph", "networkDT", "unfiltered", "outputObj"),
     set_defaults = TRUE,
     copy_obj = TRUE) {
     checkmate::assert_class(gobject, "giotto")
 
-    output <- match.arg(output, choices = c(
-        "spatialNetworkObj",
-        "networkDT",
-        "networkDT_before_filter",
-        "outputObj"
-    ))
+    output <- match.arg(output, choices = c("spatialNetworkObj", "igraph", "networkDT", "unfiltered", "outputObj"))
 
     if (isTRUE(set_defaults)) {
         spat_unit <- set_default_spat_unit(
@@ -3752,16 +3731,24 @@ get_spatial_network_list <- function(gobject,
         return(NULL)
     }
 
-    # copy object
-    if (isTRUE(copy_obj)) data_list <- lapply(data_list, copy)
-
-    # return object list
+    # return object list. spatialNetworkObj@network is an igraph
+    # (canonical as of 0.6.0); igraph is copy-on-modify so `copy_obj` is
+    # a no-op here. NOTE: accessor_rework branch may need to align with
+    # these output choices when it merges.
+    as_dt <- function(g) {
+        if (inherits(g, "igraph")) {
+            data.table::as.data.table(
+                igraph::as_data_frame(g, what = "edges")
+            )
+        } else g
+    }
     switch(output,
         "spatialNetworkObj" = return(data_list),
-        "networkDT" = return(lapply(data_list, `[`)),
-        "networkDT_before_filter" = {
-            return(lapply(data_list, slot, "networkDT_before_filter"))
-        },
+        "igraph" = return(lapply(data_list, `[`)),
+        "networkDT" = return(lapply(data_list, function(x) as_dt(x[]))),
+        "unfiltered" = return(lapply(data_list,
+            function(x) as_dt(slot(x, "unfiltered"))
+        )),
         "outputObj" = return(lapply(data_list, slot, "outputObj"))
     )
 }
