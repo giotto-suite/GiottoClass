@@ -43,9 +43,11 @@ createNetwork(x, param, ...)
   param,
   spat_unit = NULL,
   feat_type = NULL,
+  space = c("expression", "spatial"),
   dim_reduction_to_use = "pca",
   dim_reduction_name = NULL,
   dimensions_to_use = seq_len(10L),
+  spat_loc_name = "raw",
   ...
 )
 
@@ -66,12 +68,19 @@ to keep when building the network. \code{NULL} (default) keeps all.}
 
 \item{feat_type}{feature type (\code{giotto} method, NN networks)}
 
+\item{space}{for NN networks on a \code{giotto} object: which space the
+neighborhood is defined in. Default \code{"expression"} (pulls a
+dimension reduction such as PCA). Set to \code{"spatial"} to build a
+spatial kNN/sNN from cell coordinates.}
+
 \item{dim_reduction_to_use}{name of the reduction family to pull from the
-\code{giotto} object (default \code{"pca"}). NN networks only.}
+\code{giotto} object (default \code{"pca"}). Only used when \code{space = "expression"}.}
 
-\item{dim_reduction_name}{specific reduction name. NN networks only.}
+\item{dim_reduction_name}{specific reduction name. Only used when
+\code{space = "expression"}.}
 
-\item{spat_loc_name}{spatial-locations name. Delaunay only.}
+\item{spat_loc_name}{spatial-locations name. Used by the Delaunay method
+and by NN methods when \code{space = "spatial"}.}
 }
 \value{
 A network. Concrete type depends on the Param's \code{output} slot
