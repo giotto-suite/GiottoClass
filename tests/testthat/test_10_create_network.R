@@ -434,4 +434,166 @@ describe("Network Creation Functions", {
 
     })
 
+
+    # Behaviour locked down for the wrapper rewrite (step 8 of the
+    # consolidation). Each test pins a load-bearing behaviour of the
+    # legacy createSpatial*Network / createNearestNetwork functions so a
+    # regression during the rewrite is caught immediately.
+    #
+    # Coord columns (sdimx_begin/sdimy_begin/sdimx_end/sdimy_end and the z
+    # variants) are intentionally NOT locked here — they're slated for
+    # removal in a follow-up so that networks carry only edges and
+    # consumers fetch coords from spatLocsObj on demand.
+    describe("Wrapper-rewrite lockdown", {
+
+        it("3D Delaunay works with delaunayn_geometry, errors otherwise", {
+            # Synthesize a 3D spat_unit by adding sdimz to the existing one
+            sl3d <- getSpatialLocations(g, output = "spatLocsObj")
+            dt3d <- data.table::copy(sl3d[])
+            set.seed(1)
+            dt3d[, sdimz := stats::runif(.N, 0, 50)]
+            sl3d@coordinates <- dt3d
+            g3d <- setSpatialLocations(g, sl3d, verbose = FALSE)
+
+            # geometry method handles 3D
+            sn3d <- createSpatialDelaunayNetwork(g3d,
+                method = "delaunayn_geometry",
+                return_gobject = FALSE, verbose = FALSE
+            )
+            expect_true(inherits(sn3d, "spatialNetworkObj"))
+            expect_true(nrow(sn3d[]) > 0)
+
+            # non-geometry methods error on 3D
+            expect_error(
+                createSpatialDelaunayNetwork(g3d,
+                    method = "deldir",
+                    return_gobject = FALSE, verbose = FALSE
+                ),
+                "2D"
+            )
+            expect_error(
+                createSpatialDelaunayNetwork(g3d,
+                    method = "RTriangle",
+                    return_gobject = FALSE, verbose = FALSE
+                ),
+                "2D"
+            )
+        })
+
+        it("maximum_distance_delaunay filters long edges", {
+            sn_all <- createSpatialNetwork(g,
+                method = "Delaunay",
+                maximum_distance_delaunay = NULL,
+                return_gobject = FALSE, verbose = FALSE
+            )
+            sn_capped <- createSpatialNetwork(g,
+                method = "Delaunay",
+                maximum_distance_delaunay = 50,
+                return_gobject = FALSE, verbose = FALSE
+            )
+            expect_lt(nrow(sn_capped[]), nrow(sn_all[]))
+            expect_true(all(sn_capped[]$distance <= 50))
+        })
+
+        it("maximum_distance_delaunay = 'auto' applies a finite filter", {
+            sn_all <- createSpatialNetwork(g,
+                method = "Delaunay",
+                maximum_distance_delaunay = NULL,
+                return_gobject = FALSE, verbose = FALSE
+            )
+            sn_auto <- createSpatialNetwork(g,
+                method = "Delaunay",
+                maximum_distance_delaunay = "auto",
+                return_gobject = FALSE, verbose = FALSE
+            )
+            # auto should remove at least the outliers
+            expect_lte(nrow(sn_auto[]), nrow(sn_all[]))
+        })
+
+        it("minimum_k preserves more edges than the bare distance filter", {
+            sn_no_min <- createSpatialNetwork(g,
+                method = "kNN", k = 8,
+                maximum_distance_knn = 30,
+                minimum_k = 0,
+                return_gobject = FALSE, verbose = FALSE
+            )
+            sn_min2 <- createSpatialNetwork(g,
+                method = "kNN", k = 8,
+                maximum_distance_knn = 30,
+                minimum_k = 2,
+                return_gobject = FALSE, verbose = FALSE
+            )
+            # minimum_k = 2 re-adds nearest neighbours for nodes the
+            # distance filter would otherwise have stripped below the
+            # floor — so edge count should not decrease
+            expect_gte(nrow(sn_min2[]), nrow(sn_no_min[]))
+        })
+
+        it("delaunay_method = 'delaunayn_geometry' is the geometry backend", {
+            sn_geom <- createSpatialNetwork(g,
+                method = "Delaunay",
+                delaunay_method = "delaunayn_geometry",
+                return_gobject = FALSE, verbose = FALSE
+            )
+            sn_dd <- createSpatialNetwork(g,
+                method = "Delaunay",
+                delaunay_method = "deldir",
+                return_gobject = FALSE, verbose = FALSE
+            )
+            # Same point set, different backends → same edge set
+            edges_undir <- function(x) {
+                e <- x[][, c("from", "to")]
+                sorted <- t(apply(e, 1, sort))
+                sort(unique(paste(sorted[, 1], sorted[, 2], sep = "|")))
+            }
+            expect_equal(edges_undir(sn_geom), edges_undir(sn_dd))
+        })
+
+        it("default network names follow legacy conventions", {
+            sn_del <- createSpatialNetwork(g,
+                method = "Delaunay", return_gobject = FALSE, verbose = FALSE
+            )
+            expect_equal(objName(sn_del), "Delaunay_network")
+
+            sn_knn <- createSpatialNetwork(g,
+                method = "kNN", k = 4,
+                return_gobject = FALSE, verbose = FALSE
+            )
+            expect_equal(objName(sn_knn), "kNN_network")
+
+            g_knn <- createNearestNetwork(g,
+                type = "kNN", dim_reduction_to_use = "pca",
+                return_gobject = TRUE
+            )
+            nn_knn <- getNearestNetwork(g_knn,
+                nn_type = "kNN", name = "kNN.pca", output = "nnNetObj"
+            )
+            expect_equal(objName(nn_knn), "kNN.pca")
+
+            g_snn <- createNearestNetwork(g,
+                type = "sNN", dim_reduction_to_use = "pca",
+                return_gobject = TRUE
+            )
+            nn_snn <- getNearestNetwork(g_snn,
+                nn_type = "sNN", name = "sNN.pca", output = "nnNetObj"
+            )
+            expect_equal(objName(nn_snn), "sNN.pca")
+        })
+
+        it("createNearestNetwork preserves dimObj provenance", {
+            g@nn_network <- NULL
+            dim_obj <- getDimReduction(g,
+                reduction = "cells", reduction_method = "pca",
+                name = "pca", output = "dimObj"
+            )
+            res <- createNearestNetwork(g,
+                type = "kNN", dim_reduction_to_use = "pca",
+                return_gobject = TRUE
+            )
+            nn <- res[["nn_network"]][[1]]
+            expect_equal(prov(nn), prov(dim_obj))
+        })
+
+    })
+
 })
