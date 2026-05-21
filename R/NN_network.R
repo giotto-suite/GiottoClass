@@ -942,220 +942,98 @@ createNearestNetwork <- function(
         top_shared = 3,
         verbose = TRUE,
         ...) {
-    # Set feat_type and spat_unit
-    spat_unit <- set_default_spat_unit(
-        gobject = gobject,
-        spat_unit = spat_unit
-    )
-    feat_type <- set_default_feat_type(
-        gobject = gobject,
-        spat_unit = spat_unit,
-        feat_type = feat_type
-    )
+    # NB: thin wrapper over createNetwork() + nnNetObj construction.
+    # Legacy expression-matrix path (dim_reduction_to_use = NULL) goes
+    # through the matrix method; PCA / dim-reduction path goes through
+    # the giotto/NN method.
 
-    # specify dim_reduction_name tailored to feat_type
-    if (is.null(dim_reduction_name)) {
-        if (feat_type == "rna") {
-            dim_reduction_name <- "pca"
-        } else {
-            dim_reduction_name <- paste0(feat_type, ".", "pca")
-        }
-    }
-
-    # type of NN network
     type <- match.arg(type, c("sNN", "kNN"))
 
-    ## using dimension reduction ##
-    if (!is.null(dim_reduction_to_use)) {
-        ## check if reduction exists
-        dim_red_names <- list_dim_reductions_names(
-            gobject = gobject, data_type = "cells",
-            spat_unit = spat_unit, feat_type = feat_type,
-            dim_type = dim_reduction_to_use
-        )
-
-        if (!dim_reduction_name %in% dim_red_names) {
-            stop(sprintf(
-                "\n dimension reduction: %s or dimension reduction name:
-                %s is not available \n",
-                dim_reduction_to_use,
-                dim_reduction_name
-            ))
-        }
-
-        # check = gobject@dimension_reduction[['cells']][[spat_unit
-        # ]][[dim_reduction_to_use]][[dim_reduction_name]]
-        # if(is.null(check)) stop('dimension reduction does not exist,
-        # check if you did ', dim_reduction_to_use,
-        # ' and if ', dim_reduction_name, ' was the name used')
-
-        # use only available dimensions if dimensions < dimensions_to_use
-
-        dim_obj <- get_dimReduction(
-            gobject = gobject,
-            spat_unit = spat_unit,
-            feat_type = feat_type,
-            reduction = "cells",
-            reduction_method = dim_reduction_to_use,
-            name = dim_reduction_name,
-            output = "dimObj"
-        )
-
-        provenance <- prov(dim_obj)
-
-        dim_coord <- dim_obj[]
-        dimensions_to_use <- dimensions_to_use[dimensions_to_use %in%
-            seq_len(ncol(dim_coord))]
-        matrix_to_use <- dim_coord[, dimensions_to_use]
-    } else {
-        ## using original matrix ##
-        # expression values to be used
-        values <- match.arg(
-            expression_values,
-            unique(c(
-                "normalized", "scaled", "custom",
-                expression_values
-            ))
-        )
-        expr_obj <- getExpression(
-            gobject = gobject,
-            feat_type = feat_type,
-            spat_unit = spat_unit,
-            values = values,
-            output = "exprObj"
-        )
-
-        provenance <- prov(expr_obj)
-        expr_values <- expr_obj[] # extract matrix
-
-        # subset expression matrix
-        if (!is.null(feats_to_use)) {
-            expr_values <- expr_values[rownames(expr_values) %in%
-                feats_to_use, ]
-        }
-
-        # features as columns & cells as rows
-        matrix_to_use <- t_flex(expr_values)
-    }
-
-    # vector for cell_ID
-    cell_names <- rownames(matrix_to_use)
-    names(cell_names) <- seq_len(nrow(matrix_to_use))
-
-    ## run nearest-neighbour algorithm ##
-    if (k >= nrow(matrix_to_use)) {
-        k <- (nrow(matrix_to_use) - 1)
-        vmsg(.v = verbose, "k is higher than total number of cells.
-        Adjusted to (total number of cells - 1)")
-    }
-
-    nn_network <- dbscan::kNN(x = matrix_to_use, k = k, sort = TRUE, ...)
-
-    # data.table variables
-    from <- to <- weight <- distance <- from_cell_ID <- to_cell_ID <-
-        shared <- NULL
-
-    nn_network_dt <- data.table::data.table(
-        from = rep(seq_len(nrow(nn_network$id)), k),
-        to = as.vector(nn_network$id),
-        weight = 1 / (1 + as.vector(nn_network$dist)),
-        distance = as.vector(nn_network$dist)
+    spat_unit <- set_default_spat_unit(gobject, spat_unit = spat_unit)
+    feat_type <- set_default_feat_type(gobject,
+        spat_unit = spat_unit, feat_type = feat_type
     )
-    nn_network_dt[, from_cell_ID := cell_names[from]]
-    nn_network_dt[, to_cell_ID := cell_names[to]]
 
-
-    if (type == "sNN") {
-        snn_network <- dbscan::sNN(x = nn_network, k = k, kt = NULL, ...)
-        snn_network_dt <- data.table::data.table(
-            from = rep(seq_len(nrow(snn_network$id)), k),
-            to = as.vector(snn_network$id),
-            weight = 1 / (1 + as.vector(snn_network$dist)),
-            distance = as.vector(snn_network$dist),
-            shared = as.vector(snn_network$shared)
-        )
-        snn_network_dt <- snn_network_dt[stats::complete.cases(snn_network_dt)]
-        snn_network_dt[, from_cell_ID := cell_names[from]]
-        snn_network_dt[, to_cell_ID := cell_names[to]]
-
-        # rank snn
-        data.table::setorder(snn_network_dt, from, -shared)
-        snn_network_dt[, rank := seq_len(.N), by = from]
-
-        # filter snn
-        snn_network_dt <- snn_network_dt[rank <= top_shared |
-            shared >= minimum_shared]
+    # default dim_reduction_name
+    if (is.null(dim_reduction_name)) {
+        dim_reduction_name <- if (feat_type == "rna") {
+            dim_reduction_to_use
+        } else {
+            paste0(feat_type, ".", dim_reduction_to_use)
+        }
     }
 
-    ## convert to igraph object
-    all_index <- unique(x = c(
-        nn_network_dt$from_cell_ID,
-        nn_network_dt$to_cell_ID
-    ))
-
-
-    if (type == "kNN") {
-        nn_network_igraph <- igraph::graph_from_data_frame(
-            nn_network_dt[, .(from_cell_ID, to_cell_ID, weight, distance)],
-            directed = TRUE, vertices = all_index
-        )
-    } else if (type == "sNN") {
-        # TODO never returned?
-        missing_indices <- all_index[!all_index %in%
-            unique(snn_network_dt$from)]
-        nn_network_igraph <- igraph::graph_from_data_frame(
-            snn_network_dt[
-                ,
-                .(from_cell_ID, to_cell_ID, weight, distance, shared, rank)
-            ],
-            directed = TRUE, vertices = all_index
+    # build Param; output = "igraph" because nnNetObj wraps an igraph
+    param <- if (type == "kNN") {
+        kNNNetworkParam(k = k, output = "igraph")
+    } else {
+        sNNNetworkParam(k = k,
+            minimum_shared = minimum_shared, top_shared = top_shared,
+            output = "igraph"
         )
     }
 
+    if (!is.null(dim_reduction_to_use)) {
+        # PCA / dim-reduction source
+        dim_obj <- getDimReduction(gobject,
+            spat_unit = spat_unit, feat_type = feat_type,
+            reduction = "cells", reduction_method = dim_reduction_to_use,
+            name = dim_reduction_name, output = "dimObj"
+        )
+        provenance <- prov(dim_obj)
+        nn_igraph <- createNetwork(dim_obj, param,
+            dimensions_to_use = dimensions_to_use, verbose = verbose, ...
+        )
+    } else {
+        # legacy: build NN from raw expression matrix
+        expression_values <- match.arg(
+            expression_values,
+            unique(c("normalized", "scaled", "custom", expression_values))
+        )
+        expr_obj <- getExpression(gobject,
+            feat_type = feat_type, spat_unit = spat_unit,
+            values = expression_values, output = "exprObj"
+        )
+        provenance <- prov(expr_obj)
+        expr_mat <- expr_obj[]
+        if (!is.null(feats_to_use)) {
+            expr_mat <- expr_mat[rownames(expr_mat) %in% feats_to_use, ]
+        }
+        matrix_to_use <- t_flex(expr_mat) # cells as rows
+        nn_igraph <- createNetwork(matrix_to_use, param,
+            node_ids = rownames(matrix_to_use), verbose = verbose, ...
+        )
+    }
 
-
-
-    # set default name
     if (is.null(name)) name <- paste0(type, ".", dim_reduction_to_use)
 
-    if (return_gobject == TRUE) {
-        nn_names <- names(gobject@nn_network[[spat_unit]][[type]])
-
-        if (name %in% nn_names) {
-            vmsg(
-                .v = verbose,
-                name, "has already been used, will be overwritten"
-            )
-        }
-
-        nnObj <- create_nn_net_obj(
-            name = name,
-            nn_type = type,
-            igraph = nn_network_igraph,
-            spat_unit = spat_unit,
-            feat_type = feat_type,
-            provenance = provenance,
-            misc = NULL
-        )
-
-        gobject <- set_NearestNetwork(
-            gobject = gobject,
-            spat_unit = spat_unit,
-            feat_type = feat_type,
-            nn_network_to_use = type,
-            network_name = name,
-            nn_network = nnObj,
-            verbose = verbose
-        )
-
-        ## update parameters used ##
-        gobject <- update_giotto_params(gobject, description = "_nn_network")
-
-        return(gobject)
-    } else {
-        return(nn_network_igraph)
+    if (!return_gobject) {
+        return(nn_igraph)
     }
+
+    # wrap and store
+    nnObj <- create_nn_net_obj(
+        name = name,
+        nn_type = type,
+        igraph = nn_igraph,
+        spat_unit = spat_unit,
+        feat_type = feat_type,
+        provenance = provenance
+    )
+    nn_names <- names(gobject@nn_network[[spat_unit]][[type]])
+    if (name %in% nn_names) {
+        vmsg(.v = verbose, name, "has already been used, will be overwritten")
+    }
+    gobject <- setNearestNetwork(gobject,
+        x = nnObj,
+        spat_unit = spat_unit, feat_type = feat_type,
+        nn_type = type, name = name,
+        verbose = verbose
+    )
+    gobject <- update_giotto_params(gobject, description = "_nn_network")
+    gobject
 }
+
 
 
 

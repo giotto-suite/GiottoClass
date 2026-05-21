@@ -354,7 +354,7 @@ describe("Network Creation Functions", {
                         dim_reduction_to_use = "nonexistent",
                         return_gobject = FALSE
                     ),
-                    "is not available"
+                    "not found"
                 )
             })
 

@@ -202,14 +202,5 @@ test_that("sNN <NN> [dbscan] produces expected results", {
         as.igraph = TRUE,
     )
 
-    # sNN is undirected at creation in the new createNetwork (one edge per
-    # symmetric pair); the legacy createNearestNetwork still emits the
-    # duplicated-arc directed form. Until createNearestNetwork becomes a
-    # thin wrapper, compare on the canonical undirected edge set.
-    edges_undir <- function(g) {
-        e <- igraph::as_data_frame(g, "edges")[, c("from", "to")]
-        sorted <- t(apply(e, 1, sort))
-        sort(unique(paste(sorted[, 1], sorted[, 2], sep = "|")))
-    }
-    expect_equal(edges_undir(sNN_g), edges_undir(sNN_cn))
+    expect_true(igraph::identical_graphs(sNN_g, sNN_cn))
 })
