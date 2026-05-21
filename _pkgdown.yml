@@ -330,7 +330,6 @@ reference:
   - rescale
   - shear
   - affine
-  - area
   - convHull
   - buffer
   - settleGeom
