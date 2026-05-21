@@ -79,16 +79,6 @@ setMethod("ext", signature("giottoPoints"), function(x, ...) {
 
 #' @rdname ext
 #' @export
-setMethod("ext", signature("spatialNetworkObj"), function(x, ...) {
-    sdimx_begin <- sdimx_end <- sdimy_begin <- sdimy_end <- NULL # dt vars
-    terra::ext(c(
-        x[][, range(c(sdimx_begin, sdimx_end))],
-        x[][, range(c(sdimy_begin, sdimy_end))]
-    ))
-})
-
-#' @rdname ext
-#' @export
 setMethod("ext", signature("giottoLargeImage"), function(x, ...) {
     terra::ext(x@raster_object)
 })

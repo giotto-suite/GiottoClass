@@ -58,7 +58,15 @@ setMethod("nrow", signature("metaData"), function(x) nrow(x@metaDT))
 #' @export
 setMethod(
     "nrow", signature("spatialNetworkObj"),
-    function(x) nrow(x@networkDT)
+    function(x) {
+        # @network is an igraph (or, in future, a parquetEdgeStore). nrow
+        # historically reported edge count back when storage was a DT —
+        # preserve that semantics via igraph::ecount when applicable.
+        if (inherits(x@network, "igraph")) {
+            return(igraph::ecount(x@network))
+        }
+        nrow(x@network)
+    }
 )
 
 #' @rdname dims-generic

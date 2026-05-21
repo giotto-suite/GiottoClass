@@ -459,7 +459,9 @@ evaluate_input <- function(type, x, ...) {
 
 #' @title Evaluate spatial network
 #' @name .evaluate_spatial_network
-#' @description function to evaluate a spatial network
+#' @description function to evaluate a spatial network. Accepts an
+#'   `igraph` (canonical) or a `data.frame`-shaped edge table with at
+#'   least `from`/`to` columns.
 #' @keywords internal
 #' @noRd
 .evaluate_spatial_network <- function(spatial_network) {
@@ -468,27 +470,22 @@ evaluate_input <- function(type, x, ...) {
         return(spatial_network)
     }
 
+    # igraph is the canonical in-memory form
+    if (inherits(spatial_network, "igraph")) {
+        return(spatial_network)
+    }
+
+    # data.frame-shaped fallback (legacy + edge-table inputs)
     if (!inherits(spatial_network, "data.frame")) {
-        .gstop("The spatial network must be a data.frame(-like) object")
+        .gstop("The spatial network must be an igraph or data.frame(-like) object")
     }
     if (!inherits(spatial_network, "data.table")) {
         spatial_network <- data.table::setDT(spatial_network)
     }
-
-    netw_names <- colnames(spatial_network)
-    required_cols <- c(
-        "from", "to",
-        "sdimx_begin", "sdimy_begin",
-        "sdimx_end", "sdimy_end",
-        "distance", "weight"
-    )
-
-    missing_cols <- required_cols[!required_cols %in% netw_names]
-
+    missing_cols <- setdiff(c("from", "to"), colnames(spatial_network))
     if (length(missing_cols) > 0) {
         .gstop("missing columns: ", list(missing_cols))
     }
-
     return(spatial_network)
 }
 

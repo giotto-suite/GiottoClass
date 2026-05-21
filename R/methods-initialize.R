@@ -66,23 +66,6 @@ setMethod(
 
 
 
-## spatNetData ####
-setMethod(
-    "initialize", "spatNetData",
-    function(.Object, ...) {
-        .Object <- methods::callNextMethod()
-        # prepare DT for set by reference
-        if (!is.null(.Object@networkDT)) {
-            .Object@networkDT <- data.table::setalloccol(.Object@networkDT)
-        }
-        if (!is.null(.Object@networkDT_before_filter)) {
-            .Object@networkDT_before_filter <- data.table::setalloccol(
-                .Object@networkDT_before_filter
-            )
-        }
-        .Object
-    }
-)
 
 
 

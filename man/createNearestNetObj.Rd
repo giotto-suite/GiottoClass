@@ -46,7 +46,7 @@ dataframe-like inputs must have 'from', 'to', and 'distance' columns
 x <- GiottoData::loadSubObjectMini("nnNetObj")
 
 createNearestNetObj(
-    network = slot(x, "igraph"), name = "sNN",
+    network = slot(x, "network"), name = "sNN",
     nn_type = "sNN"
 )
 }

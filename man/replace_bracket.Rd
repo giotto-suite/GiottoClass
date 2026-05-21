@@ -101,10 +101,10 @@ Assign to \code{coordinates} slot in giotto S4 dimObj
 Assign to \code{exprMat} slot in giotto S4
 
 
-Assign to \code{networkDT} slot in giotto S4
+Assign to \code{network} slot in giotto S4
 
 
-Assign to \code{igraph} slot in giotto S4
+Assign to \code{network} slot in giotto S4
 
 
 Assign to \code{enrichDT} slot in giotto S4

@@ -1015,7 +1015,7 @@ createNearestNetwork <- function(
     nnObj <- create_nn_net_obj(
         name = name,
         nn_type = type,
-        igraph = nn_igraph,
+        network = nn_igraph,
         spat_unit = spat_unit,
         feat_type = feat_type,
         provenance = provenance
@@ -1030,7 +1030,7 @@ createNearestNetwork <- function(
         nn_type = type, name = name,
         verbose = verbose
     )
-    gobject <- update_giotto_params(gobject, description = "_nn_network")
+    gobject <- update_giotto_params(gobject, description = "_nn_network", toplevel = 1L)
     gobject
 }
 

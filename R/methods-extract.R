@@ -862,7 +862,7 @@ setMethod(
 # * spatNetData ####
 #' @rdname subset_bracket
 #' @section \code{`[`} methods:
-#'   Return \code{spatNetData} slot network data.table object from giotto S4
+#'   Return \code{spatNetData} slot network object (`igraph`) from giotto S4
 #' @export
 setMethod(
     "[",
@@ -871,7 +871,7 @@ setMethod(
         drop = "missing"
     ),
     function(x, i, j) {
-        x@networkDT
+        x@network
     }
 )
 
@@ -880,13 +880,13 @@ setMethod(
 #' ANY-method [<-,spatNetData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
-#'   Assign to \code{networkDT} slot in giotto S4
+#'   Assign to \code{network} slot in giotto S4
 #' @export
 setMethod(
     "[<-",
     signature(x = "spatNetData", i = "missing", j = "missing", value = "ANY"),
     function(x, i, j, value) {
-        x@networkDT <- value
+        x@network <- value
         x
     }
 )
@@ -901,7 +901,7 @@ setMethod(
     "[",
     signature(x = "nnData", i = "missing", j = "missing", drop = "missing"),
     function(x, i, j) {
-        x@igraph
+        x@network
     }
 )
 
@@ -910,12 +910,12 @@ setMethod(
 #' ANY-method [<-,nnData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
-#'   Assign to \code{igraph} slot in giotto S4
+#'   Assign to \code{network} slot in giotto S4
 #' @export
 setMethod(
     "[<-", signature(x = "nnData", i = "missing", j = "missing", value = "ANY"),
     function(x, i, j, value) {
-        x@igraph <- value
+        x@network <- value
         x
     }
 )

@@ -581,14 +581,14 @@ anndataToGiotto <- function(anndata_path = NULL,
                 spatObj <- create_spat_net_obj(
                     name = "Delaunay_network",
                     method = "delaunay",
-                    networkDT = network_DT,
+                    network = network_DT,
                     cellShapeObj = cellShapeObj
                 )
             } else {
                 spatObj <- create_spat_net_obj(
                     name = net_name,
                     method = "non-delaunay",
-                    networkDT = network_DT,
+                    network = network_DT,
                     cellShapeObj = cellShapeObj
                 )
             }
@@ -2230,7 +2230,7 @@ seuratToGiottoV4 <- function(
             DT$weight <- ed_attr[1]
             DT$distance <- ed_attr[2]
             spatNetObj <- create_spat_net_obj(
-                networkDT = DT
+                network = DT
             )
             gobject <- set_spatialNetwork(
                 gobject = gobject,
@@ -2613,7 +2613,7 @@ seuratToGiottoV5 <- function(
             DT$weight <- ed_attr[1]
             DT$distance <- ed_attr[2]
             spatNetObj <- create_spat_net_obj(
-                networkDT = DT
+                network = DT
             )
             gobject <- set_spatialNetwork(
                 gobject = gobject,
@@ -3268,7 +3268,7 @@ spatialExperimentToGiotto <- function(
                 networkDT$to <- colnames(spe)[networkDT$to]
                 networkDT$from <- colnames(spe)[networkDT$from]
                 spatNetObj <- create_spat_net_obj(
-                    networkDT = networkDT
+                    network = networkDT
                 )
                 giottoObj <- set_spatialNetwork(
                     gobject = giottoObj,
@@ -3287,7 +3287,7 @@ spatialExperimentToGiotto <- function(
                 if (verbose) message("Copying nearest neighbour networks")
                 nnNetObj <- create_nn_net_obj(
                     name = nn_network[i],
-                    igraph = networks[[nn_network[i]]]
+                    network = networks[[nn_network[i]]]
                 )
                 giottoObj <- set_NearestNetwork(
                     gobject = giottoObj,
@@ -3304,7 +3304,7 @@ spatialExperimentToGiotto <- function(
             if (verbose) message("Copying additional networks")
             nnNetObj <- create_nn_net_obj(
                 name = names(networks)[i],
-                igraph = networks[[i]]
+                network = networks[[i]]
             )
             giottoObj <- set_NearestNetwork(
                 gobject = giottoObj,
@@ -3933,7 +3933,7 @@ spatialdataToGiotto <- function(spatialdata_path = NULL,
                         network = network_DT,
                         name = "Delaunay_network",
                         method = "delaunay",
-                        networkDT_before_filter = network_DT,
+                        unfiltered = network_DT,
                         cellShapeObj = cellShapeObj
                     )
                 } else {
@@ -3942,7 +3942,7 @@ spatialdataToGiotto <- function(spatialdata_path = NULL,
                         network = network_DT,
                         name = net_name,
                         method = "non-delaunay",
-                        networkDT_before_filter = network_DT,
+                        unfiltered = network_DT,
                         cellShapeObj = cellShapeObj
                     )
                 }

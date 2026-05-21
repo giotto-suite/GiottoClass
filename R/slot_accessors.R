@@ -3155,7 +3155,7 @@ get_NearestNetwork <- function(gobject,
     if (output == "nnNetObj") {
         return(nnNet) # return nnNetObj
     } else if (output == "igraph" | output == "data.table") {
-        nnNet <- slot(nnNet, "igraph")
+        nnNet <- slot(nnNet, "network")
 
         if (output == "igraph") {
             return(nnNet)
@@ -3631,9 +3631,9 @@ get_spatialNetwork <- function(gobject,
     out <- lapply(out, function(x) {
         if (isTRUE(copy_obj)) {
             x[] <- data.table::copy(x[])
-            if (!is.null(x@networkDT_before_filter)) {
-                x@networkDT_before_filter <- data.table::copy(
-                    x@networkDT_before_filter
+            if (!is.null(x@unfiltered)) {
+                x@unfiltered <- data.table::copy(
+                    x@unfiltered
                 )
             }
         }
@@ -3641,7 +3641,7 @@ get_spatialNetwork <- function(gobject,
         res <- switch(output,
             "spatialNetworkObj" = x,
             "networkDT" = x[],
-            "networkDT_before_filter" = x@networkDT_before_filter,
+            "unfiltered" = x@unfiltered,
             "outputObj" = x@outputObj
         )
         return(res)

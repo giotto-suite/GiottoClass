@@ -7,7 +7,7 @@
 createSpatNetObj(
   network,
   name = "test",
-  networkDT_before_filter = NULL,
+  unfiltered = NULL,
   method = NULL,
   spat_unit = "cell",
   provenance = NULL,
@@ -19,12 +19,13 @@ createSpatNetObj(
 )
 }
 \arguments{
-\item{network}{network data with connections, distances, and weightings}
+\item{network}{network as \code{igraph} (canonical) or \code{data.frame} with
+\code{from}/\code{to} columns. Data.frame input is coerced to \code{data.table}.}
 
 \item{name}{name of spatialNetworkObj}
 
-\item{networkDT_before_filter}{(optional) unfiltered data.table  of
-network connections, distances, and weightings}
+\item{unfiltered}{(optional) unfiltered network — same accepted forms as
+\code{network}. Stored for inspection.}
 
 \item{method}{method used to generate spatial network}
 
@@ -52,5 +53,5 @@ Create S4 spatialNetworkObj
 \examples{
 x <- GiottoData::loadSubObjectMini("spatialNetworkObj")
 
-createSpatNetObj(network = slot(x, "networkDT"), name = "Delaunay_network")
+createSpatNetObj(network = slot(x, "network"), name = "Delaunay_network")
 }

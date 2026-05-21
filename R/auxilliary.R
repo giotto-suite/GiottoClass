@@ -1673,33 +1673,6 @@ createMetafeats <- function(gobject,
         }
     }
 
-    # spatial network
-    avail_sn <- list_spatial_networks(gobject)
-    if (!is.null(avail_sn)) {
-        for (sn_i in seq(nrow(avail_sn))) {
-            sn <- get_spatialNetwork(
-                gobject = gobject,
-                spat_unit = avail_sn[sn_i, spat_unit],
-                name = avail_sn[sn_i, name],
-                output = "spatialNetworkObj"
-            )
-            if (!is.null(slot(sn, "networkDT_before_filter"))) {
-                slot(sn, "networkDT_before_filter") <- data.table::setalloccol(
-                    slot(sn, "networkDT_before_filter")
-                )
-            }
-            if (!is.null(sn[])) {
-                sn[] <- data.table::setalloccol(sn[])
-                gobject <- set_spatialNetwork(
-                    gobject = gobject,
-                    spatial_network = sn,
-                    verbose = FALSE,
-                    set_defaults = FALSE
-                )
-            }
-        }
-    }
-
     # spatial grid
     avail_sg <- list_spatial_grids(gobject)
     if (!is.null(avail_sg)) {

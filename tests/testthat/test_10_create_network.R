@@ -245,7 +245,7 @@ describe("Network Creation Functions", {
                 expect_true(inherits(result, "giotto"))
                 expect_true(inherits(nn, "nnNetObj"))
                 expect_equal(nn@nn_type, "sNN")
-                expect_true(igraph::is_igraph(nn@igraph))
+                expect_true(igraph::is_igraph(nn@network))
             })
 
             it("creates kNN network from PCA reduction", {
@@ -259,7 +259,7 @@ describe("Network Creation Functions", {
                 expect_true(inherits(result, "giotto"))
                 expect_true(inherits(nn, "nnNetObj"))
                 expect_equal(nn@nn_type, "kNN")
-                expect_true(igraph::is_igraph(nn@igraph))
+                expect_true(igraph::is_igraph(nn@network))
             })
 
             it("returns igraph when return_gobject = FALSE", {
@@ -287,7 +287,7 @@ describe("Network Creation Functions", {
                 nn <- result[["nn_network"]][[1]]
 
                 expect_true(inherits(nn, "nnNetObj"))
-                out_degrees <- igraph::degree(nn@igraph, mode = "out")
+                out_degrees <- igraph::degree(nn@network, mode = "out")
                 expect_true(all(out_degrees <= k_val))
                 # more than 80% are = k
                 expect_true(mean(out_degrees >= k_val - 1) > 0.8)
@@ -377,7 +377,7 @@ describe("Network Creation Functions", {
                 expect_true(inherits(result, "spatialNetworkObj"))
                 expect_equal(objName(result), "Delaunay_network") # default
                 expect_equal(result@method, "deldir")
-                expect_true(nrow(result[]) > 0)
+                expect_true(igraph::ecount(result[]) > 0)
                 expect_equal(spatUnit(result), activeSpatUnit(g))
             })
 
@@ -390,7 +390,7 @@ describe("Network Creation Functions", {
 
                 expect_true(inherits(result, "spatialNetworkObj"))
                 expect_equal(objName(result), "kNN_network")
-                expect_true(nrow(result[]) > 0)
+                expect_true(igraph::ecount(result[]) > 0)
             })
 
             it("returns updated giotto object when return_gobject = TRUE", {
@@ -461,7 +461,7 @@ describe("Network Creation Functions", {
                 return_gobject = FALSE, verbose = FALSE
             )
             expect_true(inherits(sn3d, "spatialNetworkObj"))
-            expect_true(nrow(sn3d[]) > 0)
+            expect_true(igraph::ecount(sn3d[]) > 0)
 
             # non-geometry methods error on 3D
             expect_error(
@@ -491,7 +491,7 @@ describe("Network Creation Functions", {
                 maximum_distance_delaunay = 50,
                 return_gobject = FALSE, verbose = FALSE
             )
-            expect_lt(nrow(sn_capped[]), nrow(sn_all[]))
+            expect_lt(igraph::ecount(sn_capped[]), igraph::ecount(sn_all[]))
             expect_true(all(sn_capped[]$distance <= 50))
         })
 
@@ -507,7 +507,7 @@ describe("Network Creation Functions", {
                 return_gobject = FALSE, verbose = FALSE
             )
             # auto should remove at least the outliers
-            expect_lte(nrow(sn_auto[]), nrow(sn_all[]))
+            expect_lte(igraph::ecount(sn_auto[]), igraph::ecount(sn_all[]))
         })
 
         it("minimum_k preserves more edges than the bare distance filter", {
@@ -526,7 +526,7 @@ describe("Network Creation Functions", {
             # minimum_k = 2 re-adds nearest neighbours for nodes the
             # distance filter would otherwise have stripped below the
             # floor — so edge count should not decrease
-            expect_gte(nrow(sn_min2[]), nrow(sn_no_min[]))
+            expect_gte(igraph::ecount(sn_min2[]), igraph::ecount(sn_no_min[]))
         })
 
         it("delaunay_method = 'delaunayn_geometry' is the geometry backend", {
@@ -542,7 +542,7 @@ describe("Network Creation Functions", {
             )
             # Same point set, different backends → same edge set
             edges_undir <- function(x) {
-                e <- x[][, c("from", "to")]
+                e <- igraph::as_data_frame(x[], what = "edges")[, c("from", "to")]
                 sorted <- t(apply(e, 1, sort))
                 sort(unique(paste(sorted[, 1], sorted[, 2], sep = "|")))
             }

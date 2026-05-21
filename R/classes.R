@@ -146,6 +146,13 @@ updateGiottoObject <- function(gobject) {
         gobject <- .update_source_slot(gobject)
     }
 
+    # GiottoClass 0.6.0 renames spatNetData / nnData slots and switches
+    # spatialNetworkObj storage to igraph (canonical). Migrate any
+    # legacy serialized subobjects to the new schema + canonical form.
+    if (.gversion(gobject) < "0.6.0") {
+        gobject <- .update_network_slots(gobject)
+    }
+
     # -------------------------------------------------------------------------#
 
     # subobject updates
@@ -289,6 +296,79 @@ updateGiottoObject <- function(gobject) {
     attr(x, "source") <- list() # init slot
     x@source <- NULL
     x
+}
+
+# for updating pre-0.6.0 objects: slot renames on spatNetData / nnData
+# plus DT -> igraph canonicalization of spatialNetworkObj content.
+# Legacy data sits at attr() level under the OLD slot names because R's
+# S4 deserialization preserves an object's stored representation even
+# when the class definition has changed.
+.update_network_slots <- function(gobject) {
+    checkmate::assert_class(gobject, "giotto")
+    sn_list <- gobject[["spatial_network"]]
+    if (length(sn_list) > 0) {
+        sn_list <- lapply(sn_list, .migrate_spatnet_obj)
+        gobject <- setGiotto(gobject, sn_list, initialize = FALSE)
+    }
+    nn_list <- gobject[["nn_network"]]
+    if (length(nn_list) > 0) {
+        nn_list <- lapply(nn_list, .migrate_nn_net_obj)
+        gobject <- setGiotto(gobject, nn_list, initialize = FALSE)
+    }
+    gobject
+}
+
+# True if `obj` already exposes `slot_name` via the new class def
+# (legacy objects error on @-access of renamed slots).
+.has_new_slot <- function(obj, slot_name) {
+    tryCatch({
+        slot(obj, slot_name)
+        TRUE
+    }, error = function(e) FALSE)
+}
+
+# Convert a legacy spatial-network data.table (with coord columns) into
+# an undirected igraph carrying only distance/weight edge attributes.
+.legacy_spatnet_dt_to_igraph <- function(dt) {
+    if (is.null(dt) || !inherits(dt, "data.frame")) return(dt)
+    cols <- intersect(c("from", "to", "distance", "weight"), names(dt))
+    igraph::graph_from_data_frame(
+        as.data.frame(dt)[, cols, drop = FALSE],
+        directed = FALSE
+    )
+}
+
+.migrate_spatnet_obj <- function(sn) {
+    if (.has_new_slot(sn, "network")) return(sn) # idempotent
+    old_net <- attr(sn, "networkDT", exact = TRUE)
+    old_unf <- attr(sn, "networkDT_before_filter", exact = TRUE)
+    create_spat_net_obj(
+        name = sn@name,
+        method = sn@method,
+        parameters = sn@parameters,
+        outputObj = sn@outputObj,
+        network = .legacy_spatnet_dt_to_igraph(old_net),
+        unfiltered = .legacy_spatnet_dt_to_igraph(old_unf),
+        cellShapeObj = sn@cellShapeObj,
+        crossSectionObjects = sn@crossSectionObjects,
+        spat_unit = sn@spat_unit,
+        provenance = sn@provenance,
+        misc = sn@misc
+    )
+}
+
+.migrate_nn_net_obj <- function(nn) {
+    if (.has_new_slot(nn, "network")) return(nn) # idempotent
+    old_ig <- attr(nn, "igraph", exact = TRUE)
+    create_nn_net_obj(
+        name = nn@name,
+        nn_type = nn@nn_type,
+        network = old_ig,
+        spat_unit = nn@spat_unit,
+        feat_type = nn@feat_type,
+        provenance = nn@provenance,
+        misc = nn@misc
+    )
 }
 
 
@@ -914,11 +994,10 @@ spatLocsObj <- setClass("spatLocsObj",
     #   errors = c(errors, msg)
     # }
 
-    if (is.null(object@networkDT) && is.null(object@networkDT_before_filter)) {
-        msg <- "No data in either networkDT or networkDT_before_filter slots.\n
-        This object contains no network information.\n"
-        errors <- c(errors, msg)
-    }
+    # An empty spatialNetworkObj is a valid intermediate state during
+    # construction or migration from legacy schema. Substantive content
+    # checks live in the constructors and the migration step in
+    # updateGiottoObject().
 
     if (length(errors) == 0) TRUE else errors
 }
