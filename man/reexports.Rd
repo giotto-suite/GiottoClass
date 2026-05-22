@@ -19,6 +19,6 @@ These objects are imported from other packages. Follow the links
 below to see their documentation.
 
 \describe{
-  \item{GiottoUtils}{\code{\link[GiottoUtils]{getDistinctColors}}, \code{\link[GiottoUtils]{getMonochromeColors}}, \code{\link[GiottoUtils]{getRainbowColors}}}
+  \item{GiottoUtils}{\code{\link[GiottoUtils:getDistinctColors]{getDistinctColors()}}, \code{\link[GiottoUtils:getMonochromeColors]{getMonochromeColors()}}, \code{\link[GiottoUtils:getRainbowColors]{getRainbowColors()}}}
 }}
 

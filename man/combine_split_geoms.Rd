@@ -38,7 +38,7 @@ if not provided.}
 \item{fun}{function used to aggregate values. Either an actual function, or for the following, their name: "mean", "max", "min", "median", "sum", "modal", "any", "all", "none", "prod", "which.min", "which.max", "table", "sd" (sample standard deviation) and "std" (population standard deviation)}
 
 \item{...}{additional params to pass to \code{\link[terra:aggregate]{terra::aggregate()}} (and then to
-\code{fun}, such as \code{na.rm=TRUE}) or \code{\link[terra:disaggregate]{terra::disagg()}}}
+\code{fun}, such as \code{na.rm=TRUE}) or \code{\link[terra:disagg]{terra::disagg()}}}
 
 \item{fmt}{character. sprintf formatting to use to generate \code{poly_ID} column
 values if no attributes are retained after combining.}

@@ -47,23 +47,23 @@ g <- GiottoData::loadGiottoMini("visium")
 getDimReduction(g)
 }
 \seealso{
-Other dimensional reduction data accessor functions: 
-\code{\link{setDimReduction}()}
+Other dimensional reduction data accessor functions:
+\code{\link[=setDimReduction]{setDimReduction()}}
 
-Other functions to get data from giotto object: 
-\code{\link{getCellMetadata}()},
-\code{\link{getExpression}()},
-\code{\link{getFeatureInfo}()},
-\code{\link{getFeatureMetadata}()},
-\code{\link{getGiottoImage}()},
-\code{\link{getMultiomics}()},
-\code{\link{getNearestNetwork}()},
-\code{\link{getPolygonInfo}()},
-\code{\link{getSpatialEnrichment}()},
-\code{\link{getSpatialGrid}()},
-\code{\link{getSpatialLocations}()},
-\code{\link{getSpatialNetwork}()},
-\code{\link{get_multiomics}()}
+Other functions to get data from giotto object:
+\code{\link[=getCellMetadata]{getCellMetadata()}},
+\code{\link[=getExpression]{getExpression()}},
+\code{\link[=getFeatureInfo]{getFeatureInfo()}},
+\code{\link[=getFeatureMetadata]{getFeatureMetadata()}},
+\code{\link[=getGiottoImage]{getGiottoImage()}},
+\code{\link[=getMultiomics]{getMultiomics()}},
+\code{\link[=getNearestNetwork]{getNearestNetwork()}},
+\code{\link[=getPolygonInfo]{getPolygonInfo()}},
+\code{\link[=getSpatialEnrichment]{getSpatialEnrichment()}},
+\code{\link[=getSpatialGrid]{getSpatialGrid()}},
+\code{\link[=getSpatialLocations]{getSpatialLocations()}},
+\code{\link[=getSpatialNetwork]{getSpatialNetwork()}},
+\code{\link[=get_multiomics]{get_multiomics()}}
 }
 \concept{dimensional reduction data accessor functions}
 \concept{functions to get data from giotto object}

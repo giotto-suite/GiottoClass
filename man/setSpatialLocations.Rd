@@ -53,24 +53,24 @@ sl <- data.frame(cell_ID = x$cell_ID, sdimx = rnorm(624), sdimy = rnorm(624))
 setSpatialLocations(gobject = g, x = createSpatLocsObj(sl, name = "raw"))
 }
 \seealso{
-Other spatial location data accessor functions: 
-\code{\link{getSpatialLocations}()}
+Other spatial location data accessor functions:
+\code{\link[=getSpatialLocations]{getSpatialLocations()}}
 
-Other functions to set data in giotto object: 
-\code{\link{setCellMetadata}()},
-\code{\link{setDimReduction}()},
-\code{\link{setExpression}()},
-\code{\link{setFeatureInfo}()},
-\code{\link{setFeatureMetadata}()},
+Other functions to set data in giotto object:
+\code{\link[=setCellMetadata]{setCellMetadata()}},
+\code{\link[=setDimReduction]{setDimReduction()}},
+\code{\link[=setExpression]{setExpression()}},
+\code{\link[=setFeatureInfo]{setFeatureInfo()}},
+\code{\link[=setFeatureMetadata]{setFeatureMetadata()}},
 \code{\link{setGiotto,giotto,giottoBinPoints-method}},
-\code{\link{setGiottoImage}()},
-\code{\link{setMultiomics}()},
-\code{\link{setNearestNetwork}()},
-\code{\link{setPolygonInfo}()},
-\code{\link{setSpatialEnrichment}()},
-\code{\link{setSpatialGrid}()},
-\code{\link{setSpatialNetwork}()},
-\code{\link{set_multiomics}()}
+\code{\link[=setGiottoImage]{setGiottoImage()}},
+\code{\link[=setMultiomics]{setMultiomics()}},
+\code{\link[=setNearestNetwork]{setNearestNetwork()}},
+\code{\link[=setPolygonInfo]{setPolygonInfo()}},
+\code{\link[=setSpatialEnrichment]{setSpatialEnrichment()}},
+\code{\link[=setSpatialGrid]{setSpatialGrid()}},
+\code{\link[=setSpatialNetwork]{setSpatialNetwork()}},
+\code{\link[=set_multiomics]{set_multiomics()}}
 }
 \concept{functions to set data in giotto object}
 \concept{spatial location data accessor functions}
