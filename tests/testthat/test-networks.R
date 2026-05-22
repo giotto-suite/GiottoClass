@@ -57,4 +57,149 @@ test_that("createNearestNetwork returns gobject with igraph-backed nnNetObj", {
     expect_gt(igraph::ecount(nn@network), 0)
 })
 
+
+# Backend-aware auto-write on network setters. When the gobject has a
+# gsource backend attached and the incoming network is in-mem (igraph),
+# setNearestNetwork / setSpatialNetwork route through GiottoDisk to
+# disk-back the @network slot as a parquetEdgeStore. Mirrors the
+# setExpression / setPolygonInfo pattern.
+
+test_that("setNearestNetwork auto-writes igraph to parquetEdgeStore on backed gobject", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(lifecycle_verbosity = "quiet")
+
+    gdir <- file.path(tempdir(), paste0("nn_autowrite_", basename(tempfile())))
+    on.exit(unlink(gdir, recursive = TRUE), add = TRUE)
+    mat <- matrix(rpois(20 * 50, 2), nrow = 50, ncol = 20,
+                  dimnames = list(paste0("g_", 1:50),
+                                  paste0("c_", 1:20)))
+    gb <- createGiottoObject(expression = mat, backend = gdir)
+    expect_false(is.null(gb@source))
+
+    ig <- igraph::sample_gnm(20, 50, directed = FALSE)
+    igraph::V(ig)$name <- paste0("c_", seq_len(20))
+    nn <- methods::new("nnNetObj", network = ig, nn_type = "sNN",
+        name = "sNN.test", spat_unit = "cell", feat_type = "rna",
+        provenance = "cell")
+    rlang::local_options(giotto.check_valid = FALSE)
+    gb <- setNearestNetwork(gb, nn, verbose = FALSE)
+
+    nn_back <- getNearestNetwork(gb, output = "nnNetObj",
+        spat_unit = "cell", feat_type = "rna",
+        nn_type = "sNN", name = "sNN.test")
+    expect_s4_class(nn_back@network, "parquetEdgeStore")
+})
+
+test_that("setSpatialNetwork auto-writes igraph to parquetEdgeStore on backed gobject", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(lifecycle_verbosity = "quiet")
+
+    gdir <- file.path(tempdir(), paste0("sn_autowrite_", basename(tempfile())))
+    on.exit(unlink(gdir, recursive = TRUE), add = TRUE)
+    mat <- matrix(rpois(20 * 50, 2), nrow = 50, ncol = 20,
+                  dimnames = list(paste0("g_", 1:50),
+                                  paste0("c_", 1:20)))
+    sl_dt <- data.table::data.table(
+        cell_ID = paste0("c_", 1:20),
+        sdimx = runif(20), sdimy = runif(20)
+    )
+    sl <- createSpatLocsObj(coordinates = sl_dt, spat_unit = "cell",
+                            provenance = "cell")
+    gb <- createGiottoObject(expression = mat, backend = gdir)
+    gb <- setSpatialLocations(gb, sl, verbose = FALSE)
+
+    ig <- igraph::sample_gnm(20, 50, directed = FALSE)
+    igraph::V(ig)$name <- paste0("c_", seq_len(20))
+    sn <- methods::new("spatialNetworkObj", network = ig,
+        name = "delaunay.network", spat_unit = "cell", provenance = "cell")
+    rlang::local_options(giotto.check_valid = FALSE)
+    gb <- setSpatialNetwork(gb, sn, verbose = FALSE)
+
+    sn_back <- getSpatialNetwork(gb, output = "spatialNetworkObj",
+        spat_unit = "cell", name = "delaunay.network")
+    expect_s4_class(sn_back@network, "parquetEdgeStore")
+})
+
+test_that("network setters plumb @type + @directed correctly to parquetEdgeStore", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(lifecycle_verbosity = "quiet")
+
+    gdir <- file.path(tempdir(), paste0("nn_typedir_", basename(tempfile())))
+    on.exit(unlink(gdir, recursive = TRUE), add = TRUE)
+    cells <- paste0("c_", 1:10)
+    mat <- matrix(rpois(10 * 20, 2), nrow = 20, ncol = 10,
+                  dimnames = list(paste0("g", 1:20), cells))
+    sl_dt <- data.table::data.table(cell_ID = cells,
+                                    sdimx = runif(10),
+                                    sdimy = runif(10))
+    sl <- createSpatLocsObj(coordinates = sl_dt, spat_unit = "cell",
+                            provenance = "cell")
+    g <- createGiottoObject(expression = mat, backend = gdir)
+    g <- setSpatialLocations(g, sl, verbose = FALSE)
+
+    # sNN — undirected
+    ig_snn <- igraph::sample_gnm(10, 15, directed = FALSE)
+    igraph::V(ig_snn)$name <- cells
+    nn_snn <- methods::new("nnNetObj", network = ig_snn, nn_type = "sNN",
+        name = "sNN.t", spat_unit = "cell", feat_type = "rna",
+        provenance = "cell")
+    # kNN — directed
+    ig_knn <- igraph::sample_gnm(10, 15, directed = TRUE)
+    igraph::V(ig_knn)$name <- cells
+    nn_knn <- methods::new("nnNetObj", network = ig_knn, nn_type = "kNN",
+        name = "kNN.t", spat_unit = "cell", feat_type = "rna",
+        provenance = "cell")
+    # spatial — undirected
+    ig_sp <- igraph::sample_gnm(10, 15, directed = FALSE)
+    igraph::V(ig_sp)$name <- cells
+    sn <- methods::new("spatialNetworkObj", network = ig_sp,
+        name = "delaunay.t", spat_unit = "cell", provenance = "cell")
+
+    rlang::local_options(giotto.check_valid = FALSE)
+    g <- setNearestNetwork(g, nn_snn, verbose = FALSE)
+    g <- setNearestNetwork(g, nn_knn, verbose = FALSE)
+    g <- setSpatialNetwork(g, sn, verbose = FALSE)
+
+    snn_store <- getNearestNetwork(g, output = "nnNetObj",
+        spat_unit = "cell", feat_type = "rna",
+        nn_type = "sNN", name = "sNN.t")@network
+    expect_equal(snn_store@type, "sNN")
+    expect_false(snn_store@directed)
+
+    knn_store <- getNearestNetwork(g, output = "nnNetObj",
+        spat_unit = "cell", feat_type = "rna",
+        nn_type = "kNN", name = "kNN.t")@network
+    expect_equal(knn_store@type, "kNN")
+    expect_true(knn_store@directed)
+
+    sn_store <- getSpatialNetwork(g, output = "spatialNetworkObj",
+        spat_unit = "cell", name = "delaunay.t")@network
+    expect_equal(sn_store@type, "spatial")
+    expect_false(sn_store@directed)
+})
+
+test_that("network setters leave in-mem igraphs untouched on unbacked gobject", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(lifecycle_verbosity = "quiet")
+
+    mat <- matrix(rpois(20 * 50, 2), nrow = 50, ncol = 20,
+                  dimnames = list(paste0("g_", 1:50),
+                                  paste0("c_", 1:20)))
+    gb <- createGiottoObject(expression = mat)
+    expect_null(gb@source)
+
+    ig <- igraph::sample_gnm(20, 50, directed = FALSE)
+    igraph::V(ig)$name <- paste0("c_", seq_len(20))
+    nn <- methods::new("nnNetObj", network = ig, nn_type = "sNN",
+        name = "sNN.test", spat_unit = "cell", feat_type = "rna",
+        provenance = "cell")
+    rlang::local_options(giotto.check_valid = FALSE)
+    gb <- setNearestNetwork(gb, nn, verbose = FALSE)
+
+    nn_back <- getNearestNetwork(gb, output = "nnNetObj",
+        spat_unit = "cell", feat_type = "rna",
+        nn_type = "sNN", name = "sNN.test")
+    expect_s3_class(nn_back@network, "igraph")  # not promoted
+})
+
 options("lifecycle_verbosity" = lifecycle_opt)
