@@ -2034,11 +2034,14 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
     # setPolygonInfo / setFeatureInfo: when the gobject has a gsource
     # backend and the network is in-memory (igraph, not a dataStore),
     # write through to a parquetEdgeStore so the artifact lives in the
-    # project vault.
+    # project vault. `type` is plumbed through so the resulting store's
+    # @type slot reflects the actual network kind (kNN vs sNN) instead
+    # of the storeWrite default.
     if (!is.null(gobject@source)) {
         gsrc <- .gsource(gobject)
         if (!inherits(x@network, "dataStore")) {
-            store <- GiottoDisk::sourceWrite(gsrc, x@network)
+            store <- GiottoDisk::sourceWrite(gsrc, x@network,
+                type = x@nn_type)
             x@network <- store
         }
     }
@@ -2316,10 +2319,14 @@ setMethod("setSpatialNetwork", signature("giotto"), function(gobject,
     x <- methods::initialize(x)
 
     # Write to disk if needed (see setNearestNetwork for rationale).
+    # Always tagged "spatial" — the underlying graph construction
+    # method (delaunay / kNN / Voronoi) is stored on the
+    # spatialNetworkObj's @method slot, not the parquetEdgeStore.
     if (!is.null(gobject@source)) {
         gsrc <- .gsource(gobject)
         if (!inherits(x@network, "dataStore")) {
-            store <- GiottoDisk::sourceWrite(gsrc, x@network)
+            store <- GiottoDisk::sourceWrite(gsrc, x@network,
+                type = "spatial")
             x@network <- store
         }
     }
