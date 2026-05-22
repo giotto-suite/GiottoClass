@@ -8,7 +8,7 @@ showGrids(...)
 }
 \arguments{
 \item{...}{
-  Arguments passed on to \code{\link[=showGiottoSpatGrids]{showGiottoSpatGrids}}
+  Arguments passed on to \code{\link{showGiottoSpatGrids}}
   \describe{
     \item{\code{gobject}}{giotto object}
     \item{\code{nrows}}{number of rows to print}

@@ -23,18 +23,18 @@ g <- GiottoData::loadGiottoMini("vizgen")
 showGiottoSpatEnrichments(g)
 }
 \seealso{
-Other functions to show data in giotto object: 
-\code{\link{showGiottoCellMetadata}()},
-\code{\link{showGiottoDimRed}()},
-\code{\link{showGiottoExpression}()},
-\code{\link{showGiottoFeatInfo}()},
-\code{\link{showGiottoFeatMetadata}()},
-\code{\link{showGiottoImageNames}()},
-\code{\link{showGiottoNearestNetworks}()},
-\code{\link{showGiottoSpatGrids}()},
-\code{\link{showGiottoSpatLocs}()},
-\code{\link{showGiottoSpatNetworks}()},
-\code{\link{showGiottoSpatialInfo}()}
+Other functions to show data in giotto object:
+\code{\link[=showGiottoCellMetadata]{showGiottoCellMetadata()}},
+\code{\link[=showGiottoDimRed]{showGiottoDimRed()}},
+\code{\link[=showGiottoExpression]{showGiottoExpression()}},
+\code{\link[=showGiottoFeatInfo]{showGiottoFeatInfo()}},
+\code{\link[=showGiottoFeatMetadata]{showGiottoFeatMetadata()}},
+\code{\link[=showGiottoImageNames]{showGiottoImageNames()}},
+\code{\link[=showGiottoNearestNetworks]{showGiottoNearestNetworks()}},
+\code{\link[=showGiottoSpatGrids]{showGiottoSpatGrids()}},
+\code{\link[=showGiottoSpatLocs]{showGiottoSpatLocs()}},
+\code{\link[=showGiottoSpatNetworks]{showGiottoSpatNetworks()}},
+\code{\link[=showGiottoSpatialInfo]{showGiottoSpatialInfo()}}
 }
 \concept{functions to show data in giotto object}
 \keyword{show}

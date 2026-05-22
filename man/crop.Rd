@@ -33,7 +33,7 @@
 \item{ext}{\code{logical}. When \code{TRUE}, the extent of y will be used instead of y}
 
 \item{compact}{\code{character} or \code{logical} (default = "auto"). Whether to
-compact object. See \linkS4class{giottoBinPoints}. \code{"auto"} will perform a
+compact object. See \link[=giottoBinPoints-class]{giottoBinPoints}. \code{"auto"} will perform a
 compaction when number of spatial points referenced in \verb{@counts} is 1/10 of
 that existing in \verb{@spatial}}
 

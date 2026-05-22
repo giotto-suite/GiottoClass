@@ -57,24 +57,24 @@ dimred <- getNearestNetwork(gobject = g)
 setNearestNetwork(gobject = g, x = dimred)
 }
 \seealso{
-Other expression space nearest network accessor functions: 
-\code{\link{getNearestNetwork}()}
+Other expression space nearest network accessor functions:
+\code{\link[=getNearestNetwork]{getNearestNetwork()}}
 
-Other functions to set data in giotto object: 
-\code{\link{setCellMetadata}()},
-\code{\link{setDimReduction}()},
-\code{\link{setExpression}()},
-\code{\link{setFeatureInfo}()},
-\code{\link{setFeatureMetadata}()},
+Other functions to set data in giotto object:
+\code{\link[=setCellMetadata]{setCellMetadata()}},
+\code{\link[=setDimReduction]{setDimReduction()}},
+\code{\link[=setExpression]{setExpression()}},
+\code{\link[=setFeatureInfo]{setFeatureInfo()}},
+\code{\link[=setFeatureMetadata]{setFeatureMetadata()}},
 \code{\link{setGiotto,giotto,giottoBinPoints-method}},
-\code{\link{setGiottoImage}()},
-\code{\link{setMultiomics}()},
-\code{\link{setPolygonInfo}()},
-\code{\link{setSpatialEnrichment}()},
-\code{\link{setSpatialGrid}()},
-\code{\link{setSpatialLocations}()},
-\code{\link{setSpatialNetwork}()},
-\code{\link{set_multiomics}()}
+\code{\link[=setGiottoImage]{setGiottoImage()}},
+\code{\link[=setMultiomics]{setMultiomics()}},
+\code{\link[=setPolygonInfo]{setPolygonInfo()}},
+\code{\link[=setSpatialEnrichment]{setSpatialEnrichment()}},
+\code{\link[=setSpatialGrid]{setSpatialGrid()}},
+\code{\link[=setSpatialLocations]{setSpatialLocations()}},
+\code{\link[=setSpatialNetwork]{setSpatialNetwork()}},
+\code{\link[=set_multiomics]{set_multiomics()}}
 }
 \concept{expression space nearest network accessor functions}
 \concept{functions to set data in giotto object}

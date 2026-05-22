@@ -35,10 +35,10 @@ g <- GiottoData::loadGiottoMini("vizgen")
 aggregateStacksLocations(g, spat_units = c("z0", "z1"))
 }
 \seealso{
-Other aggregate stacks: 
-\code{\link{aggregateStacks}()},
-\code{\link{aggregateStacksExpression}()},
-\code{\link{aggregateStacksPolygonOverlaps}()},
-\code{\link{aggregateStacksPolygons}()}
+Other aggregate stacks:
+\code{\link[=aggregateStacks]{aggregateStacks()}},
+\code{\link[=aggregateStacksExpression]{aggregateStacksExpression()}},
+\code{\link[=aggregateStacksPolygonOverlaps]{aggregateStacksPolygonOverlaps()}},
+\code{\link[=aggregateStacksPolygons]{aggregateStacksPolygons()}}
 }
 \concept{aggregate stacks}
