@@ -1880,10 +1880,10 @@ setMethod("getNearestNetwork", signature("giotto"), function(gobject,
     }
 
     if (output == "nnNetObj") return(nnNet)
-    if (output == "igraph") return(slot(nnNet, "igraph"))
+    if (output == "igraph") return(slot(nnNet, "network"))
     if (output == "data.table") {
         return(data.table::setDT(
-            igraph::get.data.frame(x = slot(nnNet, "igraph"))
+            igraph::as_data_frame(x = slot(nnNet, "network"), what = "edges")
         ))
     }
 })
