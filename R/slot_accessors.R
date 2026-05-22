@@ -1880,10 +1880,10 @@ setMethod("getNearestNetwork", signature("giotto"), function(gobject,
     }
 
     if (output == "nnNetObj") return(nnNet)
-    if (output == "igraph") return(slot(nnNet, "igraph"))
+    if (output == "igraph") return(slot(nnNet, "network"))
     if (output == "data.table") {
         return(data.table::setDT(
-            igraph::get.data.frame(x = slot(nnNet, "igraph"))
+            igraph::as_data_frame(x = slot(nnNet, "network"), what = "edges")
         ))
     }
 })
@@ -2027,6 +2027,8 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
         ))
     }
 
+    # ensure legacy pre-0.6.0 schema migrates before storing
+    x <- methods::initialize(x)
     gobject@nn_network[[spat_unit]][[feat_type]][[nn_type]][[name]] <- x
     if (isTRUE(initialize)) return(initialize(gobject))
     gobject
@@ -2078,21 +2080,13 @@ setGeneric("getSpatialNetwork",
 setMethod("getSpatialNetwork", signature("giotto"), function(gobject,
     spat_unit = NULL,
     name = NULL,
-    output = c(
-        "spatialNetworkObj",
-        "networkDT",
-        "networkDT_before_filter",
-        "outputObj"
-    ),
+    output = c("spatialNetworkObj", "igraph", "networkDT", "unfiltered", "outputObj"),
     set_defaults = TRUE,
     copy_obj = TRUE,
     verbose = TRUE,
     simplify = TRUE) {
     output <- match.arg(output, choices = c(
-        "spatialNetworkObj",
-        "networkDT",
-        "networkDT_before_filter",
-        "outputObj"
+        "spatialNetworkObj", "igraph", "networkDT", "unfiltered", "outputObj"
     ))
     all_su <- identical(spat_unit, ":all:")
 
@@ -2149,19 +2143,21 @@ setMethod("getSpatialNetwork", signature("giotto"), function(gobject,
     if (!inherits(out, "list")) out <- list(out)
     names(out) <- NULL
 
+    # spatialNetworkObj@network is an igraph (canonical as of 0.6.0);
+    # igraph is copy-on-modify so `copy_obj` is a no-op here.
+    as_dt <- function(g) {
+        if (inherits(g, "igraph")) {
+            data.table::as.data.table(
+                igraph::as_data_frame(g, what = "edges")
+            )
+        } else g
+    }
     out <- lapply(out, function(x) {
-        if (isTRUE(copy_obj)) {
-            x[] <- data.table::copy(x[])
-            if (!is.null(x@networkDT_before_filter)) {
-                x@networkDT_before_filter <- data.table::copy(
-                    x@networkDT_before_filter
-                )
-            }
-        }
         switch(output,
             "spatialNetworkObj" = x,
-            "networkDT" = x[],
-            "networkDT_before_filter" = x@networkDT_before_filter,
+            "igraph" = x[],
+            "networkDT" = as_dt(x[]),
+            "unfiltered" = as_dt(x@unfiltered),
             "outputObj" = x@outputObj
         )
     })
@@ -2302,6 +2298,8 @@ setMethod("setSpatialNetwork", signature("giotto"), function(gobject,
         )
     }
 
+    # ensure legacy pre-0.6.0 schema migrates before storing
+    x <- methods::initialize(x)
     slot(gobject, "spatial_network")[[spat_unit]][[name]] <- x
     if (isTRUE(initialize)) return(initialize(gobject))
     gobject

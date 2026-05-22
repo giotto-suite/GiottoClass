@@ -233,7 +233,7 @@ setMethod(
 setMethod(
     "spatIDs", signature(x = "nnNetObj"),
     function(x, ...) {
-        as.character(unique(names(igraph::V(x@igraph))))
+        as.character(unique(names(igraph::V(x@network))))
     }
 )
 

@@ -66,26 +66,41 @@ setMethod(
 
 
 
+
+
+
+
+
 ## spatNetData ####
+# Migrate pre-0.6.0 serialized spatialNetworkObj on the fly. Pre-0.6.0
+# objects carried @networkDT / @networkDT_before_filter (data.table)
+# instead of @network / @unfiltered (igraph). The migration helper
+# lives in classes.R and is the same one used by updateGiottoObject.
 setMethod(
     "initialize", "spatNetData",
     function(.Object, ...) {
         .Object <- methods::callNextMethod()
-        # prepare DT for set by reference
-        if (!is.null(.Object@networkDT)) {
-            .Object@networkDT <- data.table::setalloccol(.Object@networkDT)
-        }
-        if (!is.null(.Object@networkDT_before_filter)) {
-            .Object@networkDT_before_filter <- data.table::setalloccol(
-                .Object@networkDT_before_filter
-            )
+        if (inherits(.Object, "spatialNetworkObj") &&
+            !is.null(attr(.Object, "networkDT", exact = TRUE))) {
+            return(.migrate_spatnet_obj(.Object))
         }
         .Object
     }
 )
 
 
-
+## nnData ####
+setMethod(
+    "initialize", "nnData",
+    function(.Object, ...) {
+        .Object <- methods::callNextMethod()
+        if (inherits(.Object, "nnNetObj") &&
+            !is.null(attr(.Object, "igraph", exact = TRUE))) {
+            return(.migrate_nn_net_obj(.Object))
+        }
+        .Object
+    }
+)
 
 
 ## coordDataDT ####

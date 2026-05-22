@@ -109,14 +109,6 @@ setMethod(
     }
 )
 
-#' @rdname flip
-#' @export
-setMethod(
-    "flip", signature(x = "spatialNetworkObj"),
-    function(x, direction = "vertical", x0 = 0, y0 = 0, ...) {
-        .flip_spatnet(sn = x, direction = direction, x0 = x0, y0 = y0)
-    }
-)
 
 # TODO apply as instructions for lazy eval after crop/resampling
 #' @rdname flip
@@ -433,71 +425,6 @@ setMethod("flip", signature("affine2d"), function(x, direction = "vertical", x0 
 
 
 
-#' @name .flip_spatnet
-#' @param sn spatialNetworkObj
-#' @param direction character. Direction to flip. Should be either partial
-#' match to 'vertical' or 'horizontal'
-#' @param x0 x value to flip horizontally over (ignored for vertical). Pass NULL
-#' to flip over the extent
-#' @param y0 y value to flip vertically over (ignored for horizontal). Pass NULL
-#' to flip over the extent
-#' @keywords internal
-#' @noRd
-.flip_spatnet <- function(sn,
-    direction = "vertical",
-    x0 = 0,
-    y0 = 0,
-    copy_obj = TRUE) {
-    sdimy_begin <- sdimy_end <- sdimx_begin <- sdimx_end <- NULL
-
-    checkmate::assert_class(sn, "spatialNetworkObj")
-    checkmate::assert_character(direction)
-    if (!is.null(x0)) {
-        checkmate::assert_numeric(x0)
-    }
-    if (!is.null(y0)) {
-        checkmate::assert_numeric(y0)
-    }
-
-    if (isTRUE(copy_obj)) sn <- copy(sn)
-
-    if (grepl(direction, "vertical")) {
-        y_min <- sn[][, min(sdimy_begin, sdimy_end)]
-        if (is.null(y0)) y0 <- y_min
-        sn[][, c("sdimy_begin", "sdimy_end") := .(
-            -sdimy_begin + (2 * y0),
-            -sdimy_end + (2 * y0)
-        )]
-        if (!is.null(sn@networkDT_before_filter)) {
-            sn@networkDT_before_filter[
-                ,
-                c("sdimy_begin", "sdimy_end") := .(
-                    -sdimy_begin + (2 * y0),
-                    -sdimy_end + (2 * y0)
-                )
-            ]
-        }
-    }
-    if (grepl(direction, "horizontal")) {
-        x_min <- sn[][, min(sdimx_begin, sdimx_end)]
-        if (is.null(x0)) x0 <- x_min
-        sn[][, c("sdimx_begin", "sdimx_end") := .(
-            -sdimx_begin + (2 * x0),
-            -sdimx_end + (2 * x0)
-        )]
-        if (!is.null(sn@networkDT_before_filter)) {
-            sn@networkDT_before_filter[
-                ,
-                c("sdimx_begin", "sdimx_end") := .(
-                    -sdimx_begin + (2 * x0),
-                    -sdimx_end + (2 * x0)
-                )
-            ]
-        }
-    }
-
-    return(sn)
-}
 
 
 

@@ -1618,7 +1618,7 @@ create_dim_obj <- function(name = "test",
 #' x <- GiottoData::loadSubObjectMini("nnNetObj")
 #'
 #' createNearestNetObj(
-#'     network = slot(x, "igraph"), name = "sNN",
+#'     network = slot(x, "network"), name = "sNN",
 #'     nn_type = "sNN"
 #' )
 #' @export
@@ -1630,15 +1630,15 @@ createNearestNetObj <- function(name = "test",
     provenance = NULL,
     misc = NULL) {
     if (is.null(network)) {
-        igraph <- NULL
+        network <- NULL
     } else {
-        # convert igraph input to preferred format
-        igraph <- .evaluate_nearest_networks(network)
+        # convert input to canonical igraph form
+        network <- .evaluate_nearest_networks(network)
     }
 
     create_nn_net_obj(
         name = name,
-        igraph = igraph,
+        network = network,
         nn_type = nn_type,
         spat_unit = spat_unit,
         feat_type = feat_type,
@@ -1649,7 +1649,7 @@ createNearestNetObj <- function(name = "test",
 
 create_nn_net_obj <- function(name = "test",
     nn_type = NA_character_,
-    igraph = NULL,
+    network = NULL,
     spat_unit = "cell",
     feat_type = "rna",
     provenance = NULL,
@@ -1660,7 +1660,7 @@ create_nn_net_obj <- function(name = "test",
     new("nnNetObj",
         name = name,
         nn_type = nn_type,
-        igraph = igraph,
+        network = network,
         spat_unit = spat_unit,
         feat_type = feat_type,
         provenance = provenance,
@@ -1782,10 +1782,11 @@ create_spat_locs_obj <- function(name = "test",
 
 #' @title Create S4 spatialNetworkObj
 #' @name createSpatNetObj
-#' @param network network data with connections, distances, and weightings
+#' @param network network as `igraph` (canonical) or `data.frame` with
+#'   `from`/`to` columns. Data.frame input is coerced to `data.table`.
 #' @param name name of spatialNetworkObj
-#' @param networkDT_before_filter (optional) unfiltered data.table  of
-#' network connections, distances, and weightings
+#' @param unfiltered (optional) unfiltered network — same accepted forms as
+#'   `network`. Stored for inspection.
 #' @param spat_unit spatial unit tag
 #' @param method method used to generate spatial network
 #' @param parameters (optional) additional method-specific parameters used
@@ -1799,11 +1800,11 @@ create_spat_locs_obj <- function(name = "test",
 #' @examples
 #' x <- GiottoData::loadSubObjectMini("spatialNetworkObj")
 #'
-#' createSpatNetObj(network = slot(x, "networkDT"), name = "Delaunay_network")
+#' createSpatNetObj(network = slot(x, "network"), name = "Delaunay_network")
 #' @export
 createSpatNetObj <- function(network,
     name = "test",
-    networkDT_before_filter = NULL,
+    unfiltered = NULL,
     method = NULL,
     spat_unit = "cell",
     provenance = NULL,
@@ -1812,15 +1813,18 @@ createSpatNetObj <- function(network,
     cellShapeObj = NULL,
     crossSectionObjects = NULL,
     misc = NULL) {
-    networkDT <- .evaluate_spatial_network(network)
+    network <- .evaluate_spatial_network(network)
+    if (!is.null(unfiltered)) {
+        unfiltered <- .evaluate_spatial_network(unfiltered)
+    }
 
     create_spat_net_obj(
         name = name,
         method = method,
         parameters = parameters,
         outputObj = outputObj,
-        networkDT = networkDT,
-        networkDT_before_filter = networkDT_before_filter,
+        network = network,
+        unfiltered = unfiltered,
         cellShapeObj = cellShapeObj,
         crossSectionObjects = crossSectionObjects,
         spat_unit = spat_unit,
@@ -1833,8 +1837,8 @@ create_spat_net_obj <- function(name = "test",
     method = NA_character_,
     parameters = NULL,
     outputObj = NULL,
-    networkDT = NULL,
-    networkDT_before_filter = NULL,
+    network = NULL,
+    unfiltered = NULL,
     cellShapeObj = NULL,
     crossSectionObjects = NULL,
     spat_unit = "cell",
@@ -1848,8 +1852,8 @@ create_spat_net_obj <- function(name = "test",
         method = method,
         parameters = parameters,
         outputObj = outputObj,
-        networkDT = networkDT,
-        networkDT_before_filter = networkDT_before_filter,
+        network = network,
+        unfiltered = unfiltered,
         cellShapeObj = cellShapeObj,
         crossSectionObjects = crossSectionObjects,
         spat_unit = spat_unit,

@@ -89,25 +89,6 @@ setMethod("t", signature("spatLocsObj"), function(x) {
     return(x)
 })
 
-# * spatialNetworkObj ####
-#' @rdname transpose
-#' @export
-setMethod("t", signature("spatialNetworkObj"), function(x) {
-    sdimx_begin <- sdimx_end <- sdimy_begin <- sdimy_end <- NULL
-    x <- data.table::copy(x)
-    x@networkDT[, c("sdimx_begin", "sdimy_begin", "sdimx_end", "sdimy_end") := .(sdimy_begin, sdimx_begin, sdimy_end, sdimx_end)]
-    if (!is.null(x@networkDT_before_filter)) {
-        x@networkDT_before_filter[, c(
-            "sdimx_begin", "sdimy_begin",
-            "sdimx_end", "sdimy_end"
-        ) := .(
-            sdimy_begin, sdimx_begin, sdimy_end,
-            sdimx_end
-        )]
-    }
-    return(x)
-})
-
 # * giottoPoints ####
 #' @rdname transpose
 #' @export
@@ -166,21 +147,3 @@ t.spatLocsObj <- function(x) {
 }
 
 
-#' @rdname transpose
-#' @method t spatialNetworkObj
-#' @export
-t.spatialNetworkObj <- function(x) {
-    sdimx_begin <- sdimx_end <- sdimy_begin <- sdimy_end <- NULL
-    x <- data.table::copy(x)
-    x@networkDT[, c("sdimx_begin", "sdimy_begin", "sdimx_end", "sdimy_end") := .(sdimy_begin, sdimx_begin, sdimy_end, sdimx_end)]
-    if (!is.null(x@networkDT_before_filter)) {
-        x@networkDT_before_filter[, c(
-            "sdimx_begin", "sdimy_begin",
-            "sdimx_end", "sdimy_end"
-        ) := .(
-            sdimy_begin, sdimx_begin, sdimy_end,
-            sdimx_end
-        )]
-    }
-    return(x)
-}

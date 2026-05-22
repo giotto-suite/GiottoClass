@@ -888,12 +888,14 @@ calculateLabelProportions <- function(gobject, labels,
         spat_unit = spat_unit,
         name = spatial_network_name,
         output = "networkDT",
-        copy_obj = TRUE,
         verbose = verbose
     )
     # ensure for every A -> B, there is both A -> B and B -> A
-    sn <- convert_to_full_spatial_network(reduced_spatial_network_DT = sn)
-    # extract only needed info
+    rev <- data.table::copy(sn)
+    data.table::setnames(rev, c("from", "to"), c("to", "from"))
+    sn <- unique(rbind(sn, rev))
+    # extract only needed info, normalize to (source, target[, weight])
+    data.table::setnames(sn, c("from", "to"), c("source", "target"))
     needed_cols <- c("source", "target")
     if ("weight" %in% colnames(sn)) needed_cols <- c(needed_cols, "weight")
     sn <- sn[, needed_cols, with = FALSE]
@@ -1035,10 +1037,13 @@ calculateSpatCellMetadataProportions <- function(gobject,
         output = "networkDT"
     )
 
-    # convert spatial network to a full spatial network
-    sp_network <- convert_to_full_spatial_network(
-        reduced_spatial_network_DT = sp_network
-    )
+    # downstream merges below match on (source, target). The canonical
+    # network stores one row per undirected pair; expand to both
+    # directions so each cell appears as `target` for every neighbour.
+    rev <- data.table::copy(sp_network)
+    data.table::setnames(rev, c("from", "to"), c("to", "from"))
+    sp_network <- unique(rbind(sp_network, rev))
+    data.table::setnames(sp_network, c("from", "to"), c("source", "target"))
 
     # get cell metadata
     cell_meta <- getCellMetadata(

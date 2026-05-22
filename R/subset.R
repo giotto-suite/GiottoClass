@@ -295,10 +295,6 @@
         gobject,
         spat_unit = ":all:",
         cell_ids = NULL) {
-    # DT vars
-    to <- from <- NULL
-
-    # Find existing networks and return as DT
     if (isTRUE(spat_unit == ":all:")) spat_unit <- NULL
     avail_sn <- list_spatial_networks(gobject, spat_unit = spat_unit)
 
@@ -307,7 +303,7 @@
         return(gobject)
     }
 
-    # for each selected spatnet, perform subset
+    # for each selected spatnet, induced-subgraph by surviving cell set
     lapply(seq(nrow(avail_sn)), function(sn_i) {
         sn <- getSpatialNetwork(
             gobject = gobject,
@@ -316,18 +312,17 @@
             output = "spatialNetworkObj"
         )
 
-        # Within each spatialNetworkObj, subset only the cells_to_keep
-        sn[] <- sn[][to %in% cell_ids & from %in% cell_ids]
+        g <- sn[]
+        keep <- igraph::V(g)$name %in% cell_ids
+        sn[] <- igraph::induced_subgraph(g, vids = keep)
 
-        # Set the spatialNetworkObj back into the gobject
         gobject <<- setSpatialNetwork(
             gobject = gobject,
             x = sn,
             verbose = FALSE,
             initialize = FALSE
         )
-
-        return(NULL) # ignore this
+        return(NULL)
     })
 
     return(gobject)

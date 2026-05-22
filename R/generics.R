@@ -150,6 +150,24 @@ setGeneric("filterData", function(x, param, ...) standardGeneric("filterData"))
 #' e.g. `list(u, d, v, sdev, eigenvalues)` for PCA)
 #' @export
 setGeneric("reduceData", function(x, param, ...) standardGeneric("reduceData"))
+#' @title Create a Network
+#' @name createNetwork
+#' @description Generic for constructing a network (graph) from
+#' coordinates, features, or an embedding. Methods dispatch on the input
+#' data class and a [networkParam-class]-inheriting object that selects
+#' the algorithm (kNN, sNN, Delaunay, ...). Part of the `create<Noun>`
+#' object-construction family. Distinct from analysis-stage operations
+#' such as [processData()], [filterData()], [reduceData()], and
+#' [analyzeData()].
+#' @param x a data object (matrix, [spatLocsObj-class], [dimObj-class],
+#' [giotto-class], or a GiottoDisk `fileStore`)
+#' @param param a [networkParam-class]-inheriting object
+#' @param ... additional arguments, for use in specific methods
+#' @returns A network. Concrete type depends on the Param's `output` slot
+#' and any supplied `backend`: `"data.table"` of edges, `igraph`, or a
+#' GiottoDisk `parquetEdgeStore`.
+#' @export
+setGeneric("createNetwork", function(x, param, ...) standardGeneric("createNetwork"))
 
 # spatial operations ####
 setGeneric(

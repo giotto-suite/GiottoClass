@@ -175,7 +175,7 @@ Select rows (i) and cols (j) from giotto S4 exprMat slot
 Return \code{exprMat} slot Matrix object from giotto S4
 
 
-Return \code{spatNetData} slot network data.table object from giotto S4
+Return \code{spatNetData} slot network object (\code{igraph}) from giotto S4
 
 
 Return \code{nnData} slot igraph object from giotto S4

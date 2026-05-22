@@ -5,21 +5,17 @@
 \alias{t}
 \alias{t,giotto-method}
 \alias{t,spatLocsObj-method}
-\alias{t,spatialNetworkObj-method}
 \alias{t,giottoPoints-method}
 \alias{t,giottoPolygon-method}
 \alias{t,giottoLargeImage-method}
 \alias{t,giottoAffineImage-method}
 \alias{t,affine2d-method}
 \alias{t.spatLocsObj}
-\alias{t.spatialNetworkObj}
 \title{Transpose}
 \usage{
 \S4method{t}{giotto}(x)
 
 \S4method{t}{spatLocsObj}(x)
-
-\S4method{t}{spatialNetworkObj}(x)
 
 \S4method{t}{giottoPoints}(x)
 
@@ -32,8 +28,6 @@
 \S4method{t}{affine2d}(x)
 
 \method{t}{spatLocsObj}(x)
-
-\method{t}{spatialNetworkObj}(x)
 }
 \arguments{
 \item{x}{object to be transposed}

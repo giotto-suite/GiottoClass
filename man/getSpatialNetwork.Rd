@@ -11,7 +11,7 @@ getSpatialNetwork(gobject, ...)
   gobject,
   spat_unit = NULL,
   name = NULL,
-  output = c("spatialNetworkObj", "networkDT", "networkDT_before_filter", "outputObj"),
+  output = c("spatialNetworkObj", "igraph", "networkDT", "unfiltered", "outputObj"),
   set_defaults = TRUE,
   copy_obj = TRUE,
   verbose = TRUE,

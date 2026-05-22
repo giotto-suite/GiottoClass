@@ -149,27 +149,6 @@ setMethod(
 )
 
 
-#' @describeIn spatShift Shift the locations of a spatialNetworkObj
-#' @export
-setMethod(
-    "spatShift", signature("spatialNetworkObj"),
-    function(
-        x, dx = 0, dy = 0, dz = 0,
-        copy_obj = TRUE, ...) {
-        x@networkDT <- .shift_spatial_network(
-            spatnet = x@networkDT,
-            dx = dx, dy = dy, dz = dz, ...
-        )
-        if (!is.null(x@networkDT_before_filter)) {
-            x@networkDT_before_filter <- .shift_spatial_network(
-                spatnet = x@networkDT_before_filter,
-                dx = dx, dy = dy, dz = dz, ...
-            )
-        }
-        return(x)
-    }
-)
-
 #' @rdname spatShift
 #' @export
 setMethod(
@@ -295,63 +274,6 @@ setMethod(
 
 
 
-# See function spatShift in generics.R
-#' @name .shift_spatial_network
-#' @title Shift spatial network
-#' @description Shift spatial network coordinates
-#' @param spatnet spatial network data.table
-#' @param dx distance to shift on x axis
-#' @param dy distance to shift on y axis
-#' @param dz distance to shift on z axis
-#' @param copy_obj copy/duplicate object (default = TRUE)
-#' @returns spatial network
-#' @keywords internal
-.shift_spatial_network <- function(spatnet, dx = 0, dy = 0, dz = 0, copy_obj = TRUE) {
-    # NSE vars
-    sdimx_begin <- sdimx_end <- sdimy_begin <- sdimy_end <- sdimz_begin <-
-        sdimz_end <- NULL
-
-    # catch NULL inputs
-    dx <- dx %null% 0
-    dy <- dy %null% 0
-    dz <- dz %null% 0
-
-    if (copy_obj) spatnet <- data.table::copy(spatnet)
-
-    spatnet[, `:=`(
-        sdimx_begin = sdimx_begin + dx,
-        sdimx_end = sdimx_end + dx,
-        sdimy_begin = sdimy_begin + dy,
-        sdimy_end = sdimy_end + dy
-    )]
-
-    if (dz == 0) {
-        return(spatnet)
-    } # return early if no zshift
-
-    if ("sdimz_begin" %in% colnames(spatnet)) {
-        spatnet[, sdimz_begin := sdimz_begin + dz]
-    } else {
-        spatnet[, sdimz_begin := dz]
-    }
-
-    if ("sdimz_end" %in% colnames(spatnet)) {
-        spatnet[, sdimz_end := sdimz_end + dz]
-    } else {
-        spatnet[, sdimz_end := dz]
-    }
-
-    # fix col ordering
-    data.table::setcolorder(
-        spatnet,
-        c(
-            "from", "to", "sdimx_begin", "sdimy_begin", "sdimz_begin",
-            "sdimx_end", "sdimy_end", "sdimz_end"
-        )
-    )
-
-    return(spatnet)
-}
 
 
 
