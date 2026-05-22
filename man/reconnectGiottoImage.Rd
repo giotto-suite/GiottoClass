@@ -60,9 +60,9 @@ g <- GiottoData::loadGiottoMini("visium")
 reconnectGiottoImage(g, reconnect_type = "largeImage")
 }
 \seealso{
-Other basic image functions: 
-\code{\link{addGiottoImage}()},
-\code{\link{plotGiottoImage}()},
-\code{\link{updateGiottoImage}()}
+Other basic image functions:
+\code{\link[=addGiottoImage]{addGiottoImage()}},
+\code{\link[=plotGiottoImage]{plotGiottoImage()}},
+\code{\link[=updateGiottoImage]{updateGiottoImage()}}
 }
 \concept{basic image functions}

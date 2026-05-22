@@ -44,23 +44,23 @@ g <- GiottoData::loadGiottoMini("visium")
 getExpression(g)
 }
 \seealso{
-Other expression accessor functions: 
-\code{\link{setExpression}()}
+Other expression accessor functions:
+\code{\link[=setExpression]{setExpression()}}
 
-Other functions to get data from giotto object: 
-\code{\link{getCellMetadata}()},
-\code{\link{getDimReduction}()},
-\code{\link{getFeatureInfo}()},
-\code{\link{getFeatureMetadata}()},
-\code{\link{getGiottoImage}()},
-\code{\link{getMultiomics}()},
-\code{\link{getNearestNetwork}()},
-\code{\link{getPolygonInfo}()},
-\code{\link{getSpatialEnrichment}()},
-\code{\link{getSpatialGrid}()},
-\code{\link{getSpatialLocations}()},
-\code{\link{getSpatialNetwork}()},
-\code{\link{get_multiomics}()}
+Other functions to get data from giotto object:
+\code{\link[=getCellMetadata]{getCellMetadata()}},
+\code{\link[=getDimReduction]{getDimReduction()}},
+\code{\link[=getFeatureInfo]{getFeatureInfo()}},
+\code{\link[=getFeatureMetadata]{getFeatureMetadata()}},
+\code{\link[=getGiottoImage]{getGiottoImage()}},
+\code{\link[=getMultiomics]{getMultiomics()}},
+\code{\link[=getNearestNetwork]{getNearestNetwork()}},
+\code{\link[=getPolygonInfo]{getPolygonInfo()}},
+\code{\link[=getSpatialEnrichment]{getSpatialEnrichment()}},
+\code{\link[=getSpatialGrid]{getSpatialGrid()}},
+\code{\link[=getSpatialLocations]{getSpatialLocations()}},
+\code{\link[=getSpatialNetwork]{getSpatialNetwork()}},
+\code{\link[=get_multiomics]{get_multiomics()}}
 }
 \concept{expression accessor functions}
 \concept{functions to get data from giotto object}

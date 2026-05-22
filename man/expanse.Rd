@@ -21,7 +21,12 @@
 \item{...}{
   Arguments passed on to \code{\link[terra:expanse]{terra::expanse}}
   \describe{
-    \item{\code{}}{}
+    \item{\code{unit}}{character. Output unit of area. One of "m", "km", or "ha"}
+    \item{\code{transform}}{logical. If \code{TRUE}, planar CRS are transformed to lon/lat for accuracy}
+    \item{\code{byValue}}{logical. If \code{TRUE}, the area for each unique cell value is returned}
+    \item{\code{zones}}{NULL or SpatRaster with the same geometry identifying zones in \code{x}}
+    \item{\code{wide}}{logical. Should the results be in "wide" rather than "long" format?}
+    \item{\code{usenames}}{logical. If \code{TRUE} layers are identified by their names instead of their numbers}
   }}
 }
 \value{

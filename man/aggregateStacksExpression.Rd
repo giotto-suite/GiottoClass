@@ -41,10 +41,10 @@ g <- GiottoData::loadGiottoMini("vizgen")
 aggregateStacksExpression(g, spat_units = c("z0", "z1"), feat_type = "rna")
 }
 \seealso{
-Other aggregate stacks: 
-\code{\link{aggregateStacks}()},
-\code{\link{aggregateStacksLocations}()},
-\code{\link{aggregateStacksPolygonOverlaps}()},
-\code{\link{aggregateStacksPolygons}()}
+Other aggregate stacks:
+\code{\link[=aggregateStacks]{aggregateStacks()}},
+\code{\link[=aggregateStacksLocations]{aggregateStacksLocations()}},
+\code{\link[=aggregateStacksPolygonOverlaps]{aggregateStacksPolygonOverlaps()}},
+\code{\link[=aggregateStacksPolygons]{aggregateStacksPolygons()}}
 }
 \concept{aggregate stacks}

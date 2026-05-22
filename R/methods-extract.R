@@ -590,8 +590,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,coordDataDT,missing,missing,
-#' ANY-method [<-,coordDataDT,missing,missing-method
+#' @aliases [<-,coordDataDT,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{coordinates} slot in giotto S4
@@ -670,8 +669,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,metaData,missing,missing,
-#' ANY-method [<-,metaData,missing,missing-method
+#' @aliases [<-,metaData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{metaDT} slot in giotto S4
@@ -711,8 +709,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,dimObj,missing,missing,
-#' ANY-method [<-,dimObj,missing,missing-method
+#' @aliases [<-,dimObj,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{coordinates} slot in giotto S4 dimObj
@@ -772,8 +769,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,exprData,missing,missing,
-#' ANY-method [<-,exprData,missing,missing-method
+#' @aliases [<-,exprData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{exprMat} slot in giotto S4
@@ -804,8 +800,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,spatNetData,missing,missing,
-#' ANY-method [<-,spatNetData,missing,missing-method
+#' @aliases [<-,spatNetData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{networkDT} slot in giotto S4
@@ -834,8 +829,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,nnData,missing,missing,
-#' ANY-method [<-,nnData,missing,missing-method
+#' @aliases [<-,nnData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{igraph} slot in giotto S4
@@ -896,8 +890,7 @@ setMethod(
 
 
 #' @rdname replace_bracket
-#' @aliases [<-,enrData,missing,missing,
-#' ANY-method [<-,enrData,missing,missing-method
+#' @aliases [<-,enrData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{enrichDT} slot in giotto S4
@@ -928,8 +921,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,spatGridData,missing,missing,
-#' ANY-method [<-,spatGridData,missing,missing-method
+#' @aliases [<-,spatGridData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{gridDT} slot in giotto S4
@@ -1012,8 +1004,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,giottoPoints,missing,missing,
-#' ANY-method [<-,giottoPoints,missing,missing-method
+#' @aliases [<-,giottoPoints,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{spatVector} slot in giotto S4
@@ -1319,8 +1310,7 @@ setMethod(
 
 
 #' @rdname replace_bracket
-#' @aliases [<-,giottoPolygon,missing,missing,
-#' ANY-method [<-,giottoPolygon,missing,missing-method
+#' @aliases [<-,giottoPolygon,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{spatVector} slot in giottoPolygon
@@ -1544,8 +1534,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,affine2d,missing,missing,
-#' ANY-method [<-,affine2d,missing,missing-method
+#' @aliases [<-,affine2d,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{affine} slot in affine2d
