@@ -1022,7 +1022,7 @@ giottoToAnnData <- function(
 
     # Nearest Neighbor Network
 
-    # error hanldling wrapper to get_NearestNetwork
+    # error handling wrapper to getNearestNetwork
     try_get_NN <- function(
         gobject,
         spat_unit,

@@ -862,7 +862,7 @@ setMethod(
 # * spatNetData ####
 #' @rdname subset_bracket
 #' @section \code{`[`} methods:
-#'   Return \code{spatNetData} slot network object (`igraph`) from giotto S4
+#'   Return \code{spatNetData} \code{network} slot (an igraph) from giotto S4
 #' @export
 setMethod(
     "[",
@@ -895,7 +895,7 @@ setMethod(
 # * nnData ####
 #' @rdname subset_bracket
 #' @section \code{`[`} methods:
-#'   Return \code{nnData} slot igraph object from giotto S4
+#'   Return \code{nnData} \code{network} slot (an igraph) from giotto S4
 #' @export
 setMethod(
     "[",
