@@ -3,48 +3,48 @@
 \name{setGiotto,giotto,giottoBinPoints-method}
 \alias{setGiotto,giotto,giottoBinPoints-method}
 \alias{setGiotto}
-\alias{setGiotto,giotto,list-method}
-\alias{setGiotto,giotto,cellMetaObj-method}
-\alias{setGiotto,giotto,featMetaObj-method}
-\alias{setGiotto,giotto,exprObj-method}
-\alias{setGiotto,giotto,giottoPoints-method}
-\alias{setGiotto,giotto,giottoPolygon-method}
-\alias{setGiotto,giotto,dimObj-method}
-\alias{setGiotto,giotto,spatLocsObj-method}
-\alias{setGiotto,giotto,spatEnrObj-method}
-\alias{setGiotto,giotto,nnNetObj-method}
-\alias{setGiotto,giotto,spatialNetworkObj-method}
-\alias{setGiotto,giotto,giottoLargeImage-method}
-\alias{setGiotto,giotto,giottoImage-method}
+\alias{setGiotto,gAny,list-method}
+\alias{setGiotto,gAny,cellMetaObj-method}
+\alias{setGiotto,gAny,featMetaObj-method}
+\alias{setGiotto,gAny,exprObj-method}
+\alias{setGiotto,gAny,giottoPoints-method}
+\alias{setGiotto,gAny,giottoPolygon-method}
+\alias{setGiotto,gAny,dimObj-method}
+\alias{setGiotto,gAny,spatLocsObj-method}
+\alias{setGiotto,gAny,spatEnrObj-method}
+\alias{setGiotto,gAny,nnNetObj-method}
+\alias{setGiotto,gAny,spatialNetworkObj-method}
+\alias{setGiotto,gAny,giottoLargeImage-method}
+\alias{setGiotto,gAny,giottoImage-method}
 \title{Set giotto subobjects into giotto object}
 \usage{
 \S4method{setGiotto}{giotto,giottoBinPoints}(gobject, x, ...)
 
-\S4method{setGiotto}{giotto,list}(gobject, x, verbose = TRUE, ...)
+\S4method{setGiotto}{gAny,list}(gobject, x, verbose = TRUE, ...)
 
-\S4method{setGiotto}{giotto,cellMetaObj}(gobject, x, ...)
+\S4method{setGiotto}{gAny,cellMetaObj}(gobject, x, ...)
 
-\S4method{setGiotto}{giotto,featMetaObj}(gobject, x, ...)
+\S4method{setGiotto}{gAny,featMetaObj}(gobject, x, ...)
 
-\S4method{setGiotto}{giotto,exprObj}(gobject, x, ...)
+\S4method{setGiotto}{gAny,exprObj}(gobject, x, ...)
 
-\S4method{setGiotto}{giotto,giottoPoints}(gobject, x, ...)
+\S4method{setGiotto}{gAny,giottoPoints}(gobject, x, ...)
 
-\S4method{setGiotto}{giotto,giottoPolygon}(gobject, x, ...)
+\S4method{setGiotto}{gAny,giottoPolygon}(gobject, x, ...)
 
-\S4method{setGiotto}{giotto,dimObj}(gobject, x, ...)
+\S4method{setGiotto}{gAny,dimObj}(gobject, x, ...)
 
-\S4method{setGiotto}{giotto,spatLocsObj}(gobject, x, ...)
+\S4method{setGiotto}{gAny,spatLocsObj}(gobject, x, ...)
 
-\S4method{setGiotto}{giotto,spatEnrObj}(gobject, x, ...)
+\S4method{setGiotto}{gAny,spatEnrObj}(gobject, x, ...)
 
-\S4method{setGiotto}{giotto,nnNetObj}(gobject, x, ...)
+\S4method{setGiotto}{gAny,nnNetObj}(gobject, x, ...)
 
-\S4method{setGiotto}{giotto,spatialNetworkObj}(gobject, x, ...)
+\S4method{setGiotto}{gAny,spatialNetworkObj}(gobject, x, ...)
 
-\S4method{setGiotto}{giotto,giottoLargeImage}(gobject, x, ...)
+\S4method{setGiotto}{gAny,giottoLargeImage}(gobject, x, ...)
 
-\S4method{setGiotto}{giotto,giottoImage}(gobject, x, ...)
+\S4method{setGiotto}{gAny,giottoImage}(gobject, x, ...)
 }
 \arguments{
 \item{gobject}{giotto object}

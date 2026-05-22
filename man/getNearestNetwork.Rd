@@ -2,12 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getNearestNetwork}
 \alias{getNearestNetwork}
-\alias{getNearestNetwork,giotto-method}
+\alias{getNearestNetwork,gAny-method}
 \title{Get nearest neighbor network}
 \usage{
 getNearestNetwork(gobject, ...)
 
-\S4method{getNearestNetwork}{giotto}(
+\S4method{getNearestNetwork}{gAny}(
   gobject,
   spat_unit = NULL,
   feat_type = NULL,

@@ -316,13 +316,15 @@
         keep <- igraph::V(g)$name %in% cell_ids
         sn[] <- igraph::induced_subgraph(g, vids = keep)
 
+        # Set the spatialNetworkObj back into the gobject
         gobject <<- setSpatialNetwork(
             gobject = gobject,
             x = sn,
             verbose = FALSE,
             initialize = FALSE
         )
-        return(NULL)
+
+        return(NULL) # ignore this
     })
 
     return(gobject)

@@ -6,11 +6,14 @@
 \alias{activeFeatType<-}
 \alias{activeFeatType,giotto-method}
 \alias{activeFeatType<-,giotto,character-method}
+\alias{activeFeatType,giottoMulti-method}
 \title{Active feature type}
 \usage{
 \S4method{activeFeatType}{giotto}(gobject)
 
 \S4method{activeFeatType}{giotto,character}(gobject) <- value
+
+\S4method{activeFeatType}{giottoMulti}(gobject)
 }
 \arguments{
 \item{gobject}{giotto object}

@@ -246,6 +246,17 @@ setMethod(
     }
 )
 
+#' @rdname activeSpatUnit-generic
+#' @export
+setMethod("activeSpatUnit", signature(gobject = "giottoMulti"),
+    function(gobject) {
+        # Per-child defaults from @access; named vector keyed by child name.
+        out <- gobject@access$spat_unit
+        names(out) <- gobject@access$object
+        out
+    }
+)
+
 
 ## activeFeatType ####
 setGeneric(
@@ -273,5 +284,15 @@ setMethod(
     function(gobject, value) {
         instructions(gobject, "active_feat_type") <- value
         return(gobject)
+    }
+)
+
+#' @rdname activeFeatType-generic
+#' @export
+setMethod("activeFeatType", signature(gobject = "giottoMulti"),
+    function(gobject) {
+        out <- gobject@access$feat_type
+        names(out) <- gobject@access$object
+        out
     }
 )

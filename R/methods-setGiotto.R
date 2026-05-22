@@ -20,7 +20,7 @@ NULL
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "list"),
+    "setGiotto", signature("gAny", "list"),
     function(gobject, x, verbose = TRUE, ...) {
         # suspend init and checking until all items are added
         a <- list(...)
@@ -51,7 +51,7 @@ setMethod(
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "cellMetaObj"),
+    "setGiotto", signature("gAny", "cellMetaObj"),
     function(gobject, x, ...) {
         gobject <- setCellMetadata(gobject = gobject, x = x, ...)
         gobject
@@ -61,7 +61,7 @@ setMethod(
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "featMetaObj"),
+    "setGiotto", signature("gAny", "featMetaObj"),
     function(gobject, x, ...) {
         gobject <- setFeatureMetadata(gobject = gobject, x = x, ...)
         gobject
@@ -71,7 +71,7 @@ setMethod(
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "exprObj"),
+    "setGiotto", signature("gAny", "exprObj"),
     function(gobject, x, ...) {
         gobject <- setExpression(gobject = gobject, x = x, ...)
         gobject
@@ -81,7 +81,7 @@ setMethod(
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "giottoPoints"),
+    "setGiotto", signature("gAny", "giottoPoints"),
     function(gobject, x, ...) {
         gobject <- setFeatureInfo(gobject = gobject, x = x, ...)
         gobject
@@ -91,7 +91,7 @@ setMethod(
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "giottoPolygon"),
+    "setGiotto", signature("gAny", "giottoPolygon"),
     function(gobject, x, ...) {
         gobject <- setPolygonInfo(gobject = gobject, x = x, ...)
         gobject
@@ -101,7 +101,7 @@ setMethod(
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "dimObj"),
+    "setGiotto", signature("gAny", "dimObj"),
     function(gobject, x, ...) {
         gobject <- setDimReduction(gobject = gobject, x = x, ...)
         gobject
@@ -111,7 +111,7 @@ setMethod(
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "spatLocsObj"),
+    "setGiotto", signature("gAny", "spatLocsObj"),
     function(gobject, x, ...) {
         gobject <- setSpatialLocations(gobject = gobject, x = x, ...)
         gobject
@@ -121,7 +121,7 @@ setMethod(
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "spatEnrObj"),
+    "setGiotto", signature("gAny", "spatEnrObj"),
     function(gobject, x, ...) {
         gobject <- setSpatialEnrichment(gobject = gobject, x = x, ...)
         gobject
@@ -131,7 +131,7 @@ setMethod(
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "nnNetObj"),
+    "setGiotto", signature("gAny", "nnNetObj"),
     function(gobject, x, ...) {
         gobject <- setNearestNetwork(gobject = gobject, x = x, ...)
         gobject
@@ -141,7 +141,7 @@ setMethod(
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "spatialNetworkObj"),
+    "setGiotto", signature("gAny", "spatialNetworkObj"),
     function(gobject, x, ...) {
         gobject <- setSpatialNetwork(gobject = gobject, x = x, ...)
         gobject
@@ -152,7 +152,7 @@ setMethod(
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "giottoLargeImage"),
+    "setGiotto", signature("gAny", "giottoLargeImage"),
     function(gobject, x, ...) {
         gobject <- setGiottoImage(
             gobject = gobject,
@@ -167,7 +167,7 @@ setMethod(
 #' @rdname setGiotto
 #' @export
 setMethod(
-    "setGiotto", signature("giotto", "giottoImage"),
+    "setGiotto", signature("gAny", "giottoImage"),
     function(gobject, x, ...) {
         gobject <- setGiottoImage(
             gobject = gobject,

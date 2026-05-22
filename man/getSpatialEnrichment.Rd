@@ -2,12 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getSpatialEnrichment}
 \alias{getSpatialEnrichment}
-\alias{getSpatialEnrichment,giotto-method}
+\alias{getSpatialEnrichment,gAny-method}
 \title{Get spatial enrichment}
 \usage{
 getSpatialEnrichment(gobject, ...)
 
-\S4method{getSpatialEnrichment}{giotto}(
+\S4method{getSpatialEnrichment}{gAny}(
   gobject,
   spat_unit = NULL,
   feat_type = NULL,

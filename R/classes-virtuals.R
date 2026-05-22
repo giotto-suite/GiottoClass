@@ -20,6 +20,22 @@ setClassUnion("nullOrLogical", c("NULL", "logical"))
 #' @noRd
 setClassUnion("gIndex", c("numeric", "logical", "character"))
 
+# ** gAny Class ####
+#' @title gAny virtual class
+#' @description
+#' Virtual base for `giotto` and `giottoMulti`. Acts purely as a dispatch tag
+#' so that shared-domain methods (expression, dim reduction, NN networks, cell
+#' metadata, etc.) can be written once via `setMethod("foo", "gAny", ...)` and
+#' apply to both classes. Defines no slots — concrete subclasses are free to
+#' represent shared concepts however they like, and `gAny`-level methods reach
+#' them via accessor generics rather than direct slot access.
+#' @keywords internal
+#' @noRd
+setClass(
+    "gAny",
+    contains = "VIRTUAL"
+)
+
 # ** giottoSubobject Class ####
 #' @keywords internal
 #' @noRd

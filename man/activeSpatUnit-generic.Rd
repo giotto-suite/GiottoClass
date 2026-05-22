@@ -6,11 +6,14 @@
 \alias{activeSpatUnit<-}
 \alias{activeSpatUnit,giotto-method}
 \alias{activeSpatUnit<-,giotto,character-method}
+\alias{activeSpatUnit,giottoMulti-method}
 \title{Active spatial unit}
 \usage{
 \S4method{activeSpatUnit}{giotto}(gobject)
 
 \S4method{activeSpatUnit}{giotto,character}(gobject) <- value
+
+\S4method{activeSpatUnit}{giottoMulti}(gobject)
 }
 \arguments{
 \item{gobject}{giotto object}

@@ -2,12 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setDimReduction}
 \alias{setDimReduction}
-\alias{setDimReduction,giotto-method}
+\alias{setDimReduction,gAny-method}
 \title{Set dimension reduction data}
 \usage{
 setDimReduction(gobject, ...)
 
-\S4method{setDimReduction}{giotto}(
+\S4method{setDimReduction}{gAny}(
   gobject,
   x,
   spat_unit = NULL,
