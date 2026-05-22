@@ -1120,7 +1120,7 @@ setMethod(
             }
             next
         }
-        x@overlaps[[feat]] <- x@overlaps[[feat]][i, ids = FALSE]
+        x@overlaps[[feat]] <- x@overlaps[[feat]][i]
     }
     x
 }
