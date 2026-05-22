@@ -58,7 +58,13 @@ setMethod("nrow", signature("metaData"), function(x) nrow(x@metaDT))
 #' @export
 setMethod(
     "nrow", signature("spatialNetworkObj"),
-    function(x) nrow(x@networkDT)
+    function(x) {
+        # report edge count regardless of underlying network backend
+        if (inherits(x@network, "igraph")) {
+            return(igraph::ecount(x@network))
+        }
+        nrow(x@network)
+    }
 )
 
 #' @rdname dims-generic

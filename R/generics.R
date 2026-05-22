@@ -99,6 +99,75 @@ setGeneric("processData", function(x, param, ...) standardGeneric("processData")
 #' @returns Clustering results. Exact outputs may depend on param settings
 #' @export
 setGeneric("clusterData", function(x, param, ...) standardGeneric("clusterData"))
+#' @title Data Analysis
+#' @name analyzeData
+#' @description Generic for analyzing an object containing measured values,
+#' producing computed outputs or summary statistics about the data rather than
+#' transforming it. Specific methods should be defined for this generic to
+#' perform analyses specific to a data class type. No methods are exported
+#' from \pkg{GiottoClass}. The methods, which may differ depending on the
+#' input data, are attached from other packages which focus on analyses and/or
+#' alternative data representations with specific ways to implement those
+#' analyses.
+#' @param x a data object
+#' @param param a [analyzeParam-class] inheriting object
+#' @param ... additional arguments, for use in specific methods
+#' @returns A \code{data.table} of computed values or summary statistics
+#' @export
+setGeneric("analyzeData", function(x, param, ...) standardGeneric("analyzeData"))
+#' @title Data Filter
+#' @name filterData
+#' @description Generic for filtering an object containing measured values,
+#' producing a selection (typically a list of IDs to keep) rather than
+#' transformed data or summary statistics. Specific methods should be
+#' defined for this generic to perform filtering specific to a data class
+#' type. No methods are exported from \pkg{GiottoClass}. The methods, which
+#' may differ depending on the input data, are attached from other packages
+#' which focus on filtering and/or alternative data representations with
+#' specific ways to implement those filters.
+#' @param x a data object
+#' @param param a [filterParam-class] inheriting object
+#' @param ... additional arguments, for use in specific methods
+#' @returns A selection (typically a list of character ID vectors)
+#' @export
+setGeneric("filterData", function(x, param, ...) standardGeneric("filterData"))
+#' @title Data Reduction
+#' @name reduceData
+#' @description Generic for reducing an object containing measured values
+#' to a lower-dimensional decomposition or embedding (PCA, UMAP, tSNE,
+#' ...), distinct from [processData()] (same-shape transform),
+#' [analyzeData()] (summary stats), and [filterData()] (selection).
+#' Specific methods should be defined for this generic to perform
+#' reductions specific to a data class type. No methods are exported from
+#' \pkg{GiottoClass}. The methods, which may differ depending on the input
+#' data, are attached from other packages which focus on reduction methods
+#' and/or alternative data representations with specific ways to implement
+#' those reductions.
+#' @param x a data object
+#' @param param a [reduceParam-class] inheriting object
+#' @param ... additional arguments, for use in specific methods
+#' @returns A decomposition (typically a list of matrices/vectors,
+#' e.g. `list(u, d, v, sdev, eigenvalues)` for PCA)
+#' @export
+setGeneric("reduceData", function(x, param, ...) standardGeneric("reduceData"))
+#' @title Create a Network
+#' @name createNetwork
+#' @description Generic for constructing a network (graph) from
+#' coordinates, features, or an embedding. Methods dispatch on the input
+#' data class and a [networkParam-class]-inheriting object that selects
+#' the algorithm (kNN, sNN, Delaunay, ...). Part of the `create<Noun>`
+#' object-construction family. Distinct from analysis-stage operations
+#' such as [processData()], [filterData()], [reduceData()], and
+#' [analyzeData()].
+#' @param x a data object (matrix, [spatLocsObj-class], [dimObj-class],
+#' [giotto-class], or a GiottoDisk `fileStore`)
+#' @param param a [networkParam-class]-inheriting object
+#' @param ... additional arguments, for use in specific methods
+#' @returns A network. Concrete type depends on the Param's `output` slot
+#' and any supplied `backend`: `"data.table"` of edges, `igraph`, or a
+#' GiottoDisk `parquetEdgeStore`.
+#' @export
+setGeneric("createNetwork", function(x, param, ...) standardGeneric("createNetwork"))
 
 # spatial operations ####
 setGeneric(

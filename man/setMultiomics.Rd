@@ -2,10 +2,13 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setMultiomics}
 \alias{setMultiomics}
+\alias{setMultiomics,giotto-method}
 \title{Set multiomics integration results}
 \usage{
-setMultiomics(
-  gobject = NULL,
+setMultiomics(gobject, ...)
+
+\S4method{setMultiomics}{giotto}(
+  gobject,
   result,
   spat_unit = NULL,
   feat_type = NULL,
@@ -17,6 +20,8 @@ setMultiomics(
 }
 \arguments{
 \item{gobject}{A Giotto object}
+
+\item{...}{additional params to pass}
 
 \item{result}{A matrix or result from multiomics
 integration (e.g. theta weighted values from runWNN)}
@@ -30,8 +35,6 @@ integration (e.g. theta weighted values from runWNN)}
 \item{result_name}{Default = 'theta_weighted_matrix'}
 
 \item{verbose}{be verbose}
-
-\item{...}{additional params to pass}
 }
 \value{
 A giotto object

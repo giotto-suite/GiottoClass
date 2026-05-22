@@ -6,7 +6,6 @@
 \alias{crop,giottoLargeImage,ANY-method}
 \alias{crop,giottoAffineImage,ANY-method}
 \alias{crop,spatLocsObj,ANY-method}
-\alias{crop,spatialNetworkObj,ANY-method}
 \alias{crop,giottoPoints,ANY-method}
 \alias{crop,giottoPolygon,ANY-method}
 \title{Crop to a spatial subset}
@@ -18,8 +17,6 @@
 \S4method{crop}{giottoAffineImage,ANY}(x, y, write = FALSE, filename = tempfile(fileext = ".tif"), ...)
 
 \S4method{crop}{spatLocsObj,ANY}(x, y, ...)
-
-\S4method{crop}{spatialNetworkObj,ANY}(x, y, ...)
 
 \S4method{crop}{giottoPoints,ANY}(x, y, DT = TRUE, xmin = NULL, xmax = NULL, ymin = NULL, ymax = NULL, ...)
 

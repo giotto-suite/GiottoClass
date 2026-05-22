@@ -373,6 +373,78 @@ setMethod(
     }
 )
 
+#' @rdname subset_dollar
+#' @section \code{`$`} methods:
+#'   Select param from `analyzeParam` inheriting objects
+#' @export
+setMethod("$", signature("analyzeParam"), function(x, name) {
+    x@param[[name]]
+})
+#' @export
+.DollarNames.analyzeParam <- function(x, pattern) {
+    names(x@param)
+}
+
+#' @rdname replace_dollar
+#' @section \code{`$<-`} methods:
+#'   Set values by param name into `analyzeParam` inheriting objects
+#' @export
+setMethod(
+    "$<-", signature("analyzeParam"),
+    function(x, name, value) {
+        x@param[[name]] <- value
+        return(initialize(x))
+    }
+)
+
+#' @rdname subset_dollar
+#' @section \code{`$`} methods:
+#'   Select param from `filterParam` inheriting objects
+#' @export
+setMethod("$", signature("filterParam"), function(x, name) {
+    x@param[[name]]
+})
+#' @export
+.DollarNames.filterParam <- function(x, pattern) {
+    names(x@param)
+}
+
+#' @rdname replace_dollar
+#' @section \code{`$<-`} methods:
+#'   Set values by param name into `filterParam` inheriting objects
+#' @export
+setMethod(
+    "$<-", signature("filterParam"),
+    function(x, name, value) {
+        x@param[[name]] <- value
+        return(initialize(x))
+    }
+)
+
+#' @rdname subset_dollar
+#' @section \code{`$`} methods:
+#'   Select param from `reduceParam` inheriting objects
+#' @export
+setMethod("$", signature("reduceParam"), function(x, name) {
+    x@param[[name]]
+})
+#' @export
+.DollarNames.reduceParam <- function(x, pattern) {
+    names(x@param)
+}
+
+#' @rdname replace_dollar
+#' @section \code{`$<-`} methods:
+#'   Set values by param name into `reduceParam` inheriting objects
+#' @export
+setMethod(
+    "$<-", signature("reduceParam"),
+    function(x, name, value) {
+        x@param[[name]] <- value
+        return(initialize(x))
+    }
+)
+
 # [ S4 access generic ####
 
 
@@ -790,7 +862,7 @@ setMethod(
 # * spatNetData ####
 #' @rdname subset_bracket
 #' @section \code{`[`} methods:
-#'   Return \code{spatNetData} slot network data.table object from giotto S4
+#'   Return \code{spatNetData} \code{network} slot (an igraph) from giotto S4
 #' @export
 setMethod(
     "[",
@@ -799,7 +871,7 @@ setMethod(
         drop = "missing"
     ),
     function(x, i, j) {
-        x@networkDT
+        x@network
     }
 )
 
@@ -808,13 +880,13 @@ setMethod(
 #' ANY-method [<-,spatNetData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
-#'   Assign to \code{networkDT} slot in giotto S4
+#'   Assign to \code{network} slot in giotto S4
 #' @export
 setMethod(
     "[<-",
     signature(x = "spatNetData", i = "missing", j = "missing", value = "ANY"),
     function(x, i, j, value) {
-        x@networkDT <- value
+        x@network <- value
         x
     }
 )
@@ -823,13 +895,13 @@ setMethod(
 # * nnData ####
 #' @rdname subset_bracket
 #' @section \code{`[`} methods:
-#'   Return \code{nnData} slot igraph object from giotto S4
+#'   Return \code{nnData} \code{network} slot (an igraph) from giotto S4
 #' @export
 setMethod(
     "[",
     signature(x = "nnData", i = "missing", j = "missing", drop = "missing"),
     function(x, i, j) {
-        x@igraph
+        x@network
     }
 )
 
@@ -838,12 +910,12 @@ setMethod(
 #' ANY-method [<-,nnData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
-#'   Assign to \code{igraph} slot in giotto S4
+#'   Assign to \code{network} slot in giotto S4
 #' @export
 setMethod(
     "[<-", signature(x = "nnData", i = "missing", j = "missing", value = "ANY"),
     function(x, i, j, value) {
-        x@igraph <- value
+        x@network <- value
         x
     }
 )

@@ -1072,7 +1072,7 @@ readSpatNetData <- function(data_list,
                             provenance
                         }, # assumed
                         network = networkDT,
-                        networkDT_before_filter = NULL,
+                        unfiltered = NULL,
                         cellShapeObj = NULL,
                         crossSectionObjects = NULL,
                         parameters = NULL,

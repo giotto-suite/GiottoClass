@@ -6,7 +6,6 @@
 \alias{ext,spatLocsObj-method}
 \alias{ext,giottoPolygon-method}
 \alias{ext,giottoPoints-method}
-\alias{ext,spatialNetworkObj-method}
 \alias{ext,giottoLargeImage-method}
 \alias{ext,giottoImage-method}
 \alias{ext,giotto-method}
@@ -28,8 +27,6 @@
 \S4method{ext}{giottoPolygon}(x, ...)
 
 \S4method{ext}{giottoPoints}(x, ...)
-
-\S4method{ext}{spatialNetworkObj}(x, ...)
 
 \S4method{ext}{giottoLargeImage}(x, ...)
 

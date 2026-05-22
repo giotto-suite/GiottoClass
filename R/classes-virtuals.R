@@ -140,11 +140,11 @@ setClass("nnData",
     contains = "VIRTUAL",
     slots = list(
         nn_type = "character",
-        igraph = "ANY"
+        network = "ANY"
     ),
     prototype = methods::prototype(
         nn_type = NA_character_,
-        igraph = NULL
+        network = NULL
     )
 )
 
@@ -158,16 +158,16 @@ setClass("spatNetData",
         method = "character",
         parameters = "ANY",
         outputObj = "ANY",
-        networkDT = "nullOrDatatable",
-        networkDT_before_filter = "nullOrDatatable",
+        network = "ANY",
+        unfiltered = "ANY",
         cellShapeObj = "ANY"
     ),
     prototype = methods::prototype(
         method = NA_character_,
         parameters = NULL,
         outputObj = NULL,
-        networkDT = NULL,
-        networkDT_before_filter = NULL,
+        network = NULL,
+        unfiltered = NULL,
         cellShapeObj = NULL
     )
 )

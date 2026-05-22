@@ -73,6 +73,75 @@ setClass(
 #' @exportClass processParam
 setClass("processParam", contains = "VIRTUAL", slots = list(param = "list"))
 
+# ** analyzeParam ####
+
+#' @title Parameter Classes for Data Analysis Operations
+#' @name analyzeParam-class
+#' @aliases analyzeParam
+#' @description
+#' Utility class that defines a data analysis procedure and any params used
+#' in performing it. Packages defining analysis methods will create their own
+#' child classes. These parameter objects are intended to be passed alongside
+#' the data to analyze to [analyzeData()].
+#' @slot param list. Named parameters to use with the intended analysis
+#' operation. These can be accessed and updated using the `$` operator.
+#' @exportClass analyzeParam
+setClass("analyzeParam", contains = "VIRTUAL", slots = list(param = "list"))
+
+# ** filterParam ####
+
+#' @title Parameter Classes for Data Filter Operations
+#' @name filterParam-class
+#' @aliases filterParam
+#' @description
+#' Utility class that defines a data filter procedure and any params used
+#' in performing it. Packages defining filter methods will create their own
+#' child classes. These parameter objects are intended to be passed alongside
+#' the data to filter to [filterData()]. Filter methods return a selection
+#' (typically `list(feats_keep, cells_keep)` of character IDs) rather than
+#' transformed data, distinguishing them from [processData()].
+#' @slot param list. Named parameters to use with the intended filter
+#' operation. These can be accessed and updated using the `$` operator.
+#' @exportClass filterParam
+setClass("filterParam", contains = "VIRTUAL", slots = list(param = "list"))
+
+# ** reduceParam ####
+
+#' @title Parameter Classes for Data Reduction Operations
+#' @name reduceParam-class
+#' @aliases reduceParam
+#' @description
+#' Utility class that defines a dimensionality-reduction or decomposition
+#' procedure and any params used in performing it. Packages defining
+#' reduction methods (PCA, UMAP, tSNE, ...) will create their own child
+#' classes. These parameter objects are intended to be passed alongside the
+#' data to reduce to [reduceData()]. Reduction methods return a decomposition
+#' (typically a list of matrices/vectors such as `list(u, d, v, ...)`),
+#' distinguishing them from [processData()] (same-shape transform),
+#' [analyzeData()] (summary stats), and [filterData()] (selection).
+#' @slot param list. Named parameters to use with the intended reduction
+#' operation. These can be accessed and updated using the `$` operator.
+#' @exportClass reduceParam
+setClass("reduceParam", contains = "VIRTUAL", slots = list(param = "list"))
+
+# ** networkParam ####
+
+#' @title Parameter Classes for Network Construction
+#' @name networkParam-class
+#' @aliases networkParam
+#' @description
+#' Utility class that defines a network-construction procedure (kNN, sNN,
+#' Delaunay, ...) and any params used in performing it. Packages defining
+#' network methods will create their own child classes. These parameter
+#' objects are intended to be passed alongside data to [createNetwork()].
+#' Network constructors return a graph (edges and optionally weights /
+#' distances), distinguishing them from analysis-stage operations such as
+#' [processData()], [filterData()], [reduceData()], and [analyzeData()].
+#' @slot param list. Named parameters to use with the intended network
+#' operation. Accessed and updated via the `$` operator.
+#' @exportClass networkParam
+setClass("networkParam", contains = "VIRTUAL", slots = list(param = "list"))
+
 
 
 # ** svkey ####

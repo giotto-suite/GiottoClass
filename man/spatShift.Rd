@@ -6,7 +6,6 @@
 \alias{spatShift,SpatExtent-method}
 \alias{spatShift,spatLocsObj-method}
 \alias{spatShift,data.frame-method}
-\alias{spatShift,spatialNetworkObj-method}
 \alias{spatShift,giottoPolygon-method}
 \alias{spatShift,giottoPoints-method}
 \alias{spatShift,giottoLargeImage-method}
@@ -37,8 +36,6 @@
   geom = c("sdimx", "sdimy", "sdimz"),
   ...
 )
-
-\S4method{spatShift}{spatialNetworkObj}(x, dx = 0, dy = 0, dz = 0, copy_obj = TRUE, ...)
 
 \S4method{spatShift}{giottoPolygon}(x, dx = 0, dy = 0, copy_obj = FALSE, ...)
 
@@ -84,11 +81,6 @@ Shift the spatial locations of an object
 With the \code{giotto} object, the ":all:" token can be passed to \code{spat_unit},
 \code{feat_type}, and \code{images} arguments to affect all available items.
 }
-\section{Methods (by class)}{
-\itemize{
-\item \code{spatShift(spatialNetworkObj)}: Shift the locations of a spatialNetworkObj
-
-}}
 \examples{
 g <- GiottoData::loadSubObjectMini("spatLocsObj")
 

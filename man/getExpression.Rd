@@ -3,9 +3,12 @@
 \name{getExpression}
 \alias{getExpression}
 \alias{getExpressionValues}
+\alias{getExpression,giotto-method}
 \title{Get expression values}
 \usage{
-getExpression(
+getExpression(gobject, ...)
+
+\S4method{getExpression}{giotto}(
   gobject,
   values = NULL,
   spat_unit = NULL,
@@ -16,6 +19,8 @@ getExpression(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{values}{expression values to
 extract (e.g. "raw", "normalized", "scaled")}

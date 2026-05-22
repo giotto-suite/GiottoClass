@@ -345,8 +345,8 @@ setMethod(
             cat("----|     provenance:", object@provenance, "\n\n")
         }
 
-        if (!is.null(object@igraph)) {
-            print(object@igraph)
+        if (!is.null(object@network)) {
+            print(object@network)
             cat("\n\n")
         }
 
@@ -417,14 +417,18 @@ setMethod(
         .show_spat(object)
         .show_prov(object)
 
-        if (!is.null(object@networkDT)) {
-            cat("  ", nrow(object@networkDT), "connections (filtered)\n")
+        .ecount_or_null <- function(x) {
+            if (is.null(x)) NULL
+            else if (inherits(x, "igraph")) igraph::ecount(x)
+            else nrow(x)
         }
-        if (!is.null(object@networkDT_before_filter)) {
-            cat(
-                "  ", nrow(object@networkDT_before_filter),
-                "connections (before filter)\n\n"
-            )
+        n_filtered <- .ecount_or_null(object@network)
+        n_unfiltered <- .ecount_or_null(object@unfiltered)
+        if (!is.null(n_filtered)) {
+            cat("  ", n_filtered, "connections (filtered)\n")
+        }
+        if (!is.null(n_unfiltered)) {
+            cat("  ", n_unfiltered, "connections (before filter)\n\n")
         }
     }
 )

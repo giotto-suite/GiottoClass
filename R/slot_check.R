@@ -416,9 +416,9 @@
 
         for (coord_i in avail_sl[spat_unit == su_i, name]) {
             # 1. get colnames
-            spatlocs <- get_spatial_locations(gobject,
+            spatlocs <- getSpatialLocations(gobject,
                 spat_unit = su_i,
-                spat_loc_name = coord_i,
+                name = coord_i,
                 output = "data.table",
                 copy_obj = FALSE
             )
@@ -510,7 +510,7 @@
 
             su_sn <- avail_sn[spat_unit == su_i, ]
             lapply(seq(nrow(su_sn)), function(obj_i) {
-                sn_obj <- get_spatialNetwork(
+                sn_obj <- getSpatialNetwork(
                     gobject = gobject,
                     spat_unit = su_i,
                     name = su_sn$name[[obj_i]],
@@ -569,11 +569,11 @@
 
             su_se <- avail_se[spat_unit == su_i, ]
             lapply(seq(nrow(su_se)), function(obj_i) {
-                se_obj <- get_spatial_enrichment(
+                se_obj <- getSpatialEnrichment(
                     gobject = gobject,
                     spat_unit = su_i,
                     feat_type = su_se$feat_type[[obj_i]],
-                    enrichm_name = su_se$name[[obj_i]],
+                    name = su_se$name[[obj_i]],
                     output = "spatEnrObj",
                     copy_obj = FALSE,
                     set_defaults = FALSE
@@ -642,7 +642,7 @@
 
             su_dr <- avail_dr[spat_unit == su_i, ]
             lapply(seq(nrow(su_dr)), function(obj_i) {
-                dr_obj <- get_dimReduction(
+                dr_obj <- getDimReduction(
                     gobject = gobject,
                     spat_unit = su_i,
                     feat_type = su_dr$feat_type[[obj_i]],
@@ -669,15 +669,12 @@
                             Guessing based on existing expression cell_IDs"
                         ))
                         rownames(dr_obj[]) <- IDs
-                        ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-                        gobject <- set_dimReduction(
+                        gobject <- setDimReduction(
                             gobject = gobject,
-                            dimObject = dr_obj,
-                            set_defaults = FALSE,
+                            x = dr_obj,
                             initialize = TRUE,
                             verbose = FALSE
                         )
-                        ### ### ### ### ### ### ### ### ### ### ### ### ### ###
                     } else {
                         # if number of values do NOT match, throw error
                         stop(wrap_txt(
@@ -750,12 +747,12 @@
 
             su_nn <- avail_nn[spat_unit == su_i, ]
             lapply(seq(nrow(su_nn)), function(obj_i) {
-                nn_obj <- get_NearestNetwork(
+                nn_obj <- getNearestNetwork(
                     gobject = gobject,
                     spat_unit = su_i,
                     feat_type = su_nn$feat_type[[obj_i]],
-                    nn_network_to_use = su_nn$nn_type[[obj_i]],
-                    network_name = su_nn$name[[obj_i]],
+                    nn_type = su_nn$nn_type[[obj_i]],
+                    name = su_nn$name[[obj_i]],
                     output = "nnNetObj",
                     set_defaults = FALSE
                 )
@@ -801,7 +798,7 @@
     if (length(common_su) != 0) {
         for (su_i in common_su) {
             # get spat_info
-            sinfo <- get_polygon_info(
+            sinfo <- getPolygonInfo(
                 gobject = gobject,
                 polygon_name = su_i,
                 return_giottoPolygon = TRUE
@@ -810,10 +807,10 @@
             # get spatlocs
             su_sloc <- avail_slocs[spat_unit == su_i]
             lapply(seq(nrow(su_sloc)), function(obj_i) {
-                spatlocs <- get_spatial_locations(
+                spatlocs <- getSpatialLocations(
                     gobject = gobject,
                     spat_unit = su_i,
-                    spat_loc_name = su_sloc$name[[obj_i]],
+                    name = su_sloc$name[[obj_i]],
                     output = "spatLocsObj",
                     set_defaults = FALSE,
                     copy_obj = FALSE

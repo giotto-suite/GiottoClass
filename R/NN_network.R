@@ -3,240 +3,526 @@ NULL
 
 
 
-# createNetwork ####
+# networkParam classes ####
 
-#' @name createNetwork
-#' @title Create a network
-#' @description Create networks from node values. This is a hub function for
-#' many different methods of finding nearest neighbors. See details for
-#' additional params important for generating specific types of networks.
-#' @param x matrix. Data to treat as nodes. Examples include expression
-#' information, PCA matrix, spatial locations xy(z) coordinates.
-#' @param type type of network to create. Currently: "sNN", "kNN", or "delaunay"
-#' @param method method used to create the type of network requested.
-#' One of "dbscan" for sNN and kNN or "geometry", "RTriangle", or "deldir"
-#' for delaunay.
-#' @param node_ids character. Node ID values to assign. If NULL, rownames of
-#' input matrix will be used. If no rownames, integer indices will be used as
-#' node IDs.
-#' @param include_weight logical. include edge weight attribute in output
-#' @param include_distance logical. include edge distance attribute in output
-#' @param as.igraph logical. Whether to return as `igraph`. Otherwise returns
-#' as `data.table`
-#' @param verbose be verbose. Default = NULL (uses giotto verbosity option)
-#' @param ... additional params to pass. See details section
-#' @details
-#' Additional params are described below. Items in parenthesis refer to which
-#' network types and/or methods the params are specific to.
-#' - \[**`k`**\] numeric. (*sNN, kNN*) number of neighbors to find. Default is
-#' 30
-#' - \[**`minimum_shared`**\] numeric. (*sNN*) minimum shared neighbors allowed
-#'   per edge
-#' - \[**`top_shared`**\] numeric. (*sNN*) keep at least this many edges per
-#' node, where kept edges are top ranked in terms of number of shared neighbors.
-#' - \[**`filter`**\] logical. (*kNN*) whether to filter for only unique
-#'   edges and apply `minimum_k` and `maximum_distance` filters. Should be set
-#'   `TRUE` when generating a spatial kNN network. Default is `FALSE.`
-#' - \[**`minimum_k`**\] (*delaunay, kNN*) minimum nearest neighbours if
-#'   `maximum_distance != NULL`
-#' - \[**`maximum_distance`**\] (*delaunay, kNN*) edge maximum euclidean
-#'   distance allowed
-#' - \[**`Y`**\] (*RTriangle*) If TRUE prohibits the insertion of Steiner points
-#'   on the mesh boundary. Default is TRUE
-#' - \[**`j`**\] (*RTriangle*) If TRUE jettisons vertices that are not part of
-#'   the final triangulation from the output. Default is TRUE
-#' - \[**`S`**\] (*RTriangle*) Specifies the maximum number of added Steiner
-#'   points. Default is 0
-#' - \[**`options`**\] (*geometry*) default is "Pp". See [geometry::delaunayn]
-#' - \[**`weight_fun`**\] function to calculate weights based on distance if
-#'   `include_weight = TRUE`. Default is \eqn{weight = 1 / (1 + distance)} for
-#'   `"kNN"` and `"sNN"` types and \eqn{weight = 1 / distance} for `delaunay`
-#'   type
-#' networks
-#' @returns Either `igraph` if `as.igraph = TRUE` and `data.table` otherwise.
-#' @examples
-#' pca <- GiottoData::loadSubObjectMini("dimObj")[]
-#' sl <- GiottoData::loadSubObjectMini("spatLocsObj")[]
-#'
-#' # Delaunay via geometry::delaunayn()
-#' del_geom <- createNetwork(
-#'     x = as.matrix(sl[, .(sdimx, sdimy)]),
-#'     type = "delaunay",
-#'     method = "geometry",
-#'     include_weight = TRUE,
-#'     weight_fun = function(d) 1 / d,
-#'     as.igraph = FALSE,
-#'     node_ids = sl$cell_ID
-#' )
-#'
-#' # Delaunay via RTriangle::triangulate()
-#' del_rt <- createNetwork(
-#'     x = as.matrix(sl[, .(sdimx, sdimy)]),
-#'     type = "delaunay",
-#'     method = "RTriangle",
-#'     include_weight = TRUE,
-#'     weight_fun = function(d) 1 / d,
-#'     as.igraph = FALSE,
-#'     node_ids = sl$cell_ID
-#' )
-#'
-#' # Delaunay via deldir::deldir()
-#' del_dd <- createNetwork(
-#'     x = as.matrix(sl[, .(sdimx, sdimy)]),
-#'     type = "delaunay",
-#'     method = "deldir",
-#'     include_weight = TRUE,
-#'     weight_fun = function(d) 1 / d,
-#'     as.igraph = FALSE,
-#'     node_ids = sl$cell_ID
-#' )
-#'
-#' # kNN spatial network
-#' kNN_spat <- createNetwork(
-#'     x = as.matrix(sl[, .(sdimx, sdimy)]),
-#'     type = "kNN",
-#'     method = "dbscan",
-#'     include_weight = TRUE,
-#'     weight_fun = function(d) 1 / d, # not the default
-#'     as.igraph = FALSE,
-#'     node_ids = sl$cell_ID,
-#'     k = 4L,
-#'     maximum_distance = NULL,
-#'     minimum_k = 0L
-#' )
-#'
-#' # kNN NN network
-#' kNN <- createNetwork(
-#'     pca[, seq_len(10)],
-#'     type = "kNN",
-#'     method = "dbscan",
-#'     node_ids = rownames(pca),
-#'     as.igraph = TRUE
-#' )
-#'
-#' # sNN NN network
-#' sNN <- createNetwork(
-#'     pca[, seq_len(10)],
-#'     type = "sNN",
-#'     method = "dbscan",
-#'     node_ids = rownames(pca),
-#'     as.igraph = TRUE
-#' )
-#'
-#' # using defaults for sNN with index IDs to create igraph
-#' sNN_idx <- createNetwork(pca[, seq_len(10)])
-NULL
+#' @rdname NNNetworkParam-class
+#' @title NNNetworkParam — Nearest-Neighbour Network Param Classes
+#' @description Virtual parent for [kNNNetworkParam-class] and
+#' [sNNNetworkParam-class].
+#' @exportClass NNNetworkParam
+setClass("NNNetworkParam", contains = c("networkParam", "VIRTUAL"))
 
-#' @rdname createNetwork
+#' @rdname kNNNetworkParam-class
+#' @title kNNNetworkParam — k-Nearest-Neighbour Network Param
+#' @description
+#' Constructor and class for k-Nearest-Neighbour network parameters. Pass
+#' to [createNetwork()] to build a kNN graph. kNN edges are inherently
+#' asymmetric (`a`'s k-nearest neighbours are not necessarily those for
+#' which `a` is among the k-nearest), so the resulting graph is
+#' **directed** when promoted to igraph.
+#' @slot k integer. number of nearest neighbours per node.
+#' @slot filter logical. apply `minimum_k`/`maximum_distance` post-filter.
+#' @slot maximum_distance numeric or NULL. drop edges longer than this.
+#' @slot minimum_k integer. minimum neighbours per node when filtering.
+#' @slot weight_fun function. weight = `weight_fun(distance)`.
+#' @slot include_weight,include_distance logical. include columns.
+#' @slot output character. one of `"auto"`, `"data.table"`, `"igraph"`,
+#'   `"parquet"`. See [createNetwork()].
+#' @exportClass kNNNetworkParam
+setClass("kNNNetworkParam",
+    contains = "NNNetworkParam",
+    slots = list(
+        k = "integer",
+        filter = "logical",
+        maximum_distance = "ANY",
+        minimum_k = "integer",
+        weight_fun = "function",
+        include_weight = "logical",
+        include_distance = "logical",
+        output = "character"
+    )
+)
+
+#' @rdname sNNNetworkParam-class
+#' @title sNNNetworkParam — Shared-Nearest-Neighbour Network Param
+#' @description
+#' Constructor and class for shared-Nearest-Neighbour network parameters.
+#' sNN edges are symmetric by definition (`|N(a) ∩ N(b)| = |N(b) ∩ N(a)|`),
+#' so the resulting graph is **undirected** — one edge per pair.
+#' @slot k integer. number of nearest neighbours used to compute sharing.
+#' @slot top_shared integer. keep at least this many edges per node.
+#' @slot minimum_shared integer. keep edges with at least this many shared
+#'   neighbours.
+#' @slot weight_fun function. weight = `weight_fun(distance)`.
+#' @slot include_weight,include_distance logical. include columns.
+#' @slot output character. See [createNetwork()].
+#' @exportClass sNNNetworkParam
+setClass("sNNNetworkParam",
+    contains = "NNNetworkParam",
+    slots = list(
+        k = "integer",
+        top_shared = "integer",
+        minimum_shared = "integer",
+        weight_fun = "function",
+        include_weight = "logical",
+        include_distance = "logical",
+        output = "character"
+    )
+)
+
+#' @rdname delaunayNetworkParam-class
+#' @title delaunayNetworkParam — Delaunay Network Param
+#' @description
+#' Constructor and class for Delaunay triangulation network parameters.
+#' Delaunay edges are an undirected geometric relation, so the resulting
+#' graph is **undirected** — one edge per pair.
+#' @slot method character. backend: `"deldir"`, `"RTriangle"`, or
+#'   `"geometry"`.
+#' @slot maximum_distance numeric, `"auto"`, or NULL.
+#' @slot minimum_k integer. minimum neighbours per node when filtering.
+#' @slot weight_fun function. weight = `weight_fun(distance)`.
+#' @slot include_weight,include_distance logical. include columns.
+#' @slot output character. See [createNetwork()].
+#' @slot options character. *geometry only.* passed to `geometry::delaunayn`.
+#' @slot Y,j logical; S numeric. *RTriangle only.* passed to
+#'   `RTriangle::triangulate`.
+#' @exportClass delaunayNetworkParam
+setClass("delaunayNetworkParam",
+    contains = "networkParam",
+    slots = list(
+        method = "character",
+        maximum_distance = "ANY",
+        minimum_k = "integer",
+        weight_fun = "function",
+        include_weight = "logical",
+        include_distance = "logical",
+        output = "character",
+        # geometry-only
+        options = "character",
+        # RTriangle-only
+        Y = "logical",
+        j = "logical",
+        S = "numeric"
+    )
+)
+
+
+# networkParam constructors ####
+
+#' @rdname kNNNetworkParam-class
+#' @param k number of neighbours
+#' @param filter apply `minimum_k`/`maximum_distance` post-filter
+#' @param maximum_distance maximum edge length
+#' @param minimum_k minimum neighbours per node when filtering
+#' @param weight_fun function mapping distance to weight
+#' @param include_weight,include_distance include columns in output
+#' @param output one of `"auto"`, `"data.table"`, `"igraph"`, `"parquet"`
 #' @export
-createNetwork <- function(
-        x,
-        type = c("sNN", "kNN", "delaunay"),
-        method = c("dbscan", "geometry", "RTriangle", "deldir"),
-        node_ids = NULL,
-        include_distance = TRUE,
-        include_weight = TRUE,
-        as.igraph = TRUE,
-        verbose = NULL,
-        ...) {
+kNNNetworkParam <- function(k = 30L, filter = FALSE,
+        maximum_distance = NULL, minimum_k = 0L,
+        weight_fun = function(d) 1 / (1 + d),
+        include_weight = TRUE, include_distance = TRUE,
+        output = c("auto", "data.table", "igraph", "parquet")) {
+    output <- match.arg(output)
+    new("kNNNetworkParam",
+        k = as.integer(k), filter = filter,
+        maximum_distance = maximum_distance,
+        minimum_k = as.integer(minimum_k),
+        weight_fun = weight_fun,
+        include_weight = include_weight,
+        include_distance = include_distance,
+        output = output
+    )
+}
+
+#' @rdname sNNNetworkParam-class
+#' @param k number of neighbours used to compute sharing
+#' @param top_shared keep at least this many edges per node
+#' @param minimum_shared keep edges with at least this many shared neighbours
+#' @param weight_fun function mapping distance to weight
+#' @param include_weight,include_distance include columns in output
+#' @param output one of `"auto"`, `"data.table"`, `"igraph"`, `"parquet"`
+#' @export
+sNNNetworkParam <- function(k = 30L, top_shared = 3L, minimum_shared = 5L,
+        weight_fun = function(d) 1 / (1 + d),
+        include_weight = TRUE, include_distance = TRUE,
+        output = c("auto", "data.table", "igraph", "parquet")) {
+    output <- match.arg(output)
+    new("sNNNetworkParam",
+        k = as.integer(k),
+        top_shared = as.integer(top_shared),
+        minimum_shared = as.integer(minimum_shared),
+        weight_fun = weight_fun,
+        include_weight = include_weight,
+        include_distance = include_distance,
+        output = output
+    )
+}
+
+#' @rdname delaunayNetworkParam-class
+#' @param method backend: `"deldir"`, `"RTriangle"`, or `"geometry"`
+#' @param maximum_distance maximum edge length, or `"auto"`, or `NULL`
+#' @param minimum_k minimum neighbours per node when filtering
+#' @param weight_fun function mapping distance to weight
+#' @param include_weight,include_distance include columns in output
+#' @param output one of `"auto"`, `"data.table"`, `"igraph"`, `"parquet"`
+#' @param options *geometry only.* passed to `geometry::delaunayn`
+#' @param Y,j,S *RTriangle only.* passed to `RTriangle::triangulate`
+#' @export
+delaunayNetworkParam <- function(
+        method = c("deldir", "RTriangle", "geometry"),
+        maximum_distance = "auto", minimum_k = 0L,
+        weight_fun = function(d) 1 / d,
+        include_weight = TRUE, include_distance = TRUE,
+        output = c("auto", "data.table", "igraph", "parquet"),
+        options = "Pp", Y = TRUE, j = TRUE, S = 0) {
+    method <- match.arg(method)
+    output <- match.arg(output)
+    new("delaunayNetworkParam",
+        method = method,
+        maximum_distance = maximum_distance,
+        minimum_k = as.integer(minimum_k),
+        weight_fun = weight_fun,
+        include_weight = include_weight,
+        include_distance = include_distance,
+        output = output,
+        options = options, Y = Y, j = j, S = S
+    )
+}
+
+#' @title networkParam — Dispatcher constructor
+#' @name networkParam
+#' @description
+#' Returns the appropriate concrete `*NetworkParam` based on `type`.
+#' Equivalent to calling [kNNNetworkParam()], [sNNNetworkParam()], or
+#' [delaunayNetworkParam()] directly.
+#' @param type one of `"kNN"`, `"sNN"`, `"delaunay"`
+#' @param ... arguments forwarded to the type-specific constructor
+#' @returns a [networkParam-class]-inheriting object
+#' @examples
+#' p <- networkParam("kNN", k = 30)
+#' @export
+networkParam <- function(type = c("kNN", "sNN", "delaunay"), ...) {
+    type <- match.arg(type)
+    switch(type,
+        kNN      = kNNNetworkParam(...),
+        sNN      = sNNNetworkParam(...),
+        delaunay = delaunayNetworkParam(...)
+    )
+}
+
+
+# createNetwork methods ####
+
+# Internal helper: post-process the edge data.table from a backend helper
+# and emit per the param's `output` slot. Centralizes node_id substitution,
+# column trim, directionality handling, and output dispatch.
+.finalize_network <- function(network_dt, x, node_ids, type, directed, param,
+        backend = NULL) {
     # NSE vars
     from <- to <- NULL
-
-    if (length(x) == 0L) {
-        stop(wrap_txt(errWidth = TRUE,
-            "[createNetwork] empty matrix provided.
-            No network can be generated"
-        ))
-    }
-
-    # check params
-    type <- match.arg(type, choices = c("sNN", "kNN", "delaunay"))
-
-    mdef <- c("dbscan", "geometry", "RTriangle", "deldir")
-    if (type %in% c("sNN", "kNN")) {
-        mchoices <- c("dbscan")
-        if (identical(method, mdef)) method <- mchoices
-    }
-    if (type %in% c("delaunay")) {
-        mchoices <- c("geometry", "RTriangle", "deldir")
-        if (identical(method, mdef)) method <- mchoices
-    }
-
-    method <- switch(type,
-        "sNN" = match.arg(method, choices = mchoices, several.ok = TRUE),
-        "kNN" = match.arg(method, choices = mchoices, several.ok = TRUE),
-        "delaunay" = {
-            method <- method[[1L]]
-            match.arg(method, choices = mchoices, several.ok = TRUE)
-        }
-    )
-
-    vmsg(.is_debug = TRUE, sprintf(
-        "network\n type: %s\n method: %s",
-        type, method
-    ))
-
-    # get common params
-    alist <- list(
-        x = x,
-        include_weight = include_weight,
-        ...
-    )
-
-    # generate network data.table
-    network_dt <- switch(sprintf("%s:%s", type, method),
-        "kNN:dbscan" = do.call(.net_dt_knn, args = alist),
-        "sNN:dbscan" = do.call(.net_dt_snn, args = alist),
-        "delaunay:deldir" = do.call(.net_dt_del_deldir,
-            args = alist
-        )$delaunay_network_DT,
-        "delaunay:RTriangle" = do.call(.net_dt_del_rtriangle,
-            args = alist
-        )$delaunay_network_DT,
-        "delaunay:geometry" = do.call(.net_dt_del_geometry,
-            args = alist
-        )$delaunay_network_DT
-    )
 
     # default node_ids are input matrix rownames
     if (is.null(node_ids) && !is.null(rownames(x))) {
         node_ids <- rownames(x)
     }
-
-    # replace indices with node_ids if desired
     if (!is.null(node_ids)) {
-        # if node_ids are provided, include as extra cols
         names(node_ids) <- seq_along(node_ids)
         network_dt[, "from" := node_ids[from]]
         network_dt[, "to" := node_ids[to]]
     }
 
-    ## outputs ##
-
-    # cols to include in output
+    # cols to keep
     keep_cols <- c("from", "to")
-
     all_index <- network_dt[, unique(unlist(.SD)), .SDcols = keep_cols]
-    if (include_weight) keep_cols <- c(keep_cols, "weight")
-    if (include_distance) keep_cols <- c(keep_cols, "distance")
+    if (isTRUE(param@include_weight)) keep_cols <- c(keep_cols, "weight")
+    if (isTRUE(param@include_distance)) keep_cols <- c(keep_cols, "distance")
+    if (type == "sNN") keep_cols <- c(keep_cols, "shared")
+    network_dt <- network_dt[, keep_cols, with = FALSE]
 
-    if (type == "sNN") keep_cols <- c(keep_cols, "shared", "rank")
-
-    # return early if igraph not required
-    network_dt_final <- network_dt[, keep_cols, with = FALSE]
-    if (!as.igraph) {
-        return(network_dt_final)
+    # resolve output
+    output <- param@output
+    if (output == "auto") {
+        output <- if (is.null(backend)) "data.table" else "parquet"
     }
 
-    ## convert to igraph object
-    out <- igraph::graph_from_data_frame(
-        network_dt_final,
-        directed = TRUE,
-        vertices = all_index
-    )
-
-    return(out)
+    if (output == "data.table") {
+        return(network_dt)
+    }
+    if (output == "igraph") {
+        return(igraph::graph_from_data_frame(
+            network_dt, directed = directed, vertices = all_index
+        ))
+    }
+    if (output == "parquet") {
+        package_check("GiottoDisk", repository = "github:giotto-suite/GiottoDisk")
+        if (is.null(backend)) {
+            # storeCreate handles dump-path resolution when no path supplied
+            store <- GiottoDisk::storeCreate(type = "parquetEdgeStore")
+            return(GiottoDisk::storeWrite(store, network_dt))
+        }
+        # write through the supplied source backend
+        return(GiottoDisk::sourceWrite(backend, network_dt,
+            store_type = "parquetEdgeStore"))
+    }
+    stop(sprintf("[createNetwork] unknown output: %s", output))
 }
+
+#' @rdname createNetwork
+setMethod("createNetwork", signature("matrix", "kNNNetworkParam"),
+    function(x, param, node_ids = NULL, verbose = NULL, backend = NULL, ...) {
+        if (length(x) == 0L) {
+            stop(wrap_txt(errWidth = TRUE,
+                "[createNetwork] empty matrix provided.
+                No network can be generated"
+            ))
+        }
+        dt <- .net_dt_knn(
+            x = x, k = param@k, filter = param@filter,
+            maximum_distance = param@maximum_distance,
+            minimum_k = param@minimum_k,
+            weight_fun = param@weight_fun,
+            include_weight = param@include_weight,
+            include_distance = param@include_distance,
+            verbose = verbose, ...
+        )
+        .finalize_network(dt, x = x, node_ids = node_ids,
+            type = "kNN", directed = TRUE, param = param, backend = backend)
+    }
+)
+
+#' @rdname createNetwork
+setMethod("createNetwork", signature("matrix", "sNNNetworkParam"),
+    function(x, param, node_ids = NULL, verbose = NULL, backend = NULL, ...) {
+        if (length(x) == 0L) {
+            stop(wrap_txt(errWidth = TRUE,
+                "[createNetwork] empty matrix provided.
+                No network can be generated"
+            ))
+        }
+        dt <- .net_dt_snn(
+            x = x, k = param@k,
+            top_shared = param@top_shared,
+            minimum_shared = param@minimum_shared,
+            weight_fun = param@weight_fun,
+            include_weight = param@include_weight,
+            include_distance = param@include_distance,
+            verbose = verbose, ...
+        )
+        # sNN: symmetric relation, collapse to undirected unique pairs.
+        # `rank` is per-source and ill-defined after symmetrization — dropped.
+        dt <- .undirected_unique(dt)
+        .finalize_network(dt, x = x, node_ids = node_ids,
+            type = "sNN", directed = FALSE, param = param, backend = backend)
+    }
+)
+
+#' @rdname createNetwork
+setMethod("createNetwork", signature("matrix", "delaunayNetworkParam"),
+    function(x, param, node_ids = NULL, verbose = NULL, backend = NULL, ...) {
+        if (length(x) == 0L) {
+            stop(wrap_txt(errWidth = TRUE,
+                "[createNetwork] empty matrix provided.
+                No network can be generated"
+            ))
+        }
+        helper <- switch(param@method,
+            deldir    = .net_dt_del_deldir,
+            RTriangle = .net_dt_del_rtriangle,
+            geometry  = .net_dt_del_geometry
+        )
+        # Build per-backend arg list. Each helper accepts only a subset;
+        # don't forward irrelevant Param slots.
+        helper_args <- list(
+            x = x,
+            include_weight = param@include_weight,
+            maximum_distance = param@maximum_distance,
+            minimum_k = param@minimum_k,
+            weight_fun = param@weight_fun
+        )
+        if (param@method == "geometry") {
+            helper_args$options <- param@options
+        } else if (param@method == "RTriangle") {
+            helper_args$Y <- param@Y
+            helper_args$j <- param@j
+            helper_args$S <- param@S
+        }
+        dt <- do.call(helper, c(helper_args, list(...)))$delaunay_network_DT
+        .finalize_network(dt, x = x, node_ids = node_ids,
+            type = "delaunay", directed = FALSE, param = param,
+            backend = backend)
+    }
+)
+
+# Collapse a directed (from, to) edge table to an undirected unique pair
+# table by canonicalizing each pair as (min, max) and applying `unique()`
+# on the (from, to) key.
+.undirected_unique <- function(dt) {
+    from <- to <- NULL
+    if (nrow(dt) == 0L) return(dt)
+    swap <- dt$from > dt$to
+    if (any(swap)) {
+        tmp <- dt$from[swap]
+        data.table::set(dt, which(swap), "from", dt$to[swap])
+        data.table::set(dt, which(swap), "to", tmp)
+    }
+    unique(dt, by = c("from", "to"))
+}
+
+# Legacy string-arg shim — translates the pre-Param signature
+# `createNetwork(x, type = ..., method = ..., as.igraph = ..., ...)`
+# into the appropriate Param and dispatches.
+#' @rdname createNetwork
+setMethod("createNetwork", signature("matrix", "missing"),
+    function(x, param,
+            type = c("sNN", "kNN", "delaunay"),
+            method = c("dbscan", "geometry", "RTriangle", "deldir"),
+            node_ids = NULL,
+            include_distance = TRUE,
+            include_weight = TRUE,
+            as.igraph = TRUE,
+            verbose = NULL,
+            backend = NULL,
+            ...) {
+        if (length(x) == 0L) {
+            stop(wrap_txt(errWidth = TRUE,
+                "[createNetwork] empty matrix provided.
+                No network can be generated"
+            ))
+        }
+        type <- match.arg(type, choices = c("sNN", "kNN", "delaunay"))
+        mdef <- c("dbscan", "geometry", "RTriangle", "deldir")
+        mchoices <- if (type %in% c("sNN", "kNN")) {
+            "dbscan"
+        } else {
+            c("deldir", "RTriangle", "geometry")
+        }
+        if (identical(method, mdef)) method <- mchoices[[1L]]
+        method <- match.arg(method, choices = mchoices)
+
+        # translate as.igraph → output
+        output <- if (isTRUE(as.igraph)) "igraph" else "data.table"
+
+        # build Param, splitting `...` into Param ctor args vs method args
+        param_ctor <- switch(type,
+            kNN = kNNNetworkParam, sNN = sNNNetworkParam,
+            delaunay = delaunayNetworkParam
+        )
+        ctor_formals <- names(formals(param_ctor))
+        dots <- list(...)
+        ctor_args <- dots[intersect(names(dots), ctor_formals)]
+        method_args <- dots[setdiff(names(dots), ctor_formals)]
+        ctor_args$include_weight <- include_weight
+        ctor_args$include_distance <- include_distance
+        ctor_args$output <- output
+        if (type == "delaunay") ctor_args$method <- method
+        param <- do.call(param_ctor, ctor_args)
+
+        do.call(createNetwork, c(
+            list(x = x, param = param, node_ids = node_ids,
+                verbose = verbose, backend = backend),
+            method_args
+        ))
+    }
+)
+
+
+# Higher-level dispatches ####
+
+#' @rdname createNetwork
+setMethod("createNetwork", signature("spatLocsObj", "networkParam"),
+    function(x, param, node_ids = NULL, ...) {
+        sl_dt <- x[]
+        coord_cols <- intersect(c("sdimx", "sdimy", "sdimz"), names(sl_dt))
+        coords <- as.matrix(sl_dt[, coord_cols, with = FALSE])
+        if (is.null(node_ids) && "cell_ID" %in% names(sl_dt)) {
+            node_ids <- sl_dt$cell_ID
+        }
+        createNetwork(coords, param, node_ids = node_ids, ...)
+    }
+)
+
+#' @rdname createNetwork
+#' @param dimensions_to_use integer vector; columns of the `dimObj` matrix
+#'   to keep when building the network. `NULL` (default) keeps all.
+setMethod("createNetwork", signature("dimObj", "networkParam"),
+    function(x, param, dimensions_to_use = NULL, ...) {
+        mat <- x[]
+        if (!is.null(dimensions_to_use)) {
+            dimensions_to_use <- dimensions_to_use[
+                dimensions_to_use %in% seq_len(ncol(mat))
+            ]
+            mat <- mat[, dimensions_to_use, drop = FALSE]
+        }
+        createNetwork(mat, param, ...)
+    }
+)
+
+#' @rdname createNetwork
+#' @param spat_unit spatial unit (`giotto` method)
+#' @param feat_type feature type (`giotto` method, NN networks)
+#' @param space for NN networks on a `giotto` object: which space the
+#'   neighborhood is defined in. Default `"expression"` (pulls a
+#'   dimension reduction such as PCA). Set to `"spatial"` to build a
+#'   spatial kNN/sNN from cell coordinates.
+#' @param dim_reduction_to_use name of the reduction family to pull from the
+#'   `giotto` object (default `"pca"`). Only used when `space = "expression"`.
+#' @param dim_reduction_name specific reduction name. Only used when
+#'   `space = "expression"`.
+#' @param spat_loc_name spatial-locations name. Used by the Delaunay method
+#'   and by NN methods when `space = "spatial"`.
+setMethod("createNetwork", signature("giotto", "NNNetworkParam"),
+    function(x, param,
+            spat_unit = NULL, feat_type = NULL,
+            space = c("expression", "spatial"),
+            dim_reduction_to_use = "pca", dim_reduction_name = NULL,
+            dimensions_to_use = seq_len(10L),
+            spat_loc_name = "raw", ...) {
+        space <- match.arg(space)
+        spat_unit <- set_default_spat_unit(x, spat_unit = spat_unit)
+
+        if (space == "spatial") {
+            sl <- getSpatialLocations(x,
+                spat_unit = spat_unit,
+                name = spat_loc_name,
+                output = "spatLocsObj"
+            )
+            return(createNetwork(sl, param, ...))
+        }
+
+        feat_type <- set_default_feat_type(x,
+            spat_unit = spat_unit, feat_type = feat_type
+        )
+        if (is.null(dim_reduction_name)) {
+            dim_reduction_name <- if (feat_type == "rna") {
+                dim_reduction_to_use
+            } else {
+                paste0(feat_type, ".", dim_reduction_to_use)
+            }
+        }
+        dim_obj <- getDimReduction(x,
+            spat_unit = spat_unit, feat_type = feat_type,
+            reduction = "cells", reduction_method = dim_reduction_to_use,
+            name = dim_reduction_name, output = "dimObj"
+        )
+        createNetwork(dim_obj, param,
+            dimensions_to_use = dimensions_to_use, ...)
+    }
+)
+
+#' @rdname createNetwork
+setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
+    function(x, param,
+            spat_unit = NULL, spat_loc_name = "raw", ...) {
+        spat_unit <- set_default_spat_unit(x, spat_unit = spat_unit)
+        sl <- getSpatialLocations(x,
+            spat_unit = spat_unit,
+            name = spat_loc_name,
+            output = "spatLocsObj"
+        )
+        createNetwork(sl, param, ...)
+    }
+)
 
 
 # x input is a matrix
@@ -363,21 +649,20 @@ createNetwork <- function(
     )
 
     geometry_obj <- list("delaunay_simplex_mat" = delaunay_simplex_mat)
-    edge_combs <- combn(x = ncol(delaunay_simplex_mat), m = 2L)
-    delaunay_edges <- data.table::as.data.table(apply(
-        edge_combs,
-        MARGIN = 1L, function(comb) delaunay_simplex_mat[, comb]
-    ))
 
-    ### making sure of no duplication ###
-    delaunay_edges_dedup <- unique(delaunay_edges)
-    igraph_obj <- igraph::graph_from_edgelist(as.matrix(delaunay_edges_dedup))
-    adj_obj <- igraph::as_adjacency_matrix(igraph_obj)
-    igraph_obj2 <- igraph::graph.adjacency(adj_obj)
-    delaunay_edges_dedup2 <- igraph::get.data.frame(igraph_obj2)
-    delaunay_network_dt <- data.table::as.data.table(delaunay_edges_dedup2)
-    delaunay_network_dt[, from := as.integer(from)]
-    delaunay_network_dt[, to := as.integer(to)]
+    # expand each simplex into its (d+1 choose 2) edges
+    edge_combs <- combn(x = ncol(delaunay_simplex_mat), m = 2L)
+    from_idx <- as.vector(delaunay_simplex_mat[, edge_combs[1L, ]])
+    to_idx <- as.vector(delaunay_simplex_mat[, edge_combs[2L, ]])
+
+    # canonicalize as undirected pairs (from < to), then dedupe
+    swap <- from_idx > to_idx
+    tmp <- from_idx[swap]
+    from_idx[swap] <- to_idx[swap]
+    to_idx[swap] <- tmp
+    delaunay_network_dt <- unique(data.table::data.table(
+        from = from_idx, to = to_idx
+    ))
     data.table::setorder(delaunay_network_dt, from, to)
 
     # needed for filtering
@@ -657,220 +942,98 @@ createNearestNetwork <- function(
         top_shared = 3,
         verbose = TRUE,
         ...) {
-    # Set feat_type and spat_unit
-    spat_unit <- set_default_spat_unit(
-        gobject = gobject,
-        spat_unit = spat_unit
-    )
-    feat_type <- set_default_feat_type(
-        gobject = gobject,
-        spat_unit = spat_unit,
-        feat_type = feat_type
-    )
+    # NB: thin wrapper over createNetwork() + nnNetObj construction.
+    # Legacy expression-matrix path (dim_reduction_to_use = NULL) goes
+    # through the matrix method; PCA / dim-reduction path goes through
+    # the giotto/NN method.
 
-    # specify dim_reduction_name tailored to feat_type
-    if (is.null(dim_reduction_name)) {
-        if (feat_type == "rna") {
-            dim_reduction_name <- "pca"
-        } else {
-            dim_reduction_name <- paste0(feat_type, ".", "pca")
-        }
-    }
-
-    # type of NN network
     type <- match.arg(type, c("sNN", "kNN"))
 
-    ## using dimension reduction ##
-    if (!is.null(dim_reduction_to_use)) {
-        ## check if reduction exists
-        dim_red_names <- list_dim_reductions_names(
-            gobject = gobject, data_type = "cells",
-            spat_unit = spat_unit, feat_type = feat_type,
-            dim_type = dim_reduction_to_use
-        )
-
-        if (!dim_reduction_name %in% dim_red_names) {
-            stop(sprintf(
-                "\n dimension reduction: %s or dimension reduction name:
-                %s is not available \n",
-                dim_reduction_to_use,
-                dim_reduction_name
-            ))
-        }
-
-        # check = gobject@dimension_reduction[['cells']][[spat_unit
-        # ]][[dim_reduction_to_use]][[dim_reduction_name]]
-        # if(is.null(check)) stop('dimension reduction does not exist,
-        # check if you did ', dim_reduction_to_use,
-        # ' and if ', dim_reduction_name, ' was the name used')
-
-        # use only available dimensions if dimensions < dimensions_to_use
-
-        dim_obj <- get_dimReduction(
-            gobject = gobject,
-            spat_unit = spat_unit,
-            feat_type = feat_type,
-            reduction = "cells",
-            reduction_method = dim_reduction_to_use,
-            name = dim_reduction_name,
-            output = "dimObj"
-        )
-
-        provenance <- prov(dim_obj)
-
-        dim_coord <- dim_obj[]
-        dimensions_to_use <- dimensions_to_use[dimensions_to_use %in%
-            seq_len(ncol(dim_coord))]
-        matrix_to_use <- dim_coord[, dimensions_to_use]
-    } else {
-        ## using original matrix ##
-        # expression values to be used
-        values <- match.arg(
-            expression_values,
-            unique(c(
-                "normalized", "scaled", "custom",
-                expression_values
-            ))
-        )
-        expr_obj <- getExpression(
-            gobject = gobject,
-            feat_type = feat_type,
-            spat_unit = spat_unit,
-            values = values,
-            output = "exprObj"
-        )
-
-        provenance <- prov(expr_obj)
-        expr_values <- expr_obj[] # extract matrix
-
-        # subset expression matrix
-        if (!is.null(feats_to_use)) {
-            expr_values <- expr_values[rownames(expr_values) %in%
-                feats_to_use, ]
-        }
-
-        # features as columns & cells as rows
-        matrix_to_use <- t_flex(expr_values)
-    }
-
-    # vector for cell_ID
-    cell_names <- rownames(matrix_to_use)
-    names(cell_names) <- seq_len(nrow(matrix_to_use))
-
-    ## run nearest-neighbour algorithm ##
-    if (k >= nrow(matrix_to_use)) {
-        k <- (nrow(matrix_to_use) - 1)
-        vmsg(.v = verbose, "k is higher than total number of cells.
-        Adjusted to (total number of cells - 1)")
-    }
-
-    nn_network <- dbscan::kNN(x = matrix_to_use, k = k, sort = TRUE, ...)
-
-    # data.table variables
-    from <- to <- weight <- distance <- from_cell_ID <- to_cell_ID <-
-        shared <- NULL
-
-    nn_network_dt <- data.table::data.table(
-        from = rep(seq_len(nrow(nn_network$id)), k),
-        to = as.vector(nn_network$id),
-        weight = 1 / (1 + as.vector(nn_network$dist)),
-        distance = as.vector(nn_network$dist)
+    spat_unit <- set_default_spat_unit(gobject, spat_unit = spat_unit)
+    feat_type <- set_default_feat_type(gobject,
+        spat_unit = spat_unit, feat_type = feat_type
     )
-    nn_network_dt[, from_cell_ID := cell_names[from]]
-    nn_network_dt[, to_cell_ID := cell_names[to]]
 
-
-    if (type == "sNN") {
-        snn_network <- dbscan::sNN(x = nn_network, k = k, kt = NULL, ...)
-        snn_network_dt <- data.table::data.table(
-            from = rep(seq_len(nrow(snn_network$id)), k),
-            to = as.vector(snn_network$id),
-            weight = 1 / (1 + as.vector(snn_network$dist)),
-            distance = as.vector(snn_network$dist),
-            shared = as.vector(snn_network$shared)
-        )
-        snn_network_dt <- snn_network_dt[stats::complete.cases(snn_network_dt)]
-        snn_network_dt[, from_cell_ID := cell_names[from]]
-        snn_network_dt[, to_cell_ID := cell_names[to]]
-
-        # rank snn
-        data.table::setorder(snn_network_dt, from, -shared)
-        snn_network_dt[, rank := seq_len(.N), by = from]
-
-        # filter snn
-        snn_network_dt <- snn_network_dt[rank <= top_shared |
-            shared >= minimum_shared]
+    # default dim_reduction_name
+    if (is.null(dim_reduction_name)) {
+        dim_reduction_name <- if (feat_type == "rna") {
+            dim_reduction_to_use
+        } else {
+            paste0(feat_type, ".", dim_reduction_to_use)
+        }
     }
 
-    ## convert to igraph object
-    all_index <- unique(x = c(
-        nn_network_dt$from_cell_ID,
-        nn_network_dt$to_cell_ID
-    ))
-
-
-    if (type == "kNN") {
-        nn_network_igraph <- igraph::graph_from_data_frame(
-            nn_network_dt[, .(from_cell_ID, to_cell_ID, weight, distance)],
-            directed = TRUE, vertices = all_index
-        )
-    } else if (type == "sNN") {
-        # TODO never returned?
-        missing_indices <- all_index[!all_index %in%
-            unique(snn_network_dt$from)]
-        nn_network_igraph <- igraph::graph_from_data_frame(
-            snn_network_dt[
-                ,
-                .(from_cell_ID, to_cell_ID, weight, distance, shared, rank)
-            ],
-            directed = TRUE, vertices = all_index
+    # build Param; output = "igraph" because nnNetObj wraps an igraph
+    param <- if (type == "kNN") {
+        kNNNetworkParam(k = k, output = "igraph")
+    } else {
+        sNNNetworkParam(k = k,
+            minimum_shared = minimum_shared, top_shared = top_shared,
+            output = "igraph"
         )
     }
 
+    if (!is.null(dim_reduction_to_use)) {
+        # PCA / dim-reduction source
+        dim_obj <- getDimReduction(gobject,
+            spat_unit = spat_unit, feat_type = feat_type,
+            reduction = "cells", reduction_method = dim_reduction_to_use,
+            name = dim_reduction_name, output = "dimObj"
+        )
+        provenance <- prov(dim_obj)
+        nn_igraph <- createNetwork(dim_obj, param,
+            dimensions_to_use = dimensions_to_use, verbose = verbose, ...
+        )
+    } else {
+        # legacy: build NN from raw expression matrix
+        expression_values <- match.arg(
+            expression_values,
+            unique(c("normalized", "scaled", "custom", expression_values))
+        )
+        expr_obj <- getExpression(gobject,
+            feat_type = feat_type, spat_unit = spat_unit,
+            values = expression_values, output = "exprObj"
+        )
+        provenance <- prov(expr_obj)
+        expr_mat <- expr_obj[]
+        if (!is.null(feats_to_use)) {
+            expr_mat <- expr_mat[rownames(expr_mat) %in% feats_to_use, ]
+        }
+        matrix_to_use <- t_flex(expr_mat) # cells as rows
+        nn_igraph <- createNetwork(matrix_to_use, param,
+            node_ids = rownames(matrix_to_use), verbose = verbose, ...
+        )
+    }
 
-
-
-    # set default name
     if (is.null(name)) name <- paste0(type, ".", dim_reduction_to_use)
 
-    if (return_gobject == TRUE) {
-        nn_names <- names(gobject@nn_network[[spat_unit]][[type]])
-
-        if (name %in% nn_names) {
-            vmsg(
-                .v = verbose,
-                name, "has already been used, will be overwritten"
-            )
-        }
-
-        nnObj <- create_nn_net_obj(
-            name = name,
-            nn_type = type,
-            igraph = nn_network_igraph,
-            spat_unit = spat_unit,
-            feat_type = feat_type,
-            provenance = provenance,
-            misc = NULL
-        )
-
-        gobject <- set_NearestNetwork(
-            gobject = gobject,
-            spat_unit = spat_unit,
-            feat_type = feat_type,
-            nn_network_to_use = type,
-            network_name = name,
-            nn_network = nnObj,
-            verbose = verbose
-        )
-
-        ## update parameters used ##
-        gobject <- update_giotto_params(gobject, description = "_nn_network")
-
-        return(gobject)
-    } else {
-        return(nn_network_igraph)
+    if (!return_gobject) {
+        return(nn_igraph)
     }
+
+    # wrap and store
+    nnObj <- create_nn_net_obj(
+        name = name,
+        nn_type = type,
+        network = nn_igraph,
+        spat_unit = spat_unit,
+        feat_type = feat_type,
+        provenance = provenance
+    )
+    nn_names <- names(gobject@nn_network[[spat_unit]][[type]])
+    if (name %in% nn_names) {
+        vmsg(.v = verbose, name, "has already been used, will be overwritten")
+    }
+    gobject <- setNearestNetwork(gobject,
+        x = nnObj,
+        spat_unit = spat_unit, feat_type = feat_type,
+        nn_type = type, name = name,
+        verbose = verbose
+    )
+    gobject <- update_giotto_params(gobject, description = "_nn_network", toplevel = 1L)
+    gobject
 }
+
 
 
 
@@ -922,11 +1085,11 @@ addNetworkLayout <- function(gobject,
         feat_type = feat_type
     )
 
-    ig_object <- get_NearestNetwork(
+    ig_object <- getNearestNetwork(
         gobject = gobject,
         spat_unit = spat_unit,
-        nn_network_to_use = nn_network_to_use,
-        network_name = network_name, output = "igraph"
+        nn_type = nn_network_to_use,
+        name = network_name, output = "igraph"
     )
 
     # ig_object = gobject@nn_network[[spat_unit]][[nn_network_to_use

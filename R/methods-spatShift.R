@@ -44,16 +44,11 @@ setMethod(
             gobject = x, spat_unit = spat_unit, feat_type = feat_type
         )
 
-        all_su <- spat_unit == ":all:"
-        all_ft <- feat_type == ":all:"
+        su_filter <- if (spat_unit == ":all:") NULL else spat_unit
+        ft_filter <- if (feat_type == ":all:") NULL else feat_type
 
         # polygons ---------------------------------------------------------- #
-        poly <- get_polygon_info_list(
-            gobject = x, return_giottoPolygon = TRUE
-        )
-        if (!all_su) {
-            poly <- poly[spatUnit(poly) %in% spat_unit]
-        }
+        poly <- x[["spatial_info", spat_unit = su_filter]]
         if (!is.null(poly)) {
             for (p in poly) {
                 p <- do.call(spatShift, args = c(list(x = p), a))
@@ -62,15 +57,7 @@ setMethod(
         }
 
         # spatlocs --------------------------------------------------------- #
-        sls <- get_spatial_locations_list(
-            gobject = x,
-            spat_unit = ":all:",
-            output = "spatLocsObj",
-            copy_obj = FALSE
-        )
-        if (!all_su) {
-            sls[spatUnit(sls) %in% spat_unit]
-        }
+        sls <- x[["spatial_locs", spat_unit = su_filter]]
         if (!is.null(sls)) {
             for (sl in sls) {
                 sl <- do.call(spatShift, args = c(list(x = sl), a))
@@ -82,12 +69,7 @@ setMethod(
 
             # TODO remove this after spatial info is removed from
             # spatialNetwork objs
-            sn_list <- get_spatial_network_list(
-                gobject = x,
-                spat_unit = ":all:",
-                output = "spatialNetworkObj",
-                copy_obj = FALSE
-            )
+            sn_list <- x[["spatial_network"]]
             if (length(sn_list) > 0) {
                 warning(wrap_txt("spatial locations have been modified.
                                 Relevant spatial networks may need to be
@@ -97,12 +79,7 @@ setMethod(
 
 
         # points ----------------------------------------------------------- #
-        pts <- get_feature_info_list(
-            gobject = x, return_giottoPoints = TRUE
-        )
-        if (!all_ft) {
-            pts <- pts[featType(pts) %in% feat_type]
-        }
+        pts <- x[["feat_info", feat_type = ft_filter]]
         if (!is.null(pts)) {
             for (pt in pts) {
                 pt <- do.call(spatShift, args = c(list(x = pt), a))
@@ -171,27 +148,6 @@ setMethod(
     }
 )
 
-
-#' @describeIn spatShift Shift the locations of a spatialNetworkObj
-#' @export
-setMethod(
-    "spatShift", signature("spatialNetworkObj"),
-    function(
-        x, dx = 0, dy = 0, dz = 0,
-        copy_obj = TRUE, ...) {
-        x@networkDT <- .shift_spatial_network(
-            spatnet = x@networkDT,
-            dx = dx, dy = dy, dz = dz, ...
-        )
-        if (!is.null(x@networkDT_before_filter)) {
-            x@networkDT_before_filter <- .shift_spatial_network(
-                spatnet = x@networkDT_before_filter,
-                dx = dx, dy = dy, dz = dz, ...
-            )
-        }
-        return(x)
-    }
-)
 
 #' @rdname spatShift
 #' @export
@@ -318,63 +274,6 @@ setMethod(
 
 
 
-# See function spatShift in generics.R
-#' @name .shift_spatial_network
-#' @title Shift spatial network
-#' @description Shift spatial network coordinates
-#' @param spatnet spatial network data.table
-#' @param dx distance to shift on x axis
-#' @param dy distance to shift on y axis
-#' @param dz distance to shift on z axis
-#' @param copy_obj copy/duplicate object (default = TRUE)
-#' @returns spatial network
-#' @keywords internal
-.shift_spatial_network <- function(spatnet, dx = 0, dy = 0, dz = 0, copy_obj = TRUE) {
-    # NSE vars
-    sdimx_begin <- sdimx_end <- sdimy_begin <- sdimy_end <- sdimz_begin <-
-        sdimz_end <- NULL
-
-    # catch NULL inputs
-    dx <- dx %null% 0
-    dy <- dy %null% 0
-    dz <- dz %null% 0
-
-    if (copy_obj) spatnet <- data.table::copy(spatnet)
-
-    spatnet[, `:=`(
-        sdimx_begin = sdimx_begin + dx,
-        sdimx_end = sdimx_end + dx,
-        sdimy_begin = sdimy_begin + dy,
-        sdimy_end = sdimy_end + dy
-    )]
-
-    if (dz == 0) {
-        return(spatnet)
-    } # return early if no zshift
-
-    if ("sdimz_begin" %in% colnames(spatnet)) {
-        spatnet[, sdimz_begin := sdimz_begin + dz]
-    } else {
-        spatnet[, sdimz_begin := dz]
-    }
-
-    if ("sdimz_end" %in% colnames(spatnet)) {
-        spatnet[, sdimz_end := sdimz_end + dz]
-    } else {
-        spatnet[, sdimz_end := dz]
-    }
-
-    # fix col ordering
-    data.table::setcolorder(
-        spatnet,
-        c(
-            "from", "to", "sdimx_begin", "sdimy_begin", "sdimz_begin",
-            "sdimx_end", "sdimy_end", "sdimz_end"
-        )
-    )
-
-    return(spatnet)
-}
 
 
 

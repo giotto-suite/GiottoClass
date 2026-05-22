@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setSpatialLocations}
 \alias{setSpatialLocations}
+\alias{setSpatialLocations,giotto-method}
 \title{Set spatial locations}
 \usage{
-setSpatialLocations(
+setSpatialLocations(gobject, ...)
+
+\S4method{setSpatialLocations}{giotto}(
   gobject,
   x,
   spat_unit = NULL,
@@ -17,6 +20,8 @@ setSpatialLocations(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{x}{spatLocsObj or list of spatLocsObj. Passing NULL will remove a
 specified set of spatial locations data.}
@@ -31,8 +36,6 @@ specified set of spatial locations data.}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{...}{additional params to pass}
 }
 \value{
 giotto object

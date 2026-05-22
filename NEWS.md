@@ -15,6 +15,12 @@
 - On-disk persistence via `GiottoDisk::sourceWrite()` is now triggered inside
   `set_expression_values()`, `set_polygon_info()`, and `set_feature_info()`
   when a `gsource` backend is present.
+- `createNetwork()` is now an S4 generic with method dispatch on
+  `matrix`, `spatLocsObj`, `dimObj`, and `giotto` inputs.
+- `networkParam` virtual class with concrete constructors
+  `kNNNetworkParam()`, `sNNNetworkParam()`, and `delaunayNetworkParam()`
+  configure `createNetwork()` calls. The legacy `type` string arg is
+  superseded by passing a `*NetworkParam` object.
 
 ## changes
 
@@ -22,7 +28,33 @@
   instead.
 - `overlapInfo` class exported as an extension point.
 - `updateGiottoObject()` now upgrades pre-0.6.0 objects to initialize the
-  new `source` slot.
+  new `source` slot, and migrates `spatialNetworkObj` / `nnNetObj` to the
+  new igraph-based storage (see breaking changes).
+- `createNearestNetwork()`, `createSpatialDelaunayNetwork()`, and
+  `createSpatialKNNnetwork()` are now thin wrappers over `createNetwork()`.
+  Behavior is preserved.
+
+## breaking changes
+
+- Network subobject storage migrated from `data.table` to `igraph`:
+    - `spatialNetworkObj`: `@networkDT` → `@network` (igraph),
+      `@networkDT_before_filter` → `@unfiltered` (igraph)
+    - `nnNetObj`: `@igraph` → `@network`
+    - `updateGiottoObject()` migrates serialized pre-0.6.0 objects. The
+      same migration runs on-load via `initialize()` so legacy subobjects
+      passed to setters (`setSpatialNetwork()`, `setNearestNetwork()`)
+      are upgraded transparently.
+- `getSpatialNetwork()` `output` choices changed:
+  `"networkDT_before_filter"` → `"unfiltered"`; new option `"igraph"`
+  returns the underlying graph directly.
+- Removed exported helpers `convert_to_full_spatial_network()` and
+  `convert_to_reduced_spatial_network()`. The edge table is now an
+  igraph; use `igraph::as_data_frame(net, what = "edges")` if a
+  data.table form is needed.
+- Geometric-transform methods (`flip()`, `spatShift()`, `t()`, `spin()`,
+  `rescale()`, `affine()`) are no longer defined on `spatialNetworkObj`.
+  Graph topology is invariant under these transforms; gobject-level
+  walkers skip the spatial-network slot.
 
 
 # GiottoClass 0.5.1 (2026/05/14)

@@ -6,7 +6,6 @@
 \alias{flip,giottoPolygon-method}
 \alias{flip,giottoPoints-method}
 \alias{flip,spatLocsObj-method}
-\alias{flip,spatialNetworkObj-method}
 \alias{flip,giottoLargeImage-method}
 \alias{flip,SpatExtent-method}
 \alias{flip,giottoAffineImage-method}
@@ -28,8 +27,6 @@
 \S4method{flip}{giottoPoints}(x, direction = "vertical", x0 = 0, y0 = 0, ...)
 
 \S4method{flip}{spatLocsObj}(x, direction = "vertical", x0 = 0, y0 = 0, ...)
-
-\S4method{flip}{spatialNetworkObj}(x, direction = "vertical", x0 = 0, y0 = 0, ...)
 
 \S4method{flip}{giottoLargeImage}(x, direction = "vertical", x0 = 0, y0 = 0)
 
