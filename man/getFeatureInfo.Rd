@@ -2,10 +2,13 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getFeatureInfo}
 \alias{getFeatureInfo}
+\alias{getFeatureInfo,giotto-method}
 \title{Get feature info}
 \usage{
-getFeatureInfo(
-  gobject = gobject,
+getFeatureInfo(gobject, ...)
+
+\S4method{getFeatureInfo}{giotto}(
+  gobject,
   feat_type = NULL,
   return_giottoPoints = FALSE,
   set_defaults = TRUE,
@@ -14,6 +17,8 @@ getFeatureInfo(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 

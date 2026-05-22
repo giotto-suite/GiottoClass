@@ -2,20 +2,25 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setPolygonInfo}
 \alias{setPolygonInfo}
+\alias{setPolygonInfo,giotto-method}
 \title{Set polygon info}
 \usage{
-setPolygonInfo(
+setPolygonInfo(gobject, ...)
+
+\S4method{setPolygonInfo}{giotto}(
   gobject,
   x,
   name = "cell",
   centroids_to_spatlocs = FALSE,
-  verbose = TRUE,
+  verbose = NULL,
   initialize = TRUE,
   ...
 )
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{x}{single object or named list of objects to set as polygon
 information (see details)}
@@ -31,8 +36,6 @@ to additionally set them as a set of spatial locations (default = FALSE)}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{...}{additional params to pass}
 }
 \value{
 giotto object

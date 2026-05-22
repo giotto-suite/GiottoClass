@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getSpatialEnrichment}
 \alias{getSpatialEnrichment}
+\alias{getSpatialEnrichment,giotto-method}
 \title{Get spatial enrichment}
 \usage{
-getSpatialEnrichment(
+getSpatialEnrichment(gobject, ...)
+
+\S4method{getSpatialEnrichment}{giotto}(
   gobject,
   spat_unit = NULL,
   feat_type = NULL,
@@ -16,6 +19,8 @@ getSpatialEnrichment(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{spat_unit}{spatial unit (e.g. "cell")}
 

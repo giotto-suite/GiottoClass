@@ -367,20 +367,6 @@ createGiottoObject <- function(expression,
             expression_matrix_class = expression_matrix_class
         )
         ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        ## evaluate if h5_file exists
-        if (!is.null(h5_file)) {
-            if (file.exists(h5_file)) {
-                wrap_msg("'", h5_file, "'",
-                    " file already exists and will be replaced",
-                    sep = ""
-                )
-                file.remove(h5_file)
-            } else {
-                wrap_msg("Initializing file ", "'", h5_file, "'", sep = "")
-            }
-        }
-
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
         gobject <- setExpression(
             gobject = gobject,
             x = expression_data,
@@ -470,11 +456,11 @@ createGiottoObject <- function(expression,
                 provenance = spat_unit
             )
 
-            ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-            gobject <- set_spatial_locations(gobject,
-                spatlocs = dummySpatLocObj
+            gobject <- setSpatialLocations(gobject,
+                x = dummySpatLocObj,
+                verbose = FALSE,
+                initialize = FALSE
             )
-            ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
         }
     }
 
@@ -574,7 +560,7 @@ createGiottoObject <- function(expression,
                         # TODO Assign grid as the first spat_unit and feat_type.
                         # Assigment process will need to be improved later
                         avail_spat_feats <- list_expression(gobject)
-                        gobject <- set_spatialGrid(
+                        gobject <- setSpatialGrid(
                             gobject = gobject,
                             spat_unit = avail_spat_feats$spat_unit[[1]],
                             feat_type = avail_spat_feats$feat_type[[1]],
@@ -3115,10 +3101,10 @@ createGiottoImage <- function(gobject = NULL,
     # generation
     if (!is.null(gobject)) {
         # Get spatial locations (or automatically take first available)
-        spatlocs <- get_spatial_locations(
+        spatlocs <- getSpatialLocations(
             gobject = gobject,
             spat_unit = spat_unit,
-            spat_loc_name = spat_loc_name,
+            name = spat_loc_name,
             copy_obj = FALSE,
             output = "data.table"
         )

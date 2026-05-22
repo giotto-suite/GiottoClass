@@ -157,7 +157,7 @@ updateGiottoObject <- function(gobject) {
 
     # subobject updates
     if (!is.null(attr(gobject, "feat_info"))) {
-        info_list <- get_feature_info_list(gobject)
+        info_list <- gobject[["feat_info"]]
         # update S4 object if needed
         info_list <- lapply(info_list, function(info) {
             try_val <- try(validObject(info), silent = TRUE)
@@ -220,7 +220,7 @@ updateGiottoObject <- function(gobject) {
     }
 
     if (!is.null(attr(gobject, "spatial_info"))) {
-        info_list <- get_polygon_info_list(gobject)
+        info_list <- gobject[["spatial_info"]]
         # update S4 object if needed
         info_list <- lapply(info_list, function(info) {
             try_val <- try(validObject(info), silent = TRUE)

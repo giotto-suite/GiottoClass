@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getCellMetadata}
 \alias{getCellMetadata}
+\alias{getCellMetadata,giotto-method}
 \title{getCellMetadata}
 \usage{
-getCellMetadata(
+getCellMetadata(gobject, ...)
+
+\S4method{getCellMetadata}{giotto}(
   gobject,
   spat_unit = NULL,
   feat_type = NULL,
@@ -15,6 +18,8 @@ getCellMetadata(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{spat_unit}{spatial unit (e.g. "cell")}
 

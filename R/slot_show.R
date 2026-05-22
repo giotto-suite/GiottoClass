@@ -319,10 +319,10 @@ showGiottoSpatLocs <- function(gobject,
         objPrints <- objRows <- list()
         for (obj_i in seq(nrow(available_data))) {
             # get object
-            dataObj <- get_spatial_locations(
+            dataObj <- getSpatialLocations(
                 gobject = gobject,
                 spat_unit = available_data$spat_unit[[obj_i]],
-                spat_loc_name = available_data$name[[obj_i]],
+                name = available_data$name[[obj_i]],
                 output = "spatLocsObj",
                 copy_obj = TRUE
             )
@@ -497,7 +497,7 @@ showGiottoDimRed <- function(gobject,
         objPrints <- objRows <- objCols <- list()
         for (obj_i in seq(nrow(available_data))) {
             # Get object
-            dataObj <- get_dimReduction(
+            dataObj <- getDimReduction(
                 gobject = gobject,
                 reduction = available_data$data_type[[obj_i]],
                 spat_unit = available_data$spat_unit[[obj_i]],
@@ -648,12 +648,12 @@ showGiottoNearestNetworks <- function(gobject,
         objPrints <- objRows <- list()
         for (obj_i in seq(nrow(available_data))) {
             # Get object
-            dataObj <- get_NearestNetwork(
+            dataObj <- getNearestNetwork(
                 gobject = gobject,
                 spat_unit = available_data$spat_unit[[obj_i]],
                 feat_type = available_data$feat_type[[obj_i]],
-                nn_network_to_use = available_data$nn_type[[obj_i]],
-                network_name = available_data$name[[obj_i]],
+                nn_type = available_data$nn_type[[obj_i]],
+                name = available_data$name[[obj_i]],
                 output = "data.table"
             )
 
@@ -826,7 +826,7 @@ showGiottoSpatNetworks <- function(gobject,
         objPrints <- objRows <- list()
         for (obj_i in seq(nrow(available_data))) {
             # Get object
-            dataObj <- get_spatialNetwork(
+            dataObj <- getSpatialNetwork(
                 gobject = gobject,
                 spat_unit = available_data$spat_unit[[obj_i]],
                 name = available_data$name[[obj_i]],
@@ -933,7 +933,7 @@ showGiottoSpatGrids <- function(gobject,
         objPrints <- objRows <- list()
         for (obj_i in seq(nrow(available_data))) {
             # Get object
-            dataObj <- get_spatialGrid(
+            dataObj <- getSpatialGrid(
                 gobject = gobject,
                 spat_unit = available_data$spat_unit[[obj_i]],
                 name = available_data$name[[obj_i]],

@@ -25,9 +25,7 @@ setMethod(
         # param
 
         # polygons --------------------------------------------------------- #
-        poly <- get_polygon_info_list(
-            gobject = x, return_giottoPolygon = TRUE
-        )
+        poly <- x[["spatial_info"]]
         if (!is.null(poly)) {
             for (p in poly) {
                 p <- do.call(t, args = list(x = p))
@@ -36,12 +34,7 @@ setMethod(
         }
 
         # spatlocs --------------------------------------------------------- #
-        sls <- get_spatial_locations_list(
-            gobject = x,
-            spat_unit = ":all:",
-            output = "spatLocsObj",
-            copy_obj = FALSE
-        )
+        sls <- x[["spatial_locs"]]
         if (!is.null(sls)) {
             for (sl in sls) {
                 sl <- do.call(t, args = list(x = sl))
@@ -55,12 +48,7 @@ setMethod(
         # spatnets --------------------------------------------------------- #
         # TODO remove this after spatial info is removed from
         # spatialNetwork objs
-        sn_list <- get_spatial_network_list(
-            gobject = x,
-            spat_unit = ":all:",
-            output = "spatialNetworkObj",
-            copy_obj = FALSE
-        )
+        sn_list <- x[["spatial_network"]]
         if (length(sn_list) > 0) {
             for (sn in sn_list) {
                 sn <- t(sn)
@@ -70,9 +58,7 @@ setMethod(
 
 
         # points ----------------------------------------------------------- #
-        pts <- get_feature_info_list(
-            gobject = x, return_giottoPoints = TRUE
-        )
+        pts <- x[["feat_info"]]
         if (!is.null(pts)) {
             for (pt in pts) {
                 pt <- do.call(t, args = list(x = pt))
@@ -81,7 +67,7 @@ setMethod(
         }
 
         # images ----------------------------------------------------------- #
-        imgs <- get_giotto_image_list(x)
+        imgs <- x[["images"]]
         if (!is.null(imgs)) {
             for (img in imgs) {
                 img <- t(img)

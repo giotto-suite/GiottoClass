@@ -1085,11 +1085,11 @@ addNetworkLayout <- function(gobject,
         feat_type = feat_type
     )
 
-    ig_object <- get_NearestNetwork(
+    ig_object <- getNearestNetwork(
         gobject = gobject,
         spat_unit = spat_unit,
-        nn_network_to_use = nn_network_to_use,
-        network_name = network_name, output = "igraph"
+        nn_type = nn_network_to_use,
+        name = network_name, output = "igraph"
     )
 
     # ig_object = gobject@nn_network[[spat_unit]][[nn_network_to_use

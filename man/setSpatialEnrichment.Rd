@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setSpatialEnrichment}
 \alias{setSpatialEnrichment}
+\alias{setSpatialEnrichment,giotto-method}
 \title{Set spatial enrichment}
 \usage{
-setSpatialEnrichment(
+setSpatialEnrichment(gobject, ...)
+
+\S4method{setSpatialEnrichment}{giotto}(
   gobject,
   x,
   spat_unit = NULL,
@@ -18,6 +21,8 @@ setSpatialEnrichment(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{x}{spatEnrObj or list of spatEnrObj to set. Passing NULL will remove
 a specified set of spatial enrichment information from the gobject.}
@@ -34,8 +39,6 @@ a specified set of spatial enrichment information from the gobject.}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{...}{additional params to pass}
 }
 \value{
 giotto object

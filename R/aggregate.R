@@ -1195,7 +1195,7 @@ calculateOverlapPolygonImages <- function(gobject,
             )
         }
 
-        intensity_image <- get_giottoLargeImage(
+        intensity_image <- getGiottoImage(
             gobject = gobject,
             name = img_name
         )
@@ -1240,10 +1240,12 @@ calculateOverlapPolygonImages <- function(gobject,
 
     if (return_gobject) {
         poly_info@overlaps[["intensity"]][[name_overlap]] <- dt_exact
-        gobject <- set_polygon_info(
+        gobject <- setPolygonInfo(
             gobject = gobject,
-            polygon_name = spatial_info,
-            gpolygon = poly_info
+            x = poly_info,
+            name = spatial_info,
+            verbose = FALSE,
+            initialize = FALSE
         )
         return(gobject)
     } else {
@@ -2367,9 +2369,9 @@ aggregateStacksExpression <- function(gobject,
         misc = NULL
     )
 
-    ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-    gobject <- set_expression_values(gobject = gobject, values = new_expr_obj)
-    ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+    gobject <- setExpression(
+        gobject = gobject, x = new_expr_obj, verbose = FALSE
+    )
 
     # set new cell IDs
     ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -2468,10 +2470,10 @@ aggregateStacksLocations <- function(gobject,
     # aggregate locations
     locs_list <- list()
     for (spat_unit in spat_units) {
-        locDT <- get_spatial_locations(
+        locDT <- getSpatialLocations(
             gobject = gobject,
             spat_unit = spat_unit,
-            spat_loc_name = values,
+            name = values,
             output = "data.table"
         )
         locs_list[[spat_unit]] <- locDT
@@ -2490,13 +2492,12 @@ aggregateStacksLocations <- function(gobject,
         misc = NULL
     )
 
-    ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-    gobject <- set_spatial_locations(
+    gobject <- setSpatialLocations(
         gobject = gobject,
-        spatlocs = new_spatlocs_obj,
-        set_defaults = FALSE
+        x = new_spatlocs_obj,
+        verbose = FALSE,
+        initialize = FALSE
     )
-    ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
     return(gobject)
 }
@@ -2547,7 +2548,7 @@ aggregateStacksLocations <- function(gobject,
     stack_list <- list()
     for (spat_i in seq_len(length(spat_units))) {
         spat <- spat_units[[spat_i]]
-        stackspatvector <- get_polygon_info(
+        stackspatvector <- getPolygonInfo(
             gobject = gobject,
             polygon_name = spat,
             polygon_overlap = NULL,
@@ -2642,11 +2643,12 @@ aggregateStacksPolygons <- function(gobject,
         overlaps = NULL
     )
 
-    gobject <- set_polygon_info(
+    gobject <- setPolygonInfo(
         gobject = gobject,
-        polygon_name = new_spat_unit,
-        gpolygon = gpolygon,
-        verbose = FALSE
+        x = gpolygon,
+        name = new_spat_unit,
+        verbose = FALSE,
+        initialize = FALSE
     )
 
     return(gobject)

@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getSpatialNetwork}
 \alias{getSpatialNetwork}
+\alias{getSpatialNetwork,giotto-method}
 \title{Get spatial network}
 \usage{
-getSpatialNetwork(
+getSpatialNetwork(gobject, ...)
+
+\S4method{getSpatialNetwork}{giotto}(
   gobject,
   spat_unit = NULL,
   name = NULL,
@@ -17,6 +20,8 @@ getSpatialNetwork(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{spat_unit}{spatial unit (e.g. "cell")}
 
