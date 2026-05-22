@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setSpatialNetwork}
 \alias{setSpatialNetwork}
+\alias{setSpatialNetwork,giotto-method}
 \title{Set spatial network}
 \usage{
-setSpatialNetwork(
+setSpatialNetwork(gobject, ...)
+
+\S4method{setSpatialNetwork}{giotto}(
   gobject,
   x,
   spat_unit = NULL,
@@ -17,6 +20,8 @@ setSpatialNetwork(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{x}{spatialNetworkObj or list of spatialNetworkObj to set. Passing NULL
 removes a specified set of spatial network information from the gobject.}
@@ -31,8 +36,6 @@ removes a specified set of spatial network information from the gobject.}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{...}{additional params to pass}
 }
 \value{
 giotto object

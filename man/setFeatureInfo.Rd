@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setFeatureInfo}
 \alias{setFeatureInfo}
+\alias{setFeatureInfo,giotto-method}
 \title{Set feature info}
 \usage{
-setFeatureInfo(
+setFeatureInfo(gobject, ...)
+
+\S4method{setFeatureInfo}{giotto}(
   gobject,
   x,
   feat_type = NULL,
@@ -16,6 +19,8 @@ setFeatureInfo(
 \arguments{
 \item{gobject}{giotto object}
 
+\item{...}{additional params to pass}
+
 \item{x}{giottoPoints object or list of giottoPoints to set. Passing NULL
 will remove the specified giottoPoints object from the giotto object}
 
@@ -25,8 +30,6 @@ will remove the specified giottoPoints object from the giotto object}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{...}{additional params to pass}
 }
 \value{
 giotto object

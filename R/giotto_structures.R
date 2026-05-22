@@ -984,7 +984,7 @@ addSpatialCentroidLocationsLayer <- function(gobject,
     # There may be no existing data in expression slot to find feat_type
     # nesting from
 
-    gpoly <- get_polygon_info(gobject,
+    gpoly <- getPolygonInfo(gobject,
         polygon_name = poly_info,
         return_giottoPolygon = TRUE
     )
@@ -1024,13 +1024,12 @@ addSpatialCentroidLocationsLayer <- function(gobject,
             )
         }
 
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        gobject <- set_spatial_locations(
+        gobject <- setSpatialLocations(
             gobject = gobject,
-            spatlocs = spatial_locs,
-            verbose = FALSE
+            x = spatial_locs,
+            verbose = FALSE,
+            initialize = FALSE
         )
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
 
         # cell ID
@@ -1047,14 +1046,12 @@ addSpatialCentroidLocationsLayer <- function(gobject,
 
 
         # add centroids information
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        gobject <- set_polygon_info(gobject,
-            polygon_name = poly_info,
-            gpolygon = extended_spatvector,
-            verbose = FALSE
+        gobject <- setPolygonInfo(gobject,
+            x = extended_spatvector,
+            name = poly_info,
+            verbose = FALSE,
+            initialize = FALSE
         )
-        # gobject@spatial_info[[poly_info]] = extended_spatvector
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
 
         return(gobject)

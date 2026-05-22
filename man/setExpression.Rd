@@ -3,9 +3,12 @@
 \name{setExpression}
 \alias{setExpression}
 \alias{setExpressionValues}
+\alias{setExpression,giotto-method}
 \title{Set expression data}
 \usage{
-setExpression(
+setExpression(gobject, ...)
+
+\S4method{setExpression}{giotto}(
   gobject,
   x,
   spat_unit = NULL,
@@ -20,6 +23,8 @@ setExpression(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{x}{exprObj or list of exprObj to set. Passing NULL will remove a
 specified set of expression data from the giotto object}
@@ -37,8 +42,6 @@ information for the giotto object. Pass NULL to remove an expression object}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{...}{additional params to pass}
 }
 \value{
 giotto object

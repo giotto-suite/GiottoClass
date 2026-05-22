@@ -686,13 +686,12 @@ joinGiottoObjects <- function(gobject_list,
             ))
             expr_list[[1]][] <- combmat[["matrix"]]
 
-            ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-            comb_gobject <- set_expression_values(
+            comb_gobject <- setExpression(
                 gobject = comb_gobject,
-                values = expr_list[[1]],
-                set_defaults = FALSE
+                x = expr_list[[1]],
+                verbose = FALSE,
+                initialize = FALSE
             )
-            ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
             # Moved de novo feat metadata generation to end of fxn as a catch
         }
@@ -774,10 +773,10 @@ joinGiottoObjects <- function(gobject_list,
 
     for (slObj_i in seq(nrow(available_locs))) {
         sl_list <- lapply(updated_object_list, function(gobj) {
-            get_spatial_locations(
+            getSpatialLocations(
                 gobject = gobj,
                 spat_unit = available_locs$spat_unit[[slObj_i]],
-                spat_loc_name = available_locs$name[[slObj_i]],
+                name = available_locs$name[[slObj_i]],
                 output = "spatLocsObj",
                 copy_obj = FALSE
             )

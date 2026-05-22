@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getSpatialLocations}
 \alias{getSpatialLocations}
+\alias{getSpatialLocations,giotto-method}
 \title{Get spatial locations}
 \usage{
-getSpatialLocations(
+getSpatialLocations(gobject, ...)
+
+\S4method{getSpatialLocations}{giotto}(
   gobject,
   spat_unit = NULL,
   name = NULL,
@@ -17,6 +20,8 @@ getSpatialLocations(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{spat_unit}{spatial unit (e.g. "cell")}
 

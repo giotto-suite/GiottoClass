@@ -2,10 +2,13 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getMultiomics}
 \alias{getMultiomics}
+\alias{getMultiomics,giotto-method}
 \title{Get multiomics integration results}
 \usage{
-getMultiomics(
-  gobject = NULL,
+getMultiomics(gobject, ...)
+
+\S4method{getMultiomics}{giotto}(
+  gobject,
   spat_unit = NULL,
   feat_type = NULL,
   integration_method = "WNN",

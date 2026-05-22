@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setFeatureMetadata}
 \alias{setFeatureMetadata}
+\alias{setFeatureMetadata,giotto-method}
 \title{Set feature metadata}
 \usage{
-setFeatureMetadata(
+setFeatureMetadata(gobject, ...)
+
+\S4method{setFeatureMetadata}{giotto}(
   gobject,
   x,
   spat_unit = NULL,
@@ -17,6 +20,8 @@ setFeatureMetadata(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{x}{featMetaObj or list of featMetaObj to set. Passing NULL will
 reset a specified set of feature metadata in the giotto object.}
@@ -31,8 +36,6 @@ reset a specified set of feature metadata in the giotto object.}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{...}{additional params to pass}
 }
 \value{
 giotto object

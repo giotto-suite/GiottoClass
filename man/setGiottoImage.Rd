@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setGiottoImage}
 \alias{setGiottoImage}
+\alias{setGiottoImage,giotto-method}
 \title{Set giotto image object}
 \usage{
-setGiottoImage(
+setGiottoImage(gobject, ...)
+
+\S4method{setGiottoImage}{giotto}(
   gobject,
   image,
   image_type = NULL,
@@ -15,6 +18,8 @@ setGiottoImage(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{image}{giotto image object to be attached without modification to the
 giotto object}

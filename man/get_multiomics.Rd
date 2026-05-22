@@ -4,13 +4,7 @@
 \alias{get_multiomics}
 \title{Get multiomics integration results}
 \usage{
-get_multiomics(
-  gobject,
-  spat_unit = NULL,
-  feat_type = NULL,
-  integration_method = "WNN",
-  result_name = "theta_weighted_matrix"
-)
+get_multiomics(gobject, ...)
 }
 \arguments{
 \item{gobject}{A Giotto object}

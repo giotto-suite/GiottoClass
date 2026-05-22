@@ -33,19 +33,11 @@ setMethod(
 
         checkmate::assert_character(spat_unit)
         checkmate::assert_character(feat_type)
-        all_su <- spat_unit == ":all:"
-        all_ft <- feat_type == ":all:"
-
-        # no need to set default spat_unit and feat_type. NULL is
-        # acceptable input
+        su_filter <- if (spat_unit == ":all:") NULL else spat_unit
+        ft_filter <- if (feat_type == ":all:") NULL else feat_type
 
         # polygons --------------------------------------------------------- #
-        poly <- get_polygon_info_list(
-            gobject = x, return_giottoPolygon = TRUE
-        )
-        if (!all_su) {
-            poly <- poly[spatUnit(poly) %in% spat_unit]
-        }
+        poly <- x[["spatial_info", spat_unit = su_filter]]
         if (!is.null(poly)) {
             for (p in poly) {
                 p <- do.call(spin, args = c(list(x = p), a))
@@ -54,15 +46,7 @@ setMethod(
         }
 
         # spatlocs --------------------------------------------------------- #
-        sls <- get_spatial_locations_list(
-            gobject = x,
-            spat_unit = ":all:",
-            output = "spatLocsObj",
-            copy_obj = FALSE
-        )
-        if (!all_su) {
-            sls[spatUnit(sls) %in% spat_unit]
-        }
+        sls <- x[["spatial_locs", spat_unit = su_filter]]
         if (!is.null(sls)) {
             for (sl in sls) {
                 sl <- do.call(spin, args = c(list(x = sl), a))
@@ -74,12 +58,7 @@ setMethod(
 
             # TODO remove this after spatial info is removed from
             # spatialNetwork objs
-            sn_list <- get_spatial_network_list(
-                gobject = x,
-                spat_unit = ":all:",
-                output = "spatialNetworkObj",
-                copy_obj = FALSE
-            )
+            sn_list <- x[["spatial_network"]]
             if (length(sn_list) > 0) {
                 warning(wrap_txt("spatial locations have been modified.
                                 Relevant spatial networks may need to be
@@ -90,12 +69,7 @@ setMethod(
 
 
         # points ----------------------------------------------------------- #
-        pts <- get_feature_info_list(
-            gobject = x, return_giottoPoints = TRUE
-        )
-        if (!all_ft) {
-            pts <- pts[featType(pts) %in% feat_type]
-        }
+        pts <- x[["feat_info", feat_type = ft_filter]]
         if (!is.null(pts)) {
             for (pt in pts) {
                 pt <- do.call(spin, args = c(list(x = pt), a))

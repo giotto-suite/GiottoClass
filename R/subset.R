@@ -111,13 +111,12 @@
             ])
         }
 
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        gobject <<- set_expression_values(
+        gobject <<- setExpression(
             gobject = gobject,
-            values = ex,
-            verbose = FALSE
+            x = ex,
+            verbose = FALSE,
+            initialize = FALSE
         )
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
         return(NULL) # ignore this
     })
@@ -149,10 +148,10 @@
 
     # for each selected spatlocs, perform subset
     lapply(seq(nrow(avail_locs)), function(sl_i) {
-        spatObj <- get_spatial_locations(
+        spatObj <- getSpatialLocations(
             gobject = gobject,
             spat_unit = avail_locs[sl_i]$spat_unit,
-            spat_loc_name = avail_locs[sl_i]$name,
+            name = avail_locs[sl_i]$name,
             output = "spatLocsObj",
             copy_obj = FALSE
         )
@@ -161,12 +160,11 @@
         filter_bool_cells <- spatIDs(spatObj) %in% cell_ids
         spatObj[] <- spatObj[][filter_bool_cells]
 
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        gobject <<- set_spatial_locations(gobject,
-            spatlocs = spatObj,
-            verbose = FALSE
+        gobject <<- setSpatialLocations(gobject,
+            x = spatObj,
+            verbose = FALSE,
+            initialize = FALSE
         )
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
         # not yet possible to row subset data.tables by reference.
         # Must be set back in.
 
@@ -207,7 +205,7 @@
 
     # for each selected cellmeta, perform subset
     lapply(seq(nrow(avail_cm)), function(cm_i) {
-        cm <- get_cell_metadata(
+        cm <- getCellMetadata(
             gobject = gobject,
             spat_unit = avail_cm[cm_i]$spat_unit,
             feat_type = avail_cm[cm_i]$feat_type,
@@ -311,7 +309,7 @@
 
     # for each selected spatnet, perform subset
     lapply(seq(nrow(avail_sn)), function(sn_i) {
-        sn <- get_spatialNetwork(
+        sn <- getSpatialNetwork(
             gobject = gobject,
             spat_unit = avail_sn[sn_i]$spat_unit,
             name = avail_sn[sn_i]$name,
@@ -322,13 +320,12 @@
         sn[] <- sn[][to %in% cell_ids & from %in% cell_ids]
 
         # Set the spatialNetworkObj back into the gobject
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        gobject <<- set_spatialNetwork(
+        gobject <<- setSpatialNetwork(
             gobject = gobject,
-            spatial_network = sn,
-            verbose = FALSE
+            x = sn,
+            verbose = FALSE,
+            initialize = FALSE
         )
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
         return(NULL) # ignore this
     })
@@ -384,7 +381,7 @@
     # entirely different objects. Subset operation only needs to be performed
     # once per object, so there should be no limitations on mirai usage.
     lapply(seq(nrow(avail_cdr)), function(cdr_i) {
-        cdr <- get_dimReduction(
+        cdr <- getDimReduction(
             gobject = gobject,
             spat_unit = avail_cdr[cdr_i]$spat_unit,
             feat_type = avail_cdr[cdr_i]$feat_type,
@@ -396,18 +393,17 @@
 
         cdr[] <- cdr[][rownames(cdr[]) %in% cell_ids, ]
 
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        gobject <<- set_dimReduction(
+        gobject <<- setDimReduction(
             gobject = gobject,
-            dimObject = cdr,
-            verbose = FALSE
+            x = cdr,
+            verbose = FALSE,
+            initialize = FALSE
         )
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
         return(NULL) # ignore this
     })
 
     lapply(seq(nrow(avail_fdr)), function(fdr_i) {
-        fdr <- get_dimReduction(
+        fdr <- getDimReduction(
             gobject = gobject,
             spat_unit = avail_fdr[fdr_i]$spat_unit,
             feat_type = avail_fdr[fdr_i]$feat_type,
@@ -419,13 +415,12 @@
 
         fdr[] <- fdr[][rownames(fdr[]) %in% feat_ids, ]
 
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        gobject <<- set_dimReduction(
+        gobject <<- setDimReduction(
             gobject = gobject,
-            dimObject = fdr,
-            verbose = FALSE
+            x = fdr,
+            verbose = FALSE,
+            initialize = FALSE
         )
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
         return(NULL) # ignore this
     })
 
@@ -461,12 +456,12 @@
 
     # for each selected nearest net, perform subset
     lapply(seq(nrow(avail_nn)), function(nn_i) {
-        nnObj <- get_NearestNetwork(
+        nnObj <- getNearestNetwork(
             gobject = gobject,
             spat_unit = avail_nn[nn_i]$spat_unit,
             feat_type = avail_nn[nn_i]$feat_type,
-            nn_network_to_use = avail_nn[nn_i]$nn_type,
-            network_name = avail_nn[nn_i]$name,
+            nn_type = avail_nn[nn_i]$nn_type,
+            name = avail_nn[nn_i]$name,
             output = "nnNetObj"
         )
 
@@ -474,12 +469,11 @@
         vids <- which(spatIDs(nnObj) %in% cell_ids)
         nnObj[] <- igraph::induced_subgraph(graph = nnObj[], vids = vids)
 
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        gobject <<- set_NearestNetwork(gobject,
-            nn_network = nnObj,
-            verbose = FALSE
+        gobject <<- setNearestNetwork(gobject,
+            x = nnObj,
+            verbose = FALSE,
+            initialize = FALSE
         )
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
     })
 
     return(gobject)
@@ -512,23 +506,22 @@
 
     # for each selected spatial enrichment, perform subset
     lapply(seq(nrow(avail_enr)), function(enr_i) {
-        spatEnrObj <- get_spatial_enrichment(
+        spatEnrObj <- getSpatialEnrichment(
             gobject = gobject,
             spat_unit = avail_enr[enr_i]$spat_unit,
             feat_type = avail_enr[enr_i]$feat_type,
-            enrichm_name = avail_enr[enr_i]$name,
+            name = avail_enr[enr_i]$name,
             output = "spatEnrObj"
         )
 
         filter_bool_cells <- spatIDs(spatEnrObj) %in% cell_ids
         spatEnrObj[] <- spatEnrObj[][filter_bool_cells]
 
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        gobject <<- set_spatial_enrichment(gobject,
-            spatenrichment = spatEnrObj,
-            verbose = FALSE
+        gobject <<- setSpatialEnrichment(gobject,
+            x = spatEnrObj,
+            verbose = FALSE,
+            initialize = FALSE
         )
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
     })
 
     return(gobject)
@@ -1636,10 +1629,8 @@ subsetGiottoLocsSubcellular <- function(
     ## --------------- ##
     if (!is.null(gobject@feat_info)) {
         # get the gpoints that are selected using feat_type as named list
-        gpoints_list <- get_feature_info_list(
-            gobject = gobject,
-            return_giottoPoints = TRUE
-        )
+        gpoints_list <- gobject[["feat_info"]]
+        names(gpoints_list) <- featType(gpoints_list)
         if (isTRUE(feat_type == ":all:")) feat_type <- names(gpoints_list)
         gpoints_list <- gpoints_list[feat_type]
 
@@ -1677,10 +1668,8 @@ subsetGiottoLocsSubcellular <- function(
     ## ---------------- ##
     if (!is.null(gobject@spatial_info)) {
         # get gpolys that are selected using poly_info as a named list.
-        gpolys_list <- get_polygon_info_list(
-            gobject = gobject,
-            return_giottoPolygon = TRUE
-        )
+        gpolys_list <- gobject[["spatial_info"]]
+        names(gpolys_list) <- objName(gpolys_list)
         if (isTRUE(poly_info == ":all:")) poly_info <- names(gpolys_list)
         gpolys_list <- gpolys_list[poly_info]
 

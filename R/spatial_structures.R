@@ -694,9 +694,9 @@ spat_net_to_igraph <- function(spatialNetworkObj, attr = NULL) {
         spat_unit = spat_unit
     )
 
-    spatial_locations <- get_spatial_locations(gobject,
+    spatial_locations <- getSpatialLocations(gobject,
         spat_unit = spat_unit,
-        spat_loc_name = spat_loc_name,
+        name = spat_loc_name,
         output = "spatLocsObj",
         copy_obj = TRUE
     )
@@ -912,10 +912,10 @@ spat_net_to_igraph <- function(spatialNetworkObj, attr = NULL) {
         spat_unit = spat_unit
     )
 
-    spatial_locations <- get_spatial_locations(
+    spatial_locations <- getSpatialLocations(
         gobject = gobject,
         spat_unit = spat_unit,
-        spat_loc_name = spat_loc_name,
+        name = spat_loc_name,
         output = "spatLocsObj",
         copy_obj = TRUE
     )
@@ -1108,10 +1108,10 @@ createSpatialDelaunayNetwork <- function(gobject,
     output <- match.arg(output, c("spatialNetworkObj", "data.table"))
 
     # determine the network dimensions
-    spatial_locations <- get_spatial_locations(
+    spatial_locations <- getSpatialLocations(
         gobject = gobject,
         spat_unit = spat_unit,
-        spat_loc_name = spat_loc_name,
+        name = spat_loc_name,
         output = "data.table",
         copy_obj = TRUE
     )
@@ -1392,10 +1392,10 @@ createSpatialKNNnetwork <- function(gobject,
 
     # get parameter values
     method <- match.arg(method, c("dbscan"))
-    spatial_locations <- get_spatial_locations(
+    spatial_locations <- getSpatialLocations(
         gobject = gobject,
         spat_unit = spat_unit,
-        spat_loc_name = spat_loc_name,
+        name = spat_loc_name,
         output = "spatLocsObj",
         copy_obj = TRUE
     )
@@ -1992,10 +1992,10 @@ createSpatialWeightMatrix <- function(gobject,
         spat_unit = spat_unit
     )
 
-    spatlocs <- get_spatial_locations(
+    spatlocs <- getSpatialLocations(
         gobject = gobject,
         spat_unit = spat_unit,
-        spat_loc_name = spat_loc_name,
+        name = spat_loc_name,
         output = "data.table",
         copy_obj = FALSE
     )
@@ -2085,10 +2085,10 @@ createSpatialWeightMatrix <- function(gobject,
         spat_unit = spat_unit
     )
 
-    spatlocs <- get_spatial_locations(
+    spatlocs <- getSpatialLocations(
         gobject = gobject,
         spat_unit = spat_unit,
-        spat_loc_name = spat_loc_name,
+        name = spat_loc_name,
         output = "data.table",
         copy_obj = FALSE
     )
@@ -2285,7 +2285,7 @@ createSpatialDefaultGrid <- function(gobject,
         )
 
         # 3. assign spatial grid object
-        gobject <- set_spatialGrid(
+        gobject <- setSpatialGrid(
             gobject = gobject,
             spat_unit = spat_unit,
             feat_type = feat_type,
@@ -2539,16 +2539,16 @@ annotateSpatialGrid <- function(gobject,
     spatial_grid_name = "spatial_grid",
     cluster_columns = NULL) {
     # get grid
-    spatial_grid <- get_spatialGrid(
+    spatial_grid <- getSpatialGrid(
         gobject = gobject,
         spat_unit = spat_unit,
         feat_type = feat_type,
         name = spatial_grid_name
     )
-    spatial_locs <- get_spatial_locations(
+    spatial_locs <- getSpatialLocations(
         gobject = gobject,
         spat_unit = spat_unit,
-        spat_loc_name = spat_loc_name,
+        name = spat_loc_name,
         output = "data.table",
         copy_obj = FALSE
     ) # copy happens anyways in step 1
