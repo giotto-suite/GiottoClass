@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/JetBrains_Mono-0.4.10/font.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/JetBrains_Mono-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Overview">
@@ -26,7 +26,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.9</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -49,8 +49,8 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://drieslab.github.io/Giotto/">Suite</a></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/drieslab/GiottoClass/" aria-label="github"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://giotto-suite.github.io/Giotto/">Suite</a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/giotto-suite/GiottoClass/" aria-label="github"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -66,7 +66,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Overview</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/drieslab/Giotto/blob/website/vignettes/overview.Rmd" class="external-link"><code>vignettes/overview.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/giotto-suite/Giotto/blob/website/vignettes/overview.Rmd" class="external-link"><code>vignettes/overview.Rmd</code></a></small>
       <div class="d-none name"><code>overview.Rmd</code></div>
     </div>
 
@@ -76,21 +76,18 @@
 <h2 id="spatial-unit-and-feature-type">Spatial unit and feature type<a class="anchor" aria-label="anchor" href="#spatial-unit-and-feature-type"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://drieslab.github.io/GiottoClass/">GiottoClass</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://giotto-suite.github.io/GiottoClass/">GiottoClass</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">vizmini</span> <span class="op">&lt;-</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://drieslab.github.io/GiottoData/reference/loadGiottoMini.html" class="external-link">loadGiottoMini</a></span><span class="op">(</span><span class="st">"vizgen"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">vizmini</span> <span class="op">&lt;-</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/GiottoData/man/loadGiottoMini.html" class="external-link">loadGiottoMini</a></span><span class="op">(</span><span class="st">"vizgen"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## 1. read Giotto object</span></span></code></pre>
 <pre><code><span><span class="co">## 2. read Giotto feature information</span></span></code></pre>
 <pre><code><span><span class="co">## 3. read Giotto spatial information</span></span></code></pre>
-<pre><code><span><span class="co">## 3.1 read Giotto spatial shape information</span></span></code></pre>
-<pre><code><span><span class="co">## 3.2 read Giotto spatial centroid information</span></span></code></pre>
-<pre><code><span><span class="co">## 3.3 read Giotto spatial overlap information</span></span></code></pre>
 <pre><code><span><span class="co">## 4. read Giotto image information</span></span></code></pre>
 <pre><code><span><span class="co">## checking default envname 'giotto_env'</span></span></code></pre>
 <pre><code><span><span class="co">## a system default python environment was found</span></span></code></pre>
 <pre><code><span><span class="co">## Using python path:</span></span>
 <span><span class="co">##  "/usr/share/miniconda/envs/giotto_env/bin/python"</span></span></code></pre>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">vizmini</span></span></code></pre></div>
 <pre><code><span><span class="co">## An object of class giotto </span></span>
 <span><span class="co">## &gt;Active spat_unit:  z0 </span></span>
@@ -131,7 +128,7 @@ information exists within each of these slots and its nesting.</p>
 <li>show functions print a preview of all the data within the slot, but
 do not return information</li>
 </ul>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/showGiottoSpatLocs.html">showGiottoSpatLocs</a></span><span class="op">(</span><span class="va">vizmini</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## ├──Spatial unit "<span style="color: #0000BB;">z0</span>"</span></span>
 <span><span class="co">## │  └──S4 spatLocsObj "<span style="color: #00BBBB;">raw</span>" coordinates:   (498 rows)</span></span>
@@ -190,7 +187,7 @@ do not return information</li>
 <span><span class="co">##          </span></span>
 <span><span class="co">##          </span></span>
 <span><span class="co">## </span></span></code></pre>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/list_expression.html">list_expression</a></span><span class="op">(</span><span class="va">vizmini</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##    spat_unit feat_type       name</span></span>
 <span><span class="co">##       &lt;char&gt;    &lt;char&gt;     &lt;char&gt;</span></span>
@@ -200,13 +197,13 @@ do not return information</li>
 <span><span class="co">## 4: aggregate       rna normalized</span></span>
 <span><span class="co">## 5: aggregate       rna     scaled</span></span>
 <span><span class="co">## 6: aggregate       rna    pearson</span></span></code></pre>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Find specific spat_unit objects #</span></span>
 <span><span class="fu"><a href="../reference/list_expression.html">list_expression</a></span><span class="op">(</span><span class="va">vizmini</span>, spat_unit <span class="op">=</span> <span class="st">"z0"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##    spat_unit feat_type   name</span></span>
 <span><span class="co">##       &lt;char&gt;    &lt;char&gt; &lt;char&gt;</span></span>
 <span><span class="co">## 1:        z0       rna    raw</span></span></code></pre>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/list_expression_names.html">list_expression_names</a></span><span class="op">(</span><span class="va">vizmini</span>, spat_unit <span class="op">=</span> <span class="st">"z1"</span>, feat_type <span class="op">=</span> <span class="st">"rna"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "raw"</span></span></code></pre>
 </div>
@@ -220,7 +217,7 @@ provide both feature polygon information for multiple confocal planes
 within a tissue. The aggregated information produced then could be drawn
 from different z-planes or combinations thereof. Giotto tracks this
 provenance information for each set of aggregated data.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">expr_mat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getExpression.html">getExpression</a></span><span class="op">(</span><span class="va">vizmini</span>, spat_unit <span class="op">=</span> <span class="st">"aggregate"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/giotto_schema.html">prov</a></span><span class="op">(</span><span class="va">expr_mat</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "z0" "z1"</span></span></code></pre>
@@ -261,8 +258,8 @@ createSpatNetObj() createSpatEnrObj() createSpatialGrid()
 createGiottoPoints() createGiottoPolygonsFromDfr()
 createGiottoPolygonsFromMask() createGiottoImage()
 createGiottoLargeImage()</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">coords</span> <span class="op">&lt;-</span> <span class="fu">data.table</span><span class="fu">::</span><span class="fu"><a href="https://rdatatable.gitlab.io/data.table/reference/data.table.html" class="external-link">data.table</a></span><span class="op">(</span></span>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">coords</span> <span class="op">&lt;-</span> <span class="fu">data.table</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/data.table.html" class="external-link">data.table</a></span><span class="op">(</span></span>
 <span>    sdimx <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>,</span>
 <span>    sdimy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>,</span>
 <span>    cell_ID <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"C"</span><span class="op">)</span></span>
@@ -278,7 +275,7 @@ createGiottoLargeImage()</p>
 input at column position(s): 3 The first non-numeric column will be
 considered as a cell ID to test for consistency with the expression
 matrix. Other non numeric columns will be removed</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">st</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## An object of class spatLocsObj : "test"</span></span>
 <span><span class="co">## spat_unit : "cell"</span></span>
@@ -306,7 +303,7 @@ directly usable by the setter functions.</p>
 <p>readPolygonData() readFeatData() readExprData() readCellMetadata()
 readFeatMetadata() readSpatLocsData() readSpatNetData()
 readSpatEnrichData() readDimReducData() readNearestNetData()</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">st2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/readSpatLocsData.html">readSpatLocsData</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>cell2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    test1 <span class="op">=</span> <span class="va">coords</span>,</span>
 <span>    test2 <span class="op">=</span> <span class="va">coords</span></span>
@@ -328,7 +325,7 @@ matrix. Other non numeric columns will be removed</p>
 input at column position(s): 3. The first non-numeric column will be
 considered as a cell ID to test for consistency with the expression
 matrix. Other non numeric columns will be removed</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">st2</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [[1]]</span></span>
 <span><span class="co">## An object of class spatLocsObj : "test1"</span></span>
@@ -384,7 +381,7 @@ getSpatialEnrichment() getGiottoImage()</p>
 setSpatialLocations() setDimReduction() setNearestNetwork()
 setSpatialNetwork() setPolygonInfo() setFeatureInfo()
 setSpatialEnrichment() setGiottoImage()</p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">expval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getExpression.html">getExpression</a></span><span class="op">(</span><span class="va">vizmini</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">expval</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## An object of class exprObj : "raw"</span></span>
@@ -417,17 +414,17 @@ setSpatialEnrichment() setGiottoImage()</p>
 <p>spatUnit(), featType(), and prov() are replacement functions for
 tagged spatial unit, feature type, and provenance information
 respectively.</p>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># spat_unit</span></span>
 <span><span class="fu"><a href="../reference/giotto_schema.html">spatUnit</a></span><span class="op">(</span><span class="va">expval</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="st">"new_spat"</span></span>
 <span><span class="fu"><a href="../reference/giotto_schema.html">spatUnit</a></span><span class="op">(</span><span class="va">expval</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "new_spat"</span></span></code></pre>
-<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># feat_type</span></span>
 <span><span class="fu"><a href="../reference/giotto_schema.html">featType</a></span><span class="op">(</span><span class="va">expval</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="st">"new_feat"</span></span>
 <span><span class="fu"><a href="../reference/giotto_schema.html">featType</a></span><span class="op">(</span><span class="va">expval</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "new_feat"</span></span></code></pre>
-<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># provenance</span></span>
 <span><span class="fu"><a href="../reference/giotto_schema.html">prov</a></span><span class="op">(</span><span class="va">expval</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="st">"cell"</span></span>
 <span><span class="fu"><a href="../reference/giotto_schema.html">prov</a></span><span class="op">(</span><span class="va">expval</span><span class="op">)</span></span></code></pre></div>
@@ -441,11 +438,11 @@ when setting an S4 subobject with tagged information into a
 giottoObject. However, if input is given to the set function parameters
 then it is prioritized over the tagged information and the tagged
 information is updated.</p>
-<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># set exprObj to tagged nesting location</span></span>
 <span><span class="va">vizmini</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/setExpression.html">setExpression</a></span><span class="op">(</span><span class="va">vizmini</span>, <span class="va">expval</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Setting expression [new_spat][new_feat] raw</span></span></code></pre>
-<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/list_expression.html">list_expression</a></span><span class="op">(</span><span class="va">vizmini</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##    spat_unit feat_type       name</span></span>
 <span><span class="co">##       &lt;char&gt;    &lt;char&gt;     &lt;char&gt;</span></span>
@@ -466,20 +463,20 @@ this slot that contains the data. For example, with a spatLocsObj:</p>
 <p>class(spatLocsObj[]) is equivalent to class(<a href="mailto:spatLocsObj@coordinates" class="email">spatLocsObj@coordinates</a>)</p>
 <p>In this way, the S4 subobjects can be used in contexts that the
 wrapped objects could be.</p>
-<div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">st</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getSpatialLocations.html">getSpatialLocations</a></span><span class="op">(</span><span class="va">vizmini</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">st</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "spatLocsObj"</span></span>
 <span><span class="co">## attr(,"package")</span></span>
 <span><span class="co">## [1] "GiottoClass"</span></span></code></pre>
-<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># With empty brackets</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">st</span><span class="op">[</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "data.table" "data.frame"</span></span></code></pre>
 <div class="section level3">
 <h3 id="setting-information">Setting information<a class="anchor" aria-label="anchor" href="#setting-information"></a>
 </h3>
-<div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">st</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## An object of class spatLocsObj : "raw"</span></span>
 <span><span class="co">## spat_unit : "z0"</span></span>
@@ -496,7 +493,7 @@ wrapped objects could be.</p>
 <span><span class="co">##         sdimx     sdimy</span></span>
 <span><span class="co">## [1,] 6402.438 -5146.726</span></span>
 <span><span class="co">## [2,] 6899.203 -4700.157</span></span></code></pre>
-<div class="sourceCode" id="cb51"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">st</span><span class="op">[</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">coords</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">st</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## An object of class spatLocsObj : "raw"</span></span>
@@ -514,11 +511,11 @@ wrapped objects could be.</p>
 <span><span class="co">##      sdimx sdimy</span></span>
 <span><span class="co">## [1,]     1     1</span></span>
 <span><span class="co">## [2,]     3     3</span></span></code></pre>
-<div class="sourceCode" id="cb53"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb50"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## R version 4.5.1 (2025-06-13)</span></span>
+<pre><code><span><span class="co">## R version 4.6.0 (2026-04-24)</span></span>
 <span><span class="co">## Platform: x86_64-pc-linux-gnu</span></span>
-<span><span class="co">## Running under: Ubuntu 24.04.2 LTS</span></span>
+<span><span class="co">## Running under: Ubuntu 24.04.4 LTS</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## Matrix products: default</span></span>
 <span><span class="co">## BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 </span></span>
@@ -537,27 +534,27 @@ wrapped objects could be.</p>
 <span><span class="co">## [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## other attached packages:</span></span>
-<span><span class="co">## [1] GiottoClass_0.4.9</span></span>
+<span><span class="co">## [1] GiottoClass_0.5.1</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## loaded via a namespace (and not attached):</span></span>
-<span><span class="co">##  [1] Matrix_1.7-3        jsonlite_2.0.0      compiler_4.5.1     </span></span>
-<span><span class="co">##  [4] gtools_3.9.5        Rcpp_1.1.0          Biobase_2.68.0     </span></span>
-<span><span class="co">##  [7] jquerylib_0.1.4     png_0.1-8           systemfonts_1.2.3  </span></span>
-<span><span class="co">## [10] IRanges_2.42.0      textshaping_1.0.1   yaml_2.3.10        </span></span>
-<span><span class="co">## [13] fastmap_1.2.0       reticulate_1.42.0   lattice_0.22-7     </span></span>
-<span><span class="co">## [16] R6_2.6.1            XVector_0.48.0      generics_0.1.4     </span></span>
-<span><span class="co">## [19] igraph_2.1.4        knitr_1.50          BiocGenerics_0.54.0</span></span>
-<span><span class="co">## [22] htmlwidgets_1.6.4   backports_1.5.0     checkmate_2.3.2    </span></span>
-<span><span class="co">## [25] desc_1.4.3          bslib_0.9.0         GiottoUtils_0.2.5  </span></span>
-<span><span class="co">## [28] rlang_1.1.6         cachem_1.1.0        terra_1.8-54       </span></span>
-<span><span class="co">## [31] xfun_0.52           fs_1.6.6            sass_0.4.10        </span></span>
-<span><span class="co">## [34] cli_3.6.5           withr_3.0.2         pkgdown_2.1.3      </span></span>
-<span><span class="co">## [37] magrittr_2.0.3      digest_0.6.37       grid_4.5.1         </span></span>
-<span><span class="co">## [40] rappdirs_0.3.3      lifecycle_1.0.4     S4Vectors_0.46.0   </span></span>
-<span><span class="co">## [43] glue_1.8.0          evaluate_1.0.4      data.table_1.17.8  </span></span>
-<span><span class="co">## [46] codetools_0.2-20    ragg_1.4.0          stats4_4.5.1       </span></span>
-<span><span class="co">## [49] GiottoData_0.2.16   rmarkdown_2.29      pkgconfig_2.0.3    </span></span>
-<span><span class="co">## [52] tools_4.5.1         htmltools_0.5.8.1</span></span></code></pre>
+<span><span class="co">##  [1] Matrix_1.7-5        jsonlite_2.0.0      compiler_4.6.0     </span></span>
+<span><span class="co">##  [4] gtools_3.9.5        Rcpp_1.1.1-1.1      Biobase_2.72.0     </span></span>
+<span><span class="co">##  [7] jquerylib_0.1.4     png_0.1-9           IRanges_2.46.0     </span></span>
+<span><span class="co">## [10] systemfonts_1.3.2   textshaping_1.0.5   yaml_2.3.12        </span></span>
+<span><span class="co">## [13] fastmap_1.2.0       reticulate_1.46.0   lattice_0.22-9     </span></span>
+<span><span class="co">## [16] R6_2.6.1            XVector_0.52.0      generics_0.1.4     </span></span>
+<span><span class="co">## [19] igraph_2.3.1        knitr_1.51          BiocGenerics_0.58.1</span></span>
+<span><span class="co">## [22] htmlwidgets_1.6.4   backports_1.5.1     checkmate_2.3.4    </span></span>
+<span><span class="co">## [25] desc_1.4.3          bslib_0.11.0        GiottoUtils_0.2.5  </span></span>
+<span><span class="co">## [28] rlang_1.2.0         cachem_1.1.0        terra_1.9-27       </span></span>
+<span><span class="co">## [31] xfun_0.57           fs_2.1.0            sass_0.4.10        </span></span>
+<span><span class="co">## [34] otel_0.2.0          cli_3.6.6           withr_3.0.2        </span></span>
+<span><span class="co">## [37] pkgdown_2.2.0       magrittr_2.0.5      digest_0.6.39      </span></span>
+<span><span class="co">## [40] grid_4.6.0          rappdirs_0.3.4      lifecycle_1.0.5    </span></span>
+<span><span class="co">## [43] S4Vectors_0.50.1    evaluate_1.0.5      data.table_1.18.4  </span></span>
+<span><span class="co">## [46] codetools_0.2-20    ragg_1.5.2          stats4_4.6.0       </span></span>
+<span><span class="co">## [49] GiottoData_0.2.16   rmarkdown_2.31      pkgconfig_2.0.3    </span></span>
+<span><span class="co">## [52] tools_4.6.0         htmltools_0.5.9</span></span></code></pre>
 </div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -571,7 +568,7 @@ wrapped objects could be.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>

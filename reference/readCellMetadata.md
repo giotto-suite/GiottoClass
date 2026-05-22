@@ -1,0 +1,71 @@
+# Read cell metadata
+
+read cell metadata from list
+
+## Usage
+
+``` r
+readCellMetadata(
+  data_list,
+  default_spat_unit = NULL,
+  default_feat_type = NULL,
+  provenance = NULL,
+  verbose = TRUE
+)
+```
+
+## Arguments
+
+- data_list:
+
+  nested list of cell metadata information
+
+- default_spat_unit:
+
+  (optional) default spat_unit to use
+
+- default_feat_type:
+
+  (optional) default feat_type to use
+
+- provenance:
+
+  (optional) provenance information
+
+- verbose:
+
+  be verbose
+
+## Value
+
+cell metadata
+
+## Examples
+
+``` r
+df <- data.frame(
+    cell_ID = c("cell_1", "cell_2", "cell_3"),
+    annotation = c("cell_type_1", "cell_type_1", "cell_type_2")
+)
+temporal_dir <- tempdir()
+write.csv(df, paste0(temporal_dir, "/metadata.csv"), row.names = FALSE)
+
+readCellMetadata(paste0(temporal_dir, "/metadata.csv"))
+#> 
+#> List item [1]:
+#>  spat_unit: cell
+#>  feat_type: rna
+#> [[1]]
+#> An object of class cellMetaObj 
+#> spat_unit : "cell"
+#> feat_type : "rna"
+#> provenance: cell 
+#> dimensions: 3 2 
+#> 
+#>    cell_ID  annotation
+#>     <char>      <char>
+#> 1:  cell_1 cell_type_1
+#> 2:  cell_2 cell_type_1
+#> 3:  cell_3 cell_type_2
+#> 
+```
