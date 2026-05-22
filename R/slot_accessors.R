@@ -2700,11 +2700,11 @@ setMethod("setPolygonInfo", signature("giotto"), function(gobject, x,
             provenance = x@name,
             misc = NULL
         )
+        gobject <- setSpatialLocations(gobject, spatlocs,
+            verbose = verbose,
+            initialize = FALSE
+        )
     }
-    gobject <- setSpatialLocations(gobject, spatlocs,
-        verbose = verbose,
-        initialize = FALSE
-    )
 
     if (isTRUE(initialize)) return(initialize(gobject))
     gobject

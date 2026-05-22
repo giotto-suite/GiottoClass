@@ -366,20 +366,6 @@ createGiottoObject <- function(expression,
             expression_matrix_class = expression_matrix_class
         )
         ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        ## evaluate if h5_file exists
-        if (!is.null(h5_file)) {
-            if (file.exists(h5_file)) {
-                wrap_msg("'", h5_file, "'",
-                    " file already exists and will be replaced",
-                    sep = ""
-                )
-                file.remove(h5_file)
-            } else {
-                wrap_msg("Initializing file ", "'", h5_file, "'", sep = "")
-            }
-        }
-
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
         gobject <- setExpression(
             gobject = gobject,
             x = expression_data,

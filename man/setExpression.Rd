@@ -16,7 +16,7 @@ setExpression(gobject, ...)
   name = "raw",
   provenance = NULL,
   write = FALSE,
-  verbose = TRUE,
+  verbose = NULL,
   initialize = TRUE,
   ...
 )
@@ -24,21 +24,24 @@ setExpression(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
+\item{...}{additional params to pass (none implemented)}
 
-\item{x}{exprObj or list of exprObj to set. Passing NULL will remove a
-specified set of expression data from the giotto object}
+\item{x}{\code{exprObj} or \code{list} of \code{exprObj} to set. Passing \code{NULL} will remove
+a specified set of expression data from the \code{giotto} object}
 
 \item{spat_unit}{spatial unit (e.g. "cell")}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 
-\item{name}{name for the expression information}
+\item{name}{\code{character} (default = \code{"raw"}). Name for the expression
+information.}
 
-\item{provenance}{provenance information (optional)
-information for the giotto object. Pass NULL to remove an expression object}
+\item{provenance}{provenance information (optional)}
 
-\item{verbose}{be verbose}
+\item{write}{\code{logical} (default = \code{FALSE}). For \code{gsource} managed projects,
+whether to force a write of \code{x}.}
+
+\item{verbose}{verbosity}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
@@ -47,7 +50,7 @@ returning}
 giotto object
 }
 \description{
-Function to set expression values for giotto object.
+Function to set expression values for \code{giotto} object.
 }
 \examples{
 g <- createGiottoObject()

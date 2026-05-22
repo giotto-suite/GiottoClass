@@ -12,7 +12,7 @@ setPolygonInfo(gobject, ...)
   x,
   name = "cell",
   centroids_to_spatlocs = FALSE,
-  verbose = TRUE,
+  verbose = NULL,
   initialize = TRUE,
   ...
 )

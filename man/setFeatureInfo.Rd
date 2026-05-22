@@ -11,7 +11,7 @@ setFeatureInfo(gobject, ...)
   gobject,
   x,
   feat_type = NULL,
-  verbose = TRUE,
+  verbose = NULL,
   initialize = TRUE,
   ...
 )

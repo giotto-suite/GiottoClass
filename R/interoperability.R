@@ -12,7 +12,9 @@
 #' @param bin_size bin size to select from .gef file
 #' @param gene_column (optional) character. Which column contains gene names
 #' within the geneExp information.
-#' @param h5_file name to create and on-disk HDF5 file
+#' @param backend path or `gsource` to use as a managed backend for
+#'   on-disk artifacts (passed to [createGiottoObject()]).
+#' @param h5_file deprecated. Use `backend` instead.
 #' @param verbose be verbose
 #'
 #' @details Function in beta. Converts .gef object to Giotto object.
@@ -28,7 +30,9 @@ gefToGiotto <- function(gef_file,
     bin_size = "bin100",
     gene_column = NULL,
     verbose = FALSE,
-    h5_file = NULL) {
+    backend = NULL,
+    h5_file = deprecated()) {
+    if (is_present(h5_file)) backend <- h5_file
     # data.table vars
     genes <- gene_idx <- x <- y <- sdimx <- sdimy <- cell_ID <- bin_ID <-
         count <- i.bin_ID <- NULL
@@ -130,7 +134,7 @@ gefToGiotto <- function(gef_file,
         expression = expMatrix,
         spatial_locs = cell_locations,
         verbose = FALSE,
-        h5_file = h5_file
+        backend = backend
     )
     if (isTRUE(verbose)) wrap_msg("finished giotto object... \n")
 
@@ -221,7 +225,9 @@ check_py_for_scanpy <- function() {
 #' and all keys are used in conversion unless specified in the function call.
 #' @param spat_unit desired spatial unit to use for conversion, default NULL
 #' @param feat_type desired feature type to use for conversion, default NULL
-#' @param h5_file name to create and on-disk HDF5 file
+#' @param backend path or `gsource` to use as a managed backend for
+#'   on-disk artifacts (passed to [createGiottoObject()]).
+#' @param h5_file deprecated. Use `backend` instead.
 #' @param python_path path to python executable within a conda/miniconda
 #' environment
 #' @param env_name name of environment containing python_path executable
@@ -241,9 +247,11 @@ anndataToGiotto <- function(anndata_path = NULL,
     spat_enrich_key_added = NULL,
     spat_unit = NULL,
     feat_type = NULL,
-    h5_file = NULL,
+    backend = NULL,
+    h5_file = deprecated(),
     python_path = NULL,
     env_name = "giotto_env") {
+    if (is_present(h5_file)) backend <- h5_file
     # Preliminary file checks and guard clauses
     if (is.null(anndata_path)) {
         stop("Please provide a path to an AnnData .h5ad file for conversion.\n")
@@ -322,7 +330,7 @@ anndataToGiotto <- function(anndata_path = NULL,
         expression = X,
         spatial_locs = sp,
         instructions = instrs,
-        h5_file = h5_file
+        backend = backend
     )
 
     ### Add metadata
