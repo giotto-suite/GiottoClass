@@ -806,20 +806,12 @@ createSpatialWeightMatrix <- function(gobject,
     )
     if (is.null(sn)) stop("Specified spatial network not found")
 
-    # 2. calculate weights
-    if (method == "distance") {
-        dist_dt <- sn[][, c("from", "to", "weight")]
-        # inverse distance weights already calculated
-        graph <- igraph::graph_from_data_frame(d = dist_dt, directed = FALSE)
-        wm <- igraph::get.adjacency(
-            graph = graph, attr = "weight", sparse = TRUE
-        )
-    }
-    if (method == "adjacency") {
-        adj_dt <- sn[][, c("from", "to")]
-        graph <- igraph::graph_from_data_frame(d = adj_dt, directed = FALSE)
-        wm <- igraph::as_adjacency_matrix(graph)
-    }
+    # 2. calculate weights — sn[] is the canonical igraph
+    g <- sn[]
+    wm <- switch(method,
+        "distance"  = igraph::as_adjacency_matrix(g, attr = "weight", sparse = TRUE),
+        "adjacency" = igraph::as_adjacency_matrix(g, sparse = TRUE)
+    )
 
     # 3. return results
     if (isTRUE(return_gobject)) {

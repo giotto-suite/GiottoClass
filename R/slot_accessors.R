@@ -3323,6 +3323,8 @@ setNearestNetwork <- function(gobject,
     # NATIVE INPUT TYPES
     # 3. If input is nnNetObj or NULL, pass to internal
     if (is.null(x) || inherits(x, "nnNetObj")) {
+        # ensure legacy pre-0.6.0 schema migrates before storing
+        if (!is.null(x)) x <- methods::initialize(x)
         # pass to internal
         gobject <- set_NearestNetwork(
             gobject = gobject,
@@ -3349,7 +3351,7 @@ setNearestNetwork <- function(gobject,
 
                 gobject <- set_NearestNetwork(
                     gobject = gobject,
-                    nn_network = x[[obj_i]],
+                    nn_network = methods::initialize(x[[obj_i]]),
                     spat_unit = spat_unit,
                     feat_type = feat_type,
                     nn_network_to_use = nn_type,
@@ -3811,6 +3813,8 @@ setSpatialNetwork <- function(gobject,
     # NATIVE INPUT TYPES
     # 3. If input is spatialNetworkObj or NULL, pass to internal
     if (is.null(x) | inherits(x, "spatialNetworkObj")) {
+        # ensure legacy pre-0.6.0 schema migrates before storing
+        if (!is.null(x)) x <- methods::initialize(x)
         # pass to internal
         gobject <- set_spatialNetwork(
             gobject = gobject,
@@ -3835,7 +3839,7 @@ setSpatialNetwork <- function(gobject,
 
                 gobject <- set_spatialNetwork(
                     gobject = gobject,
-                    spatial_network = x[[obj_i]],
+                    spatial_network = methods::initialize(x[[obj_i]]),
                     spat_unit = spat_unit,
                     name = name,
                     provenance = provenance,

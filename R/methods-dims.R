@@ -59,9 +59,7 @@ setMethod("nrow", signature("metaData"), function(x) nrow(x@metaDT))
 setMethod(
     "nrow", signature("spatialNetworkObj"),
     function(x) {
-        # @network is an igraph (or, in future, a parquetEdgeStore). nrow
-        # historically reported edge count back when storage was a DT —
-        # preserve that semantics via igraph::ecount when applicable.
+        # report edge count regardless of underlying network backend
         if (inherits(x@network, "igraph")) {
             return(igraph::ecount(x@network))
         }
