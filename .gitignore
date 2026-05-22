@@ -11,3 +11,7 @@ cell_rna*
 docs
 pkgdown
 .positai
+
+# test output artifacts
+tests/testthat/Rplots.pdf
+tests/testthat/*.pdf

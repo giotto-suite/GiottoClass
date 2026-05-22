@@ -166,7 +166,7 @@ setMethod("spatUnit<-", signature("giotto"), function(x, old, value) {
         offset_file = x@offset_file,
         versions = x@versions,
         join_info = x@join_info,
-        h5_file = x@h5_file,
+        source = x@source,
         initialize = FALSE
     )
     g <- setGiotto(g, glist, initialize = TRUE, verbose = FALSE)
@@ -267,7 +267,7 @@ setMethod("featType<-", signature("giotto"), function(x, old, value) {
         offset_file = x@offset_file,
         versions = x@versions,
         join_info = x@join_info,
-        h5_file = x@h5_file,
+        source = x@source,
         initialize = FALSE
     )
     g <- setGiotto(g, glist, initialize = TRUE, verbose = FALSE)

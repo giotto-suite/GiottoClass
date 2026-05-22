@@ -388,10 +388,10 @@ addGiottoImageMG <- function(gobject,
                 sum(im@minmax == c(10, 0, 10, 0)) == 4) {
                 if (!is.null(spat_loc_name)) { # A check for the first
                     # available spatloc was already done
-                    spatlocs <- get_spatial_locations(
+                    spatlocs <- getSpatialLocations(
                         gobject = gobject,
                         spat_unit = spat_unit,
-                        spat_loc_name = spat_loc_name
+                        name = spat_loc_name
                     )
 
                     # Find spatial minmax values
@@ -567,7 +567,7 @@ updateGiottoImageMG <- function(gobject = NULL,
     # 1. get giottoImage if necessary
     if (is.null(giottoImage)) {
         if (!is.null(gobject) && !is.null(image_name)) {
-            g_image <- get_giottoImage_MG(
+            g_image <- getGiottoImage(
                 gobject = gobject,
                 name = image_name
             )
@@ -1010,7 +1010,7 @@ stitchGiottoLargeImage <- function(largeImage_list = NULL,
             # For loop to grab giottoLargeImages
             largeImage_list <- list()
             for (gobj_i in seq_len(length(gobject_list))) {
-                largeImage_list[[gobj_i]] <- get_giottoLargeImage(
+                largeImage_list[[gobj_i]] <- getGiottoImage(
                     gobject = gobject_list[[gobj_i]],
                     name = largeImage_nameList[[gobj_i]]
                 )
@@ -1159,7 +1159,7 @@ cropGiottoLargeImage <- function(gobject = NULL,
     ## 1. get giottoLargeImage if necessary
     if (is.null(giottoLargeImage)) {
         if (!is.null(gobject) && !is.null(largeImage_name)) {
-            giottoLargeImage <- get_giottoLargeImage(
+            giottoLargeImage <- getGiottoImage(
                 gobject = gobject,
                 name = largeImage_name
             )
@@ -1328,10 +1328,10 @@ convertGiottoLargeImageToMG <- function(gobject = NULL,
             current_ext$ymin
         )
     } else if (!is.null(spat_loc_name)) {
-        spatial_locs <- get_spatial_locations(
+        spatial_locs <- getSpatialLocations(
             gobject = gobject,
             spat_unit = spat_unit,
-            spat_loc_name = spat_loc_name
+            name = spat_loc_name
         )
         x_range <- range(spatial_locs$sdimx)
         y_range <- range(spatial_locs$sdimy)
@@ -1633,7 +1633,7 @@ writeGiottoLargeImage <- function(giottoLargeImage = NULL,
     ## 1. get giottoLargeImage if necessary
     if (is.null(giottoLargeImage)) {
         if (!is.null(gobject) && !is.null(largeImage_name)) {
-            giottoLargeImage <- get_giottoLargeImage(
+            giottoLargeImage <- getGiottoImage(
                 gobject = gobject,
                 name = largeImage_name
             )
@@ -1763,7 +1763,7 @@ updateGiottoLargeImage <- function(gobject = NULL,
     # 1. get giottoImage if necessary
     if (is.null(giottoLargeImage)) {
         if (!is.null(gobject) && !is.null(largeImage_name)) {
-            g_imageL <- get_giottoLargeImage(
+            g_imageL <- getGiottoImage(
                 gobject = gobject,
                 name = largeImage_name
             )
@@ -2479,7 +2479,7 @@ reconnectGiottoImage <- function(gobject,
             # get image objects
             img_list[[image_type]] <- lapply(
                 X = name_list[[image_type]],
-                FUN = get_giottoImage,
+                FUN = getGiottoImage,
                 gobject = gobject,
                 image_type = image_type
             )

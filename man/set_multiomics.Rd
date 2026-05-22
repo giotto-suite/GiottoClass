@@ -4,25 +4,17 @@
 \alias{set_multiomics}
 \title{Set multiomics integration results}
 \usage{
-set_multiomics(
-  gobject,
-  result,
-  spat_unit = NULL,
-  feat_type = NULL,
-  integration_method = "WNN",
-  result_name = "theta_weighted_matrix",
-  verbose = TRUE
-)
+set_multiomics(gobject, ...)
 }
 \arguments{
 \item{gobject}{A Giotto object}
 
-\item{result}{A matrix or result from multiomics
-integration (e.g. theta weighted values from runWNN)}
-
 \item{spat_unit}{spatial unit (e.g. 'cell')}
 
 \item{feat_type}{(e.g. 'rna_protein')}
+
+\item{result}{A matrix or result from multiomics
+integration (e.g. theta weighted values from runWNN)}
 
 \item{integration_method}{multiomics integration method used. Default = 'WNN'}
 

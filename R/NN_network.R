@@ -706,7 +706,7 @@ createNearestNetwork <- function(
 
         # use only available dimensions if dimensions < dimensions_to_use
 
-        dim_obj <- get_dimReduction(
+        dim_obj <- getDimReduction(
             gobject = gobject,
             spat_unit = spat_unit,
             feat_type = feat_type,
@@ -853,14 +853,15 @@ createNearestNetwork <- function(
             misc = NULL
         )
 
-        gobject <- set_NearestNetwork(
+        gobject <- setNearestNetwork(
             gobject = gobject,
             spat_unit = spat_unit,
             feat_type = feat_type,
-            nn_network_to_use = type,
-            network_name = name,
-            nn_network = nnObj,
-            verbose = verbose
+            nn_type = type,
+            name = name,
+            x = nnObj,
+            verbose = verbose,
+            initialize = FALSE
         )
 
         ## update parameters used ##
@@ -922,11 +923,11 @@ addNetworkLayout <- function(gobject,
         feat_type = feat_type
     )
 
-    ig_object <- get_NearestNetwork(
+    ig_object <- getNearestNetwork(
         gobject = gobject,
         spat_unit = spat_unit,
-        nn_network_to_use = nn_network_to_use,
-        network_name = network_name, output = "igraph"
+        nn_type = nn_network_to_use,
+        name = network_name, output = "igraph"
     )
 
     # ig_object = gobject@nn_network[[spat_unit]][[nn_network_to_use

@@ -2,10 +2,13 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getPolygonInfo}
 \alias{getPolygonInfo}
+\alias{getPolygonInfo,giotto-method}
 \title{Get polygon info}
 \usage{
-getPolygonInfo(
-  gobject = NULL,
+getPolygonInfo(gobject, ...)
+
+\S4method{getPolygonInfo}{giotto}(
+  gobject,
   polygon_name = NULL,
   polygon_overlap = NULL,
   return_giottoPolygon = FALSE,

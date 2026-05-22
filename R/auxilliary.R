@@ -1448,12 +1448,16 @@ createMetafeats <- function(gobject,
             wrap_msg(name, " has already been used, will be overwritten")
         }
 
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        gobject <- set_spatial_enrichment(
+        # Bypass setSpatialEnrichment's spatial_locs validity check —
+        # createMetafeats only requires expression info, not spatial_locs.
+        old <- options(giotto.check_valid = FALSE)
+        on.exit(options(old), add = TRUE)
+        gobject <- setSpatialEnrichment(
             gobject = gobject,
-            spatenrichment = enrObj
+            x = enrObj,
+            verbose = FALSE,
+            initialize = FALSE
         )
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
         ## update parameters used ##
         gobject <- update_giotto_params(gobject,
@@ -1630,20 +1634,20 @@ createMetafeats <- function(gobject,
     avail_sl <- list_spatial_locations(gobject)
     if (!is.null(avail_sl)) {
         for (sl_i in seq(nrow(avail_sl))) {
-            sl <- get_spatial_locations(
+            sl <- getSpatialLocations(
                 gobject = gobject,
                 spat_unit = avail_sl[sl_i, spat_unit],
-                spat_loc_name = avail_sl[sl_i, name],
+                name = avail_sl[sl_i, name],
                 output = "spatLocsObj",
                 copy_obj = FALSE
             )
             if (!is.null(sl[])) {
                 sl[] <- data.table::setalloccol(sl[])
-                gobject <- set_spatial_locations(
+                gobject <- setSpatialLocations(
                     gobject = gobject,
-                    spatlocs = sl,
-                    set_defaults = FALSE,
-                    verbose = FALSE
+                    x = sl,
+                    verbose = FALSE,
+                    initialize = FALSE
                 )
             }
         }
@@ -1653,21 +1657,21 @@ createMetafeats <- function(gobject,
     avail_se <- list_spatial_enrichments(gobject)
     if (!is.null(avail_se)) {
         for (se_i in seq(nrow(avail_se))) {
-            se <- get_spatial_enrichment(
+            se <- getSpatialEnrichment(
                 gobject = gobject,
                 spat_unit = avail_se[se_i, spat_unit],
                 feat_type = avail_se[se_i, feat_type],
-                enrichm_name = avail_se[se_i, name],
+                name = avail_se[se_i, name],
                 output = "spatEnrObj",
                 copy_obj = FALSE
             )
             if (!is.null(se[])) {
                 se[] <- data.table::setalloccol(se[])
-                gobject <- set_spatial_enrichment(
+                gobject <- setSpatialEnrichment(
                     gobject = gobject,
-                    spatenrichment = se,
-                    set_defaults = FALSE,
-                    verbose = FALSE
+                    x = se,
+                    verbose = FALSE,
+                    initialize = FALSE
                 )
             }
         }
@@ -1677,7 +1681,7 @@ createMetafeats <- function(gobject,
     avail_sn <- list_spatial_networks(gobject)
     if (!is.null(avail_sn)) {
         for (sn_i in seq(nrow(avail_sn))) {
-            sn <- get_spatialNetwork(
+            sn <- getSpatialNetwork(
                 gobject = gobject,
                 spat_unit = avail_sn[sn_i, spat_unit],
                 name = avail_sn[sn_i, name],
@@ -1690,11 +1694,11 @@ createMetafeats <- function(gobject,
             }
             if (!is.null(sn[])) {
                 sn[] <- data.table::setalloccol(sn[])
-                gobject <- set_spatialNetwork(
+                gobject <- setSpatialNetwork(
                     gobject = gobject,
-                    spatial_network = sn,
+                    x = sn,
                     verbose = FALSE,
-                    set_defaults = FALSE
+                    initialize = FALSE
                 )
             }
         }
@@ -1704,7 +1708,7 @@ createMetafeats <- function(gobject,
     avail_sg <- list_spatial_grids(gobject)
     if (!is.null(avail_sg)) {
         for (sg_i in seq(nrow(avail_sg))) {
-            sg <- get_spatialGrid(
+            sg <- getSpatialGrid(
                 gobject = gobject,
                 spat_unit = avail_sg[sg_i, spat_unit],
                 feat_type = avail_sg[sg_i, feat_type],
@@ -1713,7 +1717,7 @@ createMetafeats <- function(gobject,
             )
             if (!is.null(sg[])) {
                 sg[] <- data.table::setalloccol(sg[])
-                gobject <- set_spatialGrid(
+                gobject <- setSpatialGrid(
                     gobject = gobject,
                     spatial_grid = sg,
                     verbose = FALSE,

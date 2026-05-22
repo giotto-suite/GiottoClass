@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getGiottoImage}
 \alias{getGiottoImage}
+\alias{getGiottoImage,giotto-method}
 \title{Get giotto image object}
 \usage{
-getGiottoImage(gobject, image_type = NULL, name = NULL)
+getGiottoImage(gobject, ...)
+
+\S4method{getGiottoImage}{giotto}(gobject, image_type = NULL, name = NULL)
 }
 \arguments{
 \item{gobject}{giotto object}

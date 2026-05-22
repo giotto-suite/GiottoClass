@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setDimReduction}
 \alias{setDimReduction}
+\alias{setDimReduction,giotto-method}
 \title{Set dimension reduction data}
 \usage{
-setDimReduction(
+setDimReduction(gobject, ...)
+
+\S4method{setDimReduction}{giotto}(
   gobject,
   x,
   spat_unit = NULL,
@@ -20,6 +23,8 @@ setDimReduction(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{x}{dimObj or list of dimObj to set. Passing NULL will remove a
 specified set of dimension reduction information from the gobject}
@@ -40,8 +45,6 @@ specified set of dimension reduction information from the gobject}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{...}{additional params to pass}
 }
 \value{
 giotto object

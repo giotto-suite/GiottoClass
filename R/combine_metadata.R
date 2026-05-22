@@ -1028,7 +1028,7 @@ calculateSpatCellMetadataProportions <- function(gobject,
     )
 
     # get spatial network to use
-    sp_network <- get_spatialNetwork(
+    sp_network <- getSpatialNetwork(
         gobject = gobject,
         spat_unit = spat_unit,
         name = spat_network,
@@ -1128,12 +1128,12 @@ calculateSpatCellMetadataProportions <- function(gobject,
         ## update parameters used ##
         gobject <- update_giotto_params(gobject, description = "_enrichment")
 
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-        gobject <- set_spatial_enrichment(
+        gobject <- setSpatialEnrichment(
             gobject = gobject,
-            spatenrichment = enrObj
+            x = enrObj,
+            verbose = FALSE,
+            initialize = FALSE
         )
-        ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
         return(gobject)
     } else {

@@ -2,9 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setCellMetadata}
 \alias{setCellMetadata}
+\alias{setCellMetadata,giotto-method}
 \title{Set cell metadata}
 \usage{
-setCellMetadata(
+setCellMetadata(gobject, ...)
+
+\S4method{setCellMetadata}{giotto}(
   gobject,
   x,
   spat_unit = NULL,
@@ -17,6 +20,8 @@ setCellMetadata(
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{...}{additional params to pass}
 
 \item{x}{cellMetaObj or list of cellMetaObj to set. Passing NULL will
 reset a specified set of cell metadata in the giotto object.}
@@ -31,8 +36,6 @@ reset a specified set of cell metadata in the giotto object.}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{...}{additional params to pass}
 }
 \value{
 giotto object
