@@ -2029,6 +2029,20 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
 
     # ensure legacy pre-0.6.0 schema migrates before storing
     x <- methods::initialize(x)
+
+    # Write to disk if needed. Mirrors the pattern in setExpression /
+    # setPolygonInfo / setFeatureInfo: when the gobject has a gsource
+    # backend and the network is in-memory (igraph, not a dataStore),
+    # write through to a parquetEdgeStore so the artifact lives in the
+    # project vault.
+    if (!is.null(gobject@source)) {
+        gsrc <- .gsource(gobject)
+        if (!inherits(x@network, "dataStore")) {
+            store <- GiottoDisk::sourceWrite(gsrc, x@network)
+            x@network <- store
+        }
+    }
+
     gobject@nn_network[[spat_unit]][[feat_type]][[nn_type]][[name]] <- x
     if (isTRUE(initialize)) return(initialize(gobject))
     gobject
@@ -2300,6 +2314,16 @@ setMethod("setSpatialNetwork", signature("giotto"), function(gobject,
 
     # ensure legacy pre-0.6.0 schema migrates before storing
     x <- methods::initialize(x)
+
+    # Write to disk if needed (see setNearestNetwork for rationale).
+    if (!is.null(gobject@source)) {
+        gsrc <- .gsource(gobject)
+        if (!inherits(x@network, "dataStore")) {
+            store <- GiottoDisk::sourceWrite(gsrc, x@network)
+            x@network <- store
+        }
+    }
+
     slot(gobject, "spatial_network")[[spat_unit]][[name]] <- x
     if (isTRUE(initialize)) return(initialize(gobject))
     gobject
