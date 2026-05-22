@@ -15,3 +15,8 @@ pkgdown
 # test output artifacts
 tests/testthat/Rplots.pdf
 tests/testthat/*.pdf
+
+# rendered vignettes (build artifacts; only the .Rmd is tracked)
+vignettes/*.html
+vignettes/*_files/
+vignettes/*_cache/

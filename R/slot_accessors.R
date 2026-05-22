@@ -462,7 +462,7 @@ setGeneric("getCellMetadata",
 
 #' @rdname getCellMetadata
 #' @export
-setMethod("getCellMetadata", signature("giotto"), function(gobject,
+setMethod("getCellMetadata", signature("gAny"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     output = c("cellMetaObj", "data.table"),
@@ -484,6 +484,8 @@ setMethod("getCellMetadata", signature("giotto"), function(gobject,
     }
 
     if (isTRUE(copy_obj)) cellMeta[] <- data.table::copy(cellMeta[])
+
+    cellMeta <- .gm_apply_view(cellMeta, gobject)
 
     if (output == "cellMetaObj") return(cellMeta)
     if (output == "data.table") return(slot(cellMeta, "metaDT"))
@@ -519,7 +521,7 @@ setGeneric("setCellMetadata",
 
 #' @rdname setCellMetadata
 #' @export
-setMethod("setCellMetadata", signature("giotto"), function(gobject,
+setMethod("setCellMetadata", signature("gAny"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
@@ -679,7 +681,7 @@ setGeneric("getFeatureMetadata",
 
 #' @rdname getFeatureMetadata
 #' @export
-setMethod("getFeatureMetadata", signature("giotto"), function(gobject,
+setMethod("getFeatureMetadata", signature("gAny"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     output = c("featMetaObj", "data.table"),
@@ -699,6 +701,8 @@ setMethod("getFeatureMetadata", signature("giotto"), function(gobject,
     }
 
     if (isTRUE(copy_obj)) featMeta[] <- data.table::copy(featMeta[])
+
+    featMeta <- .gm_apply_view(featMeta, gobject)
 
     if (output == "featMetaObj") return(featMeta)
     if (output == "data.table") return(featMeta[])
@@ -734,7 +738,7 @@ setGeneric("setFeatureMetadata",
 
 #' @rdname setFeatureMetadata
 #' @export
-setMethod("setFeatureMetadata", signature("giotto"), function(gobject,
+setMethod("setFeatureMetadata", signature("gAny"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
@@ -884,7 +888,7 @@ setGeneric("getExpression",
 
 #' @rdname getExpression
 #' @export
-setMethod("getExpression", signature("giotto"), function(
+setMethod("getExpression", signature("gAny"), function(
         gobject,
         values = NULL,
         spat_unit = NULL,
@@ -935,6 +939,8 @@ setMethod("getExpression", signature("giotto"), function(
 
     expr_vals <- gobject@expression[[spat_unit]][[feat_type]][[values]]
 
+    expr_vals <- .gm_apply_view(expr_vals, gobject)
+
     # Output
     if (output == "exprObj") {
         return(expr_vals)
@@ -976,7 +982,7 @@ setGeneric("setExpression",
 
 #' @rdname setExpression
 #' @export
-setMethod("setExpression", signature("giotto"), function(gobject, x,
+setMethod("setExpression", signature("gAny"), function(gobject, x,
     spat_unit = NULL,
     feat_type = NULL,
     name = "raw",
@@ -1079,7 +1085,7 @@ setMethod("setExpression", signature("giotto"), function(gobject, x,
 
     ## 7. Write matrix to disk if needed
     memory_matrix <- c("matrix", "Matrix")
-    if (!is.null(gobject@source)) {
+    if (inherits(gobject, "giotto") && !is.null(gobject@source)) {
         gsrc <- .gsource(gobject)
         mat <- x[]
         if (inherits(mat, memory_matrix) || isTRUE(write)) {
@@ -1158,7 +1164,7 @@ setGeneric("setMultiomics",
 
 #' @rdname setMultiomics
 #' @export
-setMethod("setMultiomics", signature("giotto"), function(gobject,
+setMethod("setMultiomics", signature("gAny"), function(gobject,
     result,
     spat_unit = NULL,
     feat_type = NULL,
@@ -1249,7 +1255,7 @@ setGeneric("getMultiomics",
 
 #' @rdname getMultiomics
 #' @export
-setMethod("getMultiomics", signature("giotto"), function(gobject,
+setMethod("getMultiomics", signature("gAny"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     integration_method = "WNN",
@@ -1572,7 +1578,7 @@ setGeneric("getDimReduction",
 
 #' @rdname getDimReduction
 #' @export
-setMethod("getDimReduction", signature("giotto"), function(gobject,
+setMethod("getDimReduction", signature("gAny"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     reduction = c("cells", "feats"),
@@ -1624,6 +1630,8 @@ setMethod("getDimReduction", signature("giotto"), function(gobject,
     reduction_res <- gobject@dimension_reduction[[reduction]][[
         spat_unit]][[feat_type]][[reduction_method]][[name]]
 
+    reduction_res <- .gm_apply_view(reduction_res, gobject)
+
     if (output == "dimObj") return(reduction_res)
     if (output == "matrix") return(slot(reduction_res, "coordinates"))
 })
@@ -1657,7 +1665,7 @@ setGeneric("setDimReduction",
 
 #' @rdname setDimReduction
 #' @export
-setMethod("setDimReduction", signature("giotto"), function(gobject,
+setMethod("setDimReduction", signature("gAny"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
@@ -1819,7 +1827,7 @@ setGeneric("getNearestNetwork",
 
 #' @rdname getNearestNetwork
 #' @export
-setMethod("getNearestNetwork", signature("giotto"), function(gobject,
+setMethod("getNearestNetwork", signature("gAny"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     nn_type = NULL,
@@ -1879,6 +1887,8 @@ setMethod("getNearestNetwork", signature("giotto"), function(gobject,
         ))
     }
 
+    nnNet <- .gm_apply_view(nnNet, gobject)
+
     if (output == "nnNetObj") return(nnNet)
     if (output == "igraph") return(slot(nnNet, "network"))
     if (output == "data.table") {
@@ -1916,7 +1926,7 @@ setGeneric("setNearestNetwork",
 
 #' @rdname setNearestNetwork
 #' @export
-setMethod("setNearestNetwork", signature("giotto"), function(gobject,
+setMethod("setNearestNetwork", signature("gAny"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
@@ -2037,7 +2047,7 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
     # project vault. `type` is plumbed through so the resulting store's
     # @type slot reflects the actual network kind (kNN vs sNN) instead
     # of the storeWrite default.
-    if (!is.null(gobject@source)) {
+    if (inherits(gobject, "giotto") && !is.null(gobject@source)) {
         gsrc <- .gsource(gobject)
         if (!inherits(x@network, "dataStore")) {
             store <- GiottoDisk::sourceWrite(gsrc, x@network,
@@ -2322,7 +2332,7 @@ setMethod("setSpatialNetwork", signature("giotto"), function(gobject,
     # Always tagged "spatial" — the underlying graph construction
     # method (delaunay / kNN / Voronoi) is stored on the
     # spatialNetworkObj's @method slot, not the parquetEdgeStore.
-    if (!is.null(gobject@source)) {
+    if (inherits(gobject, "giotto") && !is.null(gobject@source)) {
         gsrc <- .gsource(gobject)
         if (!inherits(x@network, "dataStore")) {
             store <- GiottoDisk::sourceWrite(gsrc, x@network,
@@ -2710,7 +2720,7 @@ setMethod("setPolygonInfo", signature("giotto"), function(gobject, x,
     vmsg(.v = verbose, sprintf("Setting polygon info [%s]", objName(x)))
   
     # Write to disk if needed
-    if (!is.null(gobject@source)) {
+    if (inherits(gobject, "giotto") && !is.null(gobject@source)) {
         gsrc <- .gsource(gobject)
         if (!inherits(x[], "dataStore")) {
             store <- GiottoDisk::sourceWrite(gsrc, x[])
@@ -2927,7 +2937,7 @@ setMethod("setFeatureInfo", signature("giotto"), function(gobject, x,
     ))
   
     # write to disk if needed
-    if (!is.null(gobject@source)) {
+    if (inherits(gobject, "giotto") && !is.null(gobject@source)) {
         gsrc <- .gsource(gobject)
         if (!inherits(x[], "dataStore")) {
             store <- GiottoDisk::sourceWrite(gsrc, x[])
@@ -2975,7 +2985,7 @@ setGeneric("getSpatialEnrichment",
 
 #' @rdname getSpatialEnrichment
 #' @export
-setMethod("getSpatialEnrichment", signature("giotto"), function(gobject,
+setMethod("getSpatialEnrichment", signature("gAny"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     name = "DWLS",
@@ -3025,6 +3035,8 @@ setMethod("getSpatialEnrichment", signature("giotto"), function(gobject,
 
     if (isTRUE(copy_obj)) enr_res[] <- data.table::copy(enr_res[])
 
+    enr_res <- .gm_apply_view(enr_res, gobject)
+
     if (output == "spatEnrObj") return(enr_res)
     if (output == "data.table") return(enr_res[])
 })
@@ -3058,7 +3070,7 @@ setGeneric("setSpatialEnrichment",
 
 #' @rdname setSpatialEnrichment
 #' @export
-setMethod("setSpatialEnrichment", signature("giotto"), function(gobject,
+setMethod("setSpatialEnrichment", signature("gAny"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
