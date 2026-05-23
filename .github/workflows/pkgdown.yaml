@@ -49,7 +49,6 @@ jobs:
             any::rmarkdown
             any::rlang
             any::R.utils
-            any::qs2
             any::sp
             any::stars
             any::raster
