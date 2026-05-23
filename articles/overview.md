@@ -558,21 +558,36 @@ sessionInfo()
     ## [1] GiottoClass_0.5.1
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] Matrix_1.7-5        jsonlite_2.0.0      compiler_4.6.0     
-    ##  [4] gtools_3.9.5        Rcpp_1.1.1-1.1      Biobase_2.72.0     
-    ##  [7] jquerylib_0.1.4     png_0.1-9           IRanges_2.46.0     
-    ## [10] systemfonts_1.3.2   textshaping_1.0.5   yaml_2.3.12        
-    ## [13] fastmap_1.2.0       reticulate_1.46.0   lattice_0.22-9     
-    ## [16] R6_2.6.1            XVector_0.52.0      generics_0.1.4     
-    ## [19] igraph_2.3.1        knitr_1.51          BiocGenerics_0.58.1
-    ## [22] htmlwidgets_1.6.4   backports_1.5.1     checkmate_2.3.4    
-    ## [25] desc_1.4.3          bslib_0.11.0        GiottoUtils_0.2.5  
-    ## [28] rlang_1.2.0         cachem_1.1.0        terra_1.9-27       
-    ## [31] xfun_0.57           fs_2.1.0            sass_0.4.10        
-    ## [34] otel_0.2.0          cli_3.6.6           withr_3.0.2        
-    ## [37] pkgdown_2.2.0       magrittr_2.0.5      digest_0.6.39      
-    ## [40] grid_4.6.0          rappdirs_0.3.4      lifecycle_1.0.5    
-    ## [43] S4Vectors_0.50.1    evaluate_1.0.5      data.table_1.18.4  
-    ## [46] codetools_0.2-20    ragg_1.5.2          stats4_4.6.0       
-    ## [49] GiottoData_0.2.16   rmarkdown_2.31      pkgconfig_2.0.3    
-    ## [52] tools_4.6.0         htmltools_0.5.9
+    ##  [1] rappdirs_0.3.4              sass_0.4.10                
+    ##  [3] generics_0.1.4              SparseArray_1.12.2         
+    ##  [5] gtools_3.9.5                lattice_0.22-9             
+    ##  [7] digest_0.6.39               magrittr_2.0.5             
+    ##  [9] evaluate_1.0.5              grid_4.6.0                 
+    ## [11] fastmap_1.2.0               jsonlite_2.0.0             
+    ## [13] Matrix_1.7-5                backports_1.5.1            
+    ## [15] GiottoData_0.2.16           SingleCellExperiment_1.34.0
+    ## [17] codetools_0.2-20            textshaping_1.0.5          
+    ## [19] jquerylib_0.1.4             abind_1.4-8                
+    ## [21] cli_3.6.6                   rlang_1.2.0                
+    ## [23] XVector_0.52.0              Biobase_2.72.0             
+    ## [25] withr_3.0.2                 cachem_1.1.0               
+    ## [27] DelayedArray_0.38.1         yaml_2.3.12                
+    ## [29] otel_0.2.0                  S4Arrays_1.12.0            
+    ## [31] tools_4.6.0                 GiottoUtils_0.2.5          
+    ## [33] checkmate_2.3.4             SpatialExperiment_1.22.0   
+    ## [35] SummarizedExperiment_1.42.0 BiocGenerics_0.58.1        
+    ## [37] reticulate_1.46.0           png_0.1-9                  
+    ## [39] R6_2.6.1                    magick_2.9.1               
+    ## [41] matrixStats_1.5.0           stats4_4.6.0               
+    ## [43] lifecycle_1.0.5             Seqinfo_1.2.0              
+    ## [45] S4Vectors_0.50.1            fs_2.1.0                   
+    ## [47] htmlwidgets_1.6.4           IRanges_2.46.0             
+    ## [49] ragg_1.5.2                  pkgconfig_2.0.3            
+    ## [51] desc_1.4.3                  pkgdown_2.2.0              
+    ## [53] terra_1.9-27                bslib_0.11.0               
+    ## [55] data.table_1.18.4           Rcpp_1.1.1-1.1             
+    ## [57] systemfonts_1.3.2           xfun_0.57                  
+    ## [59] GenomicRanges_1.64.0        MatrixGenerics_1.24.0      
+    ## [61] knitr_1.51                  rjson_0.2.23               
+    ## [63] igraph_2.3.1                htmltools_0.5.9            
+    ## [65] rmarkdown_2.31              compiler_4.6.0
