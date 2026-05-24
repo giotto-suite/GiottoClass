@@ -533,7 +533,7 @@ setMethod("setCellMetadata", signature("giotto"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -742,7 +742,7 @@ setMethod("setFeatureMetadata", signature("giotto"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -1161,7 +1161,7 @@ setMethod("setMultiomics", signature("giotto"), function(gobject,
     feat_type = NULL,
     integration_method = "WNN",
     result_name = "theta_weighted_matrix",
-    verbose = TRUE,
+    verbose = NULL,
     ...) {
     .set_default_nesting(gobject, spat_unit, feat_type)
 
@@ -1434,7 +1434,7 @@ setMethod("setSpatialLocations", signature("giotto"), function(gobject,
     spat_unit = NULL,
     name = "raw",
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -1648,7 +1648,7 @@ setMethod("setDimReduction", signature("giotto"), function(gobject,
     reduction = c("cells", "feats"),
     reduction_method = c("pca", "umap", "tsne"),
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -1881,7 +1881,7 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
     nn_type = "sNN",
     name = "sNN.pca",
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -2156,7 +2156,7 @@ setMethod("setSpatialNetwork", signature("giotto"), function(gobject,
     spat_unit = NULL,
     name = NULL,
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -2399,7 +2399,7 @@ setSpatialGrid <- function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     name = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     set_defaults = TRUE,
     ...) {
     if (isTRUE(set_defaults)) {
@@ -2990,7 +2990,7 @@ setMethod("setSpatialEnrichment", signature("giotto"), function(gobject,
     feat_type = NULL,
     name = "enrichment",
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
