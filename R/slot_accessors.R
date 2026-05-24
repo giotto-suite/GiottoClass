@@ -186,6 +186,15 @@ read_s4_nesting <- function(x) {
     x
 }
 
+# Standard message for setters where x = NULL means "remove the entry".
+# `what` is the noun phrase to interpolate, e.g. "expression",
+# "spatial locations", "nearest neighbor network".
+.vmsg_null_remove <- function(verbose, what) {
+    vmsg(.v = verbose, sprintf(
+        "NULL passed to x. Removing specified %s.", what
+    ))
+}
+
 
 ## cell_ID slot ####
 
@@ -267,7 +276,7 @@ set_cell_id <- function(gobject,
 
     # if input is 'initialize', RESET/reinitialize object
     if (identical(cell_IDs, "initialize")) {
-        if (isTRUE(verbose)) wrap_msg("Initializing", spat_unit, "cell_IDs.")
+        vmsg(.v = verbose, "Initializing", spat_unit, "cell_IDs.")
         expr_avail <- list_expression(gobject = gobject, spat_unit = spat_unit)
         si_avail <- list_spatial_info(gobject = gobject)
 
@@ -524,7 +533,7 @@ setMethod("setCellMetadata", signature("giotto"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -580,9 +589,7 @@ setMethod("setCellMetadata", signature("giotto"), function(gobject,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        if (isTRUE(verbose)) {
-            message("NULL passed to x.\n Removing specified metadata.")
-        }
+        .vmsg_null_remove(verbose, "metadata")
         gobject@cell_metadata[[spat_unit]][[feat_type]] <- NULL
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -609,24 +616,20 @@ setMethod("setCellMetadata", signature("giotto"), function(gobject,
         spat_unit = spat_unit
     )[, feat_type]
     if (feat_type %in% potential_names) {
-        if (isTRUE(verbose)) {
-            wrap_msg(
-                '> Cell metadata for spat_unit "',
-                spat_unit, '" and feat_type "', feat_type,
-                '" already exists and will be replaced with new metadata.'
-            )
-        }
+        vmsg(.v = verbose,
+            '> Cell metadata for spat_unit "',
+            spat_unit, '" and feat_type "', feat_type,
+            '" already exists and will be replaced with new metadata.'
+        )
     }
 
     gobject@cell_metadata[[spat_unit]][[feat_type]] <- x
 
-    if (isTRUE(verbose)) {
-        wrap_msg(
-            "Setting cell metadata [",
-            spatUnit(x), "][", featType(x), "] ",
-            sep = ""
-        )
-    }
+    vmsg(.v = verbose,
+        "Setting cell metadata [",
+        spatUnit(x), "][", featType(x), "] ",
+        sep = ""
+    )
 
     if (isTRUE(initialize)) return(initialize(gobject))
     gobject
@@ -739,7 +742,7 @@ setMethod("setFeatureMetadata", signature("giotto"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -781,9 +784,7 @@ setMethod("setFeatureMetadata", signature("giotto"), function(gobject,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        if (isTRUE(verbose)) {
-            wrap_msg("NULL passed to x.\n Removing specified metadata.")
-        }
+        .vmsg_null_remove(verbose, "metadata")
         gobject@feat_metadata[[spat_unit]][[feat_type]] <- NULL
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -810,24 +811,20 @@ setMethod("setFeatureMetadata", signature("giotto"), function(gobject,
         spat_unit = spat_unit
     )[, feat_type]
     if (feat_type %in% potential_names) {
-        if (isTRUE(verbose)) {
-            wrap_msg(
-                '> Feat metadata for spat_unit "', spat_unit,
-                '" and feat_type "', feat_type,
-                '" already exists and will be replaced with new metadata.'
-            )
-        }
+        vmsg(.v = verbose,
+            '> Feat metadata for spat_unit "', spat_unit,
+            '" and feat_type "', feat_type,
+            '" already exists and will be replaced with new metadata.'
+        )
     }
 
     gobject@feat_metadata[[spat_unit]][[feat_type]] <- x
 
-    if (isTRUE(verbose)) {
-        wrap_msg(
-            "Setting feature metadata [",
-            spatUnit(x), "][", featType(x), "] ",
-            sep = ""
-        )
-    }
+    vmsg(.v = verbose,
+        "Setting feature metadata [",
+        spatUnit(x), "][", featType(x), "] ",
+        sep = ""
+    )
 
     if (isTRUE(initialize)) return(initialize(gobject))
     gobject
@@ -1164,15 +1161,15 @@ setMethod("setMultiomics", signature("giotto"), function(gobject,
     feat_type = NULL,
     integration_method = "WNN",
     result_name = "theta_weighted_matrix",
-    verbose = TRUE,
+    verbose = NULL,
     ...) {
     .set_default_nesting(gobject, spat_unit, feat_type)
 
     # If input is null, remove object
     if (is.null(result)) {
-        if (isTRUE(verbose)) {
-            message("NULL passed to result\n Removing specified result")
-        }
+        vmsg(.v = verbose,
+            "NULL passed to result. Removing specified result"
+        )
         gobject@multiomics[[spat_unit]][[feat_type]][[
             integration_method
         ]][[result_name]] <- result
@@ -1184,12 +1181,10 @@ setMethod("setMultiomics", signature("giotto"), function(gobject,
         slot(gobject, "multiomics")[[spat_unit]][[integration_method]][[feat_type]]
     )
     if (result_name %in% potential_names) {
-        if (isTRUE(verbose)) {
-            wrap_msg(
-                '> "', result_name,
-                '" already exists and will be replaced with new result'
-            )
-        }
+        vmsg(.v = verbose,
+            '> "', result_name,
+            '" already exists and will be replaced with new result'
+        )
     }
 
     gobject@multiomics[[spat_unit]][[feat_type]][[
@@ -1439,7 +1434,7 @@ setMethod("setSpatialLocations", signature("giotto"), function(gobject,
     spat_unit = NULL,
     name = "raw",
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -1496,19 +1491,11 @@ setMethod("setSpatialLocations", signature("giotto"), function(gobject,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        if (isTRUE(verbose)) {
-            wrap_msg("NULL passed to x. Removing specified spatial
-                    locations.")
-        }
+        .vmsg_null_remove(verbose, "spatial locations")
         gobject@spatial_locs[[spat_unit]][[name]] <- NULL
-
-        # prune if empty
-        if (length(gobject@spatial_locs[[spat_unit]]) == 0) {
-            gobject@spatial_locs[[spat_unit]] <- NULL
-            if (length(gobject@spatial_locs) == 0) {
-                gobject@spatial_locs <- NULL
-            }
-        }
+        gobject@spatial_locs <- .prune_nesting(
+            gobject@spatial_locs, spat_unit
+        )
 
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -1523,22 +1510,18 @@ setMethod("setSpatialLocations", signature("giotto"), function(gobject,
         spat_unit = spat_unit
     )
     if (name %in% potential_names) {
-        if (isTRUE(verbose)) {
-            wrap_msg(
-                "> ", name,
-                " already exists and will be replaced with new spatial
-                locations \n"
-            )
-        }
-    }
-
-    if (isTRUE(verbose)) {
-        wrap_msg(
-            "Setting spatial locations [", spatUnit(x), "] ",
-            objName(x),
-            sep = ""
+        vmsg(.v = verbose,
+            "> ", name,
+            " already exists and will be replaced with new spatial
+            locations \n"
         )
     }
+
+    vmsg(.v = verbose,
+        "Setting spatial locations [", spatUnit(x), "] ",
+        objName(x),
+        sep = ""
+    )
 
     gobject@spatial_locs[[spat_unit]][[name]] <- x
     if (isTRUE(initialize)) return(initialize(gobject))
@@ -1665,7 +1648,7 @@ setMethod("setDimReduction", signature("giotto"), function(gobject,
     reduction = c("cells", "feats"),
     reduction_method = c("pca", "umap", "tsne"),
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -1725,35 +1708,13 @@ setMethod("setDimReduction", signature("giotto"), function(gobject,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        if (isTRUE(verbose)) {
-            wrap_msg("NULL passed to x. Removing specified dimension
-                    reduction")
-        }
+        .vmsg_null_remove(verbose, "dimension reduction")
         gobject@dimension_reduction[[reduction]][[spat_unit]][[
             feat_type]][[reduction_method]][[name]] <- NULL
-
-        # prune if empty
-        if (length(gobject@dimension_reduction[[reduction]][[
-                spat_unit]][[feat_type]][[reduction_method]]) == 0L) {
-            gobject@dimension_reduction[[reduction]][[spat_unit]][[
-                feat_type]][[reduction_method]] <- NULL
-            if (length(gobject@dimension_reduction[[reduction]][[
-                    spat_unit]][[feat_type]]) == 0) {
-                gobject@dimension_reduction[[reduction]][[
-                    spat_unit]][[feat_type]] <- NULL
-                if (length(gobject@dimension_reduction[[
-                        reduction]][[spat_unit]]) == 0) {
-                    gobject@dimension_reduction[[reduction]][[
-                        spat_unit]] <- NULL
-                    if (length(gobject@dimension_reduction[[reduction]]) == 0) {
-                        gobject@dimension_reduction[[reduction]] <- NULL
-                        if (length(gobject@dimension_reduction) == 0) {
-                            gobject@dimension_reduction <- NULL
-                        }
-                    }
-                }
-            }
-        }
+        gobject@dimension_reduction <- .prune_nesting(
+            gobject@dimension_reduction,
+            c(reduction, spat_unit, feat_type, reduction_method)
+        )
 
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -1772,20 +1733,17 @@ setMethod("setDimReduction", signature("giotto"), function(gobject,
         dim_type = reduction_method
     )
     if (name %in% potential_names) {
-        if (isTRUE(verbose)) {
-            wrap_msg("> ", name, " already exists and will be replaced with
-                    new dimension reduction object \n")
-        }
+        vmsg(.v = verbose, "> ", name,
+            " already exists and will be replaced with
+            new dimension reduction object \n")
     }
 
-    if (isTRUE(verbose)) {
-        wrap_msg(
-            "Setting dimension reduction [", spatUnit(x), "][",
-            featType(x), "] ",
-            objName(x),
-            sep = ""
-        )
-    }
+    vmsg(.v = verbose,
+        "Setting dimension reduction [", spatUnit(x), "][",
+        featType(x), "] ",
+        objName(x),
+        sep = ""
+    )
 
     slot(gobject, "dimension_reduction")[[reduction]][[spat_unit]][[
         feat_type]][[reduction_method]][[name]] <- x
@@ -1923,7 +1881,7 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
     nn_type = "sNN",
     name = "sNN.pca",
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -1981,23 +1939,11 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        vmsg(.v = verbose, "NULL passed to x. Removing specified nearest
-            neighbor network.")
+        .vmsg_null_remove(verbose, "nearest neighbor network")
         gobject@nn_network[[spat_unit]][[feat_type]][[nn_type]][[name]] <- NULL
-
-        # prune if empty
-        if (length(gobject@nn_network[[spat_unit]][[feat_type]][[nn_type]]) == 0L) {
-            gobject@nn_network[[spat_unit]][[feat_type]][[nn_type]] <- NULL
-            if (length(gobject@nn_network[[spat_unit]][[feat_type]]) == 0) {
-                gobject@nn_network[[spat_unit]][[feat_type]] <- NULL
-                if (length(gobject@nn_network[[spat_unit]]) == 0) {
-                    gobject@nn_network[[spat_unit]] <- NULL
-                    if (length(gobject@nn_network) == 0) {
-                        gobject@nn_network <- NULL
-                    }
-                }
-            }
-        }
+        gobject@nn_network <- .prune_nesting(
+            gobject@nn_network, c(spat_unit, feat_type, nn_type)
+        )
 
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -2020,12 +1966,10 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
         ))
     }
 
-    if (isTRUE(verbose)) {
-        wrap_msg(sprintf(
-            "Setting nearest neighbor network [%s][%s] %s",
-            spatUnit(x), featType(x), objName(x)
-        ))
-    }
+    vmsg(.v = verbose, sprintf(
+        "Setting nearest neighbor network [%s][%s] %s",
+        spatUnit(x), featType(x), objName(x)
+    ))
 
     # ensure legacy pre-0.6.0 schema migrates before storing
     x <- methods::initialize(x)
@@ -2212,7 +2156,7 @@ setMethod("setSpatialNetwork", signature("giotto"), function(gobject,
     spat_unit = NULL,
     name = NULL,
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -2270,19 +2214,11 @@ setMethod("setSpatialNetwork", signature("giotto"), function(gobject,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        if (isTRUE(verbose)) {
-            wrap_msg("NULL passed to x. Removing specified spatial
-                    network.")
-        }
+        .vmsg_null_remove(verbose, "spatial network")
         gobject@spatial_network[[spat_unit]][[name]] <- NULL
-
-        # prune if empty
-        if (length(gobject@spatial_network[[spat_unit]]) == 0L) {
-            gobject@spatial_network[[spat_unit]] <- NULL
-            if (length(gobject@spatial_network) == 0L) {
-                gobject@spatial_network <- NULL
-            }
-        }
+        gobject@spatial_network <- .prune_nesting(
+            gobject@spatial_network, spat_unit
+        )
 
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -2293,27 +2229,23 @@ setMethod("setSpatialNetwork", signature("giotto"), function(gobject,
     x <- read_s4_nesting(x)
 
     # Notify on replacement
-    if (isTRUE(verbose)) {
-        potential_names <- list_spatial_networks_names(
-            gobject = gobject,
-            spat_unit = spat_unit
+    potential_names <- list_spatial_networks_names(
+        gobject = gobject,
+        spat_unit = spat_unit
+    )
+    if (name %in% potential_names) {
+        vmsg(.v = verbose,
+            '> "', name,
+            '" already exists and will be replaced with new
+            spatial network'
         )
-        if (name %in% potential_names) {
-            wrap_msg(
-                '> "', name,
-                '" already exists and will be replaced with new
-                spatial network'
-            )
-        }
     }
 
-    if (isTRUE(verbose)) {
-        wrap_msg(
-            "Setting spatial network [", spatUnit(x), "] ",
-            objName(x),
-            sep = ""
-        )
-    }
+    vmsg(.v = verbose,
+        "Setting spatial network [", spatUnit(x), "] ",
+        objName(x),
+        sep = ""
+    )
 
     # ensure legacy pre-0.6.0 schema migrates before storing
     x <- methods::initialize(x)
@@ -2467,7 +2399,7 @@ setSpatialGrid <- function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     name = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     set_defaults = TRUE,
     ...) {
     if (isTRUE(set_defaults)) {
@@ -2475,9 +2407,9 @@ setSpatialGrid <- function(gobject,
     }
 
     if (is.null(spatial_grid)) {
-        if (isTRUE(verbose)) {
-            message("NULL passed to spatial_grid.\n Removing specified entry.")
-        }
+        vmsg(.v = verbose,
+            "NULL passed to spatial_grid. Removing specified entry."
+        )
         gobject@spatial_grid[[spat_unit]][[feat_type]][[name]] <- NULL
         return(gobject)
     }
@@ -2488,16 +2420,14 @@ setSpatialGrid <- function(gobject,
 
     spatial_grid <- read_s4_nesting(spatial_grid)
 
-    if (isTRUE(verbose)) {
-        potential_names <- names(
-            slot(gobject, "spatial_grid")[[spat_unit]][[feat_type]]
+    potential_names <- names(
+        slot(gobject, "spatial_grid")[[spat_unit]][[feat_type]]
+    )
+    if (name %in% potential_names) {
+        vmsg(.v = verbose,
+            '> "', name,
+            '" already exists and will be replaced with new spatial grid \n'
         )
-        if (name %in% potential_names) {
-            wrap_msg(
-                '> "', name,
-                '" already exists and will be replaced with new spatial grid \n'
-            )
-        }
     }
 
     silent <- validObject(spatial_grid) # hide TRUE print
@@ -2554,10 +2484,10 @@ setMethod("getPolygonInfo", signature("giotto"), function(gobject,
         } else {
             # Otherwise the first available
             polygon_name <- potential_names[1]
-            if (isTRUE(verbose)) {
-                wrap_txtf("No polygon information named 'cell' discovered.
-                Selecting first available ('%s')", polygon_name)
-            }
+            vmsg(.v = verbose, sprintf(
+                "No polygon information named 'cell' discovered.
+                Selecting first available ('%s')", polygon_name
+            ))
         }
     }
 
@@ -2681,15 +2611,11 @@ setMethod("setPolygonInfo", signature("giotto"), function(gobject, x,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        vmsg(.v = verbose, 
-            "NULL passed to x. Removing specified polygon information"
-        )
+        .vmsg_null_remove(verbose, "polygon information")
         gobject@spatial_info[[name]] <- NULL
-
-        # prune if empty
-        if (length(gobject@spatial_info) == 0L) {
-            gobject@spatial_info <- NULL
-        }
+        gobject@spatial_info <- .prune_nesting(
+            gobject@spatial_info, character(0L)
+        )
 
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -3064,7 +2990,7 @@ setMethod("setSpatialEnrichment", signature("giotto"), function(gobject,
     feat_type = NULL,
     name = "enrichment",
     provenance = NULL,
-    verbose = TRUE,
+    verbose = NULL,
     initialize = TRUE,
     ...) {
     if (!methods::hasArg(x)) {
@@ -3126,22 +3052,11 @@ setMethod("setSpatialEnrichment", signature("giotto"), function(gobject,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        if (isTRUE(verbose)) {
-            wrap_msg("NULL passed to x. Removing specified spatial
-                    enrichment.")
-        }
+        .vmsg_null_remove(verbose, "spatial enrichment")
         gobject@spatial_enrichment[[spat_unit]][[feat_type]][[name]] <- NULL
-
-        # prune if empty
-        if (length(gobject@spatial_enrichment[[spat_unit]][[feat_type]]) == 0L) {
-            gobject@spatial_enrichment[[spat_unit]][[feat_type]] <- NULL
-            if (length(gobject@spatial_enrichment[[spat_unit]]) == 0L) {
-                gobject@spatial_enrichment[[spat_unit]] <- NULL
-                if (length(gobject@spatial_enrichment) == 0L) {
-                    gobject@spatial_enrichment <- NULL
-                }
-            }
-        }
+        gobject@spatial_enrichment <- .prune_nesting(
+            gobject@spatial_enrichment, c(spat_unit, feat_type)
+        )
 
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -3152,29 +3067,25 @@ setMethod("setSpatialEnrichment", signature("giotto"), function(gobject,
     x <- read_s4_nesting(x)
 
     # Notify on replacement
-    if (isTRUE(verbose)) {
-        potential_names <- list_spatial_enrichments_names(
-            gobject = gobject,
-            spat_unit = spat_unit,
-            feat_type = feat_type
+    potential_names <- list_spatial_enrichments_names(
+        gobject = gobject,
+        spat_unit = spat_unit,
+        feat_type = feat_type
+    )
+    if (name %in% potential_names) {
+        vmsg(.v = verbose,
+            '> "', name,
+            '" already exists and will be replaced with new spatial
+                enrichment results'
         )
-        if (name %in% potential_names) {
-            wrap_msg(
-                '> "', name,
-                '" already exists and will be replaced with new spatial
-                    enrichment results'
-            )
-        }
     }
 
-    if (isTRUE(verbose)) {
-        wrap_msg(
-            "Setting spatial enrichment [", spatUnit(x), "][",
-            featType(x), "] ",
-            objName(x),
-            sep = ""
-        )
-    }
+    vmsg(.v = verbose,
+        "Setting spatial enrichment [", spatUnit(x), "][",
+        featType(x), "] ",
+        objName(x),
+        sep = ""
+    )
 
     gobject@spatial_enrichment[[spat_unit]][[feat_type]][[name]] <- x
     if (isTRUE(initialize)) return(initialize(gobject))
