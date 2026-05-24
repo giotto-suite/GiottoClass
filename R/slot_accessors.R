@@ -186,6 +186,15 @@ read_s4_nesting <- function(x) {
     x
 }
 
+# Standard message for setters where x = NULL means "remove the entry".
+# `what` is the noun phrase to interpolate, e.g. "expression",
+# "spatial locations", "nearest neighbor network".
+.vmsg_null_remove <- function(verbose, what) {
+    vmsg(.v = verbose, sprintf(
+        "NULL passed to x. Removing specified %s.", what
+    ))
+}
+
 
 ## cell_ID slot ####
 
@@ -1496,19 +1505,11 @@ setMethod("setSpatialLocations", signature("giotto"), function(gobject,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        if (isTRUE(verbose)) {
-            wrap_msg("NULL passed to x. Removing specified spatial
-                    locations.")
-        }
+        .vmsg_null_remove(verbose, "spatial locations")
         gobject@spatial_locs[[spat_unit]][[name]] <- NULL
-
-        # prune if empty
-        if (length(gobject@spatial_locs[[spat_unit]]) == 0) {
-            gobject@spatial_locs[[spat_unit]] <- NULL
-            if (length(gobject@spatial_locs) == 0) {
-                gobject@spatial_locs <- NULL
-            }
-        }
+        gobject@spatial_locs <- .prune_nesting(
+            gobject@spatial_locs, spat_unit
+        )
 
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -1725,35 +1726,13 @@ setMethod("setDimReduction", signature("giotto"), function(gobject,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        if (isTRUE(verbose)) {
-            wrap_msg("NULL passed to x. Removing specified dimension
-                    reduction")
-        }
+        .vmsg_null_remove(verbose, "dimension reduction")
         gobject@dimension_reduction[[reduction]][[spat_unit]][[
             feat_type]][[reduction_method]][[name]] <- NULL
-
-        # prune if empty
-        if (length(gobject@dimension_reduction[[reduction]][[
-                spat_unit]][[feat_type]][[reduction_method]]) == 0L) {
-            gobject@dimension_reduction[[reduction]][[spat_unit]][[
-                feat_type]][[reduction_method]] <- NULL
-            if (length(gobject@dimension_reduction[[reduction]][[
-                    spat_unit]][[feat_type]]) == 0) {
-                gobject@dimension_reduction[[reduction]][[
-                    spat_unit]][[feat_type]] <- NULL
-                if (length(gobject@dimension_reduction[[
-                        reduction]][[spat_unit]]) == 0) {
-                    gobject@dimension_reduction[[reduction]][[
-                        spat_unit]] <- NULL
-                    if (length(gobject@dimension_reduction[[reduction]]) == 0) {
-                        gobject@dimension_reduction[[reduction]] <- NULL
-                        if (length(gobject@dimension_reduction) == 0) {
-                            gobject@dimension_reduction <- NULL
-                        }
-                    }
-                }
-            }
-        }
+        gobject@dimension_reduction <- .prune_nesting(
+            gobject@dimension_reduction,
+            c(reduction, spat_unit, feat_type, reduction_method)
+        )
 
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -1981,23 +1960,11 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        vmsg(.v = verbose, "NULL passed to x. Removing specified nearest
-            neighbor network.")
+        .vmsg_null_remove(verbose, "nearest neighbor network")
         gobject@nn_network[[spat_unit]][[feat_type]][[nn_type]][[name]] <- NULL
-
-        # prune if empty
-        if (length(gobject@nn_network[[spat_unit]][[feat_type]][[nn_type]]) == 0L) {
-            gobject@nn_network[[spat_unit]][[feat_type]][[nn_type]] <- NULL
-            if (length(gobject@nn_network[[spat_unit]][[feat_type]]) == 0) {
-                gobject@nn_network[[spat_unit]][[feat_type]] <- NULL
-                if (length(gobject@nn_network[[spat_unit]]) == 0) {
-                    gobject@nn_network[[spat_unit]] <- NULL
-                    if (length(gobject@nn_network) == 0) {
-                        gobject@nn_network <- NULL
-                    }
-                }
-            }
-        }
+        gobject@nn_network <- .prune_nesting(
+            gobject@nn_network, c(spat_unit, feat_type, nn_type)
+        )
 
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -2270,19 +2237,11 @@ setMethod("setSpatialNetwork", signature("giotto"), function(gobject,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        if (isTRUE(verbose)) {
-            wrap_msg("NULL passed to x. Removing specified spatial
-                    network.")
-        }
+        .vmsg_null_remove(verbose, "spatial network")
         gobject@spatial_network[[spat_unit]][[name]] <- NULL
-
-        # prune if empty
-        if (length(gobject@spatial_network[[spat_unit]]) == 0L) {
-            gobject@spatial_network[[spat_unit]] <- NULL
-            if (length(gobject@spatial_network) == 0L) {
-                gobject@spatial_network <- NULL
-            }
-        }
+        gobject@spatial_network <- .prune_nesting(
+            gobject@spatial_network, spat_unit
+        )
 
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -2681,15 +2640,11 @@ setMethod("setPolygonInfo", signature("giotto"), function(gobject, x,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        vmsg(.v = verbose, 
-            "NULL passed to x. Removing specified polygon information"
-        )
+        .vmsg_null_remove(verbose, "polygon information")
         gobject@spatial_info[[name]] <- NULL
-
-        # prune if empty
-        if (length(gobject@spatial_info) == 0L) {
-            gobject@spatial_info <- NULL
-        }
+        gobject@spatial_info <- .prune_nesting(
+            gobject@spatial_info, character(0L)
+        )
 
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
@@ -3126,22 +3081,11 @@ setMethod("setSpatialEnrichment", signature("giotto"), function(gobject,
 
     # NULL: remove specified entry
     if (is.null(x)) {
-        if (isTRUE(verbose)) {
-            wrap_msg("NULL passed to x. Removing specified spatial
-                    enrichment.")
-        }
+        .vmsg_null_remove(verbose, "spatial enrichment")
         gobject@spatial_enrichment[[spat_unit]][[feat_type]][[name]] <- NULL
-
-        # prune if empty
-        if (length(gobject@spatial_enrichment[[spat_unit]][[feat_type]]) == 0L) {
-            gobject@spatial_enrichment[[spat_unit]][[feat_type]] <- NULL
-            if (length(gobject@spatial_enrichment[[spat_unit]]) == 0L) {
-                gobject@spatial_enrichment[[spat_unit]] <- NULL
-                if (length(gobject@spatial_enrichment) == 0L) {
-                    gobject@spatial_enrichment <- NULL
-                }
-            }
-        }
+        gobject@spatial_enrichment <- .prune_nesting(
+            gobject@spatial_enrichment, c(spat_unit, feat_type)
+        )
 
         if (isTRUE(initialize)) return(initialize(gobject))
         return(gobject)
