@@ -861,3 +861,101 @@ test_that("explicit source class mismatch with children errors", {
         "does not match"
     )
 })
+
+
+# Destructive-at-first-write metadata semantics --------------------------
+# multi@cell_metadata is empty by default: pDataDT assembles children live.
+# After setCellMetadata (the first write), multi holds its own copy and
+# reads come from there directly — child changes no longer propagate.
+# Mirrors how `@expression` materializes a union store on first write.
+
+test_that("pDataDT on fresh multi assembles live from children", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
+    expect_length(mg@cell_metadata, 0L)
+    pd <- pDataDT(mg)
+    expect_identical(nrow(pd), 8L)
+    expect_true("list_ID" %in% names(pd))
+})
+
+test_that("setCellMetadata materializes; subsequent pDataDT returns exactly what was set", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
+    # Round-trip pattern: read assembled, modify, set back
+    cm <- getCellMetadata(mg, output = "cellMetaObj")
+    cm[][, cluster := rep(c("X", "Y"), length.out = nrow(cm[]))]
+    mg <- setCellMetadata(mg, x = cm, verbose = FALSE)
+
+    # Multi is now materialized
+    expect_true(inherits(mg@cell_metadata$cell$rna, "cellMetaObj"))
+
+    # pDataDT returns exactly the set table (no merge with children)
+    pd <- pDataDT(mg)
+    expect_true("cluster" %in% names(pd))
+    expect_setequal(pd$cluster, c("X", "Y"))
+    # list_ID was in the assembled view; it survived the round-trip
+    expect_true("list_ID" %in% names(pd))
+})
+
+test_that("addCellMetadata materializes the assembled view on first add", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
+    expect_length(mg@cell_metadata, 0L)
+
+    # addCellMetadata on a fresh multi: internally reads assembled view +
+    # merges the new column by cell_ID + writes back via setCellMetadata.
+    new_dt <- data.table::data.table(
+        cell_ID = c(paste0("a::c", 1:5), paste0("b::c", 1:3)),
+        flag = rep(c(TRUE, FALSE), length.out = 8L)
+    )
+    mg <- addCellMetadata(mg, new_metadata = new_dt,
+        by_column = TRUE, column_cell_ID = "cell_ID")
+
+    # Multi is now materialized
+    expect_true(inherits(mg@cell_metadata$cell$rna, "cellMetaObj"))
+    pd <- pDataDT(mg)
+    expect_true("flag" %in% names(pd))
+    expect_identical(sum(pd$flag), 4L)
+})
+
+test_that("child standalone view is untouched by multi-level writes", {
+    g1 <- .mk_minimal(5, 4)
+    mg <- createGiottoMulti(list(a = g1))
+
+    cm <- getCellMetadata(mg, output = "cellMetaObj")
+    cm[][, cluster := "X"]
+    mg <- setCellMetadata(mg, x = cm, verbose = FALSE)
+
+    # Child accessed standalone — no `cluster` column from multi
+    child_pd <- pDataDT(mg@objects$a)
+    expect_false("cluster" %in% names(child_pd))
+})
+
+test_that("after materialization, child updates do not propagate to multi", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
+    # Materialize the multi
+    cm <- getCellMetadata(mg, output = "cellMetaObj")
+    mg <- setCellMetadata(mg, x = cm, verbose = FALSE)
+
+    # Now edit a child's metadata standalone
+    child_a <- mg@objects$a
+    child_a <- addCellMetadata(child_a,
+        new_metadata = data.table::data.table(
+            cell_ID = paste0("c", 1:5),
+            sample_only = "tagged"),
+        by_column = TRUE, column_cell_ID = "cell_ID")
+    mg@objects$a <- child_a
+
+    # Multi view does NOT show the new column — it reads its materialized copy
+    pd <- pDataDT(mg)
+    expect_false("sample_only" %in% names(pd))
+})
