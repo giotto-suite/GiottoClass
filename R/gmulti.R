@@ -962,6 +962,10 @@ setMethod("show", "giottoMulti", function(object) {
         if (is.null(cm)) return(NULL)
         dt <- data.table::copy(cm[])
         dt[, cell_ID := paste(nm, cell_ID, sep = "::")]
+        # Sample-origin tag — matches joinGiottoObjects' convention so
+        # downstream tools (e.g. runGiottoHarmony's vars_use = "list_ID"
+        # default) work out of the box on the assembled multi metadata.
+        dt[, list_ID := nm]
         list(cm = cm, dt = dt)
     })
     per_child <- Filter(Negate(is.null), per_child)
