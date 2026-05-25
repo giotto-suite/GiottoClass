@@ -149,6 +149,16 @@ list_expression_names <- function(gobject,
 #' list_cell_id_names(g)
 #' @export
 list_cell_id_names <- function(gobject) {
+    if (inherits(gobject, "giottoMulti")) {
+        # giottoMulti's own @cell_ID slot stays empty by default;
+        # fall back to the union of children's spat_units so callers
+        # checking "is there any cell info?" get a truthful answer.
+        own <- names(gobject@cell_ID)
+        if (length(own) > 0L) return(own)
+        kids <- unique(unlist(lapply(gobject@objects,
+            function(g) names(g@cell_ID))))
+        return(kids)
+    }
     return(names(gobject@cell_ID))
 }
 

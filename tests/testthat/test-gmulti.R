@@ -861,3 +861,78 @@ test_that("explicit source class mismatch with children errors", {
         "does not match"
     )
 })
+
+
+# overlay model: multi@cell_metadata as annotation layer over children ----
+
+test_that("multi@cell_metadata empty -> pDataDT returns pure assembly", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+    expect_length(mg@cell_metadata, 0L)
+    pd <- pDataDT(mg)
+    expect_true("list_ID" %in% names(pd))
+    expect_identical(nrow(pd), 8L)
+})
+
+test_that("multi-level annotation column overlays children's values", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
+    # Add a multi-level cluster column via setCellMetadata
+    base <- pDataDT(mg)
+    clusters <- data.table::data.table(
+        cell_ID = base$cell_ID,
+        cluster = rep(c("X", "Y"), length.out = nrow(base))
+    )
+    cm <- createCellMetaObj(clusters,
+        spat_unit = "cell", feat_type = "rna")
+    mg <- setCellMetadata(mg, x = cm, verbose = FALSE)
+
+    pd2 <- pDataDT(mg)
+    expect_true("cluster" %in% names(pd2))
+    expect_setequal(pd2$cluster, c("X", "Y"))
+    # list_ID still present from assembly
+    expect_true("list_ID" %in% names(pd2))
+})
+
+test_that("partial overlay coverage NA-fills unmentioned cells", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
+    # overlay covers only child b's cells
+    base <- pDataDT(mg)
+    partial <- data.table::data.table(
+        cell_ID = base$cell_ID[base$list_ID == "b"],
+        b_only_flag = TRUE
+    )
+    cm <- createCellMetaObj(partial,
+        spat_unit = "cell", feat_type = "rna")
+    mg <- setCellMetadata(mg, x = cm, verbose = FALSE)
+
+    pd <- pDataDT(mg)
+    expect_true("b_only_flag" %in% names(pd))
+    # Cells in child b have value, cells in child a are NA
+    expect_true(all(pd$b_only_flag[pd$list_ID == "b"] == TRUE))
+    expect_true(all(is.na(pd$b_only_flag[pd$list_ID == "a"])))
+})
+
+test_that("child standalone view is untouched by multi-level annotations", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
+    cluster_dt <- data.table::data.table(
+        cell_ID = paste0("a::c", 1:5),
+        cluster = "X"
+    )
+    cm <- createCellMetaObj(cluster_dt,
+        spat_unit = "cell", feat_type = "rna")
+    mg <- setCellMetadata(mg, x = cm, verbose = FALSE)
+
+    # Child accessed standalone — no `cluster` column
+    child_a_pd <- pDataDT(mg@objects$a)
+    expect_false("cluster" %in% names(child_a_pd))
+})

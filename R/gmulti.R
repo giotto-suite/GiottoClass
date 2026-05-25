@@ -1256,21 +1256,34 @@ setMethod("getCellMetadata", "giottoMulti", function(gobject,
         .set_default_nesting(gobject, spat_unit, feat_type)
     }
 
-    # Joint slot populated? defer to gAny (view-filter applies)
-    joint <- gobject@cell_metadata[[spat_unit]][[feat_type]]
-    if (inherits(joint, "cellMetaObj")) {
-        return(callNextMethod(gobject,
-            spat_unit = spat_unit, feat_type = feat_type,
-            output = output, copy_obj = copy_obj, set_defaults = FALSE))
-    }
-
-    # Empty — assemble from children with per-child resolved defaults.
-    cm <- .gm_assemble_cell_metadata(gobject,
+    # Overlay model: always assemble base from children (canonical for
+    # per-cell columns + list_ID + prefixed cell_ID). If the multi has
+    # multi-level annotations in @cell_metadata, left-join them over the
+    # base with overlay-wins-on-conflicts semantics. Same shape as
+    # SpatialData's separate annotation tables; allows non-destructive
+    # cell-level scope on the multi to write back via setCellMetadata
+    # without mutating children's metadata.
+    base <- .gm_assemble_cell_metadata(gobject,
         spat_unit = if (nospec_unit) NULL else spat_unit,
         feat_type = if (nospec_feat) NULL else feat_type)
-    cm <- .gm_apply_view(cm, gobject)
-    if (output == "data.table") return(cm[])
-    cm
+    base <- .gm_apply_view(base, gobject)
+
+    overlay <- gobject@cell_metadata[[spat_unit]][[feat_type]]
+    if (inherits(overlay, "cellMetaObj")) {
+        base_dt <- base[]
+        ov_dt <- if (isTRUE(copy_obj)) data.table::copy(overlay[]) else overlay[]
+        ov_cols <- setdiff(names(ov_dt), "cell_ID")
+        if (length(ov_cols) > 0L) {
+            # update join — overlay values override base for matching
+            # cell_IDs; overlay-only columns get added (NA for non-matching).
+            base_dt[ov_dt, on = "cell_ID",
+                (ov_cols) := mget(paste0("i.", ov_cols))]
+        }
+        base[] <- base_dt
+    }
+
+    if (output == "data.table") return(base[])
+    base
 })
 
 #' @rdname getFeatureMetadata
