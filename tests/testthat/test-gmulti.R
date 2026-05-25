@@ -760,6 +760,21 @@ test_that("pDataDT / fDataDT work on giottoMulti via assembly fallback", {
     expect_identical(sort(fd$feat_ID), paste0("f", 1:4))
 })
 
+test_that("pDataDT assembly tags each row with list_ID = child name", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
+    pd <- pDataDT(mg)
+    expect_true("list_ID" %in% names(pd))
+    # rows tagged consistently with the child they came from
+    expect_identical(sum(pd$list_ID == "a"), 5L)
+    expect_identical(sum(pd$list_ID == "b"), 3L)
+    # list_ID aligns with the cell_ID prefix
+    expect_true(all(startsWith(pd$cell_ID[pd$list_ID == "a"], "a::")))
+    expect_true(all(startsWith(pd$cell_ID[pd$list_ID == "b"], "b::")))
+})
+
 test_that("activeSpatUnit / activeFeatType return per-child vectors", {
     g1 <- .mk_minimal(5, 4)
     g2 <- .mk_minimal(3, 4)
