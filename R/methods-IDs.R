@@ -134,6 +134,11 @@ setMethod(
 setMethod(
     "spatIDs", signature(x = c("spatialNetworkObj")),
     function(x, ...) {
+        net <- x@network
+        # Disk-backed networks (parquetEdgeStore from GiottoDisk's setter
+        # auto-write or sourceAdopt path) dispatch to their own spatIDs
+        # method instead of the igraph-only $from/$to accessor.
+        if (inherits(net, "dataStore")) return(spatIDs(net, ...))
         as.character(unique(c(x[]$from, x[]$to)))
     }
 )
@@ -233,7 +238,12 @@ setMethod(
 setMethod(
     "spatIDs", signature(x = "nnNetObj"),
     function(x, ...) {
-        as.character(unique(names(igraph::V(x@network))))
+        net <- x@network
+        # Disk-backed networks delegate to their own spatIDs method
+        # (e.g. parquetEdgeStore in GiottoDisk). Falls back to igraph
+        # vertex names for the canonical in-memory case.
+        if (inherits(net, "dataStore")) return(spatIDs(net, ...))
+        as.character(unique(names(igraph::V(net))))
     }
 )
 
