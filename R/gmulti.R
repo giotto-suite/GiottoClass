@@ -111,6 +111,11 @@
 #' @slot parameters analysis parameters (mirrors `giotto@parameters`)
 #' @slot versions package versions
 #' @slot misc miscellaneous
+#' @slot source on-disk source / project manager (e.g.
+#'   [GiottoDisk::gDirSource]) where multi-level shared-domain artifacts
+#'   live. `NULL` for in-memory multis. Children may carry their own
+#'   per-sample sources; multi-level slots (shared `@expression`,
+#'   `@dimension_reduction`, `@nn_network`) write to this one.
 #'
 #' @returns giottoMulti object
 #' @exportClass giottoMulti
@@ -141,7 +146,8 @@ giottoMulti <- setClass(
         instructions        = "nullOrInstructions",
         parameters          = "ANY",
         versions            = "list",
-        misc                = "list"
+        misc                = "list",
+        source              = "ANY"
     ),
     prototype = list(
         objects             = list(),
@@ -169,7 +175,8 @@ giottoMulti <- setClass(
         instructions        = NULL,
         parameters          = list(),
         versions            = .versions_info(),
-        misc                = list()
+        misc                = list(),
+        source              = NULL
     )
 )
 
@@ -202,6 +209,13 @@ setMethod("initialize", signature("giottoMulti"), function(.Object, objects = NU
 
     if (length(.Object@objects) == 0L) return(.Object)
 
+    # Source resolution: federated multi keeps per-child sources intact but
+    # also carries one multi-level source for cross-sample shared-domain
+    # artifacts (joint PCA, joint NN networks). Enforce backend-type
+    # homogeneity across any sourced children: mixing parquet- and
+    # bpcells-backed children breaks union/cbind dispatch downstream.
+    .Object@source <- .gm_resolve_source(.Object@source, .Object@objects)
+
     # id_map: cache rebuilt only when child length-signatures differ from the
     # cached signature. Bare re-init when nothing changed is a no-op modulo a
     # signature comparison over N children — microseconds even at atlas scale.
@@ -216,6 +230,39 @@ setMethod("initialize", signature("giottoMulti"), function(.Object, objects = NU
 })
 
 
+# Decide the multi's @source slot from a (possibly-NULL) explicit value and
+# the children's per-child sources.
+# - All sourced children must share the same source class. Error otherwise.
+# - If `explicit` is provided, it must also match that class. If it doesn't
+#   match because no children have sources, accept it as-is.
+# - If `explicit` is NULL, adopt the first sourced child's source.
+# - If no children have sources and no explicit source provided, leave NULL.
+.gm_resolve_source <- function(explicit, objects) {
+    child_sources <- lapply(objects, function(g) g@source)
+    have_source <- !vapply(child_sources, is.null, logical(1L))
+    if (any(have_source)) {
+        classes <- vapply(child_sources[have_source],
+            function(s) class(s)[[1L]], character(1L))
+        if (length(unique(classes)) > 1L) {
+            stop("giottoMulti: children carry sources of different classes (",
+                paste(unique(classes), collapse = ", "),
+                "). All sourced children must use the same backend.",
+                call. = FALSE)
+        }
+        if (!is.null(explicit) && class(explicit)[[1L]] != classes[[1L]]) {
+            stop("giottoMulti: explicit source class '",
+                class(explicit)[[1L]],
+                "' does not match children's source class '",
+                classes[[1L]], "'.", call. = FALSE)
+        }
+    }
+    if (!is.null(explicit)) return(explicit)
+    first_idx <- which(have_source)[1L]
+    if (!is.na(first_idx)) return(child_sources[[first_idx]])
+    NULL
+}
+
+
 # CONSTRUCTOR ####
 
 #' @title Create a giottoMulti object
@@ -228,6 +275,11 @@ setMethod("initialize", signature("giottoMulti"), function(.Object, objects = NU
 #' @param active `character` vector of object names to mark active. Defaults
 #'   to all.
 #' @param instructions a `giottoInstructions` object (optional)
+#' @param source on-disk source / project manager (e.g.
+#'   [GiottoDisk::gDirSource]) for cross-sample shared-domain artifacts.
+#'   If `NULL` (default), auto-acquired from the first sourced child; if
+#'   no child carries a source, the multi is in-memory. When supplied,
+#'   must be the same backend class as any source the children carry.
 #'
 #' @returns `giottoMulti`
 #' @examples
@@ -237,11 +289,13 @@ setMethod("initialize", signature("giottoMulti"), function(.Object, objects = NU
 #' mg <- createGiottoMulti(list(visium = g1, viz = g2))
 #' }
 #' @export
-createGiottoMulti <- function(objects, active = NULL, instructions = NULL) {
+createGiottoMulti <- function(objects, active = NULL, instructions = NULL,
+    source = NULL) {
     checkmate::assert_list(objects, types = "giotto", names = "unique")
     args <- list(objects = objects)
     if (!is.null(active)) args$active <- active
     if (!is.null(instructions)) args$instructions <- instructions
+    if (!is.null(source)) args$source <- source
     do.call(new, c("giottoMulti", args))
 }
 

@@ -798,3 +798,51 @@ test_that("assembled joint expression on wrapped giotto carries globals", {
     expect_identical(colnames(e[]),
         paste("sample1", paste0("c", 1:5), sep = "::"))
 })
+
+
+# @source slot + acquisition + validation -----------------------------------
+
+test_that("giottoMulti has @source slot defaulting to NULL", {
+    g <- .mk_minimal(5, 4)
+    mg <- createGiottoMulti(list(a = g))
+    expect_true("source" %in% slotNames("giottoMulti"))
+    expect_null(mg@source)
+})
+
+test_that("multi inherits source from first sourced child", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    fake <- structure(list(tag = "src1"), class = "fakeSource")
+    g1@source <- fake
+
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+    expect_identical(mg@source, fake)
+})
+
+test_that("createGiottoMulti accepts explicit source arg", {
+    g <- .mk_minimal(5, 4)
+    fake <- structure(list(tag = "explicit"), class = "fakeSource")
+    mg <- createGiottoMulti(list(a = g), source = fake)
+    expect_identical(mg@source, fake)
+})
+
+test_that("mixed-class child sources error at construction", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    g1@source <- structure(list(), class = "srcA")
+    g2@source <- structure(list(), class = "srcB")
+    expect_error(
+        createGiottoMulti(list(a = g1, b = g2)),
+        "different classes"
+    )
+})
+
+test_that("explicit source class mismatch with children errors", {
+    g <- .mk_minimal(5, 4)
+    g@source <- structure(list(), class = "srcA")
+    expect_error(
+        createGiottoMulti(list(a = g),
+            source = structure(list(), class = "srcB")),
+        "does not match"
+    )
+})
