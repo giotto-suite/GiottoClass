@@ -9,7 +9,7 @@ readExprMatrix(
   cores = determine_cores(),
   transpose = FALSE,
   feat_type = "rna",
-  expression_matrix_class = c("dgCMatrix", "DelayedArray", "dbSparseMatrix")
+  expression_matrix_class = deprecated()
 )
 }
 \arguments{
@@ -21,8 +21,7 @@ readExprMatrix(
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 
-\item{expression_matrix_class}{class of expression matrix to
-use (e.g. 'dgCMatrix', 'DelayedArray')}
+\item{expression_matrix_class}{deprecated. See \code{?createExprObj} for details}
 }
 \value{
 sparse matrix

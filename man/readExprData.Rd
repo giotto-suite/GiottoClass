@@ -11,7 +11,7 @@ readExprData(
   default_feat_type = NULL,
   verbose = TRUE,
   provenance = NULL,
-  expression_matrix_class = c("dgCMatrix", "DelayedArray")
+  expression_matrix_class = deprecated()
 )
 }
 \arguments{
@@ -27,8 +27,7 @@ readExprData(
 
 \item{provenance}{(optional) provenance information}
 
-\item{expression_matrix_class}{class of expression matrix to
-use (e.g. 'dgCMatrix', 'DelayedArray')}
+\item{expression_matrix_class}{deprecated. See \code{?createExprObj} for details}
 }
 \value{
 exprObj

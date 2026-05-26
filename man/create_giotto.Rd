@@ -28,7 +28,7 @@ createGiottoObject(
   instructions = NULL,
   cores = determine_cores(),
   raw_exprs = NULL,
-  expression_matrix_class = c("dgCMatrix", "DelayedArray"),
+  expression_matrix_class = deprecated(),
   h5_file = NULL,
   verbose = FALSE
 )
@@ -108,8 +108,7 @@ provided}
 
 \item{raw_exprs}{deprecated, use expression}
 
-\item{expression_matrix_class}{class of expression matrix to
-use (e.g. 'dgCMatrix', 'DelayedArray')}
+\item{expression_matrix_class}{deprecated. See \code{?createExprObj} for details}
 
 \item{h5_file}{path to h5 file}
 

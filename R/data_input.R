@@ -10,8 +10,7 @@
 #' @param path path to the expression matrix
 #' @param cores number of cores to use
 #' @param transpose transpose matrix
-#' @param expression_matrix_class class of expression matrix to
-#' use (e.g. 'dgCMatrix', 'DelayedArray')
+#' @param expression_matrix_class deprecated. See `?createExprObj` for details
 #' @inheritParams data_access_params
 #' @details The expression matrix needs to have both unique column names and
 #' row names
@@ -28,18 +27,16 @@ readExprMatrix <- function(
         cores = determine_cores(),
         transpose = FALSE,
         feat_type = "rna",
-        expression_matrix_class = c(
-            "dgCMatrix",
-            "DelayedArray",
-            "dbSparseMatrix"
-        )) {
+        expression_matrix_class = deprecated()) {
     # check if path is a character vector and exists
     if (!is.character(path)) stop("path needs to be character vector")
     if (!file.exists(path)) stop("the path: ", path, " does not exist")
 
-    expression_matrix_class <- match.arg(expression_matrix_class)
-    if (identical(expression_matrix_class, "dbSparseMatrix")) {
-        stop("File conversion to dbMatrix is not yet supported")
+    if (is_present(expression_matrix_class)) {
+        warning(sprintf(
+            "[readExprMatrix] param '%s' is deprecated",
+            "expression_matrix_class"),
+        call. = FALSE)
     }
 
     data.table::setDTthreads(threads = cores)
@@ -59,10 +56,6 @@ readExprMatrix <- function(
 
     if (isTRUE(transpose)) {
         spM <- t_flex(spM)
-    }
-
-    if (expression_matrix_class[1] == "DelayedArray") {
-        spM <- DelayedArray::DelayedArray(spM)
     }
 
     return(spM)
@@ -85,8 +78,7 @@ readExprMatrix <- function(
 #' @param data_list (nested) list of expression input data
 #' @param sparse (boolean, default = TRUE) read matrix data in a sparse manner
 #' @param cores number of cores to use
-#' @param expression_matrix_class class of expression matrix to
-#' use (e.g. 'dgCMatrix', 'DelayedArray')
+#' @param expression_matrix_class deprecated. See `?createExprObj` for details
 #' @inheritParams read_data_params
 #' @returns exprObj
 #' @details
@@ -120,15 +112,20 @@ readExprData <- function(data_list,
     default_feat_type = NULL,
     verbose = TRUE,
     provenance = NULL,
-    expression_matrix_class = c("dgCMatrix", "DelayedArray")) {
+    expression_matrix_class = deprecated()) {
+    if (is_present(expression_matrix_class)) {
+        warning(sprintf(
+            "[readExprData] param '%s' is deprecated",
+            "expression_matrix_class"),
+        call. = FALSE)
+    }
     .read_expression_data(
         expr_list = data_list,
         sparse = sparse,
         cores = cores,
         default_feat_type = default_feat_type,
         verbose = verbose,
-        provenance = provenance,
-        expression_matrix_class = expression_matrix_class
+        provenance = provenance
     )
 }
 
@@ -141,8 +138,7 @@ readExprData <- function(data_list,
     default_spat_unit = NULL,
     default_feat_type = NULL,
     verbose = TRUE,
-    provenance = NULL,
-    expression_matrix_class = c("dgCMatrix", "DelayedArray")) {
+    provenance = NULL) {
     # import box characters
     ch <- box_chars()
 
@@ -335,8 +331,7 @@ readExprData <- function(data_list,
                         } else {
                             provenance
                         }, # assumed
-                        misc = NULL,
-                        expression_matrix_class = expression_matrix_class
+                        misc = NULL
                     )
                 )
             }

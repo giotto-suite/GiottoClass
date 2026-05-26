@@ -74,8 +74,7 @@ NULL
 #' from \code{\link{createGiottoInstructions}}
 #' @param cores how many cores or threads to use to read data if paths are
 #' provided
-#' @param expression_matrix_class class of expression matrix to
-#' use (e.g. 'dgCMatrix', 'DelayedArray')
+#' @param expression_matrix_class deprecated. See `?createExprObj` for details
 #' @param h5_file path to h5 file
 #' @param verbose be verbose when building Giotto object
 #' @returns `giotto` object
@@ -218,7 +217,7 @@ createGiottoObject <- function(expression,
     instructions = NULL,
     cores = determine_cores(),
     raw_exprs = NULL,
-    expression_matrix_class = c("dgCMatrix", "DelayedArray"),
+    expression_matrix_class = deprecated(),
     h5_file = NULL,
     verbose = FALSE) {
     debug_msg <- FALSE # for reading debug help
@@ -234,6 +233,13 @@ createGiottoObject <- function(expression,
             )
         )
         images <- c(images, largeImages)
+    }
+
+    if (is_present(expression_matrix_class)) {
+        warning(sprintf(
+            "[createGiottoObject] param '%s' is deprecated",
+            "expression_matrix_class"),
+        call. = FALSE)
     }
 
     # create minimum giotto
@@ -345,8 +351,7 @@ createGiottoObject <- function(expression,
             sparse = TRUE,
             cores = cores,
             default_feat_type = expression_feat,
-            verbose = debug_msg,
-            expression_matrix_class = expression_matrix_class
+            verbose = debug_msg
         )
         ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
         ## evaluate if h5_file exists
