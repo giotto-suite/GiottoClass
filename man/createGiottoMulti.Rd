@@ -4,15 +4,18 @@
 \alias{createGiottoMulti}
 \title{Create a giottoMulti object}
 \usage{
-createGiottoMulti(objects, active = NULL, instructions = NULL)
+createGiottoMulti(objects, instructions = NULL, source = NULL)
 }
 \arguments{
 \item{objects}{named \code{list} of \code{giotto} objects}
 
-\item{active}{\code{character} vector of object names to mark active. Defaults
-to all.}
-
 \item{instructions}{a \code{giottoInstructions} object (optional)}
+
+\item{source}{on-disk source / project manager (e.g.
+\link[GiottoDisk:gDirSource]{GiottoDisk::gDirSource}) for cross-sample shared-domain artifacts.
+If \code{NULL} (default), auto-acquired from the first sourced child; if
+no child carries a source, the multi is in-memory. When supplied,
+must be the same backend class as any source the children carry.}
 }
 \value{
 \code{giottoMulti}

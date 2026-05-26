@@ -17,7 +17,7 @@ getPolygonInfo(gobject, ...)
   simplify = TRUE
 )
 
-\S4method{getPolygonInfo}{giottoMulti}(gobject, object = NULL, unfiltered = FALSE, ...)
+\S4method{getPolygonInfo}{giottoMulti}(gobject, object = NULL, ...)
 }
 \arguments{
 \item{gobject}{giotto object}

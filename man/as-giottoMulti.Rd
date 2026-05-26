@@ -7,8 +7,8 @@
 \description{
 Useful as a quick path for code that wants to operate uniformly on a multi
 (no class branches), and to gain the lazy view layer (\code{subset()} /
-\code{rebuildMaps()} / \code{compact()} / view-filter on read) on top of a single
-giotto without committing to a destructive in-place subset.
+\code{compact()} / view-filter on read) on top of a single giotto without
+committing to a destructive in-place subset.
 }
 \details{
 The child is named \code{"sample1"} by default. To pick a different name use

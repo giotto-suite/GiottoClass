@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 
 `giottoMulti` is a container for **multiple `giotto` objects analyzed in a shared expression space**. Each child keeps its own spatial information (different physical / embedding spaces); shared analyses (joint normalization, dim reduction, NN graphs, clustering, integration) live on the parent.
 
-This is distinct from `joinGiottoObjects()`, which merges multiple giottos into one — destructive, loses per-sample addressability. `giottoMulti` keeps the children intact and provides a non-destructive view layer on top.
+This is distinct from `joinGiottoObjects()`, which merges multiple giottos into one — destructive, loses per-sample addressability. `giottoMulti` keeps the children intact and adds a separate joint analysis layer on top.
 
 ## When to use it
 
@@ -51,7 +51,6 @@ mg
 The `show` output surfaces:
 
 * the children and their cell / feature counts
-* the active scope (when narrower than all children)
 * the current view: how many cells / features are visible vs total
 * which joint shared slots are populated
 
@@ -69,22 +68,25 @@ Feature IDs are passthrough by default — the feature panel is shared vocabular
 
 ## Joint expression: assembly then override
 
-`getExpression(mg)` does the right thing depending on whether the joint slot is populated:
+`getExpression(mg)` has two modes depending on whether `mg@expression` has been written to:
+
+- **Empty (default after construction)** → assembles a baseline view live from the children: each child's matching `exprObj`, columns renamed to `sample::id`, features intersected, then `cbind`. Useful for QC and inspection before any batch correction has been run.
+- **Populated** → reads directly from `mg@expression`. The slot is authoritative; the assembly path is no longer used.
 
 ```{r}
-# No joint slot populated yet — assembles naively from children
+# Empty: assembled from children
 e <- getExpression(mg)
 dim(e[])
 colnames(e[])
 ```
 
-This is the baseline view: per-child expression matrices concatenated with `sample::id` column names, features intersected. Useful for QC and inspection before any batch correction has been run.
+The same destructive-at-first-write lifecycle applies to `@cell_metadata` and `@feat_metadata`: assembled live while empty, materialized on the first `setCellMetadata` / `setFeatureMetadata` call, after which child edits no longer propagate to the multi's view.
 
-Once you run integration (Harmony, scVI, Symphony, etc.) on the joint matrix and get a corrected one back, write it via `setExpression(mg, joint_matrix)` — that slot now becomes authoritative, and `getExpression(mg)` reads from it.
+After running integration (Harmony, scVI, Symphony, etc.) on the assembled matrix, write the corrected joint matrix back via `setExpression(mg, joint_matrix)` — that's the transition into "populated" mode.
 
-## Non-destructive subset
+## Subset
 
-`subset()` narrows `@id_map` only — children are untouched, joint slots stay full. The view filter applies on every read.
+`subset()` narrows the joint analysis view of the multi — eagerly: `@id_map` and every *already-populated* joint slot are trimmed in place. Empty joint slots stay empty (subset is a free op on them; assembly later intersects with the narrower `@id_map` automatically). Children (the spatial axis) are not touched.
 
 ```{r}
 mg_qc <- subset(mg, cells = c("visium::c1", "visium::c2", "viz::c1"))
@@ -93,57 +95,30 @@ mg_qc
 # Reads reflect the narrowed view
 ncol(getExpression(mg_qc)[])
 
-# Children intact — full data still there
+# Children are untouched — their full spatial state is still there
 length(spatIDs(mg_qc@objects$visium))
 ```
 
-To widen back to the full view:
+To widen back to the full view, use the pre-subset object — `subset()` returns a new `giottoMulti`, so the original `mg` is unchanged:
 
 ```{r}
-mg_full <- rebuildMaps(mg_qc)
-spatIDs(mg_full)
+# original is untouched (R copy-on-modify)
+spatIDs(mg)
 ```
 
-To commit to a subset and free the dropped joint data from memory:
-
-```{r}
-# populate something in a joint slot so compact has work to do
-e2 <- getExpression(g1)
-mat <- e2[]
-colnames(mat) <- paste("visium", colnames(mat), sep = "::")
-e2[] <- mat
-mg_qc@expression <- list(cell = list(rna = list(raw = e2)))
-
-mg_compact <- compact(mg_qc)
-# joint @expression slot is now sized to the surviving view
-ncol(mg_compact@expression$cell$rna$raw[])
-```
-
-`compact()` is one-way — once dropped, that data is gone. Use after committing to a cohort; keep things lazy via the view filter until then.
+If you need a child's spatial state narrowed to a current view, do that on the child explicitly via `@id_map` lookups.
 
 ## Per-child operations
 
-Spatial-domain accessors take an `object =` argument to route per child:
+Spatial-domain accessors take an `object =` argument to scope per child. Children are returned as-is — `subset()` on the multi narrows the joint analysis view, not children's spatial state.
 
 ```{r}
 # Spatial locations for one specific child
 getSpatialLocations(mg, object = "visium")
 
-# All active children — returns a named list
+# All children — returns a named list
 sl_all <- getSpatialLocations(mg)
 names(sl_all)
-```
-
-These also apply the view filter by default. Pass `unfiltered = TRUE` to bypass:
-
-```{r}
-mg_sub <- subset(mg, cells = "visium::c1")
-
-# default: narrowed by view
-nrow(getSpatialLocations(mg_sub, object = "visium")$visium[])
-
-# escape hatch: full child content
-nrow(getSpatialLocations(mg_sub, object = "visium", unfiltered = TRUE)$visium[])
 ```
 
 Per-child setters require an explicit `object =` target:
@@ -153,38 +128,25 @@ setSpatialLocations(mg, x = my_locs, object = "visium")
 setPolygonInfo(mg, x = my_polys, object = "viz")
 ```
 
-## Active scope
+## Slicing a smaller multi
 
-`@active` controls which children per-child operations route to by default. Set it via `activeObjects<-` to scope subsequent calls:
-
-```{r}
-activeObjects(mg) <- "visium"
-# now getX operations on the multi only touch "visium"
-spatIDs(mg)
-
-activeObjects(mg) <- NULL  # reset to all
-spatIDs(mg)
-```
-
-## Single-object wrap
-
-You can wrap a single `giotto` as a one-child `giottoMulti` to use the view layer (subset, compact) without committing to a destructive subset:
+To carve out a giottoMulti with a subset of the children, slice with `[`:
 
 ```{r}
-mg_single <- as(g1, "giottoMulti")
-mg_single
-
-# Same lazy view layer applies
-mg_narrowed <- subset(mg_single, cells = c("sample1::c1", "sample1::c3"))
-spatIDs(mg_narrowed)
-rebuildMaps(mg_narrowed)
+mg_one <- mg["visium"]
+names(mg_one)
+spatIDs(mg_one)
 ```
+
+There is no stateful "active" pointer to flip — every per-child operation takes an explicit `object =`, so scope is always at the call site. For one-off per-child queries, prefer `spatIDs(mg, object = "visium")` over `spatIDs(mg["visium"])`.
+
+> **Side note: single-object wrap.** `as(g, "giottoMulti")` will coerce a single `giotto` into a one-child `giottoMulti`. This is mostly here so downstream code that branches on `giotto` vs `giottoMulti` can operate uniformly when handed a single sample. For interactive use on one sample, just work with the `giotto` directly.
 
 ## Realigning after manual edits
 
 If you edit a child directly (e.g. by replacing it with `mg[["a"]] <- new_g` or by mutating a slot outside the approved op surface), the cached `@id_map` may be out of sync. `initialize(mg)` re-detects via the cached length signature and rebuilds when needed — cheap on every call, no-op when nothing changed.
 
-`rebuildMaps(mg)` forces a rebuild even when signatures match — use this if you've made a same-length-different-content change to a child.
+For an exotic same-length-different-content child edit, just reconstruct: `createGiottoMulti(mg@objects, source = mg@source)` starts fresh, no cached signature.
 
 ## Relationship to other containers
 
@@ -192,7 +154,7 @@ If you edit a child directly (e.g. by replacing it with `mg[["a"]] <- new_g` or 
 |---|---|---|---|---|
 | Per-sample addressability | ✅ | ❌ (merged) | partial | by `sample_id` filter |
 | Per-sample spatial state | ✅ rich | merged with offsets | thin | thin |
-| Non-destructive subset | ✅ via view filter | ❌ | ❌ | ❌ |
+| Subset semantics | eager on joint axis, value-semantic undo | destructive | destructive | destructive |
 | Joint analysis layer | ✅ | inherent | via JoinLayers | inherent |
 
 `giottoMulti` and `joinGiottoObjects()` are siblings, not nested: one preserves per-sample spaces, the other merges. Convert between them when needed.
