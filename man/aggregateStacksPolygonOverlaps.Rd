@@ -35,10 +35,10 @@ aggregateStacksPolygonOverlaps(g,
 )
 }
 \seealso{
-Other aggregate stacks: 
-\code{\link{aggregateStacks}()},
-\code{\link{aggregateStacksExpression}()},
-\code{\link{aggregateStacksLocations}()},
-\code{\link{aggregateStacksPolygons}()}
+Other aggregate stacks:
+\code{\link[=aggregateStacks]{aggregateStacks()}},
+\code{\link[=aggregateStacksExpression]{aggregateStacksExpression()}},
+\code{\link[=aggregateStacksLocations]{aggregateStacksLocations()}},
+\code{\link[=aggregateStacksPolygons]{aggregateStacksPolygons()}}
 }
 \concept{aggregate stacks}

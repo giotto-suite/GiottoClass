@@ -24,9 +24,9 @@ rectVertices(c(x = 1, y = 2))
 \seealso{
 \link{generate_grid}
 
-Other polygon stamping: 
-\code{\link{circleVertices}()},
-\code{\link{hexVertices}()},
-\code{\link{polyStamp}()}
+Other polygon stamping:
+\code{\link[=circleVertices]{circleVertices()}},
+\code{\link[=hexVertices]{hexVertices()}},
+\code{\link[=polyStamp]{polyStamp()}}
 }
 \concept{polygon stamping}

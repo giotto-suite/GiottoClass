@@ -8,7 +8,7 @@ showNetworks(...)
 }
 \arguments{
 \item{...}{
-  Arguments passed on to \code{\link[=showGiottoSpatNetworks]{showGiottoSpatNetworks}}
+  Arguments passed on to \code{\link{showGiottoSpatNetworks}}
   \describe{
     \item{\code{gobject}}{a giotto object}
     \item{\code{nrows}}{number of rows to print}

@@ -9,7 +9,7 @@ reduceData(x, param, ...)
 \arguments{
 \item{x}{a data object}
 
-\item{param}{a \linkS4class{reduceParam} inheriting object}
+\item{param}{a \link[=reduceParam-class]{reduceParam} inheriting object}
 
 \item{...}{additional arguments, for use in specific methods}
 }

@@ -9,7 +9,7 @@ filterData(x, param, ...)
 \arguments{
 \item{x}{a data object}
 
-\item{param}{a \linkS4class{filterParam} inheriting object}
+\item{param}{a \link[=filterParam-class]{filterParam} inheriting object}
 
 \item{...}{additional arguments, for use in specific methods}
 }

@@ -15,7 +15,9 @@
 \item{...}{
   Arguments passed on to \code{\link[terra:density]{terra::density}}
   \describe{
-    \item{\code{}}{}
+    \item{\code{maxcells}}{the maximum number of (randomly sampled) cells to be used for creating the plot}
+    \item{\code{plot}}{if \code{TRUE} produce a plot, else return a density object}
+    \item{\code{main}}{character. Caption of plot(s)}
   }}
 }
 \value{

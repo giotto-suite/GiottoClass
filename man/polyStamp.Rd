@@ -62,9 +62,9 @@ plot(rect_poly)
 \seealso{
 \link{generate_grid} \link{tessellate}
 
-Other polygon stamping: 
-\code{\link{circleVertices}()},
-\code{\link{hexVertices}()},
-\code{\link{rectVertices}()}
+Other polygon stamping:
+\code{\link[=circleVertices]{circleVertices()}},
+\code{\link[=hexVertices]{hexVertices()}},
+\code{\link[=rectVertices]{rectVertices()}}
 }
 \concept{polygon stamping}

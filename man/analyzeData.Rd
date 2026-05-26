@@ -9,7 +9,7 @@ analyzeData(x, param, ...)
 \arguments{
 \item{x}{a data object}
 
-\item{param}{a \linkS4class{analyzeParam} inheriting object}
+\item{param}{a \link[=analyzeParam-class]{analyzeParam} inheriting object}
 
 \item{...}{additional arguments, for use in specific methods}
 }
