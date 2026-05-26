@@ -14,7 +14,7 @@ setSpatialNetwork(gobject, ...)
   spat_unit = NULL,
   name = NULL,
   provenance = NULL,
-  verbose = TRUE,
+  verbose = NULL,
   initialize = TRUE,
   ...
 )
@@ -53,24 +53,24 @@ spatnet <- getSpatialNetwork(g)
 setSpatialNetwork(gobject = g, x = spatnet)
 }
 \seealso{
-Other spatial network data accessor functions: 
-\code{\link{getSpatialNetwork}()}
+Other spatial network data accessor functions:
+\code{\link[=getSpatialNetwork]{getSpatialNetwork()}}
 
-Other functions to set data in giotto object: 
-\code{\link{setCellMetadata}()},
-\code{\link{setDimReduction}()},
-\code{\link{setExpression}()},
-\code{\link{setFeatureInfo}()},
-\code{\link{setFeatureMetadata}()},
+Other functions to set data in giotto object:
+\code{\link[=setCellMetadata]{setCellMetadata()}},
+\code{\link[=setDimReduction]{setDimReduction()}},
+\code{\link[=setExpression]{setExpression()}},
+\code{\link[=setFeatureInfo]{setFeatureInfo()}},
+\code{\link[=setFeatureMetadata]{setFeatureMetadata()}},
 \code{\link{setGiotto,giotto,giottoBinPoints-method}},
-\code{\link{setGiottoImage}()},
-\code{\link{setMultiomics}()},
-\code{\link{setNearestNetwork}()},
-\code{\link{setPolygonInfo}()},
-\code{\link{setSpatialEnrichment}()},
-\code{\link{setSpatialGrid}()},
-\code{\link{setSpatialLocations}()},
-\code{\link{set_multiomics}()}
+\code{\link[=setGiottoImage]{setGiottoImage()}},
+\code{\link[=setMultiomics]{setMultiomics()}},
+\code{\link[=setNearestNetwork]{setNearestNetwork()}},
+\code{\link[=setPolygonInfo]{setPolygonInfo()}},
+\code{\link[=setSpatialEnrichment]{setSpatialEnrichment()}},
+\code{\link[=setSpatialGrid]{setSpatialGrid()}},
+\code{\link[=setSpatialLocations]{setSpatialLocations()}},
+\code{\link[=set_multiomics]{set_multiomics()}}
 }
 \concept{functions to set data in giotto object}
 \concept{spatial network data accessor functions}

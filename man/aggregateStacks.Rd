@@ -57,10 +57,10 @@ aggregateStacks(g,
 )
 }
 \seealso{
-Other aggregate stacks: 
-\code{\link{aggregateStacksExpression}()},
-\code{\link{aggregateStacksLocations}()},
-\code{\link{aggregateStacksPolygonOverlaps}()},
-\code{\link{aggregateStacksPolygons}()}
+Other aggregate stacks:
+\code{\link[=aggregateStacksExpression]{aggregateStacksExpression()}},
+\code{\link[=aggregateStacksLocations]{aggregateStacksLocations()}},
+\code{\link[=aggregateStacksPolygonOverlaps]{aggregateStacksPolygonOverlaps()}},
+\code{\link[=aggregateStacksPolygons]{aggregateStacksPolygons()}}
 }
 \concept{aggregate stacks}

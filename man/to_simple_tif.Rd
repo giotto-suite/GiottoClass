@@ -46,7 +46,7 @@ change in the future. Currently tested to work with \code{.ome.tif} and \code{qp
 
 }}
 \seealso{
-Other tif utility functions: 
-\code{\link{tif_metadata}()}
+Other tif utility functions:
+\code{\link[=tif_metadata]{tif_metadata()}}
 }
 \concept{tif utility functions}

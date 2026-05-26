@@ -31,9 +31,9 @@ convHull(x, ...)
 \item{tight}{logical. Should the hull follow the outer boundaries of the input polygons? For "concave_length" with polygon geometry only}
 
 \item{...}{
-  Arguments passed on to \code{\link[terra:convhull]{terra::hull}}
+  Arguments passed on to \code{\link[terra:hull]{terra::hull}}
   \describe{
-    \item{\code{}}{}
+    \item{\code{type}}{character. One of "convex", "rectangle", "circle", "concave_ratio", "concave_length"}
   }}
 }
 \value{

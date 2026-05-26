@@ -100,10 +100,10 @@ g <- GiottoData::loadSubObjectMini("giottoPoints")
 as.sf(g)
 }
 \seealso{
-Other As coercion functions: 
-\code{\link{as.data.table.giottoBinPoints}()},
-\code{\link{as.matrix}()},
-\code{\link{as.points}()},
-\code{\link{as.polygons}()}
+Other As coercion functions:
+\code{\link[=as.data.table.giottoBinPoints]{as.data.table.giottoBinPoints()}},
+\code{\link{as.matrix}},
+\code{\link{as.points}},
+\code{\link{as.polygons}}
 }
 \concept{As coercion functions}
