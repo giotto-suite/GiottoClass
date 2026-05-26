@@ -18,7 +18,12 @@ knitr::opts_chunk$set(
 
 `giottoMulti` is a container for **multiple `giotto` objects analyzed in a shared expression space**. Each child keeps its own spatial information (different physical / embedding spaces); shared analyses (joint normalization, dim reduction, NN graphs, clustering, integration) live on the parent.
 
-This is distinct from `joinGiottoObjects()`, which merges multiple giottos into one — destructive, loses per-sample addressability. `giottoMulti` keeps the children intact and adds a separate joint analysis layer on top.
+Two design properties worth knowing up front:
+
+- **Federated, not monolithic.** Each child can carry its own on-disk source via `@source`; the multi adds one parent-level source for cross-sample joint artifacts. Samples can be archived, versioned, or handed off independently — the whole multi doesn't have to live in one container.
+- **Per-sample analysis surface.** Every child is a full `giotto` object usable standalone. Per-sample QC, normalization, clustering, etc. pre-integration uses the same API as single-sample analysis. The multi adds the joint layer; it doesn't replace the per-sample API.
+
+This is distinct from `joinGiottoObjects()`, which merges multiple giottos into one — destructive, loses per-sample addressability.
 
 ## When to use it
 
@@ -154,6 +159,8 @@ For an exotic same-length-different-content child edit, just reconstruct: `creat
 |---|---|---|---|---|
 | Per-sample addressability | ✅ | ❌ (merged) | partial | by `sample_id` filter |
 | Per-sample spatial state | ✅ rich | merged with offsets | thin | thin |
+| Federated on-disk per sample | ✅ via `@source` | ❌ (merged) | ❌ | ❌ |
+| Per-sample standalone analysis | ✅ (child is full giotto) | ❌ | ❌ | partial |
 | Subset semantics | eager on joint axis, value-semantic undo | destructive | destructive | destructive |
 | Joint analysis layer | ✅ | inherent | via JoinLayers | inherent |
 
