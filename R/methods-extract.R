@@ -1154,7 +1154,7 @@ setMethod(
             if (!inherits(o[[feat]], "overlapInfo")) {
                 warning("[subset overlaps feats] unrecognized overlap type")
             }
-            o[[feat]] <- o[[feat]][, i, ids = FALSE]
+            o[[feat]] <- o[[feat]][, i]
         }
         o
     }
@@ -1407,12 +1407,11 @@ setMethod("[",
         i = "gIndex",
         j = "missing",
         drop = "missing"
-    ), function(x, i, j, ..., use_names = FALSE, ids = TRUE, drop) {
-        if (!isTRUE(ids)) {
-            res <- .subset_overlap_point_dt_i(x, i)
-            return(res)
+    ), function(x, i, j, ..., use_names = FALSE, ids = FALSE, drop) {
+        if (isTRUE(ids)) {
+            return(.select_overlap_point_dt_i(x, i, use_names = use_names))
         }
-        .select_overlap_point_dt_i(x, i, use_names = use_names)
+        .subset_overlap_point_dt_i(x, i)
     }
 )
 
@@ -1424,12 +1423,11 @@ setMethod("[",
         i = "missing",
         j = "gIndex",
         drop = "missing"
-    ), function(x, i, j, ..., use_names = FALSE, ids = TRUE, drop) {
-        if (!isTRUE(ids)) {
-            res <- .subset_overlap_point_dt_j(x, j)
-            return(res)
+    ), function(x, i, j, ..., use_names = FALSE, ids = FALSE, drop) {
+        if (isTRUE(ids)) {
+            return(.select_overlap_point_dt_j(x, j, use_names = use_names))
         }
-        .select_overlap_point_dt_j(x, j, use_names = use_names)
+        .subset_overlap_point_dt_j(x, j)
     }
 )
 
