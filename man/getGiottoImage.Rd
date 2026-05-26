@@ -10,7 +10,7 @@ getGiottoImage(gobject, ...)
 
 \S4method{getGiottoImage}{giotto}(gobject, image_type = NULL, name = NULL)
 
-\S4method{getGiottoImage}{giottoMulti}(gobject, object = NULL, unfiltered = FALSE, ...)
+\S4method{getGiottoImage}{giottoMulti}(gobject, object = NULL, ...)
 }
 \arguments{
 \item{gobject}{giotto object}

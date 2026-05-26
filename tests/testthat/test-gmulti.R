@@ -1,6 +1,6 @@
 # Tests for giottoMulti — sketch-level coverage only.
 # Verifies the basic class machinery: construction, introspection, id_map,
-# activeObjects accessor, and spatIDs/featIDs dispatch on global IDs.
+# and spatIDs/featIDs dispatch on global IDs.
 
 .mk_minimal <- function(ncell, nfeat) {
     m <- matrix(0, nrow = nfeat, ncol = ncell)
@@ -73,23 +73,6 @@ test_that("featIDs returns uniques by default", {
 
     expect_identical(featIDs(mg), c("f1", "f2", "f3", "f4"))
     expect_identical(length(featIDs(mg, uniques = FALSE)), 8L)
-})
-
-test_that("activeObjects get/set works and validates", {
-    g1 <- .mk_minimal(5, 4)
-    g2 <- .mk_minimal(3, 4)
-    mg <- createGiottoMulti(list(a = g1, b = g2))
-
-    # default: all
-    expect_identical(activeObjects(mg), c("a", "b"))
-
-    activeObjects(mg) <- "a"
-    expect_identical(activeObjects(mg), "a")
-
-    activeObjects(mg) <- NULL
-    expect_identical(activeObjects(mg), c("a", "b"))
-
-    expect_error(activeObjects(mg) <- "nope", "unknown object")
 })
 
 test_that("[[<- replaces a child", {
@@ -256,17 +239,15 @@ test_that("setGiotto on giottoMulti routes shared subobject to parent", {
     expect_identical(dim(e2[]), c(4L, 5L))
 })
 
-test_that("set_default_spat_unit/feat_type fall back to @access on giottoMulti", {
+test_that("set_default_spat_unit/feat_type fall back to first child on giottoMulti", {
     g1 <- .mk_minimal(5, 4)
     mg <- createGiottoMulti(list(a = g1))
-    # parent slots are empty; defaults should come from the @access cache
-    # populated by the constructor (per-child defaults).
     expect_null(mg@expression)
 
     su <- set_default_spat_unit(mg)
     ft <- set_default_feat_type(mg, spat_unit = su)
-    expect_identical(su, mg@access$spat_unit[[1L]])
-    expect_identical(ft, mg@access$feat_type[[1L]])
+    expect_identical(su, set_default_spat_unit(g1))
+    expect_identical(ft, set_default_feat_type(g1, spat_unit = su))
 })
 
 test_that("setGiotto on giottoMulti routes spatial subobject per-child", {
@@ -284,7 +265,7 @@ test_that("setGiotto on giottoMulti routes spatial subobject per-child", {
 })
 
 
-# id_map caching: fast-path initialize, rebuildMaps escape hatch ####
+# id_map caching: fast-path initialize ####
 
 test_that("constructor populates id_sig alongside id_map", {
     g1 <- .mk_minimal(5, 4)
@@ -325,7 +306,7 @@ test_that("initialize rebuilds id_map when child length signature changes", {
     expect_identical(mg2@id_sig$a$cell, lengths(g1_smaller@cell_ID))
 })
 
-test_that("rebuildMaps forces a rebuild even when signatures match", {
+test_that("clearing @id_sig forces a rebuild even when length matches", {
     g1 <- .mk_minimal(5, 4)
     mg <- createGiottoMulti(list(a = g1))
 
@@ -333,8 +314,10 @@ test_that("rebuildMaps forces a rebuild even when signatures match", {
     mg@id_map$cells <- mg@id_map$cells[1:2, ]
     # signatures still match children's actual lengths, so initialize fast-paths
     expect_identical(nrow(initialize(mg)@id_map$cells), 2L)
-    # but rebuildMaps clears @id_sig first → full rebuild
-    expect_identical(nrow(rebuildMaps(mg)@id_map$cells), 5L)
+    # clearing @id_sig before initialize forces a full rebuild — same path
+    # internal callers like `[` and `names<-` use
+    mg@id_sig <- list()
+    expect_identical(nrow(initialize(mg)@id_map$cells), 5L)
 })
 
 
@@ -374,22 +357,24 @@ test_that("subset warns on missing globals", {
     )
 })
 
-test_that("rebuildMaps restores full view after a subset", {
+test_that("subset is non-destructive on the parent (value semantics)", {
+    # R's copy-on-modify means subset() returns a new giottoMulti without
+    # touching the original. The "undo" is just keeping the original around.
     g1 <- .mk_minimal(5, 4)
     g2 <- .mk_minimal(3, 4)
     mg <- createGiottoMulti(list(a = g1, b = g2))
 
     mg2 <- subset(mg, cells = c("a::c1"))
     expect_identical(nrow(mg2@id_map$cells), 1L)
-
-    mg3 <- rebuildMaps(mg2)
-    expect_identical(nrow(mg3@id_map$cells), 8L)  # 5 + 3
+    # original is untouched
+    expect_identical(nrow(mg@id_map$cells), 8L)  # 5 + 3
 })
 
 
-# View filter: getters reflect @id_map without trimming the joint slots ####
+# Eager subset: populated joint slots trim in place; empty slots stay
+# empty and assembly intersects with @id_map at read time ####
 
-test_that("getExpression applies id_map view filter on giottoMulti", {
+test_that("subset trims populated joint @expression in place", {
     g1 <- .mk_minimal(5, 4)
     mg <- createGiottoMulti(list(a = g1))
 
@@ -400,21 +385,18 @@ test_that("getExpression applies id_map view filter on giottoMulti", {
     e[] <- mat
     mg@expression <- list(cell = list(rna = list(raw = e)))
 
-    # full view: all 5 cells
     expect_identical(ncol(getExpression(mg)[]), 5L)
 
-    # subset narrows the view; joint slot stays full
     mg2 <- subset(mg, cells = c("a::c1", "a::c3"))
+    # populated slot was trimmed in place — joint @expression IS the 2 cols
+    expect_identical(ncol(mg2@expression$cell$rna$raw[]), 2L)
     expect_identical(ncol(getExpression(mg2)[]), 2L)
-    # joint slot itself is untouched
-    expect_identical(ncol(mg2@expression$cell$rna$raw[]), 5L)
-
-    # rebuildMaps restores the full view without re-supplying expression
-    mg3 <- rebuildMaps(mg2)
-    expect_identical(ncol(getExpression(mg3)[]), 5L)
+    # original mg still shows the full view (R copy-on-modify)
+    expect_identical(ncol(mg@expression$cell$rna$raw[]), 5L)
+    expect_identical(ncol(getExpression(mg)[]), 5L)
 })
 
-test_that("getCellMetadata applies id_map view filter on giottoMulti", {
+test_that("subset trims populated joint @cell_metadata in place", {
     g1 <- .mk_minimal(5, 4)
     mg <- createGiottoMulti(list(a = g1))
 
@@ -427,50 +409,55 @@ test_that("getCellMetadata applies id_map view filter on giottoMulti", {
     expect_identical(nrow(getCellMetadata(mg)[]), 5L)
     mg2 <- subset(mg, cells = c("a::c2"))
     expect_identical(nrow(getCellMetadata(mg2)[]), 1L)
-    # joint slot untouched
-    expect_identical(nrow(mg2@cell_metadata$cell$rna[]), 5L)
+    # joint slot is now narrowed in place
+    expect_identical(nrow(mg2@cell_metadata$cell$rna[]), 1L)
 })
 
-
-# Per-child view filter (default-on, unfiltered escape hatch) ####
-
-test_that("getSpatialLocations per-child filters by id_map's local IDs", {
+test_that("subset on empty multi narrows id_map; assembly honors it", {
+    # No joint slot populated — subset just narrows id_map, no copy. Reads
+    # then assemble from children and intersect with @id_map at the end.
     g1 <- .mk_minimal(5, 4)
     g2 <- .mk_minimal(3, 4)
     mg <- createGiottoMulti(list(a = g1, b = g2))
 
-    # subset narrows globals for child "a" to c1, c3 (locals c1, c3 of a)
+    expect_length(mg@expression, 0L)
+
+    mg2 <- subset(mg, cells = c("a::c1", "b::c2"))
+    # still empty; subset is a pure id_map narrow + zero-cost on empty slots
+    expect_length(mg2@expression, 0L)
+    # assembly path runs on read, intersects with id_map
+    e <- getExpression(mg2)
+    expect_identical(colnames(e[]), c("a::c1", "b::c2"))
+})
+
+
+# Per-child getters: children are the spatial axis; subset does not touch
+# them. Reads return child content as-is. ####
+
+test_that("getSpatialLocations on giottoMulti returns child content as-is", {
+    # subset narrows the joint analysis view, not children's spatial state.
+    # Per-child reads pass through whatever the child has.
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
     mg2 <- subset(mg, cells = c("a::c1", "a::c3", "b::c1"))
 
     sl_a <- getSpatialLocations(mg2, object = "a")$a
     expect_s4_class(sl_a, "spatLocsObj")
-    expect_identical(sort(sl_a[]$cell_ID), c("c1", "c3"))
+    # child a still has all 5 cells — subset did not touch children
+    expect_identical(sort(sl_a[]$cell_ID),
+        c("c1", "c2", "c3", "c4", "c5"))
 
     sl_b <- getSpatialLocations(mg2, object = "b")$b
-    expect_identical(sl_b[]$cell_ID, "c1")
-
-    # underlying child slot untouched
-    expect_identical(length(spatIDs(mg2@objects$a)), 5L)
-})
-
-test_that("unfiltered = TRUE returns the child's full content", {
-    g1 <- .mk_minimal(5, 4)
-    mg <- createGiottoMulti(list(a = g1))
-    mg2 <- subset(mg, cells = c("a::c1"))
-
-    # default: narrowed
-    sl_filtered <- getSpatialLocations(mg2, object = "a")$a
-    expect_identical(nrow(sl_filtered[]), 1L)
-
-    # escape hatch: full child
-    sl_full <- getSpatialLocations(mg2, object = "a", unfiltered = TRUE)$a
-    expect_identical(nrow(sl_full[]), 5L)
+    expect_identical(sort(sl_b[]$cell_ID), c("c1", "c2", "c3"))
 })
 
 
-# compact: materialize the view, trim joint slots ####
+# Subset is eager: populated joint slots are trimmed in place by subset
+# itself. There is no separate "compact" / "materialize-view" step. ####
 
-test_that("compact trims joint @expression to the current view", {
+test_that("subset eagerly trims populated joint @expression", {
     g1 <- .mk_minimal(5, 4)
     mg <- createGiottoMulti(list(a = g1))
 
@@ -482,32 +469,8 @@ test_that("compact trims joint @expression to the current view", {
     mg@expression <- list(cell = list(rna = list(raw = e)))
 
     mg2 <- subset(mg, cells = c("a::c1", "a::c3"))
-    # before compact: joint slot stores full 5 cols, view filter exposes 2
-    expect_identical(ncol(mg2@expression$cell$rna$raw[]), 5L)
-    expect_identical(ncol(getExpression(mg2)[]), 2L)
-
-    mg3 <- compact(mg2)
-    # after compact: joint slot itself is now 2 cols
-    expect_identical(ncol(mg3@expression$cell$rna$raw[]), 2L)
-    # view filter is a no-op (already trimmed)
-    expect_identical(ncol(getExpression(mg3)[]), 2L)
-})
-
-test_that("compact trims joint @cell_metadata to the current view", {
-    g1 <- .mk_minimal(5, 4)
-    mg <- createGiottoMulti(list(a = g1))
-
-    cm1 <- g1@cell_metadata$cell$rna
-    dt <- cm1[]
-    dt$cell_ID <- paste("a", dt$cell_ID, sep = "::")
-    cm1[] <- dt
-    mg@cell_metadata <- list(cell = list(rna = cm1))
-
-    mg2 <- subset(mg, cells = c("a::c2"))
-    expect_identical(nrow(mg2@cell_metadata$cell$rna[]), 5L)
-
-    mg3 <- compact(mg2)
-    expect_identical(nrow(mg3@cell_metadata$cell$rna[]), 1L)
+    # joint slot was trimmed in place — IS 2 cols, not the original 5
+    expect_identical(ncol(mg2@expression$cell$rna$raw[]), 2L)
 })
 
 test_that("getExpression assembles joint matrix from children when empty", {
@@ -595,7 +558,9 @@ test_that("setExpression on giottoMulti overrides assembly", {
 })
 
 
-test_that("compact leaves children untouched", {
+test_that("subset leaves children untouched", {
+    # Children are the spatial axis; subset narrows the joint analysis view
+    # only. Per-child accessors continue to see the child's full state.
     g1 <- .mk_minimal(5, 4)
     mg <- createGiottoMulti(list(a = g1))
 
@@ -605,8 +570,7 @@ test_that("compact leaves children untouched", {
     e[] <- mat
     mg@expression <- list(cell = list(rna = list(raw = e)))
 
-    mg2 <- compact(subset(mg, cells = c("a::c1")))
-    # children intact
+    mg2 <- subset(mg, cells = c("a::c1"))
     expect_identical(length(spatIDs(mg2@objects$a)), 5L)
 })
 
@@ -623,7 +587,7 @@ test_that("as(g, 'giottoMulti') wraps a single giotto with default name", {
     expect_identical(length(spatIDs(mg@objects$sample1)), 5L)
 })
 
-test_that("wrapped giottoMulti exposes the lazy view layer", {
+test_that("wrapped giottoMulti supports eager subset with value-semantic undo", {
     g <- .mk_minimal(5, 4)
     mg <- as(g, "giottoMulti")
 
@@ -636,9 +600,8 @@ test_that("wrapped giottoMulti exposes the lazy view layer", {
     expect_identical(spatIDs(mg2), c("sample1::c1", "sample1::c3"))
     expect_identical(length(spatIDs(mg2@objects$sample1)), 5L)
 
-    # rebuildMaps restores
-    mg3 <- rebuildMaps(mg2)
-    expect_identical(length(spatIDs(mg3)), 5L)
+    # the original wrapped multi is untouched (value semantics)
+    expect_identical(length(spatIDs(mg)), 5L)
 })
 
 test_that("show(mg) surfaces children, view counts, joint slots", {
@@ -646,7 +609,7 @@ test_that("show(mg) surfaces children, view counts, joint slots", {
     g2 <- .mk_minimal(3, 4)
     mg <- createGiottoMulti(list(a = g1, b = g2))
 
-    # unfiltered: no "(filtered)" tag
+    # default view: no "(filtered)" tag
     expect_output(show(mg), "2 child object\\(s\\)")
     expect_output(show(mg), "a: 5 cells, 4 features")
     expect_output(show(mg), "b: 3 cells, 4 features")
@@ -708,14 +671,13 @@ test_that("mg[i] subsets children, returning a smaller giottoMulti", {
     expect_error(mg["nope"], "unknown child")
 })
 
-test_that("names(mg) <- renames children and refreshes id_map / access", {
+test_that("names(mg) <- renames children and refreshes id_map", {
     g1 <- .mk_minimal(5, 4)
     g2 <- .mk_minimal(3, 4)
     mg <- createGiottoMulti(list(a = g1, b = g2))
 
     names(mg) <- c("x", "y")
     expect_identical(names(mg), c("x", "y"))
-    expect_identical(mg@access$object, c("x", "y"))
     expect_identical(sort(unique(mg@id_map$cells$object)), c("x", "y"))
     expect_identical(spatIDs(mg),
         c(paste0("x::c", 1:5), paste0("y::c", 1:3)))
@@ -789,17 +751,14 @@ test_that("activeSpatUnit / activeFeatType return per-child vectors", {
     expect_true(all(ft == "rna"))
 })
 
-
-test_that("show(mg) reports active scope only when narrower than all", {
+test_that("activeSpatUnit on giottoMulti reflects live child state", {
+    # The previous @access cache would have frozen the construction-time
+    # value here. Live-derive means a child swap is reflected immediately.
     g1 <- .mk_minimal(5, 4)
-    g2 <- .mk_minimal(3, 4)
-    mg <- createGiottoMulti(list(a = g1, b = g2))
+    mg <- createGiottoMulti(list(a = g1))
 
-    # default active = all → no active line
-    expect_failure(expect_output(show(mg), "active:"))
-
-    activeObjects(mg) <- "a"
-    expect_output(show(mg), "active: a")
+    activeSpatUnit(mg@objects$a) <- "renamed_unit"
+    expect_identical(unname(activeSpatUnit(mg)), "renamed_unit")
 })
 
 
@@ -860,4 +819,102 @@ test_that("explicit source class mismatch with children errors", {
             source = structure(list(), class = "srcB")),
         "does not match"
     )
+})
+
+
+# Destructive-at-first-write metadata semantics --------------------------
+# multi@cell_metadata is empty by default: pDataDT assembles children live.
+# After setCellMetadata (the first write), multi holds its own copy and
+# reads come from there directly — child changes no longer propagate.
+# Mirrors how `@expression` materializes a union store on first write.
+
+test_that("pDataDT on fresh multi assembles live from children", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
+    expect_length(mg@cell_metadata, 0L)
+    pd <- pDataDT(mg)
+    expect_identical(nrow(pd), 8L)
+    expect_true("list_ID" %in% names(pd))
+})
+
+test_that("setCellMetadata materializes; subsequent pDataDT returns exactly what was set", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
+    # Round-trip pattern: read assembled, modify, set back
+    cm <- getCellMetadata(mg, output = "cellMetaObj")
+    cm[][, cluster := rep(c("X", "Y"), length.out = nrow(cm[]))]
+    mg <- setCellMetadata(mg, x = cm, verbose = FALSE)
+
+    # Multi is now materialized
+    expect_true(inherits(mg@cell_metadata$cell$rna, "cellMetaObj"))
+
+    # pDataDT returns exactly the set table (no merge with children)
+    pd <- pDataDT(mg)
+    expect_true("cluster" %in% names(pd))
+    expect_setequal(pd$cluster, c("X", "Y"))
+    # list_ID was in the assembled view; it survived the round-trip
+    expect_true("list_ID" %in% names(pd))
+})
+
+test_that("addCellMetadata materializes the assembled view on first add", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
+    expect_length(mg@cell_metadata, 0L)
+
+    # addCellMetadata on a fresh multi: internally reads assembled view +
+    # merges the new column by cell_ID + writes back via setCellMetadata.
+    new_dt <- data.table::data.table(
+        cell_ID = c(paste0("a::c", 1:5), paste0("b::c", 1:3)),
+        flag = rep(c(TRUE, FALSE), length.out = 8L)
+    )
+    mg <- addCellMetadata(mg, new_metadata = new_dt,
+        by_column = TRUE, column_cell_ID = "cell_ID")
+
+    # Multi is now materialized
+    expect_true(inherits(mg@cell_metadata$cell$rna, "cellMetaObj"))
+    pd <- pDataDT(mg)
+    expect_true("flag" %in% names(pd))
+    expect_identical(sum(pd$flag), 4L)
+})
+
+test_that("child standalone view is untouched by multi-level writes", {
+    g1 <- .mk_minimal(5, 4)
+    mg <- createGiottoMulti(list(a = g1))
+
+    cm <- getCellMetadata(mg, output = "cellMetaObj")
+    cm[][, cluster := "X"]
+    mg <- setCellMetadata(mg, x = cm, verbose = FALSE)
+
+    # Child accessed standalone — no `cluster` column from multi
+    child_pd <- pDataDT(mg@objects$a)
+    expect_false("cluster" %in% names(child_pd))
+})
+
+test_that("after materialization, child updates do not propagate to multi", {
+    g1 <- .mk_minimal(5, 4)
+    g2 <- .mk_minimal(3, 4)
+    mg <- createGiottoMulti(list(a = g1, b = g2))
+
+    # Materialize the multi
+    cm <- getCellMetadata(mg, output = "cellMetaObj")
+    mg <- setCellMetadata(mg, x = cm, verbose = FALSE)
+
+    # Now edit a child's metadata standalone
+    child_a <- mg@objects$a
+    child_a <- addCellMetadata(child_a,
+        new_metadata = data.table::data.table(
+            cell_ID = paste0("c", 1:5),
+            sample_only = "tagged"),
+        by_column = TRUE, column_cell_ID = "cell_ID")
+    mg@objects$a <- child_a
+
+    # Multi view does NOT show the new column — it reads its materialized copy
+    pd <- pDataDT(mg)
+    expect_false("sample_only" %in% names(pd))
 })

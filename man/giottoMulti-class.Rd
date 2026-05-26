@@ -21,11 +21,6 @@ shared across all cells.
 \item{\code{id_map}}{\code{list} with elements \code{cells} and \code{feats}, each a \code{data.table}
 mapping \verb{(object, local_id) → global_id}}
 
-\item{\code{active}}{\code{character} vector of currently-active object names. Defaults
-to all object names.}
-
-\item{\code{access}}{\code{data.frame} of per-object default \code{spat_unit} and \code{feat_type}}
-
 \item{\code{expression}}{shared expression matrices (rows = union of features,
 cols = global cell IDs)}
 
@@ -52,5 +47,11 @@ cols = global cell IDs)}
 \item{\code{versions}}{package versions}
 
 \item{\code{misc}}{miscellaneous}
+
+\item{\code{source}}{on-disk source / project manager (e.g.
+\link[GiottoDisk:gDirSource]{GiottoDisk::gDirSource}) where multi-level shared-domain artifacts
+live. \code{NULL} for in-memory multis. Children may carry their own
+per-sample sources; multi-level slots (shared \verb{@expression},
+\verb{@dimension_reduction}, \verb{@nn_network}) write to this one.}
 }}
 

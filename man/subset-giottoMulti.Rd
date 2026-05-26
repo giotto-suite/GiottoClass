@@ -18,16 +18,19 @@ no cell-level filter.}
 \item{...}{not used}
 }
 \value{
-a \code{giottoMulti} with narrowed \verb{@id_map}
+a \code{giottoMulti} with narrowed \verb{@id_map} and trimmed joint slots
 }
 \description{
-Narrow the multi's current view to a subset of global cell IDs and/or
-global feature IDs. Children are not modified — their full state is
-preserved. Only \verb{@id_map} (and joint shared slots, when populated) is
-trimmed.
+Narrow the joint analysis view of the multi to a subset of global cell IDs
+and/or global feature IDs. Eager: \verb{@id_map} is narrowed and every populated
+joint shared slot (\verb{@expression}, \verb{@cell_metadata}, \verb{@feat_metadata},
+\verb{@dimension_reduction}, \verb{@nn_network}, \verb{@spatial_enrichment}) is trimmed
+in place to the surviving globals.
 
-To restore the unfiltered view, call \code{rebuildMaps()}; this rebuilds the
-id_map from children's current state. Joint shared slots are not
-regenerated — that requires re-running whichever step produced them
-(typically integration).
+Children (\verb{@objects}) are the spatial axis and are not touched. If you
+want narrowed spatial content on a specific child, do that explicitly on
+the child.
+
+Subset returns a new \code{giottoMulti}; R copy-on-modify means the original is
+untouched and acts as the "widen back" handle.
 }

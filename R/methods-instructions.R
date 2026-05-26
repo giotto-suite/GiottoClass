@@ -250,10 +250,12 @@ setMethod(
 #' @export
 setMethod("activeSpatUnit", signature(gobject = "giottoMulti"),
     function(gobject) {
-        # Per-child defaults from @access; named vector keyed by child name.
-        out <- gobject@access$spat_unit
-        names(out) <- gobject@access$object
-        out
+        # Derive live from each child — no cache, so re-attached or mutated
+        # children always reflect their current state.
+        vapply(gobject@objects, function(g) {
+            res <- tryCatch(activeSpatUnit(g), error = function(e) NA_character_)
+            if (is.null(res)) NA_character_ else res
+        }, character(1L))
     }
 )
 
@@ -291,8 +293,9 @@ setMethod(
 #' @export
 setMethod("activeFeatType", signature(gobject = "giottoMulti"),
     function(gobject) {
-        out <- gobject@access$feat_type
-        names(out) <- gobject@access$object
-        out
+        vapply(gobject@objects, function(g) {
+            res <- tryCatch(activeFeatType(g), error = function(e) NA_character_)
+            if (is.null(res)) NA_character_ else res
+        }, character(1L))
     }
 )
