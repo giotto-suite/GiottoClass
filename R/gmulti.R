@@ -189,6 +189,14 @@ setMethod("initialize", signature("giottoMulti"), function(.Object, objects = NU
         .Object@objects <- objects
     }
 
+    # Default instructions, same lifecycle as on a single giotto: created
+    # on first initialize if not user-supplied. The multi is the object the
+    # user views and operates on, so a populated @instructions is needed
+    # for downstream tools (python path, plotting prefs, etc.).
+    if (is.null(.Object@instructions)) {
+        .Object@instructions <- createGiottoInstructions()
+    }
+
     if (length(.Object@objects) == 0L) return(.Object)
 
     # Source resolution: federated multi keeps per-child sources intact but
