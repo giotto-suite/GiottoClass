@@ -171,17 +171,17 @@ res_vect <- calculateOverlap(gpoly, gpts,
 )
 ovlp <- overlaps(res_vect, "rna")
 
-test_that("overlap `[]` subset works", {
-    # expect the feat_ID_uniq overlapped by poly 9
-    fuid9 <- ovlp[9]
+test_that("overlap `[]` selection query (ids = TRUE) works", {
+    # feat_ID_uniq overlapped by poly 9
+    fuid9 <- ovlp[9, ids = TRUE]
     expected_fuid9 <- c(
         1949, 4234, 6934, 9360, 11891, 12037, 13671, 13766, 14633, 14732,
         22670, 25184, 27910, 30742, 37026, 44881, 45922, 50053, 53519, 67618,
         68997, 69003, 69911, 70336, 72325, 74205, 76817
     )
     expect_equal(fuid9, expected_fuid9)
-    # expect the feat_ID_uniq overlapped by poly 40
-    fuid40 <- ovlp[40]
+    # feat_ID_uniq overlapped by poly 40
+    fuid40 <- ovlp[40, ids = TRUE]
     expected_fuid40 <- c(
         2184, 3710, 3870, 5862, 12664, 19589, 24959, 25368, 26082, 29026,
         36516, 45774, 49727, 50094, 50514, 53664, 53834, 54290, 54365, 54534,
@@ -189,13 +189,24 @@ test_that("overlap `[]` subset works", {
     )
     expect_equal(fuid40, expected_fuid40)
 
-    # expect poly overlapping specific features
+    # poly indices overlapping specific features
     feat_idx <- match("Bp5vKRUi", ovlp@feat_ids)
-    poly_idx_by_fidx <- head(ovlp[, feat_idx])
-    poly_idx_by_fname <- head(ovlp[, "Bp5vKRUi"])
+    poly_idx_by_fidx <- head(ovlp[, feat_idx, ids = TRUE])
+    poly_idx_by_fname <- head(ovlp[, "Bp5vKRUi", ids = TRUE])
     expect_identical(poly_idx_by_fidx, poly_idx_by_fname)
     expected_idx <- c(459, 215, 11, 30, 294, 301)
     expect_equal(poly_idx_by_fidx, expected_idx)
+})
+
+test_that("overlap `[]` default returns subset object", {
+    # default is subset (ids = FALSE) — symmetric across overlapPointDT,
+    # overlapIntensityDT, and SpatVector legacy
+    sub <- ovlp[1:10]
+    expect_s4_class(sub, "overlapPointDT")
+    sub_j <- ovlp[, 1:10]
+    expect_s4_class(sub_j, "overlapPointDT")
+    sub_ij <- ovlp[1:10, 1:10]
+    expect_s4_class(sub_ij, "overlapPointDT")
 })
 
 test_that("overlap `as.data.frame` works", {
