@@ -223,11 +223,9 @@ loadGiotto <- function(path_to_folder,
     init_gobject = TRUE,
     verbose = TRUE,
     ...) {
-    # data.table vars
-    img_type <- NULL
-
-    path_to_folder <- path.expand(path_to_folder)
-    vmsg(.v = verbose, .is_debug = TRUE, "load from:", path_to_folder)
+      path_to_folder <- path.expand(path_to_folder)
+      vmsg(.v = verbose, .is_debug = TRUE, "load from:", path_to_folder)
+      env_list <- get_args_list(...)
 
     if (!file.exists(path_to_folder)) {
         stop("path_to_folder does not exist \n")
@@ -240,32 +238,16 @@ loadGiotto <- function(path_to_folder,
         src <- GiottoDisk::resolveSource(path_to_folder)
     }
     if (isFALSE(src)) {
+        # load base object
+        # no additional effects
         gobject <- .load_gobject_core(
             path_to_folder = path_to_folder,
             load_params = load_params,
             verbose = verbose
         )
-      
-          ### ### spatial information loading ### ###
-        # terra vector objects are serialized as .shp files.
-        # These .shp files have to be read back in and then the relevant objects
-        # in the giotto object need to be regenerated.
-
-        ## 2. read in spatial features
-        gobject <- .load_giotto_feature_info(
-            gobject = gobject,
-            path_to_folder = path_to_folder,
-            verbose = verbose
-        )
-
-
-        ## 3. read in spatial polygons
-        gobject <- .load_giotto_spatial_info(
-            gobject = gobject,
-            path_to_folder = path_to_folder,
-            verbose = verbose
-        )
     } else {
+        # handles source-specific pathing + load base object
+        # no additional effects
         gobject <- GiottoDisk::snapshotLoad(src, 
             load_params = load_params,
             verbose = verbose,
@@ -273,51 +255,26 @@ loadGiotto <- function(path_to_folder,
         )
     }
 
-
-    ## 4. images
-    # compatibility for pre-v0.3.0
-    gobject <- .update_image_slot(gobject) # merge largeImages slot to images
-    gobject <- .load_giotto_images(
-        gobject = gobject,
-        path_to_folder = path_to_folder,
-        verbose = verbose
-    )
-
-    if (isTRUE(reconnect_giottoImage) && length(gobject[["images"]]) > 0) {
-        imglist <- lapply(gobject[["images"]], reconnect)
-        gobject <- setGiotto(gobject, imglist,
-            verbose = FALSE, initialize = FALSE
+    if (inherits(gobject, "giottoMulti")) {
+        gobject@objects <- lapply(gobject@objects, function(g) {
+            gtype <- ifelse(is.null(g@source), "memory", "disk")
+            .load_giotto_extra(g, 
+                type = gtype, env_list = env_list, skip = "pypath"
+            )
+        })
+        gobject <- .load_giotto_extra(gobject, 
+            type = "multi", env_list = env_list
         )
-    }
-
-
-    ## 5. Update python path (do not initialize yet)
-    # ***if python should be used...***
-    if (isTRUE(getOption("giotto.use_conda", TRUE))) {
-        identified_python_path <- set_giotto_python_path(
-            python_path = python_path,
-            verbose = verbose,
-            initialize = TRUE
-        )
-        vmsg(.v = verbose, .is_debug = TRUE, identified_python_path)
-        gobject <- changeGiottoInstructions(
-            gobject = gobject,
-            params = c("python_path"),
-            new_values = c(identified_python_path),
-            init_gobject = FALSE
+    } else if (!isFALSE(src)) {
+        gobject <- .load_giotto_extra(gobject,
+            type = "disk", env_list = env_list
         )
     } else {
-        # ***if python is not needed...***
-        instr <- instructions(gobject)
-        instr["python_path"] <- list(NULL)
-        instructions(gobject, initialize = FALSE) <- instr
+        gobject <- .load_giotto_extra(gobject,
+            type = "memory", env_list = env_list
+        )
     }
 
-    ## 6. overallocate for data.tables
-    # (data.tables when read from disk have a truelength of 0)
-    gobject <- .giotto_alloc_dt(gobject)
-
-    ## 7. initialize
     if (isTRUE(init_gobject)) {
         gobject <- initialize(gobject)
     }
@@ -512,6 +469,98 @@ setMethod(".load_external", signature("SpatVector"), function(x, name_fmt, dir,
     }
 }
 
+# extra load steps per type of gobject
+.load_giotto_extra <- function(gobject,
+    type = c("memory", "disk", "multi"),
+    skip = c(), 
+    env_list) {
+    type <- match.arg(type, choice = c("memory", "disk", "multi"))
+    list2env(env_list, environment())
+  
+    steps <- switch(type,
+        "memory" = c("point", "poly", "image", "pypath", "dtalloc"),
+        "disk" = c("image", "pypath", "dtalloc"),
+        "multi" = c("pypath", "dtalloc")
+    )
+  
+    steps <- setdiff(steps, skip)
+  
+    for(step in steps) {
+        gobject <- switch(step,
+            "point" = .load_giotto_feature_info(
+                gobject, path_to_folder, verbose),
+            "poly" = .load_giotto_spatial_info(
+                gobject, path_to_folder, verbose),
+            "image" = .load_gobject_images(
+                gobject, path_to_folder, reconnect_giottoImage, verbose),
+            "pypath" = .load_gobject_pyenv(
+                gobject, python_path, verbose),
+            "dtalloc" = .giotto_alloc_dt(gobject)
+        )
+    }
+    gobject
+}
+
+.load_gobject_images <- function(
+    gobject, path_to_folder, reconnect_giottoImage, verbose) {
+    # compatibility for pre-v0.3.0
+    gobject <- .update_image_slot(gobject) # merge largeImages slot to images
+    gobject <- .load_giotto_images(
+        gobject = gobject,
+        path_to_folder = path_to_folder,
+        verbose = verbose
+    )
+
+    if (isTRUE(reconnect_giottoImage) && length(gobject[["images"]]) > 0) {
+        imglist <- lapply(gobject[["images"]], reconnect)
+        gobject <- setGiotto(gobject, imglist,
+            verbose = FALSE, initialize = FALSE
+        )
+    }
+    gobject
+}
+
+# update python path for loaded object (no gobject initialization)
+#
+# On a giottoMulti, the python path is canonical at the multi level: there
+# is only one active python env per R session, so we set the path on the
+# multi's @instructions (already initialized by initialize(giottoMulti))
+# and distribute it down to children so they stay coherent when accessed
+# standalone.
+.load_gobject_pyenv <- function(gobject, python_path, verbose) {
+    if (isTRUE(getOption("giotto.use_conda", TRUE))) {
+        # identify python path to use
+        p <- set_giotto_python_path(
+            python_path = python_path,
+            verbose = verbose,
+            initialize = TRUE
+        )
+        vmsg(.v = verbose, .is_debug = TRUE, p)
+        instructions(gobject, "python_path", initialize = FALSE) <- p
+    } else {
+        # ***if python is not needed...***
+        instr <- instructions(gobject)
+        instr["python_path"] <- list(NULL)
+        instructions(gobject, initialize = FALSE) <- instr
+    }
+
+    # Distribute multi-level python_path down to children
+    if (inherits(gobject, "giottoMulti")) {
+        py <- instructions(gobject, "python_path")
+        gobject@objects <- lapply(gobject@objects, function(child) {
+            if (is.null(py)) {
+                instr <- instructions(child)
+                instr["python_path"] <- list(NULL)
+                instructions(child, initialize = FALSE) <- instr
+            } else {
+                instructions(child, "python_path", initialize = FALSE) <- py
+            }
+            child
+        })
+    }
+    gobject
+}
+
 # load and append spatial feature information
 .load_giotto_feature_info <- function(gobject, path_to_folder, verbose = NULL) {
     vmsg(.v = verbose, "2. read Giotto feature information")
@@ -543,7 +592,6 @@ setMethod(".load_external", signature("SpatVector"), function(x, name_fmt, dir,
 
     return(gobject)
 }
-
 
 # the actual reconnection step is done through reconnect() after this step now
 # .update_giotto_image() <- this is NEEDED for legacy structure support

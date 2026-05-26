@@ -1630,8 +1630,10 @@ createMetafeats <- function(gobject,
         }
     }
 
-    # spatlocs
-    avail_sl <- list_spatial_locations(gobject)
+    # spatlocs (per-child only — not present on giottoMulti)
+    avail_sl <- if (inherits(gobject, "giotto")) {
+        list_spatial_locations(gobject)
+    } else NULL
     if (!is.null(avail_sl)) {
         for (sl_i in seq(nrow(avail_sl))) {
             sl <- getSpatialLocations(
@@ -1677,8 +1679,10 @@ createMetafeats <- function(gobject,
         }
     }
 
-    # spatial grid
-    avail_sg <- list_spatial_grids(gobject)
+    # spatial grid (per-child only — not present on giottoMulti)
+    avail_sg <- if (inherits(gobject, "giotto")) {
+        list_spatial_grids(gobject)
+    } else NULL
     if (!is.null(avail_sg)) {
         for (sg_i in seq(nrow(avail_sg))) {
             sg <- getSpatialGrid(

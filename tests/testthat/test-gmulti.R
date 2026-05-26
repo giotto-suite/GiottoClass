@@ -918,3 +918,48 @@ test_that("after materialization, child updates do not propagate to multi", {
     pd <- pDataDT(mg)
     expect_false("sample_only" %in% names(pd))
 })
+
+
+# saveGiotto / loadGiotto round-trip on a federated giottoMulti.
+# Exercises the full federated flow: GiottoDisk::snapshotSave from the
+# saveGiotto entry point, GiottoDisk::snapshotLoad on the way back in, and
+# the GiottoClass-side post-load steps gated correctly for the multi class.
+
+test_that("saveGiotto + loadGiotto round-trip preserves a federated giottoMulti", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(lifecycle_verbosity = "quiet")
+
+    # Two backed children + a backed multi parent.
+    mk_backed <- function(n_cell, tag) {
+        m <- matrix(rpois(n_cell * 6, 2), nrow = 6, ncol = n_cell,
+            dimnames = list(paste0("f", 1:6),
+                            paste0(tag, "_c", seq_len(n_cell))))
+        dir <- file.path(tempdir(),
+            paste0("gmulti_load_child_", tag, "_", basename(tempfile())))
+        createGiottoObject(expression = m, backend = dir, verbose = FALSE)
+    }
+    g1 <- mk_backed(5, "a")
+    g2 <- mk_backed(3, "b")
+    mdir <- file.path(tempdir(),
+        paste0("gmulti_load_parent_", basename(tempfile())))
+    on.exit({
+        unlink(g1@source@path, recursive = TRUE)
+        unlink(g2@source@path, recursive = TRUE)
+        unlink(mdir, recursive = TRUE)
+    }, add = TRUE)
+
+    parent_src <- GiottoDisk::gDirSource(mdir)
+    mg <- createGiottoMulti(list(a = g1, b = g2), source = parent_src)
+    expect_s4_class(mg, "giottoMulti")
+    expect_false(is.null(mg@source))
+
+    saveGiotto(mg, name = "rt", verbose = FALSE)
+
+    mg2 <- loadGiotto(mdir, verbose = FALSE)
+    expect_s4_class(mg2, "giottoMulti")
+    expect_identical(names(mg2), c("a", "b"))
+    expect_identical(length(spatIDs(mg2@objects$a)), 5L)
+    expect_identical(length(spatIDs(mg2@objects$b)), 3L)
+    expect_identical(spatIDs(mg2),
+        c(paste0("a::a_c", 1:5), paste0("b::b_c", 1:3)))
+})
