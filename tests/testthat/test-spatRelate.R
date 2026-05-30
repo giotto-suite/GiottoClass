@@ -1,9 +1,8 @@
-# spatRelate: in-memory filter form on giottoSpatial.
+# spatRelate: filter form on giottoSpatial.
 #
 # `spatRelate()` is the filter-form complement to `relate()` -- returns x
 # narrowed to features satisfying the spatial predicate against any feature
-# of y, rather than the relation matrix. The eager method body uses
-# `relate()` + subset internally; on-disk lazy methods live in GiottoDisk.
+# of y, rather than the relation matrix.
 
 gpoly_full <- GiottoData::loadSubObjectMini("giottoPolygon")
 gpoints_full <- GiottoData::loadSubObjectMini("giottoPoints")
