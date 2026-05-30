@@ -130,6 +130,10 @@ setMethod(
 
 # spatRelate ####
 
+# TODO: audit internal `relate()` call sites across the suite and swap to
+# `spatRelate()` where the pattern is "narrow x by predicate against y"
+# rather than "consume the relation table/matrix".
+
 #' @title Spatial relationship as a filter
 #' @name spatRelate
 #' @description
