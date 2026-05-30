@@ -141,17 +141,10 @@ setMethod(
 #' of `y`. Returns an object of the same class as `x` rather than a relation
 #' matrix -- the "filter form" complement to [relate()].
 #'
-#' This generic exists to support **lazy** spatial filtering on backed
-#' (on-disk) representations, where materializing a full relation matrix as an
-#' intermediate would be wasteful. Methods on in-memory `giottoSpatial`
-#' classes evaluate eagerly via [relate()] + subset; the GiottoDisk package
-#' adds methods for on-disk `parquetGeomBase`-inheriting stores that queue
-#' the predicate as a lazy op, evaluated at `storeRead()` time.
-#'
 #' @param x spatial object to be narrowed (rows kept where predicate holds
 #'   against any feature of `y`)
 #' @param y query geometry; the form depends on the method (giottoSpatial,
-#'   SpatVector, sf, character WKT, or an on-disk store via GiottoDisk)
+#'   SpatVector, sf, character WKT)
 #' @param relation `character`. Spatial predicate. One of `"intersects"`,
 #'   `"touches"`, `"crosses"`, `"overlaps"`, `"within"`, `"contains"`,
 #'   `"covers"`, `"covered_by"`, `"disjoint"`. Default `"intersects"`.
@@ -174,10 +167,6 @@ NULL
 setMethod(
     "spatRelate", signature(x = "giottoSpatial", y = "giottoSpatial"),
     function(x, y, relation = "intersects", ...) {
-        # Eager: use relate() to get pairs, then subset x to features with
-        # any match. The pairs data.table is intermediate but in-memory --
-        # acceptable. On-disk stores avoid this intermediate by queuing the
-        # predicate as a lazy op (see GiottoDisk's parquetGeomBase methods).
         res <- relate(
             x, y,
             relation = relation,

@@ -5046,8 +5046,8 @@ setFeatureInfo <- function(gobject,
 
 
 # Detect a 0-feature giottoPoints. Cheap path via cached IDs; falls back to
-# nrow when the cache is empty/unpopulated (which may query disk for a
-# parquetGeomBase-backed gpoints).
+# nrow when the cache is empty/unpopulated (which may query disk for
+# disk-backed representations).
 .gpoints_is_empty <- function(x) {
     if (is.null(x)) return(FALSE)
     cache <- methods::slot(x, "unique_ID_cache")
