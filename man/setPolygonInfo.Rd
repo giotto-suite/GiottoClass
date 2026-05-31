@@ -62,24 +62,24 @@ polyinfo <- getPolygonInfo(g, return_giottoPolygon = TRUE)
 setPolygonInfo(gobject = g, x = polyinfo)
 }
 \seealso{
-Other polygon info data accessor functions: 
-\code{\link{getPolygonInfo}()}
+Other polygon info data accessor functions:
+\code{\link[=getPolygonInfo]{getPolygonInfo()}}
 
-Other functions to set data in giotto object: 
-\code{\link{setCellMetadata}()},
-\code{\link{setDimReduction}()},
-\code{\link{setExpression}()},
-\code{\link{setFeatureInfo}()},
-\code{\link{setFeatureMetadata}()},
+Other functions to set data in giotto object:
+\code{\link[=setCellMetadata]{setCellMetadata()}},
+\code{\link[=setDimReduction]{setDimReduction()}},
+\code{\link[=setExpression]{setExpression()}},
+\code{\link[=setFeatureInfo]{setFeatureInfo()}},
+\code{\link[=setFeatureMetadata]{setFeatureMetadata()}},
 \code{\link{setGiotto,giotto,giottoBinPoints-method}},
-\code{\link{setGiottoImage}()},
-\code{\link{setMultiomics}()},
-\code{\link{setNearestNetwork}()},
-\code{\link{setSpatialEnrichment}()},
-\code{\link{setSpatialGrid}()},
-\code{\link{setSpatialLocations}()},
-\code{\link{setSpatialNetwork}()},
-\code{\link{set_multiomics}()}
+\code{\link[=setGiottoImage]{setGiottoImage()}},
+\code{\link[=setMultiomics]{setMultiomics()}},
+\code{\link[=setNearestNetwork]{setNearestNetwork()}},
+\code{\link[=setSpatialEnrichment]{setSpatialEnrichment()}},
+\code{\link[=setSpatialGrid]{setSpatialGrid()}},
+\code{\link[=setSpatialLocations]{setSpatialLocations()}},
+\code{\link[=setSpatialNetwork]{setSpatialNetwork()}},
+\code{\link[=set_multiomics]{set_multiomics()}}
 }
 \concept{functions to set data in giotto object}
 \concept{polygon info data accessor functions}

@@ -24,9 +24,9 @@ circleVertices(radius = 10)
 \seealso{
 \link{generate_grid}
 
-Other polygon stamping: 
-\code{\link{hexVertices}()},
-\code{\link{polyStamp}()},
-\code{\link{rectVertices}()}
+Other polygon stamping:
+\code{\link[=hexVertices]{hexVertices()}},
+\code{\link[=polyStamp]{polyStamp()}},
+\code{\link[=rectVertices]{rectVertices()}}
 }
 \concept{polygon stamping}

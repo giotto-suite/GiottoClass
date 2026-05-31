@@ -43,9 +43,9 @@ g_image <- getGiottoImage(g, image_type = "largeImage")
 addGiottoImage(g, largeImages = list(g_image))
 }
 \seealso{
-Other basic image functions: 
-\code{\link{plotGiottoImage}()},
-\code{\link{reconnectGiottoImage}()},
-\code{\link{updateGiottoImage}()}
+Other basic image functions:
+\code{\link[=plotGiottoImage]{plotGiottoImage()}},
+\code{\link[=reconnectGiottoImage]{reconnectGiottoImage()}},
+\code{\link[=updateGiottoImage]{updateGiottoImage()}}
 }
 \concept{basic image functions}

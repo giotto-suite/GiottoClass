@@ -78,9 +78,6 @@ evaluate_input <- function(type, x, ...) {
 #' @param inputmatrix inputmatrix to evaluate
 #' @param sparse create sparse matrix (default = TRUE)
 #' @param cores how many cores to use
-#' @param expression_matrix_class `character` (optional). Matrix
-#'   representation to convert to. If left as NULL, no conversions will
-#'   be attempted
 #' @details The inputmatrix can be a matrix, sparse matrix, data.frame,
 #' data.table or path to any of these.
 #' @keywords internal
@@ -475,6 +472,13 @@ evaluate_input <- function(type, x, ...) {
         return(spatial_network)
     }
 
+    # disk-backed networks (e.g. parquetEdgeStore from GiottoDisk's
+    # setter auto-write or sourceAdopt path) are already validated at
+    # write time; pass through unchanged.
+    if (inherits(spatial_network, "dataStore")) {
+        return(spatial_network)
+    }
+
     # data.frame-shaped fallback (legacy + edge-table inputs)
     if (!inherits(spatial_network, "data.frame")) {
         .gstop("The spatial network must be an igraph or data.frame(-like) object")
@@ -632,6 +636,11 @@ evaluate_input <- function(type, x, ...) {
 
     if (inherits(nn_network, "nnNetObj")) {
         nn_network[] <- .evaluate_nearest_networks(nn_network = nn_network[])
+        return(nn_network)
+    } else if (inherits(nn_network, "dataStore")) {
+        # disk-backed networks (e.g. parquetEdgeStore from GiottoDisk's
+        # setter auto-write or sourceAdopt path) are already validated
+        # at write time; pass through unchanged.
         return(nn_network)
     } else if (inherits(nn_network, "igraph")) {
         v_attr <- igraph::vertex_attr_names(nn_network)

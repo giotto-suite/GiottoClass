@@ -54,10 +54,10 @@ createNetwork(x, param, ...)
 \S4method{createNetwork}{giotto,delaunayNetworkParam}(x, param, spat_unit = NULL, spat_loc_name = "raw", ...)
 }
 \arguments{
-\item{x}{a data object (matrix, \linkS4class{spatLocsObj}, \linkS4class{dimObj},
-\linkS4class{giotto}, or a GiottoDisk \code{fileStore})}
+\item{x}{a data object (matrix, \link[=spatLocsObj-class]{spatLocsObj}, \link[=dimObj-class]{dimObj},
+\link[=giotto-class]{giotto}, or a GiottoDisk \code{fileStore})}
 
-\item{param}{a \linkS4class{networkParam}-inheriting object}
+\item{param}{a \link[=networkParam-class]{networkParam}-inheriting object}
 
 \item{...}{additional arguments, for use in specific methods}
 
@@ -90,7 +90,7 @@ GiottoDisk \code{parquetEdgeStore}.
 \description{
 Generic for constructing a network (graph) from
 coordinates, features, or an embedding. Methods dispatch on the input
-data class and a \linkS4class{networkParam}-inheriting object that selects
+data class and a \link[=networkParam-class]{networkParam}-inheriting object that selects
 the algorithm (kNN, sNN, Delaunay, ...). Part of the \verb{create<Noun>}
 object-construction family. Distinct from analysis-stage operations
 such as \code{\link[=processData]{processData()}}, \code{\link[=filterData]{filterData()}}, \code{\link[=reduceData]{reduceData()}}, and

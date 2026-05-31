@@ -34,10 +34,10 @@ as.points(slot(g, "spatVector"))
 \seealso{
 \code{\link[terra:as.points]{terra::as.points()}}
 
-Other As coercion functions: 
-\code{\link{as.data.table.giottoBinPoints}()},
-\code{\link{as.matrix}()},
-\code{\link{as.polygons}()},
+Other As coercion functions:
+\code{\link[=as.data.table.giottoBinPoints]{as.data.table.giottoBinPoints()}},
+\code{\link{as.matrix}},
+\code{\link{as.polygons}},
 \code{\link{r_spatial_conversions}}
 }
 \concept{As coercion functions}

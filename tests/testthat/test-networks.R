@@ -202,4 +202,52 @@ test_that("network setters leave in-mem igraphs untouched on unbacked gobject", 
     expect_s3_class(nn_back@network, "igraph")  # not promoted
 })
 
+
+# spatIDs delegates to dataStore-backed @network -----------------------------
+# When @network is a parquetEdgeStore (GiottoDisk), the spatIDs methods on
+# nnNetObj / spatialNetworkObj must delegate via dispatch instead of calling
+# igraph functions directly.
+
+test_that("spatIDs(nnNetObj) delegates to parquetEdgeStore when @network is one", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(lifecycle_verbosity = "quiet")
+
+    gdir <- file.path(tempdir(), paste0("spatids_", basename(tempfile())))
+    on.exit(unlink(gdir, recursive = TRUE), add = TRUE)
+    src <- GiottoDisk::gDirSource(gdir)
+
+    ig <- igraph::make_graph(c(1, 2, 2, 3, 3, 4, 4, 5), directed = FALSE)
+    igraph::V(ig)$name <- letters[1:5]
+    igraph::E(ig)$weight <- c(0.9, 0.7, 0.5, 0.3)
+    igraph::E(ig)$distance <- 1 / igraph::E(ig)$weight
+
+    pes <- GiottoDisk::sourceWrite(src, ig, type = "sNN")
+    nn <- methods::new("nnNetObj", network = pes, nn_type = "sNN",
+        name = "sNN.test")
+
+    expect_s4_class(nn@network, "parquetEdgeStore")
+    expect_setequal(spatIDs(nn), letters[1:5])
+})
+
+test_that("spatIDs(spatialNetworkObj) delegates to parquetEdgeStore when @network is one", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(lifecycle_verbosity = "quiet")
+
+    gdir <- file.path(tempdir(), paste0("spatids_sn_", basename(tempfile())))
+    on.exit(unlink(gdir, recursive = TRUE), add = TRUE)
+    src <- GiottoDisk::gDirSource(gdir)
+
+    ig <- igraph::make_graph(c(1, 2, 2, 3, 3, 4), directed = FALSE)
+    igraph::V(ig)$name <- letters[1:4]
+    igraph::E(ig)$weight <- c(0.9, 0.7, 0.5)
+    igraph::E(ig)$distance <- 1 / igraph::E(ig)$weight
+
+    pes <- GiottoDisk::sourceWrite(src, ig, type = "spatial")
+    sn <- methods::new("spatialNetworkObj", network = pes, name = "sn.test")
+
+    expect_s4_class(sn@network, "parquetEdgeStore")
+    expect_setequal(spatIDs(sn), letters[1:4])
+})
+
+
 options("lifecycle_verbosity" = lifecycle_opt)

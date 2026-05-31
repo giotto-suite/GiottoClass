@@ -73,7 +73,7 @@ tif_metadata("path/to/qptiff",
 }
 }
 \seealso{
-Other tif utility functions: 
-\code{\link{to_simple_tif}()}
+Other tif utility functions:
+\code{\link[=to_simple_tif]{to_simple_tif()}}
 }
 \concept{tif utility functions}

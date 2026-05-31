@@ -5,6 +5,6 @@
 \alias{NNNetworkParam-class}
 \title{NNNetworkParam — Nearest-Neighbour Network Param Classes}
 \description{
-Virtual parent for \linkS4class{kNNNetworkParam} and
-\linkS4class{sNNNetworkParam}.
+Virtual parent for \link[=kNNNetworkParam-class]{kNNNetworkParam} and
+\link[=sNNNetworkParam-class]{sNNNetworkParam}.
 }

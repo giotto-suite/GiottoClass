@@ -9,7 +9,8 @@ gefToGiotto(
   bin_size = "bin100",
   gene_column = NULL,
   verbose = FALSE,
-  h5_file = NULL
+  backend = NULL,
+  h5_file = deprecated()
 )
 }
 \arguments{
@@ -22,7 +23,10 @@ within the geneExp information.}
 
 \item{verbose}{be verbose}
 
-\item{h5_file}{name to create and on-disk HDF5 file}
+\item{backend}{path or \code{gsource} to use as a managed backend for
+on-disk artifacts (passed to \code{\link[=createGiottoObject]{createGiottoObject()}}).}
+
+\item{h5_file}{deprecated. Use \code{backend} instead.}
 }
 \value{
 giotto object
