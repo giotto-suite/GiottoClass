@@ -195,6 +195,13 @@ setGeneric("splitGeom", function(x, ...) standardGeneric("splitGeom"))
 setGeneric("overlaps", function(x, ...) standardGeneric("overlaps"))
 
 
+# Methods and documentations found in methods-relate.R
+setGeneric(
+    "spatRelate",
+    function(x, y, relation = "intersects", ...) standardGeneric("spatRelate")
+)
+
+
 
 # Giotto subnesting ####
 # All methods and documentations found in methods-nesting.R

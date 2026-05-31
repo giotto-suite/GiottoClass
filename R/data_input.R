@@ -33,8 +33,8 @@ readExprMatrix <- function(
     checkmate::assert_flag(transpose)
     if (is_present(expression_matrix_class)) {
         warning(sprintf(
-            "[readExprMatrix] param '%s' is deprecated", 
-            "expression_matrix_class"), 
+            "[readExprMatrix] param '%s' is deprecated",
+            "expression_matrix_class"),
         call. = FALSE)
     }
 

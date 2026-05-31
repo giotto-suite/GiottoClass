@@ -13,7 +13,7 @@ setCellMetadata(gobject, ...)
   spat_unit = NULL,
   feat_type = NULL,
   provenance = NULL,
-  verbose = TRUE,
+  verbose = NULL,
   initialize = TRUE,
   ...
 )
@@ -54,20 +54,20 @@ m2 <- data.frame(
 setCellMetadata(gobject = g, x = createCellMetaObj(m2))
 }
 \seealso{
-Other functions to set data in giotto object: 
-\code{\link{setDimReduction}()},
-\code{\link{setExpression}()},
-\code{\link{setFeatureInfo}()},
-\code{\link{setFeatureMetadata}()},
+Other functions to set data in giotto object:
+\code{\link[=setDimReduction]{setDimReduction()}},
+\code{\link[=setExpression]{setExpression()}},
+\code{\link[=setFeatureInfo]{setFeatureInfo()}},
+\code{\link[=setFeatureMetadata]{setFeatureMetadata()}},
 \code{\link{setGiotto,giotto,giottoBinPoints-method}},
-\code{\link{setGiottoImage}()},
-\code{\link{setMultiomics}()},
-\code{\link{setNearestNetwork}()},
-\code{\link{setPolygonInfo}()},
-\code{\link{setSpatialEnrichment}()},
-\code{\link{setSpatialGrid}()},
-\code{\link{setSpatialLocations}()},
-\code{\link{setSpatialNetwork}()},
-\code{\link{set_multiomics}()}
+\code{\link[=setGiottoImage]{setGiottoImage()}},
+\code{\link[=setMultiomics]{setMultiomics()}},
+\code{\link[=setNearestNetwork]{setNearestNetwork()}},
+\code{\link[=setPolygonInfo]{setPolygonInfo()}},
+\code{\link[=setSpatialEnrichment]{setSpatialEnrichment()}},
+\code{\link[=setSpatialGrid]{setSpatialGrid()}},
+\code{\link[=setSpatialLocations]{setSpatialLocations()}},
+\code{\link[=setSpatialNetwork]{setSpatialNetwork()}},
+\code{\link[=set_multiomics]{set_multiomics()}}
 }
 \concept{functions to set data in giotto object}

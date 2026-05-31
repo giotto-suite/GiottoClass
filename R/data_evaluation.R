@@ -78,9 +78,6 @@ evaluate_input <- function(type, x, ...) {
 #' @param inputmatrix inputmatrix to evaluate
 #' @param sparse create sparse matrix (default = TRUE)
 #' @param cores how many cores to use
-#' @param expression_matrix_class `character` (optional). Matrix
-#'   representation to convert to. If left as NULL, no conversions will
-#'   be attempted
 #' @details The inputmatrix can be a matrix, sparse matrix, data.frame,
 #' data.table or path to any of these.
 #' @keywords internal

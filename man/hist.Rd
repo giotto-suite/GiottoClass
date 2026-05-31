@@ -15,7 +15,11 @@
 \item{...}{
   Arguments passed on to \code{\link[terra:hist]{terra::hist}}
   \describe{
-    \item{\code{}}{}
+    \item{\code{layer}}{positive integer or character to indicate layer numbers (or names). If missing, all layers up to \code{maxnl} are used}
+    \item{\code{maxcell}}{integer. To regularly sample very large objects}
+    \item{\code{plot}}{logical. Plot the histogram or only return the histogram values}
+    \item{\code{maxnl}}{positive integer. The maximum number of layers to use. Ignored if \code{layer} is not missing}
+    \item{\code{main}}{character. Main title(s) for the plot. Default is the value of \code{\link[terra]{names}}}
   }}
 }
 \value{

@@ -12,7 +12,7 @@ networkParam(type = c("kNN", "sNN", "delaunay"), ...)
 \item{...}{arguments forwarded to the type-specific constructor}
 }
 \value{
-a \linkS4class{networkParam}-inheriting object
+a \link[=networkParam-class]{networkParam}-inheriting object
 }
 \description{
 Returns the appropriate concrete \verb{*NetworkParam} based on \code{type}.

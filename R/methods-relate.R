@@ -128,6 +128,62 @@ setMethod(
 
 
 
+# spatRelate ####
+
+# TODO: audit internal `relate()` call sites across the suite and swap to
+# `spatRelate()` where the pattern is "narrow x by predicate against y"
+# rather than "consume the relation table/matrix".
+
+#' @title Spatial relationship as a filter
+#' @name spatRelate
+#' @description
+#' Narrow `x` to features that satisfy a spatial predicate against any feature
+#' of `y`. Returns an object of the same class as `x` rather than a relation
+#' matrix -- the "filter form" complement to [relate()].
+#'
+#' @param x spatial object to be narrowed (rows kept where predicate holds
+#'   against any feature of `y`)
+#' @param y query geometry; the form depends on the method (giottoSpatial,
+#'   SpatVector, sf, character WKT)
+#' @param relation `character`. Spatial predicate. One of `"intersects"`,
+#'   `"touches"`, `"crosses"`, `"overlaps"`, `"within"`, `"contains"`,
+#'   `"covers"`, `"covered_by"`, `"disjoint"`. Default `"intersects"`.
+#' @param ... additional args to pass
+#' @returns an object of the same class as `x`, narrowed to features
+#'   satisfying the predicate against any feature of `y`
+#' @seealso [relate()] for the relation-matrix / pairs form;
+#'   [spatQuery()] for the gobject-level multi-filter pipeline.
+#' @examples
+#' g <- GiottoData::loadGiottoMini("vizgen")
+#' gpoly <- g[["spatial_info"]][[1]]
+#' gpoints <- g[["feat_info"]][[1]]
+#'
+#' # narrow points to those that intersect at least one polygon
+#' pts_in_polys <- spatRelate(gpoints, gpoly, relation = "intersects")
+NULL
+
+#' @rdname spatRelate
+#' @export
+setMethod(
+    "spatRelate", signature(x = "giottoSpatial", y = "giottoSpatial"),
+    function(x, y, relation = "intersects", ...) {
+        res <- relate(
+            x, y,
+            relation = relation,
+            pairs = TRUE,
+            output = "data.table",
+            use_names = FALSE,
+            ...
+        )
+        if (nrow(res) == 0L) {
+            return(x[integer(0L)])
+        }
+        keep_idx <- sort(unique(res$x))
+        x[keep_idx]
+    }
+)
+
+
 # internals ####
 
 .get_ids <- function(x, idx) {

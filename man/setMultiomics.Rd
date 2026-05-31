@@ -14,7 +14,7 @@ setMultiomics(gobject, ...)
   feat_type = NULL,
   integration_method = "WNN",
   result_name = "theta_weighted_matrix",
-  verbose = TRUE,
+  verbose = NULL,
   ...
 )
 }
@@ -51,26 +51,26 @@ setMultiomics(
 )
 }
 \seealso{
-Other multiomics accessor functions: 
-\code{\link{getMultiomics}()},
-\code{\link{get_multiomics}()},
-\code{\link{set_multiomics}()}
+Other multiomics accessor functions:
+\code{\link[=getMultiomics]{getMultiomics()}},
+\code{\link[=get_multiomics]{get_multiomics()}},
+\code{\link[=set_multiomics]{set_multiomics()}}
 
-Other functions to set data in giotto object: 
-\code{\link{setCellMetadata}()},
-\code{\link{setDimReduction}()},
-\code{\link{setExpression}()},
-\code{\link{setFeatureInfo}()},
-\code{\link{setFeatureMetadata}()},
+Other functions to set data in giotto object:
+\code{\link[=setCellMetadata]{setCellMetadata()}},
+\code{\link[=setDimReduction]{setDimReduction()}},
+\code{\link[=setExpression]{setExpression()}},
+\code{\link[=setFeatureInfo]{setFeatureInfo()}},
+\code{\link[=setFeatureMetadata]{setFeatureMetadata()}},
 \code{\link{setGiotto,giotto,giottoBinPoints-method}},
-\code{\link{setGiottoImage}()},
-\code{\link{setNearestNetwork}()},
-\code{\link{setPolygonInfo}()},
-\code{\link{setSpatialEnrichment}()},
-\code{\link{setSpatialGrid}()},
-\code{\link{setSpatialLocations}()},
-\code{\link{setSpatialNetwork}()},
-\code{\link{set_multiomics}()}
+\code{\link[=setGiottoImage]{setGiottoImage()}},
+\code{\link[=setNearestNetwork]{setNearestNetwork()}},
+\code{\link[=setPolygonInfo]{setPolygonInfo()}},
+\code{\link[=setSpatialEnrichment]{setSpatialEnrichment()}},
+\code{\link[=setSpatialGrid]{setSpatialGrid()}},
+\code{\link[=setSpatialLocations]{setSpatialLocations()}},
+\code{\link[=setSpatialNetwork]{setSpatialNetwork()}},
+\code{\link[=set_multiomics]{set_multiomics()}}
 }
 \concept{functions to set data in giotto object}
 \concept{multiomics accessor functions}

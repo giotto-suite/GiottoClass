@@ -141,7 +141,7 @@
 character vectors, or empty}
 
 \item{compact}{\code{character} or \code{logical} (default = "auto"). Whether to
-compact object. See \linkS4class{giottoBinPoints}. \code{"auto"} will perform a
+compact object. See \link[=giottoBinPoints-class]{giottoBinPoints}. \code{"auto"} will perform a
 compaction when number of spatial points referenced in \verb{@counts} is 1/10 of
 that existing in \verb{@spatial}}
 
@@ -175,10 +175,10 @@ Select rows (i) and cols (j) from giotto S4 exprMat slot
 Return \code{exprMat} slot Matrix object from giotto S4
 
 
-Return \code{spatNetData} slot network object (\code{igraph}) from giotto S4
+Return \code{spatNetData} \code{network} slot (an igraph) from giotto S4
 
 
-Return \code{nnData} slot igraph object from giotto S4
+Return \code{nnData} \code{network} slot (an igraph) from giotto S4
 
 
 Return \code{enrData} slot enrichment data.table object from giotto S4

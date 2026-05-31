@@ -12,7 +12,8 @@ anndataToGiotto(
   spat_enrich_key_added = NULL,
   spat_unit = NULL,
   feat_type = NULL,
-  h5_file = NULL,
+  backend = NULL,
+  h5_file = deprecated(),
   python_path = NULL,
   env_name = "giotto_env"
 )
@@ -47,7 +48,10 @@ and all keys are used in conversion unless specified in the function call.}
 
 \item{feat_type}{desired feature type to use for conversion, default NULL}
 
-\item{h5_file}{name to create and on-disk HDF5 file}
+\item{backend}{path or \code{gsource} to use as a managed backend for
+on-disk artifacts (passed to \code{\link[=createGiottoObject]{createGiottoObject()}}).}
+
+\item{h5_file}{deprecated. Use \code{backend} instead.}
 
 \item{python_path}{path to python executable within a conda/miniconda
 environment}

@@ -73,9 +73,9 @@ plotGiottoImage(g,
 )
 }
 \seealso{
-Other basic image functions: 
-\code{\link{addGiottoImage}()},
-\code{\link{reconnectGiottoImage}()},
-\code{\link{updateGiottoImage}()}
+Other basic image functions:
+\code{\link[=addGiottoImage]{addGiottoImage()}},
+\code{\link[=reconnectGiottoImage]{reconnectGiottoImage()}},
+\code{\link[=updateGiottoImage]{updateGiottoImage()}}
 }
 \concept{basic image functions}

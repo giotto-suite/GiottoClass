@@ -662,8 +662,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,coordDataDT,missing,missing,
-#' ANY-method [<-,coordDataDT,missing,missing-method
+#' @aliases [<-,coordDataDT,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{coordinates} slot in giotto S4
@@ -742,8 +741,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,metaData,missing,missing,
-#' ANY-method [<-,metaData,missing,missing-method
+#' @aliases [<-,metaData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{metaDT} slot in giotto S4
@@ -783,8 +781,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,dimObj,missing,missing,
-#' ANY-method [<-,dimObj,missing,missing-method
+#' @aliases [<-,dimObj,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{coordinates} slot in giotto S4 dimObj
@@ -844,8 +841,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,exprData,missing,missing,
-#' ANY-method [<-,exprData,missing,missing-method
+#' @aliases [<-,exprData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{exprMat} slot in giotto S4
@@ -876,8 +872,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,spatNetData,missing,missing,
-#' ANY-method [<-,spatNetData,missing,missing-method
+#' @aliases [<-,spatNetData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{network} slot in giotto S4
@@ -906,8 +901,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,nnData,missing,missing,
-#' ANY-method [<-,nnData,missing,missing-method
+#' @aliases [<-,nnData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{network} slot in giotto S4
@@ -968,8 +962,7 @@ setMethod(
 
 
 #' @rdname replace_bracket
-#' @aliases [<-,enrData,missing,missing,
-#' ANY-method [<-,enrData,missing,missing-method
+#' @aliases [<-,enrData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{enrichDT} slot in giotto S4
@@ -1000,8 +993,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,spatGridData,missing,missing,
-#' ANY-method [<-,spatGridData,missing,missing-method
+#' @aliases [<-,spatGridData,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{gridDT} slot in giotto S4
@@ -1083,8 +1075,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,giottoPoints,missing,missing,
-#' ANY-method [<-,giottoPoints,missing,missing-method
+#' @aliases [<-,giottoPoints,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{spatVector} slot in giotto S4
@@ -1163,7 +1154,7 @@ setMethod(
             if (!inherits(o[[feat]], "overlapInfo")) {
                 warning("[subset overlaps feats] unrecognized overlap type")
             }
-            o[[feat]] <- o[[feat]][, i, ids = FALSE]
+            o[[feat]] <- o[[feat]][, i]
         }
         o
     }
@@ -1200,7 +1191,7 @@ setMethod(
             }
             next
         }
-        x@overlaps[[feat]] <- x@overlaps[[feat]][i, ids = FALSE]
+        x@overlaps[[feat]] <- x@overlaps[[feat]][i]
     }
     x
 }
@@ -1389,8 +1380,7 @@ setMethod(
 
 
 #' @rdname replace_bracket
-#' @aliases [<-,giottoPolygon,missing,missing,
-#' ANY-method [<-,giottoPolygon,missing,missing-method
+#' @aliases [<-,giottoPolygon,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{spatVector} slot in giottoPolygon
@@ -1417,12 +1407,11 @@ setMethod("[",
         i = "gIndex",
         j = "missing",
         drop = "missing"
-    ), function(x, i, j, ..., use_names = FALSE, ids = TRUE, drop) {
-        if (!isTRUE(ids)) {
-            res <- .subset_overlap_point_dt_i(x, i)
-            return(res)
+    ), function(x, i, j, ..., use_names = FALSE, ids = FALSE, drop) {
+        if (isTRUE(ids)) {
+            return(.select_overlap_point_dt_i(x, i, use_names = use_names))
         }
-        .select_overlap_point_dt_i(x, i, use_names = use_names)
+        .subset_overlap_point_dt_i(x, i)
     }
 )
 
@@ -1434,12 +1423,11 @@ setMethod("[",
         i = "missing",
         j = "gIndex",
         drop = "missing"
-    ), function(x, i, j, ..., use_names = FALSE, ids = TRUE, drop) {
-        if (!isTRUE(ids)) {
-            res <- .subset_overlap_point_dt_j(x, j)
-            return(res)
+    ), function(x, i, j, ..., use_names = FALSE, ids = FALSE, drop) {
+        if (isTRUE(ids)) {
+            return(.select_overlap_point_dt_j(x, j, use_names = use_names))
         }
-        .select_overlap_point_dt_j(x, j, use_names = use_names)
+        .subset_overlap_point_dt_j(x, j)
     }
 )
 
@@ -1614,8 +1602,7 @@ setMethod(
 )
 
 #' @rdname replace_bracket
-#' @aliases [<-,affine2d,missing,missing,
-#' ANY-method [<-,affine2d,missing,missing-method
+#' @aliases [<-,affine2d,missing,missing-method
 #' @docType methods
 #' @section \code{`[<-`} methods:
 #'   Assign to \code{affine} slot in affine2d

@@ -74,15 +74,14 @@ NULL
 #' from \code{\link{createGiottoInstructions}}
 #' @param cores how many cores or threads to use to read data if paths are
 #' provided
-#' @param expression_matrix_class class of expression matrix to
-#' use (e.g. 'dgCMatrix', 'DelayedArray')
+#' @param expression_matrix_class deprecated. See `?createExprObj` for details
 #' @param backend backend to use (optional). One of:
-#' 
+#'
 #'   * `NULL` - (default) in memory object
 #'   * `filepath` - path at which to set up a project directory. Does not have
 #'     to already exist. Sets the backend manager as `gDirSource` by default.
 #'   * `gsource`-inheriting - A specific backend manager to use
-#' 
+#'
 #'   `filepath` and `gsource` both require {GiottoDisk}.
 #' @param h5_file deprecated. Use `backend` instead
 #' @param verbose be verbose when building Giotto object
@@ -226,7 +225,7 @@ createGiottoObject <- function(expression,
     instructions = NULL,
     cores = determine_cores(),
     raw_exprs = NULL,
-    expression_matrix_class = c("dgCMatrix", "DelayedArray"),
+    expression_matrix_class = deprecated(),
     backend = NULL,
     h5_file = deprecated(),
     verbose = FALSE) {
@@ -243,6 +242,13 @@ createGiottoObject <- function(expression,
             )
         )
         images <- c(images, largeImages)
+    }
+
+    if (is_present(expression_matrix_class)) {
+        warning(sprintf(
+            "[createGiottoObject] param '%s' is deprecated",
+            "expression_matrix_class"),
+        call. = FALSE)
     }
 
     if (is_present(h5_file)) backend <- h5_file
@@ -363,8 +369,7 @@ createGiottoObject <- function(expression,
             sparse = TRUE,
             cores = cores,
             default_feat_type = expression_feat,
-            verbose = debug_msg,
-            expression_matrix_class = expression_matrix_class
+            verbose = debug_msg
         )
         ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
         gobject <- setExpression(
