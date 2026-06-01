@@ -12,7 +12,7 @@
 against any feature of \code{y})}
 
 \item{y}{query geometry; the form depends on the method (giottoSpatial,
-SpatVector, sf, character WKT, or an on-disk store via GiottoDisk)}
+SpatVector, sf, character WKT)}
 
 \item{relation}{\code{character}. Spatial predicate. One of \code{"intersects"},
 \code{"touches"}, \code{"crosses"}, \code{"overlaps"}, \code{"within"}, \code{"contains"},
@@ -28,13 +28,6 @@ satisfying the predicate against any feature of \code{y}
 Narrow \code{x} to features that satisfy a spatial predicate against any feature
 of \code{y}. Returns an object of the same class as \code{x} rather than a relation
 matrix -- the "filter form" complement to \code{\link[=relate]{relate()}}.
-
-This generic exists to support \strong{lazy} spatial filtering on backed
-(on-disk) representations, where materializing a full relation matrix as an
-intermediate would be wasteful. Methods on in-memory \code{giottoSpatial}
-classes evaluate eagerly via \code{\link[=relate]{relate()}} + subset; the GiottoDisk package
-adds methods for on-disk \code{parquetGeomBase}-inheriting stores that queue
-the predicate as a lazy op, evaluated at \code{storeRead()} time.
 }
 \examples{
 g <- GiottoData::loadGiottoMini("vizgen")
