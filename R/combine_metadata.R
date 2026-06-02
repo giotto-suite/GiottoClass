@@ -692,152 +692,38 @@ calculateLabelProportions <- function(gobject, labels,
     output = c("data.table", "matrix", "spatEnrObj", "gobject"),
     verbose = NULL) {
     checkmate::assert_class(gobject, "giotto")
-    checkmate::assert_character(labels, len = 1L)
-    checkmate::assert_character(name, len = 1L)
-    checkmate::assert_character(column_cell_id, len = 1L)
-    checkmate::assert_character(column_group_id, len = 1L, null.ok = TRUE)
-
-    # NSE vars
-    .LPG <- .NPG <- weight <- NULL
-
-    fname <- "[calculateLabelProportions]" # for printing
-    group_method <- match.arg(
-        group_method, choices = c("table", "spatialnetwork", "polygon")
+    # spat_info has no default in the legacy signature — lazy-eval forwarding
+    # so polygon-method callers still see the missing-arg error downstream.
+    si <- if (missing(spat_info)) NULL else spat_info
+    param <- labelProportionsParam(
+        labels               = labels,
+        group_method         = group_method,
+        groups               = groups,
+        column_cell_id       = column_cell_id,
+        column_group_id      = column_group_id,
+        spatial_network_name = spatial_network_name,
+        alpha                = alpha,
+        weights              = weights,
+        spat_info            = si,
+        select_on            = select_on,
+        centroids            = centroids,
+        spat_loc_name        = spat_loc_name,
+        name                 = name
     )
-    output <- match.arg(
-        output, choices = c("data.table", "matrix", "spatEnrObj", "gobject")
-    )
-    gm_dt_incompat <- c("spatEnrObj", "gobject")
-    if (output %in% gm_dt_incompat && group_method == "table") {
-        stop(wrap_txtf("%s %s outputs are not available for %s",
-            fname, paste(gm_dt_incompat, collapse = " and "),
-            "group_method = \"table\""
-        ), call. = FALSE)
-    }
-
-    spat_unit <- set_default_spat_unit(
-        gobject = gobject, spat_unit = spat_unit
-    )
-    feat_type <- set_default_feat_type(
-        gobject = gobject, spat_unit = spat_unit, feat_type = feat_type
-    )
-
-    # get group values
-    groups <- switch(group_method,
-        "table" = .clp_group_table(
-            gobject = gobject,
-            groups = groups,
-            spat_unit = spat_unit,
-            feat_type = feat_type,
-            verbose = verbose
-        ),
-        "spatialnetwork" = .clp_group_spatialnetwork(
-            gobject = gobject,
-            spat_unit = spat_unit,
-            spatial_network_name = spatial_network_name,
-            alpha = alpha,
-            weights = weights,
-            verbose = verbose
-        ),
-        "polygon" = .clp_group_polygon(
-            gobject = gobject,
-            spat_unit = spat_unit,
-            spat_info = spat_info,
-            select_on = select_on,
-            centroids = centroids,
-            spat_loc_name = spat_loc_name
-        )
-    )
-
-    # spatnet and poly specific hardcoded col settings
-    if (group_method %in% c("spatialnetwork", "polygon")) {
-        column_cell_id <- "cell_ID"
-        column_group_id <- "group"
-    }
-
-    # label values
-    labs <- spatValues(gobject,
-        feats = labels,
+    res <- analyzeData(gobject, param,
         spat_unit = spat_unit,
         feat_type = feat_type,
-        verbose = FALSE
+        output    = output,
+        verbose   = verbose
     )
-
-    # validate input colnames
-    if (!column_cell_id %in% colnames(groups)) {
-        stop(wrap_txt(
-            fname, "'column_cell_id' must be a colname",
-            "of 'groups' table\n"), call. = FALSE)
+    # Param-history logging lives here (not in the analyzeData method)
+    # because get_args walks the call stack via match.call and S4's
+    # .local dispatch wrapper breaks that arithmetic. The wrapper has
+    # a stable frame layout.
+    if (identical(output, "gobject")) {
+        res <- update_giotto_params(res, description = "_proportions")
     }
-    if (!is.null(column_group_id) && # if present and ID is not in colnames
-        isTRUE(!column_group_id %in% colnames(groups))) {
-        stop(wrap_txt(
-            fname, "if provided, 'column_group_id' must be a colname",
-            "of 'groups' table\n"), call. = FALSE)
-    }
-
-    # find column_group_id if not provided
-    groups_col <- .clp_detect_group_col(
-        groups, column_cell_id, column_group_id, verbose = verbose
-    )
-
-    data.table::setnames(labs, old = "cell_ID", new = column_cell_id)
-    comb_table <- merge(groups, labs, by = column_cell_id, all.x = TRUE)
-    if ("weight" %in% colnames(comb_table)) { # weight
-        labs_per_group <- comb_table[, sum(weight), by = c(groups_col, labels)]
-        n_per_group <- comb_table[, sum(weight), by = groups_col]
-        data.table::setnames(labs_per_group, old = "V1", new = ".LPG")
-        data.table::setnames(n_per_group, old = "V1", new = ".NPG")
-    } else { # adjacency
-        labs_per_group <- comb_table[, .N, by = c(groups_col, labels)]
-        n_per_group <- comb_table[, .N, by = groups_col]
-        data.table::setnames(labs_per_group, old = "N", new = ".LPG")
-        data.table::setnames(n_per_group, old = "N", new = ".NPG")
-    }
-    prop_table <- merge(labs_per_group, n_per_group, by = groups_col)
-    prop_table[, "prop" := .LPG / .NPG]
-    res <- data.table::dcast(prop_table,
-        formula = paste(groups_col, labels, sep = "~"),
-        fill = 0,
-        value.var = "prop"
-    )
-    if (output %in% c("spatEnrObj", "gobject")) {
-        data.table::setnames(res, old = "group", new = "cell_ID")
-        enr <- createSpatEnrObj(res,
-            name = name,
-            spat_unit = spat_unit,
-            feat_type = feat_type,
-            method = "calculateLabelProportions",
-            verbose = FALSE
-        )
-        if (group_method == "polygon") {
-            spatUnit(enr) <- spat_info
-            has_sl <- isTRUE(nrow(list_giotto_data(gobject,
-                slot = "spatial_locs", spat_unit = spat_info
-            )) >= 1)
-            if (!has_sl) {
-                gobject <- addSpatialCentroidLocations(gobject,
-                    poly_info = spat_info, verbose = FALSE
-                )
-            }
-        }
-        switch(output,
-            "spatEnrObj" = return(enr),
-            "gobject" = {
-                gobject <- setGiotto(gobject, enr, verbose = verbose)
-                ## update parameters used ##
-                gobject <- update_giotto_params(gobject,
-                    description = "_proportions"
-                )
-                return(gobject)
-            }
-        )
-    } else {
-        switch(output,
-            "data.table" = return(res),
-            "matrix" = return(dt_to_matrix(res))
-        )
-    }
+    res
 }
 
 .clp_detect_group_col <- function(groups, column_cell_id, column_group_id,
@@ -876,103 +762,6 @@ calculateLabelProportions <- function(gobject, labels,
     }
     groups
 }
-
-.clp_group_spatialnetwork <- function(gobject, spat_unit,
-    spatial_network_name = NULL,
-    alpha = 1,
-    weights = FALSE,
-    verbose = NULL) {
-    checkmate::assert_numeric(alpha, lower = 0, upper = 1, len = 1L)
-    checkmate::assert_logical(weights, len = 1L)
-    sn <- getSpatialNetwork(gobject,
-        spat_unit = spat_unit,
-        name = spatial_network_name,
-        output = "networkDT",
-        verbose = verbose
-    )
-    # ensure for every A -> B, there is both A -> B and B -> A
-    rev <- data.table::copy(sn)
-    data.table::setnames(rev, c("from", "to"), c("to", "from"))
-    sn <- unique(rbind(sn, rev))
-    # extract only needed info, normalize to (source, target[, weight])
-    data.table::setnames(sn, c("from", "to"), c("source", "target"))
-    needed_cols <- c("source", "target")
-    if ("weight" %in% colnames(sn)) needed_cols <- c(needed_cols, "weight")
-    sn <- sn[, needed_cols, with = FALSE]
-    if (isFALSE(weights) && alpha == 1) {
-        sn <- sn[, c("source", "target")] # drop weights info if any
-    } else if (!"weight" %in% colnames(sn) || isFALSE(weights)) {
-        warning(wrap_txt("No 'weight' information present in spatial network.
-                        Using adjacency instead."), call. = FALSE)
-        sn[, "weight" := 1] # fallback if no weight info exists
-    }
-    # ensure unique
-    rels <- unique(sn)
-    # create self information: source cell is its own neighbor
-    if (alpha != 0) {
-        src <- unique(sn$source)
-        self_rels <- data.table::data.table(
-            source = src,
-            target = src
-        )
-        if (alpha != 1 || "weight" %in% colnames(rels)) {
-            self_rels[, "weight" := alpha]
-        }
-        rels <- rbind(rels, self_rels)
-    }
-    data.table::setnames(rels, # standardize naming
-        old = c("source", "target"),
-        new = c("group", "cell_ID")
-    )
-    rels
-}
-
-.clp_group_polygon <- function(gobject, spat_unit, spat_info,
-    select_on = c("spatial_locs", "polygons"),
-    centroids = TRUE,
-    spat_loc_name = NULL,
-    verbose = NULL) {
-    checkmate::assert_character(spat_info, len = 1L)
-    select_on <- match.arg(select_on, choices = c("spatial_locs", "polygons"))
-
-    x <- getPolygonInfo(gobject,
-        polygon_name = spat_info,
-        return_giottoPolygon = TRUE,
-        verbose = TRUE
-    )
-    vmsg(.v = verbose, "using", objName(x), "polygons to select")
-
-    switch(select_on,
-        "spatial_locs" = {
-            sl <- getSpatialLocations(gobject,
-                spat_unit = spat_unit,
-                name = spat_loc_name,
-                output = "spatLocsObj",
-                verbose = FALSE
-            )
-            y <- as.points(sl)
-            y <- createGiottoPoints(y)
-        },
-        "polygons" = {
-            y <- getPolygonInfo(gobject,
-                polygon_name = spat_unit,
-                return_giottoPolygon = TRUE,
-                verbose = FALSE
-            )
-            if (centroids) {
-                y <- centroids(y)
-                y <- createGiottoPoints(y)
-            }
-        }
-    )
-    rels <- relate(x, y, relation = "intersects")
-    data.table::setnames(rels, # standardize naming
-        old = c("x", "y"),
-        new = c("group", "cell_ID")
-    )
-    rels
-}
-
 
 #' @title calculateSpatCellMetadataProportions
 #' @name calculateSpatCellMetadataProportions
