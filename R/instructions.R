@@ -178,31 +178,17 @@ create_giotto_instructions <- function(python_path = NULL,
 # These functions have been made internal. They will stop being exported
 # in a future version of GiottoClass
 
-#' @title deprecated
-#' @name readGiottoInstructions
-#' @description Retrieves the instruction associated with the provided parameter
-#' @param giotto_instructions giotto object or result from
-#' createGiottoInstructions()
-#' @param param parameter to retrieve
-#' @param default default object to return if parameter to retrieve does not
-#' exist
-#' @returns specific parameter
-#' @examples
-#' readGiottoInstructions(
-#'     giotto_instructions = createGiottoInstructions(),
-#'     param = "show_plot"
-#' )
-#' @export
+# Internal helper for `instructions(gobject, param)` — retrieves the
+# value of a single instruction param. Formerly exported as
+# `readGiottoInstructions()` with `deprecate_soft()`; both removed because
+# the new `instructions()` S4 method calls this on every access and the
+# accumulated lifecycle-warning call-stack captures were tipping R's
+# expression-limit during long test runs.
 #' @keywords internal
+#' @noRd
 readGiottoInstructions <- function(giotto_instructions,
     param = NULL,
     default) {
-    deprecate_soft(
-        when = "0.3.5",
-        what = "readGiottoInstructions()",
-        with = "instructions()"
-    )
-
     # get instructions if provided the giotto object
     if (inherits(giotto_instructions, "giotto")) {
         giotto_instructions <- giotto_instructions@instructions
@@ -223,61 +209,27 @@ readGiottoInstructions <- function(giotto_instructions,
 }
 
 
-#' @title deprecated
-#' @name showGiottoInstructions
-#' @description Function to display all instructions from giotto object
-#' @param gobject giotto object
-#' @returns named vector with giotto instructions
-#' @examples
-#' g <- GiottoData::loadGiottoMini("visium")
-#'
-#' showGiottoInstructions(g)
-#' @export
+# Internal helper for `instructions(gobject)` — extracts the full
+# instructions slot. Formerly exported as `showGiottoInstructions()`
+# with `deprecate_soft()`; both removed (see `readGiottoInstructions`
+# note above for context).
 #' @keywords internal
+#' @noRd
 showGiottoInstructions <- function(gobject) {
-    deprecate_soft(
-        when = "0.3.5",
-        what = "showGiottoInstructions()",
-        with = "instructions()"
-    )
-
-    instrs <- gobject@instructions
-    return(instrs)
+    gobject@instructions
 }
 
 
-#' @title deprecated
-#' @name changeGiottoInstructions
-#' @description Function to change one or more instructions from giotto object.
-#' If more than one item is supplied to \code{params} and \code{new_values}, use
-#' a vector of values. Does not call \code{initialize} on the giotto object
-#' @param gobject giotto object
-#' @param params parameter(s) to change
-#' @param new_values new value(s) for parameter(s)
-#' @param return_gobject (boolean, default = TRUE) return giotto object
-#' @param init_gobject (boolean, default = TRUE) initialize gobject if returning
-#' @returns giotto object with one or more changed instructions
-#' @examples
-#' g <- GiottoData::loadGiottoMini("visium")
-#'
-#' changeGiottoInstructions(
-#'     gobject = g, params = "save_plot",
-#'     new_values = TRUE
-#' )
-#' @export
+# Internal helper for `instructions<-(gobject, param) <- value` — changes
+# one or more instruction values. Formerly exported as
+# `changeGiottoInstructions()` with `deprecate_soft()`; both removed.
 #' @keywords internal
+#' @noRd
 changeGiottoInstructions <- function(gobject,
     params = NULL,
     new_values = NULL,
     return_gobject = TRUE,
     init_gobject = TRUE) {
-    deprecate_soft(
-        when = "0.3.5",
-        what = "changeGiottoInstructions()",
-        with = "instructions()"
-    )
-
-
     instrs <- gobject@instructions
 
     if (is.null(params) | is.null(new_values)) {
@@ -324,34 +276,14 @@ changeGiottoInstructions <- function(gobject,
 
 
 
-#' @title deprecated
-#' @name replaceGiottoInstructions
-#' @description Function to replace all instructions from giotto object. Does
-#' not call \code{initialize} on the giotto object
-#' @param gobject giotto object
-#' @param instructions new
-#' instructions (e.g. result from createGiottoInstructions)
-#' @param init_gobject (boolean, default = TRUE) initialize gobject when
-#' returning
-#' @returns giotto object with replaces instructions
-#' @examples
-#' g <- GiottoData::loadGiottoMini("visium")
-#'
-#' replaceGiottoInstructions(
-#'     gobject = g,
-#'     instructions = createGiottoInstructions()
-#' )
-#' @export
+# Internal helper for `instructions<-(gobject) <- value` — replaces the
+# entire instructions slot. Formerly exported as
+# `replaceGiottoInstructions()` with `deprecate_soft()`; both removed.
 #' @keywords internal
+#' @noRd
 replaceGiottoInstructions <- function(gobject,
     instructions = NULL,
     init_gobject = TRUE) {
-    deprecate_soft(
-        when = "0.3.5",
-        what = "replaceGiottoInstructions()",
-        with = "instructions()"
-    )
-
     instrs_needed <- names(create_giotto_instructions())
 
     # validate new instructions
