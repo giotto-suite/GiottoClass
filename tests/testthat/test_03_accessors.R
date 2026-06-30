@@ -993,9 +993,12 @@ describe("addCellMetadata()", {
             "chars" = sample(LETTERS, size = length(ids), replace = TRUE)
         )
 
-        am_giotto <- addCellMetadata(
-            giotto_object,
-            new_metadata = dt_no_id
+        expect_warning(
+            am_giotto <- addCellMetadata(
+                giotto_object,
+                new_metadata = dt_no_id
+            ),
+            regexp = "no 'cell_ID' column"
         )
 
         res <- pDataDT(am_giotto)
@@ -1016,9 +1019,12 @@ describe("addCellMetadata()", {
 
         chars <- sample(LETTERS, size = length(ids), replace = TRUE)
 
-        am_giotto <- addCellMetadata(
-            giotto_object,
-            new_metadata = chars
+        expect_warning(
+            am_giotto <- addCellMetadata(
+                giotto_object,
+                new_metadata = chars
+            ),
+            regexp = "no 'cell_ID' column"
         )
 
         res <- pDataDT(am_giotto)
@@ -1061,9 +1067,12 @@ describe("addCellMetadata()", {
 
         factors <- factor(sample(LETTERS, size = length(ids), replace = TRUE))
 
-        am_giotto <- addCellMetadata(
-            giotto_object,
-            new_metadata = factors
+        expect_warning(
+            am_giotto <- addCellMetadata(
+                giotto_object,
+                new_metadata = factors
+            ),
+            regexp = "no 'cell_ID' column"
         )
 
         res <- pDataDT(am_giotto)
@@ -1096,6 +1105,52 @@ describe("addCellMetadata()", {
         checkmate:: expect_factor(res$factors2) # values retain type
         # check that start meta order is the same as end
         expect_identical(original_order, res$cell_ID)
+    })
+
+    it("auto-detects cell_ID column and merges by key under default by_column", {
+        # When new_metadata carries a cell_ID column, the setter should
+        # route through the key-based merge regardless of `by_column`.
+        # Guards against silent positional misalignment when the caller's
+        # row order doesn't match cell_metadata row order.
+        ids <- spatIDs(giotto_object)
+        original_order <- spatIDs(getCellMetadata(giotto_object))
+
+        dt_keyed <- data.table::data.table(
+            "cell_ID" = ids,
+            "id_check" = ids,
+            "random" = rnorm(length(ids))
+        )
+        # scramble row order — only the cell_ID key keeps alignment honest
+        dt_keyed <- dt_keyed[sample(1:.N)]
+
+        # Note: NO `by_column = TRUE` passed. Auto-detect should promote.
+        am_giotto <- expect_silent(addCellMetadata(
+            giotto_object,
+            new_metadata = dt_keyed
+        ))
+
+        res <- pDataDT(am_giotto)
+
+        # Auto-detect must have routed through key-based merge:
+        # id_check values must follow cell_ID order, not input row order.
+        expect_identical(res$cell_ID, res$id_check)
+        expect_identical(original_order, res$cell_ID)
+        expect_true("random" %in% colnames(res))
+    })
+
+    it("warns when DF / vector input has no cell_ID column", {
+        ids <- spatIDs(giotto_object)
+        # Positional input — should still work but emit a warning so the
+        # caller can opt in to key-based alignment.
+        expect_warning(addCellMetadata(
+            giotto_object,
+            new_metadata = data.table::data.table(x = rnorm(length(ids)))
+        ), regexp = "no 'cell_ID' column")
+
+        expect_warning(addCellMetadata(
+            giotto_object,
+            new_metadata = rnorm(length(ids))
+        ), regexp = "no 'cell_ID' column")
     })
 
 
@@ -1167,9 +1222,12 @@ describe("addFeatMetadata()", {
             "chars" = sample(LETTERS, size = length(ids), replace = TRUE)
         )
 
-        am_giotto <- addFeatMetadata(
-            giotto_object,
-            new_metadata = dt_no_id
+        expect_warning(
+            am_giotto <- addFeatMetadata(
+                giotto_object,
+                new_metadata = dt_no_id
+            ),
+            regexp = "no 'feat_ID' column"
         )
 
         res <- fDataDT(am_giotto)
@@ -1190,9 +1248,12 @@ describe("addFeatMetadata()", {
 
         chars <- sample(LETTERS, size = length(ids), replace = TRUE)
 
-        am_giotto <- addFeatMetadata(
-            giotto_object,
-            new_metadata = chars
+        expect_warning(
+            am_giotto <- addFeatMetadata(
+                giotto_object,
+                new_metadata = chars
+            ),
+            regexp = "no 'feat_ID' column"
         )
 
         res <- fDataDT(am_giotto)
@@ -1235,9 +1296,12 @@ describe("addFeatMetadata()", {
 
         factors <- factor(sample(LETTERS, size = length(ids), replace = TRUE))
 
-        am_giotto <- addFeatMetadata(
-            giotto_object,
-            new_metadata = factors
+        expect_warning(
+            am_giotto <- addFeatMetadata(
+                giotto_object,
+                new_metadata = factors
+            ),
+            regexp = "no 'feat_ID' column"
         )
 
         res <- fDataDT(am_giotto)
@@ -1270,6 +1334,45 @@ describe("addFeatMetadata()", {
         checkmate::expect_factor(res$factors2) # values retain type
         # check that start meta order is the same as end
         expect_identical(original_order, res$feat_ID)
+    })
+
+    it("auto-detects feat_ID column and merges by key under default by_column", {
+        # Mirror of the addCellMetadata auto-detect test. When
+        # new_metadata carries a feat_ID column, the setter should route
+        # through the key-based merge regardless of `by_column`.
+        ids <- featIDs(giotto_object)
+        original_order <- featIDs(getFeatureMetadata(giotto_object))
+
+        dt_keyed <- data.table::data.table(
+            "feat_ID" = ids,
+            "id_check" = ids,
+            "random" = rnorm(length(ids))
+        )
+        dt_keyed <- dt_keyed[sample(1:.N)]
+
+        am_giotto <- expect_silent(addFeatMetadata(
+            giotto_object,
+            new_metadata = dt_keyed
+        ))
+
+        res <- fDataDT(am_giotto)
+
+        expect_identical(res$feat_ID, res$id_check)
+        expect_identical(original_order, res$feat_ID)
+        expect_true("random" %in% colnames(res))
+    })
+
+    it("warns when DF / vector input has no feat_ID column", {
+        ids <- featIDs(giotto_object)
+        expect_warning(addFeatMetadata(
+            giotto_object,
+            new_metadata = data.table::data.table(x = rnorm(length(ids)))
+        ), regexp = "no 'feat_ID' column")
+
+        expect_warning(addFeatMetadata(
+            giotto_object,
+            new_metadata = rnorm(length(ids))
+        ), regexp = "no 'feat_ID' column")
     })
 
 })

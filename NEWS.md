@@ -1,3 +1,26 @@
+# GiottoClass 0.5.2
+
+## changes
+- shared-domain and spatial-domain accessors promoted to S4 generics on `signature("giotto")` — `getCellMetadata` / `setCellMetadata`, `getFeatureMetadata` / `setFeatureMetadata`, `getExpression` / `setExpression`, `getMultiomics` / `setMultiomics`, `getDimReduction` / `setDimReduction`, `getNearestNetwork` / `setNearestNetwork`, `getSpatialEnrichment` / `setSpatialEnrichment`, `getSpatialLocations` / `setSpatialLocations`, `getSpatialNetwork` / `setSpatialNetwork`, `getPolygonInfo` / `setPolygonInfo`, `getFeatureInfo` / `setFeatureInfo`, `getGiottoImage` / `setGiottoImage`. Per-accessor internal/external split helpers (`.external_accessor_*` sentinel pattern) inlined into the public setters.
+- `overlapPointDT[i]` / `[, j]` default flipped from `ids = TRUE` → `ids = FALSE`. Default single-axis subset now returns an `overlapPointDT` subset object (matching `overlapIntensityDT` and `SpatVector`). The integer-index selection form is still available via `ovlp[i, ids = TRUE]`.
+
+## new
+- `spatRelate()` generic — filter-form complement to `relate()`: returns `x` narrowed by a spatial predicate rather than a relation matrix. Eager method on `(giottoSpatial, giottoSpatial)` wraps `relate() + subset`; the on-disk lazy form lives in GiottoDisk via methods on `parquetGeomBase`.
+
+## bug fixes
+- fix "unused argument (ids = FALSE)" when subsetting a `giottoPolygon` object
+- skip 0-entry `giottoPoints` in subset paths
+- documentation fix in `methods-extract`
+
+## enhancements
+- `addCellMetadata()` and `addFeatMetadata()` now auto-detect a `cell_ID` /
+  `feat_ID` column on `new_metadata` (including the column auto-added from a
+  named vector) and route through key-based merge regardless of the caller's
+  `by_column` value. Positional `cbind` is fragile when input row order does
+  not match metadata row order; the key-based path is safe by construction.
+  Positional input without a key column still works for backwards compatibility
+  but now emits a warning so callers can opt in to safe alignment.
+
 # GiottoClass 0.5.1 (2026/05/14)
 
 ## changes
