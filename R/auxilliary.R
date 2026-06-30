@@ -505,6 +505,24 @@ addCellMetadata <- function(gobject,
         column_cell_ID <- "cell_ID"
     }
 
+    # 2b. Auto-detect key-based input. When new_metadata carries a
+    # column_cell_ID column (either supplied directly as a data.table /
+    # data.frame, or auto-added from a named vector above), route through
+    # the key-based merge path regardless of the caller's by_column value.
+    # Positional cbind is fragile whenever input row order doesn't match
+    # cell_metadata row order; the key-based path is safe by construction.
+    # When no key column is present the original positional path still
+    # runs, but with a warning so callers can opt in to safe alignment.
+    has_key <- column_cell_ID %in% colnames(new_metadata)
+    if (has_key) {
+        by_column <- TRUE
+    } else if (!isTRUE(by_column)) {
+        warning("addCellMetadata: input has no '", column_cell_ID,
+            "' column / names; falling back to positional cbind. Pass a ",
+            "named vector or a table with a '", column_cell_ID,
+            "' column for key-based alignment.", call. = FALSE)
+    }
+
 
     # 3. combine with existing metadata
     # get old and new meta colnames that are not the ID col
@@ -684,6 +702,24 @@ addFeatMetadata <- function(gobject,
     # If no specific column_feat_ID is provided, assume "feat_ID"
     if (is.null(column_feat_ID)) {
         column_feat_ID <- "feat_ID"
+    }
+
+    # 3b. Auto-detect key-based input. When new_metadata carries a
+    # column_feat_ID column (either supplied directly as a data.table /
+    # data.frame, or auto-added from a named vector above), route through
+    # the key-based merge path regardless of the caller's by_column value.
+    # Positional cbind is fragile whenever input row order doesn't match
+    # feat_metadata row order; the key-based path is safe by construction.
+    # When no key column is present the original positional path still
+    # runs, but with a warning so callers can opt in to safe alignment.
+    has_key <- column_feat_ID %in% colnames(new_metadata)
+    if (has_key) {
+        by_column <- TRUE
+    } else if (!isTRUE(by_column)) {
+        warning("addFeatMetadata: input has no '", column_feat_ID,
+            "' column / names; falling back to positional cbind. Pass a ",
+            "named vector or a table with a '", column_feat_ID,
+            "' column for key-based alignment.", call. = FALSE)
     }
 
 
