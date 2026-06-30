@@ -20,6 +20,19 @@
   not match metadata row order; the key-based path is safe by construction.
   Positional input without a key column still works for backwards compatibility
   but now emits a warning so callers can opt in to safe alignment.
+- Slot-accessor S4 generics widened with contract-stable formals
+  (`spat_unit`, `feat_type`, `name`, `polygon_name`) so IDE autocomplete
+  surfaces them past `gobject`. Setter method defaults for `name`
+  (`"raw"`, `"pca"`, `"sNN.pca"`, `"enrichment"`, `"cell"`) moved out of
+  the formals and into an explicit body-side fallback after
+  `read_s4_nesting()`, allowing `name` on the generic without breaking
+  the "user-supplied vs subobject-derived" resolution. `match.call`-based
+  detection replaced with plain `is.null(name)` throughout.
+- `getExpression` adopts `name` as the canonical formal alongside
+  `values` (now a back-compat alias); they error if both supplied and
+  differ.
+- `image_type` formal removed from `getGiottoImage()` and `setGiottoImage()`
+  — already documented as deprecated and unused in body.
 
 # GiottoClass 0.5.1 (2026/05/14)
 
