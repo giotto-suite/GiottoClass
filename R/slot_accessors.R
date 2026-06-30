@@ -448,7 +448,8 @@ set_feat_id <- function(gobject,
 #' getCellMetadata(g)
 #' @export
 setGeneric("getCellMetadata",
-    function(gobject, ...) standardGeneric("getCellMetadata"))
+    function(gobject, spat_unit = NULL, feat_type = NULL, ...)
+        standardGeneric("getCellMetadata"))
 
 #' @rdname getCellMetadata
 #' @export
@@ -505,7 +506,8 @@ setMethod("getCellMetadata", signature("giotto"), function(gobject,
 #' setCellMetadata(gobject = g, x = createCellMetaObj(m2))
 #' @export
 setGeneric("setCellMetadata",
-    function(gobject, ...) standardGeneric("setCellMetadata"))
+    function(gobject, x, spat_unit = NULL, feat_type = NULL, ...)
+        standardGeneric("setCellMetadata"))
 
 #' @rdname setCellMetadata
 #' @export
@@ -665,7 +667,8 @@ setMethod("setCellMetadata", signature("giotto"), function(gobject,
 #' getFeatureMetadata(g)
 #' @export
 setGeneric("getFeatureMetadata",
-    function(gobject, ...) standardGeneric("getFeatureMetadata"))
+    function(gobject, spat_unit = NULL, feat_type = NULL, ...)
+        standardGeneric("getFeatureMetadata"))
 
 #' @rdname getFeatureMetadata
 #' @export
@@ -720,7 +723,8 @@ setMethod("getFeatureMetadata", signature("giotto"), function(gobject,
 #' setFeatureMetadata(gobject = g, x = createFeatMetaObj(m2))
 #' @export
 setGeneric("setFeatureMetadata",
-    function(gobject, ...) standardGeneric("setFeatureMetadata"))
+    function(gobject, x, spat_unit = NULL, feat_type = NULL, ...)
+        standardGeneric("setFeatureMetadata"))
 
 #' @rdname setFeatureMetadata
 #' @export
@@ -860,8 +864,11 @@ setMethod("setFeatureMetadata", signature("giotto"), function(gobject,
 #' @aliases getExpressionValues
 #' @description Function to get expression values from giotto object
 #' @inheritParams data_access_params
-#' @param values expression values to
-#' extract (e.g. "raw", "normalized", "scaled")
+#' @param name name of expression values to extract (e.g. `"raw"`,
+#' `"normalized"`, `"scaled"`). Canonical form, consistent with the rest
+#' of the slot accessors.
+#' @param values back-compat alias for `name`. If both are supplied they
+#' must agree.
 #' @param output what object type to retrieve the expression as. Currently
 #' either matrix' for the matrix object contained in the exprObj or
 #' 'exprObj' (default) for the exprObj itself are allowed.
@@ -874,31 +881,43 @@ setMethod("setFeatureMetadata", signature("giotto"), function(gobject,
 #' getExpression(g)
 #' @export
 setGeneric("getExpression",
-    function(gobject, ...) standardGeneric("getExpression"))
+    function(gobject, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
+        standardGeneric("getExpression"))
 
 #' @rdname getExpression
 #' @export
 setMethod("getExpression", signature("giotto"), function(
         gobject,
-        values = NULL,
         spat_unit = NULL,
         feat_type = NULL,
+        name = NULL,
+        values = NULL,
         output = c("exprObj", "matrix"),
         set_defaults = TRUE) {
+    # `values` is an alias for `name` (the canonical form, consistent
+    # with the rest of the slot accessors). When both are supplied they
+    # must agree.
+    if (!is.null(values)) {
+        if (!is.null(name) && !identical(name, values)) {
+            stop("getExpression: 'name' and 'values' both supplied but ",
+                "differ. Use one — 'name' is preferred.", call. = FALSE)
+        }
+        name <- values
+    }
     output <- match.arg(output, choices = c("exprObj", "matrix"))
 
     if (isTRUE(set_defaults)) {
         .set_default_nesting(gobject, spat_unit, feat_type)
     }
 
-    potential_values <- list_expression_names(
+    potential_names <- list_expression_names(
         gobject = gobject,
         spat_unit = spat_unit,
         feat_type = feat_type
     )
 
-    if (is.null(values)) values <- potential_values[[1]]
-    if (is.null(values)) {
+    if (is.null(name)) name <- potential_names[[1]]
+    if (is.null(name)) {
         stop(wrap_txt(
             "No expression values discovered by getter:",
             "\nspat_unit:", spat_unit,
@@ -907,27 +926,27 @@ setMethod("getExpression", signature("giotto"), function(
     }
 
     # Targeted error messages for the standard giotto pipeline names
-    if (values == "scaled" & !"scaled" %in% potential_values) {
+    if (name == "scaled" & !"scaled" %in% potential_names) {
         stop(wrap_txt("Scaled expression not found.
                 First run scaling (& normalization) step(s)", errWidth = TRUE))
-    } else if (values == "normalized" & !"normalized" %in% potential_values) {
+    } else if (name == "normalized" & !"normalized" %in% potential_names) {
         stop(wrap_txt("Normalized expression not found.
                 First run normalization step", errWidth = TRUE))
-    } else if (values == "custom" & !"custom" %in% potential_values) {
+    } else if (name == "custom" & !"custom" %in% potential_names) {
         stop(wrap_txt("Custom expression not found.
                 First add custom expression matrix", errWidth = TRUE))
     }
 
-    if (!values %in% potential_values) {
+    if (!name %in% potential_names) {
         stop(wrap_txt("Requested expression info not found [spat_unit:",
             spat_unit, "] [feat_type:",
-            feat_type, "] [values:", values, "]",
+            feat_type, "] [name:", name, "]",
             sep = "",
             errWidth = TRUE
         ))
     }
 
-    expr_vals <- gobject@expression[[spat_unit]][[feat_type]][[values]]
+    expr_vals <- gobject@expression[[spat_unit]][[feat_type]][[name]]
 
     # Reload matrix from h5 file if HDF5-backed (giotto only — giottoMulti
     # has no @h5_file slot)
@@ -992,7 +1011,8 @@ setMethod("getExpression", signature("giotto"), function(
 #' g <- setExpression(gobject = g, x = createExprObj(m, name = "raw"))
 #' @export
 setGeneric("setExpression",
-    function(gobject, ...) standardGeneric("setExpression"))
+    function(gobject, x, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
+        standardGeneric("setExpression"))
 
 #' @rdname setExpression
 #' @export
@@ -1000,7 +1020,7 @@ setMethod("setExpression", signature("giotto"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
-    name = "raw",
+    name = NULL,
     provenance = NULL,
     verbose = TRUE,
     initialize = TRUE,
@@ -1020,7 +1040,7 @@ setMethod("setExpression", signature("giotto"), function(gobject,
     # ones, or vice versa.
     nospec_unit <- is.null(spat_unit)
     nospec_feat <- is.null(feat_type)
-    nospec_name <- is.null(match.call()$name)
+    nospec_name <- is.null(name)
 
     # List input: validate items and iterate. Only forward nesting args that
     # the caller actually supplied; otherwise the recursive call's match.call()
@@ -1081,6 +1101,9 @@ setMethod("setExpression", signature("giotto"), function(gobject,
     # NOTE: read_s4_nesting modifies spat_unit / feat_type / name / provenance
     # in this frame based on the nospec_* flags.
     x <- read_s4_nesting(x)
+    # Fallback for the rare case where neither the caller nor the
+    # subobject supplied a name (objName(x) is NA).
+    if (is.null(name)) name <- "raw"
 
     # Notify on replacement
     potential_names <- list_expression_names(gobject,
@@ -1218,7 +1241,8 @@ set_multiomics <- function(gobject, ...) setMultiomics(gobject, ...)
 #' )
 #' @export
 setGeneric("setMultiomics",
-    function(gobject, ...) standardGeneric("setMultiomics"))
+    function(gobject, result, spat_unit = NULL, feat_type = NULL, ...)
+        standardGeneric("setMultiomics"))
 
 #' @rdname setMultiomics
 #' @export
@@ -1309,7 +1333,8 @@ get_multiomics <- function(gobject, ...) getMultiomics(gobject, ...)
 #' getMultiomics(gobject = g, spat_unit = "cell", feat_type = "rna_protein")
 #' @export
 setGeneric("getMultiomics",
-    function(gobject, ...) standardGeneric("getMultiomics"))
+    function(gobject, spat_unit = NULL, feat_type = NULL, ...)
+        standardGeneric("getMultiomics"))
 
 #' @rdname getMultiomics
 #' @export
@@ -1382,7 +1407,8 @@ setMethod("getMultiomics", signature("giotto"), function(gobject,
 #' getSpatialLocations(g)
 #' @export
 setGeneric("getSpatialLocations",
-    function(gobject, ...) standardGeneric("getSpatialLocations"))
+    function(gobject, spat_unit = NULL, name = NULL, ...)
+        standardGeneric("getSpatialLocations"))
 
 #' @rdname getSpatialLocations
 #' @export
@@ -1497,14 +1523,15 @@ setMethod("getSpatialLocations", signature("giotto"), function(gobject,
 #' setSpatialLocations(gobject = g, x = createSpatLocsObj(sl, name = "raw"))
 #' @export
 setGeneric("setSpatialLocations",
-    function(gobject, ...) standardGeneric("setSpatialLocations"))
+    function(gobject, x, spat_unit = NULL, name = NULL, ...)
+        standardGeneric("setSpatialLocations"))
 
 #' @rdname setSpatialLocations
 #' @export
 setMethod("setSpatialLocations", signature("giotto"), function(gobject,
     x,
     spat_unit = NULL,
-    name = "raw",
+    name = NULL,
     provenance = NULL,
     verbose = TRUE,
     initialize = TRUE,
@@ -1534,11 +1561,11 @@ setMethod("setSpatialLocations", signature("giotto"), function(gobject,
     # whether to overwrite the subobject's nesting values with caller-supplied
     # ones, or vice versa.
     nospec_unit <- is.null(spat_unit)
-    nospec_name <- is.null(match.call()$name)
+    nospec_name <- is.null(name)
 
     # List input: validate items and iterate. Only forward nesting args that
-    # the caller actually supplied; otherwise the recursive call's match.call()
-    # would see name = "raw" (default) and clobber each subobj's own @name.
+    # the caller actually supplied; otherwise the recursive call would
+    # clobber each subobj's own @name with our top-level default.
     if (inherits(x, "list")) {
         if (!all(vapply(x, inherits, "spatLocsObj", FUN.VALUE = logical(1L)))) {
             stop(wrap_txt("Only spatLocsObj or lists of spatLocsObj accepted.
@@ -1584,6 +1611,9 @@ setMethod("setSpatialLocations", signature("giotto"), function(gobject,
     # NOTE: read_s4_nesting modifies spat_unit / name / provenance in this
     # frame based on the nospec_* flags.
     x <- read_s4_nesting(x)
+    # Fallback for the rare case where neither the caller nor the
+    # subobject supplied a name (objName(x) is NA).
+    if (is.null(name)) name <- "raw"
 
     # Notify on replacement
     potential_names <- list_spatial_locations_names(gobject,
@@ -1647,16 +1677,17 @@ setMethod("setSpatialLocations", signature("giotto"), function(gobject,
 #' getDimReduction(g)
 #' @export
 setGeneric("getDimReduction",
-    function(gobject, ...) standardGeneric("getDimReduction"))
+    function(gobject, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
+        standardGeneric("getDimReduction"))
 
 #' @rdname getDimReduction
 #' @export
 setMethod("getDimReduction", signature("giotto"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
+    name = NULL,
     reduction = c("cells", "feats"),
     reduction_method = NULL,
-    name = NULL,
     output = c("dimObj", "matrix"),
     set_defaults = TRUE) {
     # back-compat: "data.table" used to be accepted for matrix output
@@ -1740,7 +1771,8 @@ setMethod("getDimReduction", signature("giotto"), function(gobject,
 #' setDimReduction(gobject = g, x = dimred)
 #' @export
 setGeneric("setDimReduction",
-    function(gobject, ...) standardGeneric("setDimReduction"))
+    function(gobject, x, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
+        standardGeneric("setDimReduction"))
 
 #' @rdname setDimReduction
 #' @export
@@ -1748,7 +1780,7 @@ setMethod("setDimReduction", signature("giotto"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
-    name = "pca",
+    name = NULL,
     reduction = c("cells", "feats"),
     reduction_method = c("pca", "umap", "tsne"),
     provenance = NULL,
@@ -1776,7 +1808,7 @@ setMethod("setDimReduction", signature("giotto"), function(gobject,
     # ones, or vice versa. Compute before match.arg() resolves the vectors.
     nospec_unit <- is.null(spat_unit)
     nospec_feat <- is.null(feat_type)
-    nospec_name <- is.null(match.call()$name)
+    nospec_name <- is.null(name)
     nospec_red <- is.null(match.call()$reduction)
     nospec_red_method <- is.null(match.call()$reduction_method)
 
@@ -1850,6 +1882,9 @@ setMethod("setDimReduction", signature("giotto"), function(gobject,
     # reduction / reduction_method / provenance in this frame based on
     # nospec_* flags.
     x <- read_s4_nesting(x)
+    # Fallback for the rare case where neither the caller nor the
+    # subobject supplied a name (objName(x) is NA).
+    if (is.null(name)) name <- "pca"
 
     # Notify on replacement
     potential_names <- list_dim_reductions_names(gobject,
@@ -1911,15 +1946,16 @@ setMethod("setDimReduction", signature("giotto"), function(gobject,
 #' getNearestNetwork(gobject = g)
 #' @export
 setGeneric("getNearestNetwork",
-    function(gobject, ...) standardGeneric("getNearestNetwork"))
+    function(gobject, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
+        standardGeneric("getNearestNetwork"))
 
 #' @rdname getNearestNetwork
 #' @export
 setMethod("getNearestNetwork", signature("giotto"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
-    nn_type = NULL,
     name = NULL,
+    nn_type = NULL,
     output = c("nnNetObj", "igraph", "data.table"),
     set_defaults = TRUE) {
     output <- match.arg(
@@ -2014,7 +2050,8 @@ setMethod("getNearestNetwork", signature("giotto"), function(gobject,
 #' setNearestNetwork(gobject = g, x = dimred)
 #' @export
 setGeneric("setNearestNetwork",
-    function(gobject, ...) standardGeneric("setNearestNetwork"))
+    function(gobject, x, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
+        standardGeneric("setNearestNetwork"))
 
 #' @rdname setNearestNetwork
 #' @export
@@ -2022,8 +2059,8 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
+    name = NULL,
     nn_type = "sNN",
-    name = "sNN.pca",
     provenance = NULL,
     verbose = TRUE,
     initialize = TRUE,
@@ -2052,7 +2089,7 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
     nospec_unit <- is.null(spat_unit)
     nospec_feat <- is.null(feat_type)
     nospec_net <- is.null(match.call()$nn_type)
-    nospec_name <- is.null(match.call()$name)
+    nospec_name <- is.null(name)
 
     # List input: validate items and iterate. Only forward nesting args that
     # the caller supplied; otherwise the recursive call's match.call() would
@@ -2108,6 +2145,9 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
     # NOTE: read_s4_nesting modifies spat_unit / feat_type / name / nn_type /
     # provenance in this frame based on nospec_* flags.
     x <- read_s4_nesting(x)
+    # Fallback for the rare case where neither the caller nor the
+    # subobject supplied a name (objName(x) is NA).
+    if (is.null(name)) name <- "sNN.pca"
 
     # Notify on replacement
     potential_names <- list_nearest_networks_names(gobject,
@@ -2173,7 +2213,8 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
 #' getSpatialNetwork(g)
 #' @export
 setGeneric("getSpatialNetwork",
-    function(gobject, ...) standardGeneric("getSpatialNetwork"))
+    function(gobject, spat_unit = NULL, name = NULL, ...)
+        standardGeneric("getSpatialNetwork"))
 
 #' @rdname getSpatialNetwork
 #' @export
@@ -2300,7 +2341,8 @@ setMethod("getSpatialNetwork", signature("giotto"), function(gobject,
 #' setSpatialNetwork(gobject = g, x = spatnet)
 #' @export
 setGeneric("setSpatialNetwork",
-    function(gobject, ...) standardGeneric("setSpatialNetwork"))
+    function(gobject, x, spat_unit = NULL, name = NULL, ...)
+        standardGeneric("setSpatialNetwork"))
 
 #' @rdname setSpatialNetwork
 #' @export
@@ -2336,7 +2378,7 @@ setMethod("setSpatialNetwork", signature("giotto"), function(gobject,
     # whether to overwrite the subobject's nesting values with caller-supplied
     # ones, or vice versa.
     nospec_unit <- is.null(spat_unit)
-    nospec_name <- is.null(match.call()$name)
+    nospec_name <- is.null(name)
 
     # List input: validate items and iterate via self-recursion.
     if (inherits(x, "list")) {
@@ -2621,7 +2663,8 @@ setSpatialGrid <- function(gobject,
 #' getPolygonInfo(g)
 #' @export
 setGeneric("getPolygonInfo",
-    function(gobject, ...) standardGeneric("getPolygonInfo"))
+    function(gobject, polygon_name = NULL, ...)
+        standardGeneric("getPolygonInfo"))
 
 #' @rdname getPolygonInfo
 #' @export
@@ -2724,13 +2767,14 @@ setMethod("getPolygonInfo", signature("giotto"), function(gobject,
 #' setPolygonInfo(gobject = g, x = polyinfo)
 #' @export
 setGeneric("setPolygonInfo",
-    function(gobject, ...) standardGeneric("setPolygonInfo"))
+    function(gobject, x, name = NULL, ...)
+        standardGeneric("setPolygonInfo"))
 
 #' @rdname setPolygonInfo
 #' @export
 setMethod("setPolygonInfo", signature("giotto"), function(gobject,
     x,
-    name = "cell",
+    name = NULL,
     centroids_to_spatlocs = FALSE,
     verbose = TRUE,
     initialize = TRUE,
@@ -2752,7 +2796,7 @@ setMethod("setPolygonInfo", signature("giotto"), function(gobject,
 
     # `nospec_name` is read by read_s4_nesting() to decide whether to override
     # the subobject's @name with the caller-supplied `name`.
-    nospec_name <- !methods::hasArg(name)
+    nospec_name <- is.null(name)
 
     # List input: validate items and iterate. Only forward `name` if the user
     # supplied it, so each subobj's own @name is honored by read_s4_nesting().
@@ -2799,6 +2843,9 @@ setMethod("setPolygonInfo", signature("giotto"), function(gobject,
     # NOTE: read_s4_nesting modifies `name` in this frame based on
     # nospec_name (subobj's @name wins when caller didn't supply one).
     x <- read_s4_nesting(x)
+    # Fallback for the rare case where neither the caller nor the
+    # subobject supplied a name (objName(x) is NA).
+    if (is.null(name)) name <- "cell"
 
     # Notify on replacement
     if (name %in% names(gobject@spatial_info)) {
@@ -2879,7 +2926,8 @@ setMethod("setPolygonInfo", signature("giotto"), function(gobject,
 #' getFeatureInfo(g)
 #' @export
 setGeneric("getFeatureInfo",
-    function(gobject, ...) standardGeneric("getFeatureInfo"))
+    function(gobject, feat_type = NULL, ...)
+        standardGeneric("getFeatureInfo"))
 
 #' @rdname getFeatureInfo
 #' @export
@@ -2954,7 +3002,8 @@ setMethod("getFeatureInfo", signature("giotto"), function(gobject,
 #' setFeatureInfo(gobject = g, x = featinfo)
 #' @export
 setGeneric("setFeatureInfo",
-    function(gobject, ...) standardGeneric("setFeatureInfo"))
+    function(gobject, x, feat_type = NULL, ...)
+        standardGeneric("setFeatureInfo"))
 
 #' @rdname setFeatureInfo
 #' @export
@@ -3093,7 +3142,8 @@ setMethod("setFeatureInfo", signature("giotto"), function(gobject,
 #' getSpatialEnrichment(g, spat_unit = "aggregate", name = "cluster_metagene")
 #' @export
 setGeneric("getSpatialEnrichment",
-    function(gobject, ...) standardGeneric("getSpatialEnrichment"))
+    function(gobject, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
+        standardGeneric("getSpatialEnrichment"))
 
 #' @rdname getSpatialEnrichment
 #' @export
@@ -3176,7 +3226,8 @@ setMethod("getSpatialEnrichment", signature("giotto"), function(gobject,
 #' g <- setSpatialEnrichment(g, spatenrich)
 #' @export
 setGeneric("setSpatialEnrichment",
-    function(gobject, ...) standardGeneric("setSpatialEnrichment"))
+    function(gobject, x, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
+        standardGeneric("setSpatialEnrichment"))
 
 #' @rdname setSpatialEnrichment
 #' @export
@@ -3184,7 +3235,7 @@ setMethod("setSpatialEnrichment", signature("giotto"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
-    name = "enrichment",
+    name = NULL,
     provenance = NULL,
     verbose = TRUE,
     initialize = TRUE,
@@ -3219,7 +3270,7 @@ setMethod("setSpatialEnrichment", signature("giotto"), function(gobject,
     # ones, or vice versa.
     nospec_unit <- is.null(spat_unit)
     nospec_feat <- is.null(feat_type)
-    nospec_name <- is.null(match.call()$name)
+    nospec_name <- is.null(name)
 
     # List input: validate items and iterate via self-recursion. Only forward
     # nesting args that the caller supplied.
@@ -3272,6 +3323,9 @@ setMethod("setSpatialEnrichment", signature("giotto"), function(gobject,
     # NOTE: read_s4_nesting modifies spat_unit / feat_type / name /
     # provenance in this frame based on nospec_* flags.
     x <- read_s4_nesting(x)
+    # Fallback for the rare case where neither the caller nor the
+    # subobject supplied a name (objName(x) is NA).
+    if (is.null(name)) name <- "enrichment"
 
     # Notify on replacement
     if (isTRUE(verbose)) {
@@ -3325,7 +3379,6 @@ setMethod("setSpatialEnrichment", signature("giotto"), function(gobject,
 #' @name getGiottoImage
 #' @description Get giotto one or more image objects from gobject
 #' @param gobject giotto object
-#' @param image_type deprecated
 #' @param name character vector. Names giotto image object(s)
 #' \code{\link{showGiottoImageNames}} to get
 #' @returns a giotto image object
@@ -3337,12 +3390,12 @@ setMethod("setSpatialEnrichment", signature("giotto"), function(gobject,
 #' getGiottoImage(gobject = g)
 #' @export
 setGeneric("getGiottoImage",
-    function(gobject, ...) standardGeneric("getGiottoImage"))
+    function(gobject, name = NULL, ...)
+        standardGeneric("getGiottoImage"))
 
 #' @rdname getGiottoImage
 #' @export
 setMethod("getGiottoImage", signature("giotto"), function(gobject,
-    image_type = NULL,
     name = NULL) {
     if (identical(name, ":all:")) {
         all_imgs <- gobject@images
@@ -3395,7 +3448,6 @@ setMethod("getGiottoImage", signature("giotto"), function(gobject,
 #' @param gobject giotto object
 #' @param image giotto image object to be attached without modification to the
 #' giotto object
-#' @param image_type deprecated
 #' @param name name of giotto image object
 #' @param verbose be verbose
 #' @inheritParams data_access_params
@@ -3411,13 +3463,13 @@ setMethod("getGiottoImage", signature("giotto"), function(gobject,
 #' setGiottoImage(gobject = g, image = gimg)
 #' @export
 setGeneric("setGiottoImage",
-    function(gobject, ...) standardGeneric("setGiottoImage"))
+    function(gobject, image, name = NULL, ...)
+        standardGeneric("setGiottoImage"))
 
 #' @rdname setGiottoImage
 #' @export
 setMethod("setGiottoImage", signature("giotto"), function(gobject,
     image,
-    image_type = NULL,
     name = NULL,
     initialize = FALSE,
     verbose = NULL) {

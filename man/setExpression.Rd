@@ -6,14 +6,14 @@
 \alias{setExpression,giotto-method}
 \title{Set expression data}
 \usage{
-setExpression(gobject, ...)
+setExpression(gobject, x, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
 
 \S4method{setExpression}{giotto}(
   gobject,
   x,
   spat_unit = NULL,
   feat_type = NULL,
-  name = "raw",
+  name = NULL,
   provenance = NULL,
   verbose = TRUE,
   initialize = TRUE,
@@ -23,8 +23,6 @@ setExpression(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{x}{exprObj or list of exprObj to set. Passing NULL will remove a
 specified set of expression data from the giotto object}
 
@@ -33,6 +31,8 @@ specified set of expression data from the giotto object}
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 
 \item{name}{name for the expression information}
+
+\item{...}{additional params to pass}
 
 \item{provenance}{provenance information (optional)
 information for the giotto object. Pass NULL to remove an expression object}

@@ -3063,7 +3063,6 @@ giottoToSpatialExperiment <- function(gobject,
             for (i in seq(nrow(giottoImages))) {
                 img <- getGiottoImage(
                     gobject = gobject,
-                    image_type = giottoImages[i]$img_type,
                     name = giottoImages[i]$name
                 )
 

@@ -5,7 +5,7 @@
 \alias{getFeatureInfo,giotto-method}
 \title{Get feature info}
 \usage{
-getFeatureInfo(gobject, ...)
+getFeatureInfo(gobject, feat_type = NULL, ...)
 
 \S4method{getFeatureInfo}{giotto}(
   gobject,
@@ -18,9 +18,9 @@ getFeatureInfo(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
+
+\item{...}{additional params to pass}
 
 \item{return_giottoPoints}{return as a giottoPoints object}
 

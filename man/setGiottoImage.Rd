@@ -5,28 +5,19 @@
 \alias{setGiottoImage,giotto-method}
 \title{Set giotto image object}
 \usage{
-setGiottoImage(gobject, ...)
+setGiottoImage(gobject, image, name = NULL, ...)
 
-\S4method{setGiottoImage}{giotto}(
-  gobject,
-  image,
-  image_type = NULL,
-  name = NULL,
-  initialize = FALSE,
-  verbose = NULL
-)
+\S4method{setGiottoImage}{giotto}(gobject, image, name = NULL, initialize = FALSE, verbose = NULL)
 }
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{image}{giotto image object to be attached without modification to the
 giotto object}
 
-\item{image_type}{deprecated}
-
 \item{name}{name of giotto image object}
+
+\item{...}{additional params to pass}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}

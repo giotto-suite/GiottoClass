@@ -5,14 +5,20 @@
 \alias{getNearestNetwork,giotto-method}
 \title{Get nearest neighbor network}
 \usage{
-getNearestNetwork(gobject, ...)
+getNearestNetwork(
+  gobject,
+  spat_unit = NULL,
+  feat_type = NULL,
+  name = NULL,
+  ...
+)
 
 \S4method{getNearestNetwork}{giotto}(
   gobject,
   spat_unit = NULL,
   feat_type = NULL,
-  nn_type = NULL,
   name = NULL,
+  nn_type = NULL,
   output = c("nnNetObj", "igraph", "data.table"),
   set_defaults = TRUE
 )
@@ -20,15 +26,15 @@ getNearestNetwork(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{spat_unit}{spatial unit (e.g. "cell")}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 
-\item{nn_type}{"kNN" or "sNN"}
-
 \item{name}{name of NN network to be used}
+
+\item{...}{additional params to pass}
+
+\item{nn_type}{"kNN" or "sNN"}
 
 \item{output}{return a giotto \code{nnNetObj}, \code{igraph}, \code{data.table} object.
 Default 'nnNetObj'}

@@ -315,7 +315,7 @@ get_adj_rescale_img <- function(img_minmax,
 #' @returns an updated Giotto object with access to the list of images
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
-#' g_image <- getGiottoImage(g, image_type = "largeImage")
+#' g_image <- getGiottoImage(g, name = list_images(g)$name[1])
 #'
 #' addGiottoImageMG(g, images = list(g_image))
 #' @export
@@ -835,7 +835,6 @@ reconnect_giottoImage_MG <- function(
     if (!is.null(gobject) & !is.null(image_name)) {
         img_obj <- getGiottoImage(
             gobject = gobject,
-            image_type = "largeImage",
             name = image_name
         )
     } else if (!is.null(giottoLargeImage)) {
@@ -932,7 +931,7 @@ reconnect_giottoImage_MG <- function(
 #' @returns \code{largeGiottoImage} object with pointer to stitched image
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
-#' g_image <- getGiottoImage(g, image_type = "largeImage")
+#' g_image <- getGiottoImage(g, name = list_images(g)$name[1])
 #'
 #' stitchGiottoLargeImage(largeImage_list = list(g_image))
 #' @export
@@ -1863,7 +1862,7 @@ updateGiottoLargeImage <- function(gobject = NULL,
 #' @returns an updated Giotto object with access to the list of images
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
-#' g_image <- getGiottoImage(g, image_type = "largeImage")
+#' g_image <- getGiottoImage(g, name = list_images(g)$name[1])
 #'
 #' addGiottoLargeImage(g, largeImages = list(g_image))
 #' @export
@@ -2076,7 +2075,7 @@ plotGiottoImage <- function(gobject = NULL,
 #' @family basic image functions
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
-#' g_image <- getGiottoImage(g, image_type = "largeImage")
+#' g_image <- getGiottoImage(g, name = list_images(g)$name[1])
 #'
 #' addGiottoImage(g, largeImages = list(g_image))
 #' @export

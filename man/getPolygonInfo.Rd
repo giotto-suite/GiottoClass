@@ -5,7 +5,7 @@
 \alias{getPolygonInfo,giotto-method}
 \title{Get polygon info}
 \usage{
-getPolygonInfo(gobject, ...)
+getPolygonInfo(gobject, polygon_name = NULL, ...)
 
 \S4method{getPolygonInfo}{giotto}(
   gobject,

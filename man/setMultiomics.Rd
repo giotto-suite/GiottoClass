@@ -5,7 +5,7 @@
 \alias{setMultiomics,giotto-method}
 \title{Set multiomics integration results}
 \usage{
-setMultiomics(gobject, ...)
+setMultiomics(gobject, result, spat_unit = NULL, feat_type = NULL, ...)
 
 \S4method{setMultiomics}{giotto}(
   gobject,
@@ -21,14 +21,14 @@ setMultiomics(gobject, ...)
 \arguments{
 \item{gobject}{A Giotto object}
 
-\item{...}{additional params to pass}
-
 \item{result}{A matrix or result from multiomics
 integration (e.g. theta weighted values from runWNN)}
 
 \item{spat_unit}{spatial unit (e.g. 'cell')}
 
 \item{feat_type}{(e.g. 'rna_protein')}
+
+\item{...}{additional params to pass}
 
 \item{integration_method}{multiomics integration method used. Default = 'WNN'}
 

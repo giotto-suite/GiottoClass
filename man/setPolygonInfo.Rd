@@ -5,12 +5,12 @@
 \alias{setPolygonInfo,giotto-method}
 \title{Set polygon info}
 \usage{
-setPolygonInfo(gobject, ...)
+setPolygonInfo(gobject, x, name = NULL, ...)
 
 \S4method{setPolygonInfo}{giotto}(
   gobject,
   x,
-  name = "cell",
+  name = NULL,
   centroids_to_spatlocs = FALSE,
   verbose = TRUE,
   initialize = TRUE,
@@ -20,14 +20,14 @@ setPolygonInfo(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{x}{single object or named list of objects to set as polygon
 information (see details)}
 
 \item{name}{(optional, character) name to assign to polygon and spatial unit
 that polygon might define. Only used for single giottoPolygon objects. Names
 are taken from a named list for multiple polygons.}
+
+\item{...}{additional params to pass}
 
 \item{centroids_to_spatlocs}{if centroid information is discovered, whether
 to additionally set them as a set of spatial locations (default = FALSE)}

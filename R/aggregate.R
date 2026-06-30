@@ -279,7 +279,7 @@ polygon_to_raster <- function(polygon, field = NULL) {
 #'     return_giottoPolygon = TRUE
 #' )
 #' gpoints <- getFeatureInfo(g, return_giottoPoints = TRUE)
-#' gimg <- getGiottoImage(g, image_type = "largeImage")
+#' gimg <- getGiottoImage(g, name = list_images(g)$name[1])
 #'
 #' slot(gpoly, "overlaps") <- NULL
 #' overlaps(gpoly) # Should now be NULL
@@ -444,8 +444,7 @@ setMethod(
             image_list <- lapply(image_names, function(i_n) {
                 img <- getGiottoImage(
                     gobject = x,
-                    name = i_n,
-                    image_type = "largeImage"
+                    name = i_n
                 )
                 spatrast <- img@raster_object
                 names(spatrast) <- i_n # ensure name is applied
