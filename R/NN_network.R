@@ -39,7 +39,8 @@ setClass("kNNNetworkParam",
         weight_fun = "function",
         include_weight = "logical",
         include_distance = "logical",
-        output = "character"
+        output = "character",
+        engine = "character"
     )
 )
 
@@ -66,7 +67,8 @@ setClass("sNNNetworkParam",
         weight_fun = "function",
         include_weight = "logical",
         include_distance = "logical",
-        output = "character"
+        output = "character",
+        engine = "character"
     )
 )
 
@@ -116,14 +118,22 @@ setClass("delaunayNetworkParam",
 #' @param minimum_k minimum neighbours per node when filtering
 #' @param weight_fun function mapping distance to weight
 #' @param include_weight,include_distance include columns in output
+#' @param engine character. kNN search backend. `"dbscan"` (default) is exact
+#'   and single-threaded. `"hnsw"` uses an approximate HNSW index via
+#'   `GiottoDisk::hnswKNN()` -- multithreaded and far faster at PCA
+#'   dimensionality, at the cost of recall slightly below 1 and results that
+#'   can shift with thread count. Requires \pkg{GiottoDisk} and
+#'   \pkg{RcppHNSW}.
 #' @param output one of `"auto"`, `"data.table"`, `"igraph"`, `"parquet"`
 #' @export
 kNNNetworkParam <- function(k = 30L, filter = FALSE,
         maximum_distance = NULL, minimum_k = 0L,
         weight_fun = function(d) 1 / (1 + d),
         include_weight = TRUE, include_distance = TRUE,
-        output = c("auto", "data.table", "igraph", "parquet")) {
+        output = c("auto", "data.table", "igraph", "parquet"),
+        engine = c("dbscan", "hnsw")) {
     output <- match.arg(output)
+    engine <- match.arg(engine)
     new("kNNNetworkParam",
         k = as.integer(k), filter = filter,
         maximum_distance = maximum_distance,
@@ -131,7 +141,8 @@ kNNNetworkParam <- function(k = 30L, filter = FALSE,
         weight_fun = weight_fun,
         include_weight = include_weight,
         include_distance = include_distance,
-        output = output
+        output = output,
+        engine = engine
     )
 }
 
@@ -141,13 +152,21 @@ kNNNetworkParam <- function(k = 30L, filter = FALSE,
 #' @param minimum_shared keep edges with at least this many shared neighbours
 #' @param weight_fun function mapping distance to weight
 #' @param include_weight,include_distance include columns in output
+#' @param engine character. kNN search backend. `"dbscan"` (default) is exact
+#'   and single-threaded. `"hnsw"` uses an approximate HNSW index via
+#'   `GiottoDisk::hnswKNN()` -- multithreaded and far faster at PCA
+#'   dimensionality, at the cost of recall slightly below 1 and results that
+#'   can shift with thread count. Requires \pkg{GiottoDisk} and
+#'   \pkg{RcppHNSW}.
 #' @param output one of `"auto"`, `"data.table"`, `"igraph"`, `"parquet"`
 #' @export
 sNNNetworkParam <- function(k = 30L, top_shared = 3L, minimum_shared = 5L,
         weight_fun = function(d) 1 / (1 + d),
         include_weight = TRUE, include_distance = TRUE,
-        output = c("auto", "data.table", "igraph", "parquet")) {
+        output = c("auto", "data.table", "igraph", "parquet"),
+        engine = c("dbscan", "hnsw")) {
     output <- match.arg(output)
+    engine <- match.arg(engine)
     new("sNNNetworkParam",
         k = as.integer(k),
         top_shared = as.integer(top_shared),
@@ -155,7 +174,8 @@ sNNNetworkParam <- function(k = 30L, top_shared = 3L, minimum_shared = 5L,
         weight_fun = weight_fun,
         include_weight = include_weight,
         include_distance = include_distance,
-        output = output
+        output = output,
+        engine = engine
     )
 }
 
@@ -284,6 +304,7 @@ setMethod("createNetwork", signature("matrix", "kNNNetworkParam"),
             weight_fun = param@weight_fun,
             include_weight = param@include_weight,
             include_distance = param@include_distance,
+            engine = param@engine,
             verbose = verbose, ...
         )
         .finalize_network(dt, x = x, node_ids = node_ids,
@@ -307,6 +328,7 @@ setMethod("createNetwork", signature("matrix", "sNNNetworkParam"),
             weight_fun = param@weight_fun,
             include_weight = param@include_weight,
             include_distance = param@include_distance,
+            engine = param@engine,
             verbose = verbose, ...
         )
         # sNN: symmetric relation, collapse to undirected unique pairs.
@@ -526,11 +548,30 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
 
 
 # x input is a matrix
+# kNN search backend.
+#
+# "dbscan" is exact and single-threaded. "hnsw" delegates to GiottoDisk's
+# HNSW index, which is approximate but multithreaded and does not degrade
+# with dimensionality the way a kd-tree does -- the dominant cost of
+# createNearestNetwork() at PCA dimensionality. Both return the same
+# `c("kNN", "NN")` shape, so everything downstream is identical.
+.nn_search <- function(x, k, engine = c("dbscan", "hnsw"), ...) {
+    engine <- match.arg(engine)
+    if (identical(engine, "dbscan")) {
+        return(dbscan::kNN(x = x, k = k, sort = TRUE, ...))
+    }
+    package_check("GiottoDisk",
+        repository = "github:giotto-suite/GiottoDisk")
+    GiottoDisk::hnswKNN(x = x, k = k, ...)
+}
+
+
 .net_dt_knn <- function(
         x, k = 30L, include_weight = TRUE, include_distance = TRUE,
         filter = FALSE,
         maximum_distance = NULL, minimum_k = 0L,
         weight_fun = function(d) 1 / (1 + d),
+        engine = c("dbscan", "hnsw"),
         verbose = NULL, ...) {
     # NSE vars
     from <- to <- distance <- NULL
@@ -545,7 +586,7 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
     # distances must be calculated when a limit is set
     if (!is.null(maximum_distance)) include_distance <- TRUE
 
-    nn_network <- dbscan::kNN(x = x, k = k, sort = TRUE, ...)
+    nn_network <- .nn_search(x, k = k, engine = engine, ...)
 
     nn_network_dt <- data.table::data.table(
         from = rep(seq_len(nrow(nn_network$id)), k),
@@ -588,6 +629,7 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
         x, k = 30L, include_weight = TRUE, include_distance = TRUE,
         top_shared = 3L, minimum_shared = 5L,
         weight_fun = function(d) 1 / (1 + d),
+        engine = c("dbscan", "hnsw"),
         verbose = NULL, ...) {
     # NSE vars
     from <- to <- shared <- distance <- NULL
@@ -602,8 +644,8 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
         Adjusted to (total number of cells - 1)")
     }
 
-    nn_network <- dbscan::kNN(x = x, k = k, sort = TRUE, ...)
-    snn_network <- dbscan::sNN(x = nn_network, k = k, kt = NULL, ...)
+    nn_network <- .nn_search(x, k = k, engine = engine, ...)
+    snn_network <- dbscan::sNN(x = nn_network, k = k, kt = NULL)
 
     snn_network_dt <- data.table::data.table(
         from = rep(seq_len(nrow(snn_network$id)), k),
@@ -890,6 +932,12 @@ edge_distances <- function(x, y, x_node_ids = NULL) {
 #' @param k number of k neighbors to use
 #' @param minimum_shared minimum shared neighbors
 #' @param top_shared keep at ...
+#' @param engine character. kNN search backend. `"dbscan"` (default) is exact
+#'   and single-threaded. `"hnsw"` uses an approximate HNSW index via
+#'   `GiottoDisk::hnswKNN()` -- multithreaded and far faster at PCA
+#'   dimensionality, at the cost of recall slightly below 1 and results that
+#'   can shift with thread count. Requires \pkg{GiottoDisk} and
+#'   \pkg{RcppHNSW}.
 #' @param verbose be verbose
 #' @param ... additional parameters for kNN and sNN functions from dbscan
 #' @returns giotto object with updated NN network
@@ -940,6 +988,7 @@ createNearestNetwork <- function(
         k = 30,
         minimum_shared = 5,
         top_shared = 3,
+        engine = c("dbscan", "hnsw"),
         verbose = TRUE,
         ...) {
     # NB: thin wrapper over createNetwork() + nnNetObj construction.
@@ -948,6 +997,7 @@ createNearestNetwork <- function(
     # the giotto/NN method.
 
     type <- match.arg(type, c("sNN", "kNN"))
+    engine <- match.arg(engine)
 
     spat_unit <- set_default_spat_unit(gobject, spat_unit = spat_unit)
     feat_type <- set_default_feat_type(gobject,
@@ -965,11 +1015,11 @@ createNearestNetwork <- function(
 
     # build Param; output = "igraph" because nnNetObj wraps an igraph
     param <- if (type == "kNN") {
-        kNNNetworkParam(k = k, output = "igraph")
+        kNNNetworkParam(k = k, output = "igraph", engine = engine)
     } else {
         sNNNetworkParam(k = k,
             minimum_shared = minimum_shared, top_shared = top_shared,
-            output = "igraph"
+            output = "igraph", engine = engine
         )
     }
 
