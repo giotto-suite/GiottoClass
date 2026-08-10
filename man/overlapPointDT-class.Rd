@@ -8,9 +8,9 @@
 \alias{[,overlapPointDT,gIndex,gIndex,missing-method}
 \title{Polygon and Point Relationships}
 \usage{
-\S4method{[}{overlapPointDT,gIndex,missing,missing}(x, i, j, ..., use_names = FALSE, ids = TRUE, drop)
+\S4method{[}{overlapPointDT,gIndex,missing,missing}(x, i, j, ..., use_names = FALSE, ids = FALSE, drop)
 
-\S4method{[}{overlapPointDT,missing,gIndex,missing}(x, i, j, ..., use_names = FALSE, ids = TRUE, drop)
+\S4method{[}{overlapPointDT,missing,gIndex,missing}(x, i, j, ..., use_names = FALSE, ids = FALSE, drop)
 
 \S4method{[}{overlapPointDT,gIndex,gIndex,missing}(x, i, j, ..., use_names = FALSE, drop)
 }
@@ -25,25 +25,25 @@ overlapped.}
 
 \item{\dots}{additional params to pass (none implemented)}
 
-\item{use_names}{logical (default = \code{FALSE}). Whether to return as integer
-indices or with character ids.}
+\item{use_names}{logical (default = \code{FALSE}). When \code{ids = TRUE}, whether
+to return integer indices (\code{FALSE}) or character ids (\code{TRUE}).}
 
-\item{ids}{logical (default = \code{TRUE}). Whether to return the requested
-integer indices (\code{TRUE}) or the subset overlap object (\code{FALSE}).}
+\item{ids}{logical (default = \code{FALSE}). Whether to return the requested
+integer indices (\code{TRUE}) or the subset overlap object (\code{FALSE}, default).}
 
 \item{drop}{not used.}
 }
 \value{
-integer or character if only \code{i} or \code{j} provided, depending on
-\code{use_names}. A subset \code{overlapPointDT} if both \code{i} and \code{j} are used.
+A subset \code{overlapPointDT} by default. When \code{ids = TRUE},
+an integer (or character via \code{use_names = TRUE}) vector of the queried
+indices.
 }
 \description{
 Utility class for storing overlaps relationships between polygons and points
-in a sparse \code{data.table} format. Retrieve the unique ID index of overlapped
-points \verb{[i, ]}. Get indices of which polys are overlapping specific feature
-species using \verb{[, j]}.
-
-Subsetting with \code{ids = FALSE} and \verb{[i, j]} indexing is also supported.
+in a sparse \code{data.table} format. \verb{[i, ]} / \verb{[, j]} / \verb{[i, j]} all return a
+subset \code{overlapPointDT}. To retrieve indices instead — feat_ID_uniqs
+overlapped by poly i, or poly indices overlapping feature j — pass
+\code{ids = TRUE}.
 
 Supports \code{as.matrix} for conversion to \code{dgCMatrix}. Contained poly and
 feature names simplify rownames/colnames and empty row/col creation.
@@ -84,17 +84,17 @@ as.matrix(ovlp)
 dim(ovlp)
 nrow(ovlp) # number of relationships
 
-# get feature unique IDs overlapped by nth poly
-ovlp[1] # check one (no overlaps returns integer(0))
-ovlp[1:5] # check multiple
-ovlp[1:5, use_names = TRUE] # returns feature names, but no longer unique
+# subset (default) — returns an overlapPointDT
+ovlp[1:10] # first 10 polys
+ovlp[, 1:10] # first 10 feature species
+ovlp[1:10, 1:10] # both
 
-# get integer index of poly(s) overlapping particular feature species
-ovlp[, 1]
-ovlp[, "Mlc1"] # this is the same
+# selection query — feature unique IDs overlapped by nth poly
+ovlp[1, ids = TRUE] # integer feat_ID_uniqs (integer(0) if no overlap)
+ovlp[1:5, ids = TRUE]
+ovlp[1:5, ids = TRUE, use_names = TRUE] # feature names instead of ints
 
-# get a subset of overlap object
-ovlp[1:10, ids = FALSE] # subset to first 10 polys
-ovlp[, 1:10, ids = FALSE] # subset to first 10 feature species
-ovlp[1:10, 1:10] # subset to first 10 polys and first 10 features species
+# selection query — poly indices overlapping particular feature species
+ovlp[, 1, ids = TRUE]
+ovlp[, "Mlc1", ids = TRUE]
 }
