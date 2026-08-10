@@ -630,6 +630,7 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
         top_shared = 3L, minimum_shared = 5L,
         weight_fun = function(d) 1 / (1 + d),
         engine = c("dbscan", "hnsw"),
+        nn_network = NULL,
         verbose = NULL, ...) {
     # NSE vars
     from <- to <- shared <- distance <- NULL
@@ -644,7 +645,33 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
         Adjusted to (total number of cells - 1)")
     }
 
-    nn_network <- .nn_search(x, k = k, engine = engine, ...)
+    # The kNN search is the expensive half of an sNN build. A caller that
+    # already has one -- from a previous createNetwork(type = "kNN"), or
+    # shared with a UMAP that reuses the same neighbours -- passes it here
+    # instead of paying for it twice.
+    if (is.null(nn_network)) {
+        nn_network <- .nn_search(x, k = k, engine = engine, ...)
+    } else {
+        if (!inherits(nn_network, "kNN")) {
+            stop(wrap_txt(errWidth = TRUE,
+                "[createNetwork] `nn_network` must be a kNN object, as
+                returned by dbscan::kNN() or GiottoDisk::hnswKNN()."
+            ), call. = FALSE)
+        }
+        if (ncol(nn_network$id) < k) {
+            stop(wrap_txtf(
+                "[createNetwork] `nn_network` has %d neighbours per node,
+                fewer than the requested k = %d.",
+                ncol(nn_network$id), k
+            ), call. = FALSE)
+        }
+        if (nrow(nn_network$id) != nrow(x)) {
+            stop(wrap_txtf(
+                "[createNetwork] `nn_network` covers %d nodes but `x` has %d.",
+                nrow(nn_network$id), nrow(x)
+            ), call. = FALSE)
+        }
+    }
     snn_network <- dbscan::sNN(x = nn_network, k = k, kt = NULL)
 
     snn_network_dt <- data.table::data.table(
