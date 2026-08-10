@@ -19,6 +19,7 @@ createNearestNetwork(
   k = 30,
   minimum_shared = 5,
   top_shared = 3,
+  engine = c("dbscan", "hnsw"),
   verbose = TRUE,
   ...
 )
@@ -52,6 +53,13 @@ createNearestNetwork(
 \item{minimum_shared}{minimum shared neighbors}
 
 \item{top_shared}{keep at ...}
+
+\item{engine}{character. kNN search backend. \code{"dbscan"} (default) is exact
+and single-threaded. \code{"hnsw"} uses an approximate HNSW index via
+\code{GiottoDisk::hnswKNN()} -- multithreaded and far faster at PCA
+dimensionality, at the cost of recall slightly below 1 and results that
+can shift with thread count. Requires \pkg{GiottoDisk} and
+\pkg{RcppHNSW}.}
 
 \item{verbose}{be verbose}
 
