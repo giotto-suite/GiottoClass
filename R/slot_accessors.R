@@ -1082,7 +1082,12 @@ setMethod("setExpression", signature("giotto"), function(gobject, x,
         if (inherits(mat, memory_matrix) || isTRUE(write)) {
             store <- GiottoDisk::sourceWrite(gsrc, mat)
             x@misc$uid <- store@uid
-            x[] <- GiottoDisk::storeRead(store)
+            # Keep the store itself, as setFeatureInfo() does. storeRead()
+            # returns the lazy Arrow query over it, which reports the
+            # triplet file's shape (nnz x 4) rather than features x cells
+            # and is not a `parquetExprStore`, so every downstream verb that
+            # dispatches on the store class silently misses.
+            x[] <- store
         }
     }
 
@@ -2853,9 +2858,23 @@ setMethod("setFeatureInfo", signature("giotto"), function(gobject, x,
     ))
   
     # write to disk if needed
+    #
+    # giottoBinPoints is held back deliberately. It has no `[` payload
+    # accessor (only character/logical/numeric indices), so `x[]` errors, and
+    # even with one the vault would take `@spatial` only -- while `@counts`
+    # holds the bulk. Worse, `@spatial` has to stay a terra SpatVector:
+    # calculateOverlap() and crop() call terra::extract() / terra::relate() on
+    # it directly, neither of which accepts a store. Storing it would break
+    # the bin1 overlap workflow. Revisit once giottoBinPoints has a
+    # store-backed representation for both slots.
     if (!is.null(gobject@source)) {
         gsrc <- .gsource(gobject)
-        if (!inherits(x[], "dataStore")) {
+        if (inherits(x, "giottoBinPoints")) {
+            vmsg(.v = verbose, sprintf(
+                "giottoBinPoints [%s] kept in memory; no disk representation",
+                featType(x)
+            ))
+        } else if (!inherits(x[], "dataStore")) {
             store <- GiottoDisk::sourceWrite(gsrc, x[])
             x[] <- store
         }
@@ -2869,9 +2888,17 @@ setMethod("setFeatureInfo", signature("giotto"), function(gobject, x,
 # Detect a 0-feature giottoPoints. Cheap path via cached IDs; falls back to
 # nrow when the cache is empty/unpopulated (which may query disk for
 # disk-backed representations).
+#
+# `unique_ID_cache` is a giottoPoints slot. giottoBinPoints reaches this from
+# setFeatureInfo() too and has no such slot, so read it only when present and
+# let that class take the nrow() path.
 .gpoints_is_empty <- function(x) {
     if (is.null(x)) return(FALSE)
-    cache <- methods::slot(x, "unique_ID_cache")
+    cache <- if ("unique_ID_cache" %in% methods::slotNames(x)) {
+        methods::slot(x, "unique_ID_cache")
+    } else {
+        character(0L)
+    }
     if (length(cache) > 0L) return(FALSE)
     n <- try(nrow(x), silent = TRUE)
     if (inherits(n, "try-error")) return(TRUE)

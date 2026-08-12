@@ -137,14 +137,31 @@ setMethod("calculateOverlap", signature("giottoPolygon", "giottoBinPoints"),
         if (!is.null(poly_subset_ids)) {
             x <- x[x$poly_ID %in% poly_subset_ids]
         }
-        overlap_data <- terra::extract(x[], y@spatial)
+
+        # On a project-managed giotto the polygons are store-backed, and
+        # terra::extract() has no method for a store. Materialize them into a
+        # working copy for the terra call: segmentation polygon counts are
+        # modest (~10^4-10^5) next to the bin1 points they are overlapped
+        # with (~10^6-10^7), which stay untouched in `y`. `x` itself is left
+        # alone so the object handed back keeps its store.
+        px <- x
+        if (!inherits(px[], "SpatVector")) {
+            GiottoUtils::package_check(
+                "GiottoDisk",
+                repository = "github:giotto-suite/GiottoDisk"
+            )
+            px[] <- GiottoDisk::storeRead(px[], output = "terra")
+        }
+        overlap_data <- terra::extract(px[], y@spatial)
         # res <- terra::relate(x[], y@spatial,
         #     relation = "intersects", pairs = TRUE) |>
         #     data.table::as.data.table()
         # names(res) <- c("poly_ID", "b")
         # res <- res[, .gbp_spatial_select_counts(y, b), by = "poly_ID"]
 
-        res <- .gbp_create_overlap_point_dt(x, y, overlap_data)
+        # built from the materialized copy: it reads `poly_ID` off the
+        # payload, which terra provides and a store need not
+        res <- .gbp_create_overlap_point_dt(px, y, overlap_data)
 
         if (isTRUE(return_gpolygon)) {
             # update schema metadata in overlap object
