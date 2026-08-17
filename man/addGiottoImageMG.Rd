@@ -39,7 +39,7 @@ Adds giotto image objects to your giotto object
 }
 \examples{
 g <- GiottoData::loadGiottoMini("visium")
-g_image <- getGiottoImage(g, image_type = "largeImage")
+g_image <- getGiottoImage(g, name = list_images(g)$name[1])
 
 addGiottoImageMG(g, images = list(g_image))
 }

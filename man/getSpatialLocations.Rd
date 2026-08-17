@@ -5,7 +5,7 @@
 \alias{getSpatialLocations,giotto-method}
 \title{Get spatial locations}
 \usage{
-getSpatialLocations(gobject, ...)
+getSpatialLocations(gobject, spat_unit = NULL, name = NULL, ...)
 
 \S4method{getSpatialLocations}{giotto}(
   gobject,
@@ -21,12 +21,12 @@ getSpatialLocations(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{spat_unit}{spatial unit (e.g. "cell")}
 
 \item{name}{name of spatial
 locations (defaults to first name in spatial_locs slot, e.g. "raw")}
+
+\item{...}{additional params to pass}
 
 \item{output}{what object type to get the spatial locations as. Default is as
 a 'spatLocsObj'. Returning as 'data.table' is also possible.}

@@ -187,7 +187,7 @@ setMethod("ext", signature("giotto"), function(x,
         spat_obj <- switch(type,
             "polygon" = getPolygonInfo(
                 gobject = x,
-                polygon_name = spat_unit,
+                name = spat_unit,
                 return_giottoPolygon = TRUE,
                 verbose = verbose
             ),

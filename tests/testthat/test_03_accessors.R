@@ -79,7 +79,7 @@ describe("Error handling: Gobject Getting Non-Existent Data", {
 
     it("Not found PolygonInfo returns error", {
         expect_error(
-            getPolygonInfo(g, polygon_name = "none")
+            getPolygonInfo(g, name = "none")
         )
     })
 
@@ -167,7 +167,7 @@ describe("Giotto Object Getters Work", {
     it("Finds PolygonInfo", {
         checkmate::expect_class(
             getPolygonInfo(viz,
-                polygon_name = "z0"
+                name = "z0"
             ),
             "SpatVector"
         )
@@ -319,7 +319,7 @@ describe("Giotto Object Setters Basic Functionalities", {
     # SPATINFO
 
     g <- setPolygonInfo(g,
-        x = getPolygonInfo(viz, polygon_name = "z0",
+        x = getPolygonInfo(viz, name = "z0",
             return_giottoPolygon = TRUE,
             verbose = FALSE
         )

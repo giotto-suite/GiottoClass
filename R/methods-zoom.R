@@ -14,7 +14,7 @@ NULL
 #' @returns SpatExtent (invisibly)
 #' @examples
 #' g <- GiottoData::loadGiottoMini("vizgen")
-#' gimg <- getGiottoImage(g, image_type = "largeImage")
+#' gimg <- getGiottoImage(g, name = list_images(g)$name[1])
 #' gpoly <- GiottoData::loadSubObjectMini("giottoPolygon")
 #' gpoints <- GiottoData::loadSubObjectMini("giottoPoints")
 #' e <- ext(6400, 6800, -4860, -4750) # arbitrary

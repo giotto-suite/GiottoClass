@@ -32,7 +32,7 @@ Set a multiomics integration result in a Giotto object
 g <- GiottoData::loadGiottoMini("visium")
 
 set_multiomics(
-    gobject = g, result = matrix(rnorm(100), nrow = 10),
+    gobject = g, x = matrix(rnorm(100), nrow = 10),
     spat_unit = "cell", feat_type = "rna_protein"
 )
 }

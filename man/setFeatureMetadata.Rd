@@ -5,7 +5,7 @@
 \alias{setFeatureMetadata,giotto-method}
 \title{Set feature metadata}
 \usage{
-setFeatureMetadata(gobject, ...)
+setFeatureMetadata(gobject, x, spat_unit = NULL, feat_type = NULL, ...)
 
 \S4method{setFeatureMetadata}{giotto}(
   gobject,
@@ -21,14 +21,14 @@ setFeatureMetadata(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{x}{featMetaObj or list of featMetaObj to set. Passing NULL will
 reset a specified set of feature metadata in the giotto object.}
 
 \item{spat_unit}{spatial unit (e.g. "cell")}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
+
+\item{...}{additional params to pass}
 
 \item{provenance}{provenance information (optional)}
 

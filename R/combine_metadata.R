@@ -244,7 +244,7 @@ combineCellData <- function(gobject,
         # get spatial poly information
         sv <- getPolygonInfo(
             gobject = gobject,
-            polygon_name = poly_info,
+            name = poly_info,
             return_giottoPolygon = FALSE
         )
 
@@ -491,7 +491,7 @@ combineFeatureOverlapData <- function(gobject,
             for (poly in poly_info) {
                 feat_overlap <- getPolygonInfo(
                     gobject = gobject,
-                    polygon_name = poly,
+                    name = poly,
                     polygon_overlap = feat
                 )
 
@@ -934,7 +934,7 @@ calculateLabelProportions <- function(gobject, labels,
     select_on <- match.arg(select_on, choices = c("spatial_locs", "polygons"))
 
     x <- getPolygonInfo(gobject,
-        polygon_name = spat_info,
+        name = spat_info,
         return_giottoPolygon = TRUE,
         verbose = TRUE
     )
@@ -953,7 +953,7 @@ calculateLabelProportions <- function(gobject, labels,
         },
         "polygons" = {
             y <- getPolygonInfo(gobject,
-                polygon_name = spat_unit,
+                name = spat_unit,
                 return_giottoPolygon = TRUE,
                 verbose = FALSE
             )

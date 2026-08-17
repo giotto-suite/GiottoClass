@@ -156,7 +156,7 @@ setMethod(
     function(gobject, x, ...) {
         gobject <- setGiottoImage(
             gobject = gobject,
-            image = x,
+            x = x,
             name = x@name,
             ...
         )
@@ -171,7 +171,7 @@ setMethod(
     function(gobject, x, ...) {
         gobject <- setGiottoImage(
             gobject = gobject,
-            image = x,
+            x = x,
             name = x@name,
             ...
         )

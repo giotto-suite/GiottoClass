@@ -6,13 +6,14 @@
 \alias{getExpression,giotto-method}
 \title{Get expression values}
 \usage{
-getExpression(gobject, ...)
+getExpression(gobject, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
 
 \S4method{getExpression}{giotto}(
   gobject,
-  values = NULL,
   spat_unit = NULL,
   feat_type = NULL,
+  name = NULL,
+  values = NULL,
   output = c("exprObj", "matrix"),
   set_defaults = TRUE
 )
@@ -20,14 +21,18 @@ getExpression(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
-\item{values}{expression values to
-extract (e.g. "raw", "normalized", "scaled")}
-
 \item{spat_unit}{spatial unit (e.g. "cell")}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
+
+\item{name}{name of expression values to extract (e.g. \code{"raw"},
+\code{"normalized"}, \code{"scaled"}). Canonical form, consistent with the rest
+of the slot accessors.}
+
+\item{...}{additional params to pass}
+
+\item{values}{back-compat alias for \code{name}. If both are supplied they
+must agree.}
 
 \item{output}{what object type to retrieve the expression as. Currently
 either matrix' for the matrix object contained in the exprObj or

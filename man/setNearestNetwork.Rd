@@ -5,15 +5,22 @@
 \alias{setNearestNetwork,giotto-method}
 \title{Set nearest neighbor network}
 \usage{
-setNearestNetwork(gobject, ...)
+setNearestNetwork(
+  gobject,
+  x,
+  spat_unit = NULL,
+  feat_type = NULL,
+  name = NULL,
+  ...
+)
 
 \S4method{setNearestNetwork}{giotto}(
   gobject,
   x,
   spat_unit = NULL,
   feat_type = NULL,
+  name = NULL,
   nn_type = "sNN",
-  name = "sNN.pca",
   provenance = NULL,
   verbose = TRUE,
   initialize = TRUE,
@@ -23,8 +30,6 @@ setNearestNetwork(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{x}{nnNetObj or list of nnNetObj. Passing NULL will remove a specified
 set of nearest neighbor network information from the gobject}
 
@@ -32,10 +37,12 @@ set of nearest neighbor network information from the gobject}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 
-\item{nn_type}{"kNN" or "sNN"}
+\item{name}{name of NN network to be used. NULL (default) takes the name
+from \code{x}, falling back to "sNN.pca" when \code{x} is unnamed}
 
-\item{name}{name of NN network to be used
-yet supported.}
+\item{...}{additional params to pass}
+
+\item{nn_type}{"kNN" or "sNN"}
 
 \item{provenance}{provenance information (optional)}
 

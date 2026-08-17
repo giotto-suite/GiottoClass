@@ -26,6 +26,37 @@
   not match metadata row order; the key-based path is safe by construction.
   Positional input without a key column still works for backwards compatibility
   but now emits a warning so callers can opt in to safe alignment.
+- Slot-accessor S4 generics widened with contract-stable formals
+  (`spat_unit`, `feat_type`, `name`, `polygon_name`) so IDE autocomplete
+  surfaces them past `gobject`. Setter method defaults for `name`
+  (`"raw"`, `"pca"`, `"sNN.pca"`, `"enrichment"`, `"cell"`) moved out of
+  the formals and into an explicit body-side fallback after
+  `read_s4_nesting()`, allowing `name` on the generic without breaking
+  the "user-supplied vs subobject-derived" resolution. `match.call`-based
+  detection replaced with plain `is.null(name)` throughout.
+- `getExpression` adopts `name` as the canonical formal alongside
+  `values` (now a back-compat alias); they error if both supplied and
+  differ.
+- accessor generic formals aligned to one shared contract. Three generics
+  deviated from it, which mattered once the formals moved onto the generics
+  (S4 requires methods to match the generic's shared formal names and order,
+  so the odd ones out could not be written against the common contract):
+  `setMultiomics(result=)` and `setGiottoImage(image=)` are now `x` like every
+  other setter, and `getPolygonInfo(polygon_name=)` is now `name`. The old
+  names remain as deprecated aliases via `deprecate_param()` and continue to
+  work with a warning. Positional calls are unaffected. Following the existing
+  convention (`calculateOverlap(spatial_info)`, `getExpression(values)`), the
+  aliases live on the methods only and reach them through the generic's
+  `...`, so dispatch signatures are unchanged.
+- `image_type` formal removed from `getGiottoImage()`, `setGiottoImage()`,
+  `plotGiottoImage()`, and `distGiottoImage()`. The param had been
+  deprecated for a long time and was a no-op in all four: the accessors
+  never read it, `plotGiottoImage()` overwrote any supplied value by
+  inspecting the class of the fetched image, and `distGiottoImage()`
+  accepted only its default `"largeImage"`. Image class is determined from
+  the object itself. Note this does not affect the `img_type` argument of
+  `list_images()` / `list_images_names()`, which is a working filter and
+  is retained.
 
 # GiottoClass 0.5.1 (2026/05/14)
 

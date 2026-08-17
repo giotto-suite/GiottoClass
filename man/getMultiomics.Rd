@@ -5,7 +5,7 @@
 \alias{getMultiomics,giotto-method}
 \title{Get multiomics integration results}
 \usage{
-getMultiomics(gobject, ...)
+getMultiomics(gobject, spat_unit = NULL, feat_type = NULL, ...)
 
 \S4method{getMultiomics}{giotto}(
   gobject,
@@ -35,7 +35,7 @@ Get a multiomics integration result from a Giotto object
 \examples{
 g <- GiottoData::loadGiottoMini("visium")
 g <- setMultiomics(
-    gobject = g, result = matrix(rnorm(100), nrow = 10),
+    gobject = g, x = matrix(rnorm(100), nrow = 10),
     spat_unit = "cell", feat_type = "rna_protein"
 )
 

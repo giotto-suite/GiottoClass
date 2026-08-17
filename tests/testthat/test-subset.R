@@ -194,9 +194,9 @@ test_that("Subsetting multiple spatial units works", {
     )
 
     # polys are cropped
-    z0_poly <- getPolygonInfo(g_out, polygon_name = "z0")
-    z1_poly <- getPolygonInfo(g_out, polygon_name = "z1")
-    agg_poly <- getPolygonInfo(g_out, polygon_name = "aggregate")
+    z0_poly <- getPolygonInfo(g_out, name = "z0")
+    z1_poly <- getPolygonInfo(g_out, name = "z1")
+    agg_poly <- getPolygonInfo(g_out, name = "aggregate")
 
     expect_true({
         terra::xmax(ext(centroids(z0_poly))) <= 6600 &&

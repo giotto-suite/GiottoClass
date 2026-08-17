@@ -3063,7 +3063,6 @@ giottoToSpatialExperiment <- function(gobject,
             for (i in seq(nrow(giottoImages))) {
                 img <- getGiottoImage(
                     gobject = gobject,
-                    image_type = giottoImages[i]$img_type,
                     name = giottoImages[i]$name
                 )
 
@@ -4313,7 +4312,7 @@ giottoToSpatialData <- function(
     if (!is.null(list_spatial_info(gobject))) {
         dir.create(paste0(temp, "shapes"))
         for (su in spat_unit) {
-            gpoly <- getPolygonInfo(gobject, polygon_name = su)
+            gpoly <- getPolygonInfo(gobject, name = su)
             gpoly_sf <- as.sf(gpoly)
             sf::st_write(gpoly_sf, paste0(temp, "shapes/", su, ".geojson"),
                 delete_dsn = TRUE
