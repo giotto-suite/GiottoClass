@@ -21,6 +21,10 @@
   `kNNNetworkParam()`, `sNNNetworkParam()`, and `delaunayNetworkParam()`
   configure `createNetwork()` calls. The legacy `type` string arg is
   superseded by passing a `*NetworkParam` object.
+- `spatRelate()` generic — filter-form complement to `relate()`: returns `x`
+  narrowed by a spatial predicate rather than a relation matrix. Eager method
+  on `(giottoSpatial, giottoSpatial)` wraps `relate() + subset`; the on-disk
+  lazy form lives in GiottoDisk via methods on `parquetGeomBase`.
 
 ## changes
 
@@ -56,6 +60,27 @@
   Graph topology is invariant under these transforms; gobject-level
   walkers skip the spatial-network slot.
 
+## bug fixes
+
+- `create_average_DT()` and `create_average_detection_DT()` now select each
+  group's cells by `cell_ID` rather than by position. Both fetch the expression
+  matrix and the cell metadata independently, and nothing guarantees the two
+  share a cell order. Where they diverged, cells were labelled with another
+  cell's group. **Results will change for affected objects**; they were wrong
+  before.
+- fix "unused argument (ids = FALSE)" when subsetting a `giottoPolygon` object
+- skip 0-entry `giottoPoints` in subset paths
+- documentation fix in `methods-extract`
+
+## enhancements
+
+- `addCellMetadata()` and `addFeatMetadata()` now auto-detect a `cell_ID` /
+  `feat_ID` column on `new_metadata` (including the column auto-added from a
+  named vector) and route through key-based merge regardless of the caller's
+  `by_column` value. Positional `cbind` is fragile when input row order does
+  not match metadata row order; the key-based path is safe by construction.
+  Positional input without a key column still works for backwards compatibility
+  but now emits a warning so callers can opt in to safe alignment.
 
 # GiottoClass 0.5.1 (2026/05/14)
 
