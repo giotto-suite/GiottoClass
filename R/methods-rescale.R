@@ -409,7 +409,7 @@ rescalePolygons <- function(gobject,
     # 1. get polygon information
     original <- getPolygonInfo(
         gobject = gobject,
-        polygon_name = poly_info,
+        name = poly_info,
         return_giottoPolygon = TRUE
     )
 

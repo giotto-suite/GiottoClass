@@ -5,7 +5,7 @@
 \alias{setSpatialNetwork,giotto-method}
 \title{Set spatial network}
 \usage{
-setSpatialNetwork(gobject, ...)
+setSpatialNetwork(gobject, x, spat_unit = NULL, name = NULL, ...)
 
 \S4method{setSpatialNetwork}{giotto}(
   gobject,
@@ -21,14 +21,14 @@ setSpatialNetwork(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{x}{spatialNetworkObj or list of spatialNetworkObj to set. Passing NULL
 removes a specified set of spatial network information from the gobject.}
 
 \item{spat_unit}{spatial unit (e.g. "cell")}
 
 \item{name}{name of spatial network}
+
+\item{...}{additional params to pass}
 
 \item{provenance}{provenance name}
 

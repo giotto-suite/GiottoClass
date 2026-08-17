@@ -5,7 +5,7 @@
 \alias{setFeatureInfo,giotto-method}
 \title{Set feature info}
 \usage{
-setFeatureInfo(gobject, ...)
+setFeatureInfo(gobject, x, feat_type = NULL, ...)
 
 \S4method{setFeatureInfo}{giotto}(
   gobject,
@@ -19,12 +19,12 @@ setFeatureInfo(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{x}{giottoPoints object or list of giottoPoints to set. Passing NULL
 will remove the specified giottoPoints object from the giotto object}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
+
+\item{...}{additional params to pass}
 
 \item{verbose}{be verbose}
 

@@ -6,7 +6,6 @@
 \usage{
 distGiottoImage(
   gobject = NULL,
-  image_type = "largeImage",
   image_name = NULL,
   giottoLargeImage = NULL,
   method = c("dens", "hist"),
@@ -16,9 +15,6 @@ distGiottoImage(
 }
 \arguments{
 \item{gobject}{giotto object}
-
-\item{image_type}{image object
-type (only supports largeImage and is set as default)}
 
 \item{image_name}{name of image object to use}
 

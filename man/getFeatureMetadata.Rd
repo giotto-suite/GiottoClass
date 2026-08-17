@@ -5,7 +5,7 @@
 \alias{getFeatureMetadata,giotto-method}
 \title{getFeatureMetadata}
 \usage{
-getFeatureMetadata(gobject, ...)
+getFeatureMetadata(gobject, spat_unit = NULL, feat_type = NULL, ...)
 
 \S4method{getFeatureMetadata}{giotto}(
   gobject,
@@ -19,11 +19,11 @@ getFeatureMetadata(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{spat_unit}{spatial unit (e.g. "cell")}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
+
+\item{...}{additional params to pass}
 
 \item{output}{return as either 'data.table' or 'featMetaObj'}
 

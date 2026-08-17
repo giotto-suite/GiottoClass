@@ -5,14 +5,12 @@
 \alias{getGiottoImage,giotto-method}
 \title{Get giotto image object}
 \usage{
-getGiottoImage(gobject, ...)
+getGiottoImage(gobject, name = NULL, ...)
 
-\S4method{getGiottoImage}{giotto}(gobject, image_type = NULL, name = NULL)
+\S4method{getGiottoImage}{giotto}(gobject, name = NULL)
 }
 \arguments{
 \item{gobject}{giotto object}
-
-\item{image_type}{deprecated}
 
 \item{name}{character vector. Names giotto image object(s)
 \code{\link{showGiottoImageNames}} to get}

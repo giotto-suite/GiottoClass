@@ -177,8 +177,8 @@ vizsubc <- calculateOverlap(
 
 
 # get values to test
-z0_gpoly <- getPolygonInfo(vizsubc, polygon_name = "z0", return_giottoPolygon = TRUE)
-z1_gpoly <- getPolygonInfo(vizsubc, polygon_name = "z1", return_giottoPolygon = TRUE)
+z0_gpoly <- getPolygonInfo(vizsubc, name = "z0", return_giottoPolygon = TRUE)
+z1_gpoly <- getPolygonInfo(vizsubc, name = "z1", return_giottoPolygon = TRUE)
 
 rna_pnts <- getFeatureInfo(vizsubc, feat_type = "rna", return_giottoPoints = TRUE)
 
