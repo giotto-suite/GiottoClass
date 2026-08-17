@@ -796,6 +796,11 @@ addFeatMetadata <- function(gobject,
 }
 
 
+# Duplicates `analyzeData(x, analyzeParam("feat_stats"), groups =)` in Giotto,
+# whose `mean_expr` column is this same statistic. Kept here only because
+# create_cluster_matrix() needs it and GiottoClass cannot depend on Giotto,
+# where featStatsParam lives. Prefer the verb in new code.
+
 #' @title create_average_DT
 #' @description calculates average gene expression for a cell metadata
 #' factor (e.g. cluster)
@@ -859,86 +864,6 @@ create_average_DT <- function(gobject,
 
         temp <- expr_data[, cell_metadata[[meta_data_name]] == group]
         temp_DT <- rowMeans_flex(temp)
-
-        savelist[[name]] <- temp_DT
-    }
-
-    finalDF <- do.call("cbind", savelist)
-    rownames(finalDF) <- myrownames
-
-    return(as.data.frame(finalDF))
-}
-
-#' @title create_average_detection_DT
-#' @description calculates average gene detection for a cell metadata
-#' factor (e.g. cluster)
-#' @param gobject giotto object
-#' @param spat_unit spatial unit
-#' @param feat_type feature type
-#' @param meta_data_name name of metadata column to use
-#' @param expression_values which expression values to use
-#' @param detection_threshold detection threshold to consider a gene detected
-#' @returns data.table with average gene epression values for each factor
-#' @keywords internal
-#' @examples
-#' g <- GiottoData::loadGiottoMini("visium")
-#'
-#' create_average_detection_DT(g, meta_data_name = "leiden_clus")
-#' @export
-create_average_detection_DT <- function(gobject,
-    feat_type = NULL,
-    spat_unit = NULL,
-    meta_data_name,
-    expression_values = c("normalized", "scaled", "custom"),
-    detection_threshold = 0) {
-    # Set feat_type and spat_unit
-    spat_unit <- set_default_spat_unit(
-        gobject = gobject,
-        spat_unit = spat_unit
-    )
-    feat_type <- set_default_feat_type(
-        gobject = gobject,
-        spat_unit = spat_unit,
-        feat_type = feat_type
-    )
-
-    # expression values to be used
-    values <- match.arg(
-        expression_values,
-        unique(c("normalized", "scaled", "custom", expression_values))
-    )
-    expr_data <- getExpression(
-        gobject = gobject,
-        spat_unit = spat_unit,
-        feat_type = feat_type,
-        values = values,
-        output = "matrix"
-    )
-
-    # metadata
-    cell_metadata <- getCellMetadata(gobject,
-        spat_unit = spat_unit,
-        feat_type = feat_type,
-        output = "data.table",
-        copy_obj = TRUE
-    )
-    myrownames <- rownames(expr_data)
-
-    groups <- unique(cell_metadata[[meta_data_name]])
-    cell_metadata <- cell_metadata[.expr_cell_order(cell_metadata, expr_data)]
-
-    savelist <- list()
-    for (group in groups) {
-        name <- paste0("cluster_", group)
-
-        temp <- expr_data[, cell_metadata[[meta_data_name]] == group]
-        temp <- as.matrix(temp)
-
-        if (is.matrix(temp)) {
-            temp_DT <- rowSums_flex(temp > detection_threshold) / ncol(temp)
-        } else {
-            temp_DT <- as.numeric(temp > detection_threshold)
-        }
 
         savelist[[name]] <- temp_DT
     }
