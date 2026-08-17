@@ -28,15 +28,6 @@ test_that("create_average_DT selects cells by identifier, not position", {
     expect_equal(got[, colnames(ref)], ref, ignore_attr = TRUE)
 })
 
-test_that("create_average_detection_DT selects cells by identifier", {
-    got <- as.matrix(create_average_detection_DT(g,
-        meta_data_name = CLUS, expression_values = "normalized",
-        detection_threshold = 0
-    ))
-    ref <- .ref_by_id(function(m) Matrix::rowSums(m > 0) / ncol(m))
-    expect_equal(got[, colnames(ref)], ref, ignore_attr = TRUE)
-})
-
 test_that("results are invariant to cell metadata row order", {
     # The property that actually matters, independent of any one fixture's
     # incidental ordering: permuting the metadata must not change the answer.
@@ -48,12 +39,6 @@ test_that("results are invariant to cell metadata row order", {
     a <- create_average_DT(g,
         meta_data_name = CLUS, expression_values = "normalized")
     b <- create_average_DT(g2,
-        meta_data_name = CLUS, expression_values = "normalized")
-    expect_equal(a[, sort(colnames(a))], b[, sort(colnames(b))])
-
-    a <- create_average_detection_DT(g,
-        meta_data_name = CLUS, expression_values = "normalized")
-    b <- create_average_detection_DT(g2,
         meta_data_name = CLUS, expression_values = "normalized")
     expect_equal(a[, sort(colnames(a))], b[, sort(colnames(b))])
 })

@@ -59,15 +59,20 @@
   `rescale()`, `affine()`) are no longer defined on `spatialNetworkObj`.
   Graph topology is invariant under these transforms; gobject-level
   walkers skip the spatial-network slot.
+- `create_average_detection_DT()` removed. No callers remained in the suite
+  once Giotto's gini markers moved onto
+  `analyzeData(x, analyzeParam("feat_stats"), groups = )`, whose `perc_cells`
+  column is the same statistic. `create_average_DT()` is retained because
+  `create_cluster_matrix()` needs it and GiottoClass cannot depend on Giotto,
+  but it duplicates that verb's `mean_expr` and should not be used in new code.
 
 ## bug fixes
 
-- `create_average_DT()` and `create_average_detection_DT()` now select each
-  group's cells by `cell_ID` rather than by position. Both fetch the expression
-  matrix and the cell metadata independently, and nothing guarantees the two
-  share a cell order. Where they diverged, cells were labelled with another
-  cell's group. **Results will change for affected objects**; they were wrong
-  before.
+- `create_average_DT()` now selects each group's cells by `cell_ID` rather than
+  by position. It fetches the expression matrix and the cell metadata
+  independently, and nothing guarantees the two share a cell order. Where they
+  diverged, cells were labelled with another cell's group. **Results will
+  change for affected objects**; they were wrong before.
 - fix "unused argument (ids = FALSE)" when subsetting a `giottoPolygon` object
 - skip 0-entry `giottoPoints` in subset paths
 - documentation fix in `methods-extract`
