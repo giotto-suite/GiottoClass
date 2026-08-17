@@ -1,5 +1,8 @@
 # GiottoClass 0.5.2
 
+## bug fixes
+- `create_average_DT()` and `create_average_detection_DT()` now select each group's cells by `cell_ID` rather than by position. Both fetch the expression matrix and the cell metadata independently, and nothing guarantees the two share a cell order — a freshly created object happens to agree, but `GiottoData::loadGiottoMini("visium")` has none of its 624 cells in matching position. Where the orders diverged, cells were labelled with another cell's group: on that object the per-cluster means correlated only 0.77 with the correct values. **Results will change for affected objects**; they were wrong before.
+
 ## changes
 - shared-domain and spatial-domain accessors promoted to S4 generics on `signature("giotto")` — `getCellMetadata` / `setCellMetadata`, `getFeatureMetadata` / `setFeatureMetadata`, `getExpression` / `setExpression`, `getMultiomics` / `setMultiomics`, `getDimReduction` / `setDimReduction`, `getNearestNetwork` / `setNearestNetwork`, `getSpatialEnrichment` / `setSpatialEnrichment`, `getSpatialLocations` / `setSpatialLocations`, `getSpatialNetwork` / `setSpatialNetwork`, `getPolygonInfo` / `setPolygonInfo`, `getFeatureInfo` / `setFeatureInfo`, `getGiottoImage` / `setGiottoImage`. Per-accessor internal/external split helpers (`.external_accessor_*` sentinel pattern) inlined into the public setters.
 - `overlapPointDT[i]` / `[, j]` default flipped from `ids = TRUE` → `ids = FALSE`. Default single-axis subset now returns an `overlapPointDT` subset object (matching `overlapIntensityDT` and `SpatVector`). The integer-index selection form is still available via `ovlp[i, ids = TRUE]`.
