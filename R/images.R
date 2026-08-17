@@ -1966,12 +1966,11 @@ reconnect_giottoLargeImage <- function(
 #' @name plotGiottoImage
 #' @description Display a giotto image in the viewer panel. Image object to plot
 #' can be specified by providing the giotto object containing the
-#' image (\code{gobject}), the image object name (\code{image_name}), and the
-#' image object type (\code{image_type}). Alternatively, image objects can be
+#' image (\code{gobject}) and the image object name (\code{image_name}).
+#' Alternatively, image objects can be
 #' directly plotted through their respective associated params.
 #' @param gobject gobject containing giotto image object
 #' @param image_name name of giotto image object
-#' @param image_type type of giotto image object to plot
 #' @param giottoImage giottoImage object to plot directly
 #' @param giottoLargeImage giottoLargeImage object to plot directly
 #' @param largeImage_crop_params_list (optional) named list of params for
@@ -2002,13 +2001,12 @@ reconnect_giottoLargeImage <- function(
 #' g <- GiottoData::loadGiottoMini("vizgen")
 #'
 #' plotGiottoImage(g,
-#'     image_type = "largeImage", image_name = "dapi_z0",
+#'     image_name = "dapi_z0",
 #'     largeImage_max_intensity = 200
 #' )
 #' @export
 plotGiottoImage <- function(gobject = NULL,
     image_name = NULL,
-    image_type = NULL,
     giottoImage = NULL,
     giottoLargeImage = NULL,
     largeImage_crop_params_list = NULL,
@@ -2019,6 +2017,9 @@ plotGiottoImage <- function(gobject = NULL,
         stop("Only one of a giottoImage or a giottoLargeImage can be plotted
             at the same time. \n")
     }
+
+    # image class determines which plotting function is used
+    image_type <- NULL
 
     # Get image object
     if (!is.null(gobject)) {
@@ -2479,8 +2480,7 @@ reconnectGiottoImage <- function(gobject,
             img_list[[image_type]] <- lapply(
                 X = name_list[[image_type]],
                 FUN = getGiottoImage,
-                gobject = gobject,
-                image_type = image_type
+                gobject = gobject
             )
 
             # update file_path
@@ -2556,7 +2556,7 @@ reconnectGiottoImage <- function(gobject,
         for (image_ii in seq_len(length(img_list[[image_type]]))) {
             gobject <- setGiottoImage(
                 gobject = gobject,
-                image = img_list[[image_type]][[image_ii]],
+                x = img_list[[image_type]][[image_ii]],
                 name = name_list[[image_type]][[image_ii]],
                 verbose = FALSE
             )
@@ -2581,8 +2581,6 @@ reconnectGiottoImage <- function(gobject,
 #'   Histogram of intensity values for image objects.
 #' @details Plot is generated from a downsampling of the original image
 #' @param gobject giotto object
-#' @param image_type image object
-#' type (only supports largeImage and is set as default)
 #' @param image_name name of image object to use
 #' @param giottoLargeImage giotto large image object
 #' @param method plot type to show image intensity distribution
@@ -2596,19 +2594,15 @@ reconnectGiottoImage <- function(gobject,
 #' @export
 distGiottoImage <- function(
         gobject = NULL,
-        image_type = "largeImage",
         image_name = NULL,
         giottoLargeImage = NULL,
         method = c("dens", "hist"),
         show_max = TRUE,
         ...) {
     # check params
-    if (image_type != "largeImage") {
-        stop("Only largeImage objects currently supported \n")
-    }
-    if ((is.null(image_type) | is.null(image_name) |
-        is.null(gobject)) & (is.null(giottoLargeImage))) {
-        stop("Image must be given through gobject, image_type, and image_name
+    if ((is.null(image_name) | is.null(gobject)) &
+        (is.null(giottoLargeImage))) {
+        stop("Image must be given through gobject and image_name
             params or as the image object itself \n")
     }
     method <- match.arg(arg = method, choices = c("dens", "hist"))
@@ -2619,10 +2613,8 @@ distGiottoImage <- function(
         show_max = show_max, ...
     )
 
-    # run specific function
-    if (image_type == "largeImage") {
-        do.call(.dist_giottolargeimage, args = a)
-    }
+    # only largeImage is supported
+    do.call(.dist_giottolargeimage, args = a)
 }
 
 
