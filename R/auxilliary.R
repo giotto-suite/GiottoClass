@@ -505,6 +505,24 @@ addCellMetadata <- function(gobject,
         column_cell_ID <- "cell_ID"
     }
 
+    # 2b. Auto-detect key-based input. When new_metadata carries a
+    # column_cell_ID column (either supplied directly as a data.table /
+    # data.frame, or auto-added from a named vector above), route through
+    # the key-based merge path regardless of the caller's by_column value.
+    # Positional cbind is fragile whenever input row order doesn't match
+    # cell_metadata row order; the key-based path is safe by construction.
+    # When no key column is present the original positional path still
+    # runs, but with a warning so callers can opt in to safe alignment.
+    has_key <- column_cell_ID %in% colnames(new_metadata)
+    if (has_key) {
+        by_column <- TRUE
+    } else if (!isTRUE(by_column)) {
+        warning("addCellMetadata: input has no '", column_cell_ID,
+            "' column / names; falling back to positional cbind. Pass a ",
+            "named vector or a table with a '", column_cell_ID,
+            "' column for key-based alignment.", call. = FALSE)
+    }
+
 
     # 3. combine with existing metadata
     # get old and new meta colnames that are not the ID col
@@ -686,6 +704,24 @@ addFeatMetadata <- function(gobject,
         column_feat_ID <- "feat_ID"
     }
 
+    # 3b. Auto-detect key-based input. When new_metadata carries a
+    # column_feat_ID column (either supplied directly as a data.table /
+    # data.frame, or auto-added from a named vector above), route through
+    # the key-based merge path regardless of the caller's by_column value.
+    # Positional cbind is fragile whenever input row order doesn't match
+    # feat_metadata row order; the key-based path is safe by construction.
+    # When no key column is present the original positional path still
+    # runs, but with a warning so callers can opt in to safe alignment.
+    has_key <- column_feat_ID %in% colnames(new_metadata)
+    if (has_key) {
+        by_column <- TRUE
+    } else if (!isTRUE(by_column)) {
+        warning("addFeatMetadata: input has no '", column_feat_ID,
+            "' column / names; falling back to positional cbind. Pass a ",
+            "named vector or a table with a '", column_feat_ID,
+            "' column for key-based alignment.", call. = FALSE)
+    }
+
 
     # 4. combine with existing metadata
     # get old and new meta colnames that are not the ID col
@@ -743,6 +779,23 @@ addFeatMetadata <- function(gobject,
 # expression ####
 
 
+# Row order to put cell metadata into expression-column order.
+#
+# `getExpression()` and `getCellMetadata()` are fetched independently and the
+# suite makes no guarantee that they share a cell order.
+.expr_cell_order <- function(cell_metadata, expr_data) {
+    ord <- match(colnames(expr_data), cell_metadata[["cell_ID"]])
+    if (anyNA(ord)) {
+        stop(
+            "expression columns and cell metadata do not describe the same ",
+            "cells; cannot align them.",
+            call. = FALSE
+        )
+    }
+    ord
+}
+
+
 #' @title create_average_DT
 #' @description calculates average gene expression for a cell metadata
 #' factor (e.g. cluster)
@@ -796,8 +849,12 @@ create_average_DT <- function(gobject,
     )
     myrownames <- rownames(expr_data)
 
+    # taken before the reorder so output column order is unchanged
+    groups <- unique(cell_metadata[[meta_data_name]])
+    cell_metadata <- cell_metadata[.expr_cell_order(cell_metadata, expr_data)]
+
     savelist <- list()
-    for (group in unique(cell_metadata[[meta_data_name]])) {
+    for (group in groups) {
         name <- paste0("cluster_", group)
 
         temp <- expr_data[, cell_metadata[[meta_data_name]] == group]
@@ -867,8 +924,11 @@ create_average_detection_DT <- function(gobject,
     )
     myrownames <- rownames(expr_data)
 
+    groups <- unique(cell_metadata[[meta_data_name]])
+    cell_metadata <- cell_metadata[.expr_cell_order(cell_metadata, expr_data)]
+
     savelist <- list()
-    for (group in unique(cell_metadata[[meta_data_name]])) {
+    for (group in groups) {
         name <- paste0("cluster_", group)
 
         temp <- expr_data[, cell_metadata[[meta_data_name]] == group]
