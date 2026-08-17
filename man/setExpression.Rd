@@ -30,7 +30,8 @@ specified set of expression data from the giotto object}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 
-\item{name}{name for the expression information}
+\item{name}{name for the expression information. NULL (default) takes the
+name from \code{x}, falling back to "raw" when \code{x} is unnamed}
 
 \item{...}{additional params to pass}
 

@@ -26,7 +26,8 @@ specified set of spatial locations data.}
 
 \item{spat_unit}{spatial unit (e.g. "cell")}
 
-\item{name}{name of spatial locations, default "raw"}
+\item{name}{name of spatial locations. NULL (default) takes the name from
+\code{x}, falling back to "raw" when \code{x} is unnamed}
 
 \item{...}{additional params to pass}
 

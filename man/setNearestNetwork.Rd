@@ -37,8 +37,8 @@ set of nearest neighbor network information from the gobject}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 
-\item{name}{name of NN network to be used
-yet supported.}
+\item{name}{name of NN network to be used. NULL (default) takes the name
+from \code{x}, falling back to "sNN.pca" when \code{x} is unnamed}
 
 \item{...}{additional params to pass}
 

@@ -275,7 +275,7 @@ polygon_to_raster <- function(polygon, field = NULL) {
 #' @examples
 #' g <- GiottoData::loadGiottoMini("vizgen")
 #' gpoly <- getPolygonInfo(g,
-#'     polygon_name = "aggregate",
+#'     name = "aggregate",
 #'     return_giottoPolygon = TRUE
 #' )
 #' gpoints <- getFeatureInfo(g, return_giottoPoints = TRUE)
@@ -413,7 +413,7 @@ setMethod(
         #   ---[polys to overlap with]---
         A <- getPolygonInfo(
             gobject = x,
-            polygon_name = spat_info,
+            name = spat_info,
             return_giottoPolygon = TRUE
         )
 
@@ -1011,7 +1011,7 @@ calculateOverlapRaster <- function(
     # * spatial vector
     spatvec <- getPolygonInfo(
         gobject = gobject,
-        polygon_name = spatial_info,
+        name = spatial_info,
         return_giottoPolygon = FALSE
     )
 
@@ -1151,7 +1151,7 @@ calculateOverlapPolygonImages <- function(gobject,
     ## get polygon information
     poly_info <- getPolygonInfo(
         gobject = gobject,
-        polygon_name = spatial_info,
+        name = spatial_info,
         return_giottoPolygon = TRUE
     )
 
@@ -1556,7 +1556,7 @@ calculateOverlapParallel <- function(gobject,
 #' @examples
 #' g <- GiottoData::loadGiottoMini("vizgen")
 #' gpoly <- getPolygonInfo(g,
-#'     polygon_name = "aggregate",
+#'     name = "aggregate",
 #'     return_giottoPolygon = TRUE
 #' )
 #' gpoints <- getFeatureInfo(g, return_giottoPoints = TRUE)
@@ -1624,7 +1624,7 @@ setMethod(
         # get data
         gpoly <- getPolygonInfo(
             gobject = x,
-            polygon_name = spat_info,
+            name = spat_info,
             return_giottoPolygon = TRUE,
             verbose = verbose
         )
@@ -2157,7 +2157,7 @@ overlapImagesToMatrix <- function(gobject,
     ## get polygon information
     polygon_info <- getPolygonInfo(
         gobject = gobject,
-        polygon_name = poly_info,
+        name = poly_info,
         return_giottoPolygon = TRUE
     )
 
@@ -2575,7 +2575,7 @@ aggregateStacksLocations <- function(gobject,
         spat <- spat_units[[spat_i]]
         stackspatvector <- getPolygonInfo(
             gobject = gobject,
-            polygon_name = spat,
+            name = spat,
             polygon_overlap = NULL,
             return_giottoPolygon = FALSE
         )
@@ -2708,7 +2708,7 @@ aggregateStacksPolygonOverlaps <- function(gobject,
     for (i in seq_len(length(spat_units))) {
         spat_unit <- spat_units[i]
         ovlp <- getPolygonInfo(gobject,
-            polygon_name = spat_unit,
+            name = spat_unit,
             polygon_overlap = feat_type
         )
         # vecDT <- gobject@spatial_info[[spat_unit]]@overlaps[[feat_type]]

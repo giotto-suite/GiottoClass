@@ -168,7 +168,7 @@ points info.
 \examples{
 g <- GiottoData::loadGiottoMini("vizgen")
 gpoly <- getPolygonInfo(g,
-    polygon_name = "aggregate",
+    name = "aggregate",
     return_giottoPolygon = TRUE
 )
 gpoints <- getFeatureInfo(g, return_giottoPoints = TRUE)

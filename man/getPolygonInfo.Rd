@@ -5,21 +5,24 @@
 \alias{getPolygonInfo,giotto-method}
 \title{Get polygon info}
 \usage{
-getPolygonInfo(gobject, polygon_name = NULL, ...)
+getPolygonInfo(gobject, name = NULL, ...)
 
 \S4method{getPolygonInfo}{giotto}(
   gobject,
-  polygon_name = NULL,
+  name = NULL,
   polygon_overlap = NULL,
   return_giottoPolygon = FALSE,
   verbose = TRUE,
-  simplify = TRUE
+  simplify = TRUE,
+  ...,
+  polygon_name = deprecated()
 )
 }
 \arguments{
 \item{gobject}{giotto object}
 
-\item{polygon_name}{name of polygons. Default is "cell"}
+\item{name}{name of polygons. NULL (default) selects "cell" when available,
+otherwise the first available}
 
 \item{polygon_overlap}{include polygon overlap information}
 
@@ -30,6 +33,8 @@ S4 object}
 
 \item{simplify}{logical. Whether or not to take object out of a list when
 there is a length of 1.}
+
+\item{polygon_name}{deprecated. Use \code{name}}
 }
 \value{
 spatVector

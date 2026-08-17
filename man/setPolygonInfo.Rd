@@ -25,7 +25,8 @@ information (see details)}
 
 \item{name}{(optional, character) name to assign to polygon and spatial unit
 that polygon might define. Only used for single giottoPolygon objects. Names
-are taken from a named list for multiple polygons.}
+are taken from a named list for multiple polygons. NULL (default) takes the
+name from \code{x}, falling back to "cell" when \code{x} is unnamed}
 
 \item{...}{additional params to pass}
 

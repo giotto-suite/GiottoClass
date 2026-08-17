@@ -5,14 +5,22 @@
 \alias{setGiottoImage,giotto-method}
 \title{Set giotto image object}
 \usage{
-setGiottoImage(gobject, image, name = NULL, ...)
+setGiottoImage(gobject, x, name = NULL, ...)
 
-\S4method{setGiottoImage}{giotto}(gobject, image, name = NULL, initialize = FALSE, verbose = NULL)
+\S4method{setGiottoImage}{giotto}(
+  gobject,
+  x,
+  name = NULL,
+  initialize = FALSE,
+  verbose = NULL,
+  ...,
+  image = deprecated()
+)
 }
 \arguments{
 \item{gobject}{giotto object}
 
-\item{image}{giotto image object to be attached without modification to the
+\item{x}{giotto image object to be attached without modification to the
 giotto object}
 
 \item{name}{name of giotto image object}
@@ -23,6 +31,8 @@ giotto object}
 returning}
 
 \item{verbose}{be verbose}
+
+\item{image}{deprecated. Use \code{x}}
 }
 \value{
 giotto object
@@ -43,7 +53,7 @@ g <- GiottoData::loadGiottoMini("vizgen")
 gimg <- getGiottoImage(gobject = g)
 
 setGiottoImage(g, NULL, name = objName(gimg))
-setGiottoImage(gobject = g, image = gimg)
+setGiottoImage(gobject = g, x = gimg)
 }
 \seealso{
 \code{\link{addGiottoImage}}

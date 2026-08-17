@@ -99,7 +99,7 @@ setMethod(
         x <- switch(what,
             "polygon" = {
                 getPolygonInfo(x,
-                    polygon_name = spat_unit,
+                    name = spat_unit,
                     return_giottoPolygon = TRUE
                 )
             },

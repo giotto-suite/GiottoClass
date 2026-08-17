@@ -277,7 +277,7 @@ set_cell_id <- function(gobject,
 
             cell_IDs <- spatIDs(getPolygonInfo(
                 gobject = gobject,
-                polygon_name = spat_unit,
+                name = spat_unit,
                 return_giottoPolygon = TRUE
             ))
         } else {
@@ -995,7 +995,8 @@ setMethod("getExpression", signature("giotto"), function(
 #' @inheritParams data_access_params
 #' @param x exprObj or list of exprObj to set. Passing NULL will remove a
 #' specified set of expression data from the giotto object
-#' @param name name for the expression information
+#' @param name name for the expression information. NULL (default) takes the
+#' name from \code{x}, falling back to "raw" when \code{x} is unnamed
 #' @param provenance provenance information (optional)
 #' information for the giotto object. Pass NULL to remove an expression object
 #' @param verbose be verbose
@@ -1209,7 +1210,7 @@ setMethod("setExpression", signature("giotto"), function(gobject,
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
 #' set_multiomics(
-#'     gobject = g, result = matrix(rnorm(100), nrow = 10),
+#'     gobject = g, x = matrix(rnorm(100), nrow = 10),
 #'     spat_unit = "cell", feat_type = "rna_protein"
 #' )
 #' @export
@@ -1222,12 +1223,13 @@ set_multiomics <- function(gobject, ...) setMultiomics(gobject, ...)
 #' @param gobject A Giotto object
 #' @param spat_unit spatial unit (e.g. 'cell')
 #' @param feat_type (e.g. 'rna_protein')
-#' @param result A matrix or result from multiomics
+#' @param x A matrix or result from multiomics
 #' integration (e.g. theta weighted values from runWNN)
 #' @param integration_method multiomics integration method used. Default = 'WNN'
 #' @param result_name Default = 'theta_weighted_matrix'
 #' @param verbose be verbose
 #' @param ... additional params to pass
+#' @param result deprecated. Use \code{x}
 #'
 #' @returns A giotto object
 #' @family multiomics accessor functions
@@ -1236,34 +1238,38 @@ set_multiomics <- function(gobject, ...) setMultiomics(gobject, ...)
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
 #' setMultiomics(
-#'     gobject = g, result = matrix(rnorm(100), nrow = 10),
+#'     gobject = g, x = matrix(rnorm(100), nrow = 10),
 #'     spat_unit = "cell", feat_type = "rna_protein"
 #' )
 #' @export
 setGeneric("setMultiomics",
-    function(gobject, result, spat_unit = NULL, feat_type = NULL, ...)
+    function(gobject, x, spat_unit = NULL, feat_type = NULL, ...)
         standardGeneric("setMultiomics"))
 
 #' @rdname setMultiomics
 #' @export
 setMethod("setMultiomics", signature("giotto"), function(gobject,
-    result,
+    x,
     spat_unit = NULL,
     feat_type = NULL,
     integration_method = "WNN",
     result_name = "theta_weighted_matrix",
     verbose = TRUE,
-    ...) {
+    ...,
+    result = deprecated()) {
+    x <- GiottoUtils::deprecate_param(result, x,
+        fun = "setMultiomics", when = "0.5.2"
+    )
     .set_default_nesting(gobject, spat_unit, feat_type)
 
     # If input is null, remove object
-    if (is.null(result)) {
+    if (is.null(x)) {
         if (isTRUE(verbose)) {
-            message("NULL passed to result\n Removing specified result")
+            message("NULL passed to x\n Removing specified result")
         }
         gobject@multiomics[[spat_unit]][[feat_type]][[
             integration_method
-        ]][[result_name]] <- result
+        ]][[result_name]] <- x
         return(gobject)
     }
 
@@ -1282,7 +1288,7 @@ setMethod("setMultiomics", signature("giotto"), function(gobject,
 
     gobject@multiomics[[spat_unit]][[feat_type]][[
         integration_method
-    ]][[result_name]] <- result
+    ]][[result_name]] <- x
     gobject
 })
 
@@ -1302,7 +1308,7 @@ setMethod("setMultiomics", signature("giotto"), function(gobject,
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #' g <- setMultiomics(
-#'     gobject = g, result = matrix(rnorm(100), nrow = 10),
+#'     gobject = g, x = matrix(rnorm(100), nrow = 10),
 #'     spat_unit = "cell", feat_type = "rna_protein"
 #' )
 #'
@@ -1326,7 +1332,7 @@ get_multiomics <- function(gobject, ...) getMultiomics(gobject, ...)
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #' g <- setMultiomics(
-#'     gobject = g, result = matrix(rnorm(100), nrow = 10),
+#'     gobject = g, x = matrix(rnorm(100), nrow = 10),
 #'     spat_unit = "cell", feat_type = "rna_protein"
 #' )
 #'
@@ -1506,7 +1512,8 @@ setMethod("getSpatialLocations", signature("giotto"), function(gobject,
 #' @inheritParams data_access_params
 #' @param x spatLocsObj or list of spatLocsObj. Passing NULL will remove a
 #' specified set of spatial locations data.
-#' @param name name of spatial locations, default "raw"
+#' @param name name of spatial locations. NULL (default) takes the name from
+#' \code{x}, falling back to "raw" when \code{x} is unnamed
 #' @param provenance provenance information (optional)
 #' @param verbose be verbose
 #' @details Spatial information will be set to the nested location described
@@ -1755,7 +1762,8 @@ setMethod("getDimReduction", signature("giotto"), function(gobject,
 #' @inheritParams data_access_params
 #' @param x dimObj or list of dimObj to set. Passing NULL will remove a
 #' specified set of dimension reduction information from the gobject
-#' @param name name of reduction results
+#' @param name name of reduction results. NULL (default) takes the name from
+#' \code{x}, falling back to "pca" when \code{x} is unnamed
 #' @param reduction reduction on cells or features
 #' @param reduction_method reduction method (e.g. "pca")
 #' @param provenance provenance information (optional)
@@ -2036,8 +2044,8 @@ setMethod("getNearestNetwork", signature("giotto"), function(gobject,
 #' @param x nnNetObj or list of nnNetObj. Passing NULL will remove a specified
 #' set of nearest neighbor network information from the gobject
 #' @param nn_type "kNN" or "sNN"
-#' @param name name of NN network to be used
-#' yet supported.
+#' @param name name of NN network to be used. NULL (default) takes the name
+#' from \code{x}, falling back to "sNN.pca" when \code{x} is unnamed
 #' @param provenance provenance information (optional)
 #' @param verbose be verbose
 #' @returns giotto object
@@ -2647,13 +2655,15 @@ setSpatialGrid <- function(gobject,
 #' @name getPolygonInfo
 #' @description Get giotto polygon spatVector
 #' @param gobject giotto object
-#' @param polygon_name name of polygons. Default is "cell"
+#' @param name name of polygons. NULL (default) selects "cell" when available,
+#' otherwise the first available
 #' @param polygon_overlap include polygon overlap information
 #' @param return_giottoPolygon (Defaults to FALSE) Return as giottoPolygon
 #' S4 object
 #' @param verbose be verbose
 #' @param simplify logical. Whether or not to take object out of a list when
 #' there is a length of 1.
+#' @param polygon_name deprecated. Use \code{name}
 #' @returns spatVector
 #' @family polygon info data accessor functions
 #' @family functions to get data from giotto object
@@ -2663,17 +2673,22 @@ setSpatialGrid <- function(gobject,
 #' getPolygonInfo(g)
 #' @export
 setGeneric("getPolygonInfo",
-    function(gobject, polygon_name = NULL, ...)
+    function(gobject, name = NULL, ...)
         standardGeneric("getPolygonInfo"))
 
 #' @rdname getPolygonInfo
 #' @export
 setMethod("getPolygonInfo", signature("giotto"), function(gobject,
-    polygon_name = NULL,
+    name = NULL,
     polygon_overlap = NULL,
     return_giottoPolygon = FALSE,
     verbose = TRUE,
-    simplify = TRUE) {
+    simplify = TRUE,
+    ...,
+    polygon_name = deprecated()) {
+    name <- GiottoUtils::deprecate_param(polygon_name, name,
+        fun = "getPolygonInfo", when = "0.5.2"
+    )
     slotdata <- slot(gobject, "spatial_info")
     potential_names <- names(slotdata)
 
@@ -2681,22 +2696,22 @@ setMethod("getPolygonInfo", signature("giotto"), function(gobject,
         stop("Giotto object contains no polygon information")
     }
 
-    if (is.null(polygon_name)) {
+    if (is.null(name)) {
         if ("cell" %in% potential_names) {
             # Default to 'cell' if available
-            polygon_name <- "cell"
+            name <- "cell"
         } else {
             # Otherwise the first available
-            polygon_name <- potential_names[1]
+            name <- potential_names[1]
             if (isTRUE(verbose)) {
                 wrap_txtf("No polygon information named 'cell' discovered.
-                Selecting first available ('%s')", polygon_name)
+                Selecting first available ('%s')", name)
             }
         }
     }
 
-    all_p <- identical(polygon_name, ":all:")
-    missing_p <- polygon_name[!polygon_name %in% potential_names]
+    all_p <- identical(name, ":all:")
+    missing_p <- name[!name %in% potential_names]
     if (length(missing_p) > 0L && !all_p) {
         stop(wrap_txtf(
             "No polygon information with name(s): '%s'",
@@ -2705,7 +2720,7 @@ setMethod("getPolygonInfo", signature("giotto"), function(gobject,
         ), call. = FALSE)
     }
 
-    if (!all_p) slotdata <- slotdata[polygon_name]
+    if (!all_p) slotdata <- slotdata[name]
 
     names(slotdata) <- NULL
     out <- lapply(slotdata, function(x) {
@@ -2746,7 +2761,8 @@ setMethod("getPolygonInfo", signature("giotto"), function(gobject,
 #' information (see details)
 #' @param name (optional, character) name to assign to polygon and spatial unit
 #' that polygon might define. Only used for single giottoPolygon objects. Names
-#' are taken from a named list for multiple polygons.
+#' are taken from a named list for multiple polygons. NULL (default) takes the
+#' name from \code{x}, falling back to "cell" when \code{x} is unnamed
 #' @param centroids_to_spatlocs if centroid information is discovered, whether
 #' to additionally set them as a set of spatial locations (default = FALSE)
 #' @param verbose be verbose
@@ -3211,7 +3227,8 @@ setMethod("getSpatialEnrichment", signature("giotto"), function(gobject,
 #' @name setSpatialEnrichment
 #' @description Function to set a spatial enrichment slot
 #' @inheritParams data_access_params
-#' @param name name of spatial enrichment results. Default "DWLS"
+#' @param name name of spatial enrichment results. NULL (default) takes the
+#' name from \code{x}, falling back to "enrichment" when \code{x} is unnamed
 #' @param x spatEnrObj or list of spatEnrObj to set. Passing NULL will remove
 #' a specified set of spatial enrichment information from the gobject.
 #' @param provenance provenance information (optional)
@@ -3446,10 +3463,11 @@ setMethod("getGiottoImage", signature("giotto"), function(gobject,
 #' other modalities of spatial data. \cr For the more general-purpose method
 #' of attaching image objects, see \code{\link{addGiottoImage}}
 #' @param gobject giotto object
-#' @param image giotto image object to be attached without modification to the
+#' @param x giotto image object to be attached without modification to the
 #' giotto object
 #' @param name name of giotto image object
 #' @param verbose be verbose
+#' @param image deprecated. Use \code{x}
 #' @inheritParams data_access_params
 #' @returns giotto object
 #' @family image data accessor functions
@@ -3460,33 +3478,38 @@ setMethod("getGiottoImage", signature("giotto"), function(gobject,
 #' gimg <- getGiottoImage(gobject = g)
 #'
 #' setGiottoImage(g, NULL, name = objName(gimg))
-#' setGiottoImage(gobject = g, image = gimg)
+#' setGiottoImage(gobject = g, x = gimg)
 #' @export
 setGeneric("setGiottoImage",
-    function(gobject, image, name = NULL, ...)
+    function(gobject, x, name = NULL, ...)
         standardGeneric("setGiottoImage"))
 
 #' @rdname setGiottoImage
 #' @export
 setMethod("setGiottoImage", signature("giotto"), function(gobject,
-    image,
+    x,
     name = NULL,
     initialize = FALSE,
-    verbose = NULL) {
-    if (is.null(image)) {
+    verbose = NULL,
+    ...,
+    image = deprecated()) {
+    x <- GiottoUtils::deprecate_param(image, x,
+        fun = "setGiottoImage", when = "0.5.2"
+    )
+    if (is.null(x)) {
         if (!is.null(name)) { # image removal
-            vmsg(.v = verbose, "NULL passed to `image` param
+            vmsg(.v = verbose, "NULL passed to `x` param
                 removing specified image")
-            gobject@images[[name]] <- image
+            gobject@images[[name]] <- x
             return(gobject)
         } else {
-            stop("NULL passed to `image` param, but no specified `name`\n",
+            stop("NULL passed to `x` param, but no specified `name`\n",
                 call. = FALSE
             )
         }
     }
 
-    if (!inherits(image, c("giottoImage", "giottoLargeImage"))) {
+    if (!inherits(x, c("giottoImage", "giottoLargeImage"))) {
         stop(wrap_txt(
             "Unable to set non-giottoImage objects. Please ensure a
             giottoImage or giottoLargeImage is provided to this function.",
@@ -3495,7 +3518,7 @@ setMethod("setGiottoImage", signature("giotto"), function(gobject,
     }
 
     # Default to name stored in object
-    if (is.null(name)) name <- objName(image)
+    if (is.null(name)) name <- objName(x)
 
     # Find existing names
     potential_names <- list_images_names(gobject = gobject)
@@ -3507,7 +3530,7 @@ setMethod("setGiottoImage", signature("giotto"), function(gobject,
         )
     }
 
-    gobject@images[[name]] <- image
+    gobject@images[[name]] <- x
     return(gobject)
 })
 
@@ -3785,7 +3808,7 @@ spatValues <- function(gobject,
         }
         p <- getPolygonInfo(
             gobject = gobject,
-            polygon_name = spat_unit,
+            name = spat_unit,
             return_giottoPolygon = TRUE,
             verbose = FALSE
         )

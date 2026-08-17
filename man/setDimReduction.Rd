@@ -38,7 +38,8 @@ specified set of dimension reduction information from the gobject}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 
-\item{name}{name of reduction results}
+\item{name}{name of reduction results. NULL (default) takes the name from
+\code{x}, falling back to "pca" when \code{x} is unnamed}
 
 \item{...}{additional params to pass}
 

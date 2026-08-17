@@ -36,7 +36,8 @@ a specified set of spatial enrichment information from the gobject.}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 
-\item{name}{name of spatial enrichment results. Default "DWLS"}
+\item{name}{name of spatial enrichment results. NULL (default) takes the
+name from \code{x}, falling back to "enrichment" when \code{x} is unnamed}
 
 \item{...}{additional params to pass}
 

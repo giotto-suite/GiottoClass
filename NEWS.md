@@ -31,8 +31,26 @@
 - `getExpression` adopts `name` as the canonical formal alongside
   `values` (now a back-compat alias); they error if both supplied and
   differ.
-- `image_type` formal removed from `getGiottoImage()` and `setGiottoImage()`
-  — already documented as deprecated and unused in body.
+- accessor generic formals aligned to one shared contract. Three generics
+  deviated from it, which mattered once the formals moved onto the generics
+  (S4 requires methods to match the generic's shared formal names and order,
+  so the odd ones out could not be written against the common contract):
+  `setMultiomics(result=)` and `setGiottoImage(image=)` are now `x` like every
+  other setter, and `getPolygonInfo(polygon_name=)` is now `name`. The old
+  names remain as deprecated aliases via `deprecate_param()` and continue to
+  work with a warning. Positional calls are unaffected. Following the existing
+  convention (`calculateOverlap(spatial_info)`, `getExpression(values)`), the
+  aliases live on the methods only and reach them through the generic's
+  `...`, so dispatch signatures are unchanged.
+- `image_type` formal removed from `getGiottoImage()`, `setGiottoImage()`,
+  `plotGiottoImage()`, and `distGiottoImage()`. The param had been
+  deprecated for a long time and was a no-op in all four: the accessors
+  never read it, `plotGiottoImage()` overwrote any supplied value by
+  inspecting the class of the fetched image, and `distGiottoImage()`
+  accepted only its default `"largeImage"`. Image class is determined from
+  the object itself. Note this does not affect the `img_type` argument of
+  `list_images()` / `list_images_names()`, which is a working filter and
+  is retained.
 
 # GiottoClass 0.5.1 (2026/05/14)
 
