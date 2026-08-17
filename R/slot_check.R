@@ -800,7 +800,7 @@
             # get spat_info
             sinfo <- getPolygonInfo(
                 gobject = gobject,
-                polygon_name = su_i,
+                name = su_i,
                 return_giottoPolygon = TRUE
             )
 

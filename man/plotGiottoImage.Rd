@@ -7,7 +7,6 @@
 plotGiottoImage(
   gobject = NULL,
   image_name = NULL,
-  image_type = NULL,
   giottoImage = NULL,
   giottoLargeImage = NULL,
   largeImage_crop_params_list = NULL,
@@ -19,8 +18,6 @@ plotGiottoImage(
 \item{gobject}{gobject containing giotto image object}
 
 \item{image_name}{name of giotto image object}
-
-\item{image_type}{type of giotto image object to plot}
 
 \item{giottoImage}{giottoImage object to plot directly}
 
@@ -41,8 +38,8 @@ image
 \description{
 Display a giotto image in the viewer panel. Image object to plot
 can be specified by providing the giotto object containing the
-image (\code{gobject}), the image object name (\code{image_name}), and the
-image object type (\code{image_type}). Alternatively, image objects can be
+image (\code{gobject}) and the image object name (\code{image_name}).
+Alternatively, image objects can be
 directly plotted through their respective associated params.
 }
 \section{largeImage-specific additional params}{
@@ -68,7 +65,7 @@ color scaling is desired.
 g <- GiottoData::loadGiottoMini("vizgen")
 
 plotGiottoImage(g,
-    image_type = "largeImage", image_name = "dapi_z0",
+    image_name = "dapi_z0",
     largeImage_max_intensity = 200
 )
 }

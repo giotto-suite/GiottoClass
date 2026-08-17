@@ -168,11 +168,11 @@ points info.
 \examples{
 g <- GiottoData::loadGiottoMini("vizgen")
 gpoly <- getPolygonInfo(g,
-    polygon_name = "aggregate",
+    name = "aggregate",
     return_giottoPolygon = TRUE
 )
 gpoints <- getFeatureInfo(g, return_giottoPoints = TRUE)
-gimg <- getGiottoImage(g, image_type = "largeImage")
+gimg <- getGiottoImage(g, name = list_images(g)$name[1])
 
 slot(gpoly, "overlaps") <- NULL
 overlaps(gpoly) # Should now be NULL

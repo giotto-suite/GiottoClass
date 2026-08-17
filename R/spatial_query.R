@@ -413,7 +413,7 @@ spatQueryGiottoPolygons <- spatQuery
         } else if (spat_unit %in% avail_poly) { # centroids from SpatVector
             sv <- getPolygonInfo(
                 gobject = gobject,
-                polygon_name = spat_unit,
+                name = spat_unit,
                 return_giottoPolygon = FALSE
             )
             sv <- centroids(sv)
@@ -422,7 +422,7 @@ spatQueryGiottoPolygons <- spatQuery
     } else if (spat_unit %in% avail_poly) {
         sv <- getPolygonInfo(
             gobject = gobject,
-            polygon_name = spat_unit,
+            name = spat_unit,
             return_giottoPolygon = FALSE
         )
     }

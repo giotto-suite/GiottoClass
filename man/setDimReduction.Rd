@@ -5,14 +5,21 @@
 \alias{setDimReduction,giotto-method}
 \title{Set dimension reduction data}
 \usage{
-setDimReduction(gobject, ...)
+setDimReduction(
+  gobject,
+  x,
+  spat_unit = NULL,
+  feat_type = NULL,
+  name = NULL,
+  ...
+)
 
 \S4method{setDimReduction}{giotto}(
   gobject,
   x,
   spat_unit = NULL,
   feat_type = NULL,
-  name = "pca",
+  name = NULL,
   reduction = c("cells", "feats"),
   reduction_method = c("pca", "umap", "tsne"),
   provenance = NULL,
@@ -24,8 +31,6 @@ setDimReduction(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{x}{dimObj or list of dimObj to set. Passing NULL will remove a
 specified set of dimension reduction information from the gobject}
 
@@ -33,7 +38,10 @@ specified set of dimension reduction information from the gobject}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 
-\item{name}{name of reduction results}
+\item{name}{name of reduction results. NULL (default) takes the name from
+\code{x}, falling back to "pca" when \code{x} is unnamed}
+
+\item{...}{additional params to pass}
 
 \item{reduction}{reduction on cells or features}
 

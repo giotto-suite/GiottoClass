@@ -38,7 +38,7 @@ Adds lists of giottoImages and giottoLargeImages to gobjects
 }
 \examples{
 g <- GiottoData::loadGiottoMini("visium")
-g_image <- getGiottoImage(g, image_type = "largeImage")
+g_image <- getGiottoImage(g, name = list_images(g)$name[1])
 
 addGiottoImage(g, largeImages = list(g_image))
 }

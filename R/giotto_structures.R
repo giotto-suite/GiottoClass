@@ -985,7 +985,7 @@ addSpatialCentroidLocationsLayer <- function(gobject,
     # nesting from
 
     gpoly <- getPolygonInfo(gobject,
-        polygon_name = poly_info,
+        name = poly_info,
         return_giottoPolygon = TRUE
     )
 

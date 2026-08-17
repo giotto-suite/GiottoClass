@@ -5,13 +5,13 @@
 \alias{setSpatialLocations,giotto-method}
 \title{Set spatial locations}
 \usage{
-setSpatialLocations(gobject, ...)
+setSpatialLocations(gobject, x, spat_unit = NULL, name = NULL, ...)
 
 \S4method{setSpatialLocations}{giotto}(
   gobject,
   x,
   spat_unit = NULL,
-  name = "raw",
+  name = NULL,
   provenance = NULL,
   verbose = NULL,
   initialize = TRUE,
@@ -21,14 +21,15 @@ setSpatialLocations(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{x}{spatLocsObj or list of spatLocsObj. Passing NULL will remove a
 specified set of spatial locations data.}
 
 \item{spat_unit}{spatial unit (e.g. "cell")}
 
-\item{name}{name of spatial locations, default "raw"}
+\item{name}{name of spatial locations. NULL (default) takes the name from
+\code{x}, falling back to "raw" when \code{x} is unnamed}
+
+\item{...}{additional params to pass}
 
 \item{provenance}{provenance information (optional)}
 

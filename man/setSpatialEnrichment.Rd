@@ -5,14 +5,21 @@
 \alias{setSpatialEnrichment,giotto-method}
 \title{Set spatial enrichment}
 \usage{
-setSpatialEnrichment(gobject, ...)
+setSpatialEnrichment(
+  gobject,
+  x,
+  spat_unit = NULL,
+  feat_type = NULL,
+  name = NULL,
+  ...
+)
 
 \S4method{setSpatialEnrichment}{giotto}(
   gobject,
   x,
   spat_unit = NULL,
   feat_type = NULL,
-  name = "enrichment",
+  name = NULL,
   provenance = NULL,
   verbose = NULL,
   initialize = TRUE,
@@ -22,8 +29,6 @@ setSpatialEnrichment(gobject, ...)
 \arguments{
 \item{gobject}{giotto object}
 
-\item{...}{additional params to pass}
-
 \item{x}{spatEnrObj or list of spatEnrObj to set. Passing NULL will remove
 a specified set of spatial enrichment information from the gobject.}
 
@@ -31,7 +36,10 @@ a specified set of spatial enrichment information from the gobject.}
 
 \item{feat_type}{feature type (e.g. "rna", "dna", "protein")}
 
-\item{name}{name of spatial enrichment results. Default "DWLS"}
+\item{name}{name of spatial enrichment results. NULL (default) takes the
+name from \code{x}, falling back to "enrichment" when \code{x} is unnamed}
+
+\item{...}{additional params to pass}
 
 \item{provenance}{provenance information (optional)}
 

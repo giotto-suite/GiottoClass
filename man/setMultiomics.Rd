@@ -5,36 +5,39 @@
 \alias{setMultiomics,giotto-method}
 \title{Set multiomics integration results}
 \usage{
-setMultiomics(gobject, ...)
+setMultiomics(gobject, x, spat_unit = NULL, feat_type = NULL, ...)
 
 \S4method{setMultiomics}{giotto}(
   gobject,
-  result,
+  x,
   spat_unit = NULL,
   feat_type = NULL,
   integration_method = "WNN",
   result_name = "theta_weighted_matrix",
   verbose = NULL,
-  ...
+  ...,
+  result = deprecated()
 )
 }
 \arguments{
 \item{gobject}{A Giotto object}
 
-\item{...}{additional params to pass}
-
-\item{result}{A matrix or result from multiomics
+\item{x}{A matrix or result from multiomics
 integration (e.g. theta weighted values from runWNN)}
 
 \item{spat_unit}{spatial unit (e.g. 'cell')}
 
 \item{feat_type}{(e.g. 'rna_protein')}
 
+\item{...}{additional params to pass}
+
 \item{integration_method}{multiomics integration method used. Default = 'WNN'}
 
 \item{result_name}{Default = 'theta_weighted_matrix'}
 
 \item{verbose}{be verbose}
+
+\item{result}{deprecated. Use \code{x}}
 }
 \value{
 A giotto object
@@ -46,7 +49,7 @@ Set a multiomics integration result in a Giotto object
 g <- GiottoData::loadGiottoMini("visium")
 
 setMultiomics(
-    gobject = g, result = matrix(rnorm(100), nrow = 10),
+    gobject = g, x = matrix(rnorm(100), nrow = 10),
     spat_unit = "cell", feat_type = "rna_protein"
 )
 }
