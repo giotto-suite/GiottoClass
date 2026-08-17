@@ -779,6 +779,23 @@ addFeatMetadata <- function(gobject,
 # expression ####
 
 
+# Row order to put cell metadata into expression-column order.
+#
+# `getExpression()` and `getCellMetadata()` are fetched independently and the
+# suite makes no guarantee that they share a cell order.
+.expr_cell_order <- function(cell_metadata, expr_data) {
+    ord <- match(colnames(expr_data), cell_metadata[["cell_ID"]])
+    if (anyNA(ord)) {
+        stop(
+            "expression columns and cell metadata do not describe the same ",
+            "cells; cannot align them.",
+            call. = FALSE
+        )
+    }
+    ord
+}
+
+
 #' @title create_average_DT
 #' @description calculates average gene expression for a cell metadata
 #' factor (e.g. cluster)
@@ -832,8 +849,12 @@ create_average_DT <- function(gobject,
     )
     myrownames <- rownames(expr_data)
 
+    # taken before the reorder so output column order is unchanged
+    groups <- unique(cell_metadata[[meta_data_name]])
+    cell_metadata <- cell_metadata[.expr_cell_order(cell_metadata, expr_data)]
+
     savelist <- list()
-    for (group in unique(cell_metadata[[meta_data_name]])) {
+    for (group in groups) {
         name <- paste0("cluster_", group)
 
         temp <- expr_data[, cell_metadata[[meta_data_name]] == group]
@@ -903,8 +924,11 @@ create_average_detection_DT <- function(gobject,
     )
     myrownames <- rownames(expr_data)
 
+    groups <- unique(cell_metadata[[meta_data_name]])
+    cell_metadata <- cell_metadata[.expr_cell_order(cell_metadata, expr_data)]
+
     savelist <- list()
-    for (group in unique(cell_metadata[[meta_data_name]])) {
+    for (group in groups) {
         name <- paste0("cluster_", group)
 
         temp <- expr_data[, cell_metadata[[meta_data_name]] == group]
