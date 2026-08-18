@@ -175,17 +175,26 @@ create_giotto_instructions <- function(python_path = NULL,
 
 # deprecated ####
 
-# These functions have been made internal. They will stop being exported
-# in a future version of GiottoClass
+# Superseded by `instructions()` / `instructions<-()`. They will stop being
+# exported in a future version of GiottoClass.
+#
+# The `deprecate_soft()` call these four used to carry is gone: the
+# `instructions()` S4 method calls them on every access, and the accumulated
+# lifecycle-warning call-stack captures were tipping R's expression limit
+# during long test runs. They stay exported — downstream suite packages
+# (GiottoData among them) still call them, so de-exporting is a separate
+# deliberate deprecation, not a side effect of a warning fix.
 
-# Internal helper for `instructions(gobject, param)` — retrieves the
-# value of a single instruction param. Formerly exported as
-# `readGiottoInstructions()` with `deprecate_soft()`; both removed because
-# the new `instructions()` S4 method calls this on every access and the
-# accumulated lifecycle-warning call-stack captures were tipping R's
-# expression-limit during long test runs.
+#' @title Read a giotto instruction
+#' @description Retrieves the value associated with a single instruction
+#' param. Superseded by [instructions()].
+#' @param giotto_instructions giotto object or a `giottoInstructions` list
+#' @param param parameter to retrieve
+#' @param default value to return when `param` is absent. When missing, an
+#' absent `param` is an error.
+#' @returns the value of the requested instruction param
 #' @keywords internal
-#' @noRd
+#' @export
 readGiottoInstructions <- function(giotto_instructions,
     param = NULL,
     default) {
@@ -209,22 +218,32 @@ readGiottoInstructions <- function(giotto_instructions,
 }
 
 
-# Internal helper for `instructions(gobject)` — extracts the full
-# instructions slot. Formerly exported as `showGiottoInstructions()`
-# with `deprecate_soft()`; both removed (see `readGiottoInstructions`
-# note above for context).
+#' @title Show giotto instructions
+#' @description Extracts the full instructions slot. Superseded by
+#' [instructions()].
+#' @param gobject giotto object
+#' @returns named list of giotto instructions
 #' @keywords internal
-#' @noRd
+#' @export
 showGiottoInstructions <- function(gobject) {
     gobject@instructions
 }
 
 
-# Internal helper for `instructions<-(gobject, param) <- value` — changes
-# one or more instruction values. Formerly exported as
-# `changeGiottoInstructions()` with `deprecate_soft()`; both removed.
+#' @title Change giotto instructions
+#' @description Changes one or more instruction values. Superseded by
+#' `instructions(gobject, param) <- value`.
+#' @param gobject giotto object
+#' @param params parameter(s) to change
+#' @param new_values new value(s) for `params`
+#' @param return_gobject logical. Return the giotto object (default `TRUE`)
+#' rather than the instructions list alone.
+#' @param init_gobject logical. Re-initialize the object when returning it
+#' (default `TRUE`)
+#' @returns giotto object with changed instructions, or the instructions
+#' list when `return_gobject = FALSE`
 #' @keywords internal
-#' @noRd
+#' @export
 changeGiottoInstructions <- function(gobject,
     params = NULL,
     new_values = NULL,
@@ -276,11 +295,17 @@ changeGiottoInstructions <- function(gobject,
 
 
 
-# Internal helper for `instructions<-(gobject) <- value` — replaces the
-# entire instructions slot. Formerly exported as
-# `replaceGiottoInstructions()` with `deprecate_soft()`; both removed.
+#' @title Replace giotto instructions
+#' @description Replaces the entire instructions slot. Superseded by
+#' `instructions(gobject) <- value`.
+#' @param gobject giotto object
+#' @param instructions named list of all instructions, as produced by
+#' [createGiottoInstructions()]
+#' @param init_gobject logical. Re-initialize the object before returning it
+#' (default `TRUE`)
+#' @returns giotto object with replaced instructions
 #' @keywords internal
-#' @noRd
+#' @export
 replaceGiottoInstructions <- function(gobject,
     instructions = NULL,
     init_gobject = TRUE) {
