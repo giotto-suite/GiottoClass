@@ -2,12 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setFeatureMetadata}
 \alias{setFeatureMetadata}
-\alias{setFeatureMetadata,giotto-method}
+\alias{setFeatureMetadata,gAny-method}
 \title{Set feature metadata}
 \usage{
 setFeatureMetadata(gobject, x, spat_unit = NULL, feat_type = NULL, ...)
 
-\S4method{setFeatureMetadata}{giotto}(
+\S4method{setFeatureMetadata}{gAny}(
   gobject,
   x,
   spat_unit = NULL,

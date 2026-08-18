@@ -2,12 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getDimReduction}
 \alias{getDimReduction}
-\alias{getDimReduction,giotto-method}
+\alias{getDimReduction,gAny-method}
 \title{Get dimension reduction}
 \usage{
 getDimReduction(gobject, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
 
-\S4method{getDimReduction}{giotto}(
+\S4method{getDimReduction}{gAny}(
   gobject,
   spat_unit = NULL,
   feat_type = NULL,

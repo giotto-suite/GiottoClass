@@ -3,12 +3,12 @@
 \name{getExpression}
 \alias{getExpression}
 \alias{getExpressionValues}
-\alias{getExpression,giotto-method}
+\alias{getExpression,gAny-method}
 \title{Get expression values}
 \usage{
 getExpression(gobject, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
 
-\S4method{getExpression}{giotto}(
+\S4method{getExpression}{gAny}(
   gobject,
   spat_unit = NULL,
   feat_type = NULL,
