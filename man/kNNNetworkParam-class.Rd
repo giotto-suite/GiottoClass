@@ -15,7 +15,9 @@ kNNNetworkParam(
   include_weight = TRUE,
   include_distance = TRUE,
   output = c("auto", "data.table", "igraph", "parquet"),
-  engine = c("dbscan", "hnsw")
+  engine = c("dbscan", "hnsw"),
+  ef = 200,
+  n_threads_build = 1L
 )
 }
 \arguments{
@@ -34,11 +36,25 @@ kNNNetworkParam(
 \item{output}{one of \code{"auto"}, \code{"data.table"}, \code{"igraph"}, \code{"parquet"}}
 
 \item{engine}{character. kNN search backend. \code{"dbscan"} (default) is exact
-and single-threaded. \code{"hnsw"} uses an approximate HNSW index via
-\code{GiottoDisk::hnswKNN()} -- multithreaded and far faster at PCA
-dimensionality, at the cost of recall slightly below 1 and results that
-can shift with thread count. Requires \pkg{GiottoDisk} and
-\pkg{RcppHNSW}.}
+and single-threaded, and is the better choice on small data where it is
+also faster. \code{"hnsw"} uses an approximate HNSW index via \code{\link[=hnswKNN]{hnswKNN()}} --
+multithreaded and free of the kd-tree's degradation at PCA
+dimensionality, which is what makes it worth reaching for on large
+datasets. On 158,662 cells at \code{k = 30} it reproduced 99.995\% of the exact
+network's undirected edges in 11.8s against 79.9s. Requires
+\pkg{RcppHNSW}. An \code{"auto"} setting that picks by dataset size is planned.}
+
+\item{ef}{integer. \code{"hnsw"} only, ignored otherwise. Search beam width,
+default 200 -- the recall/speed dial. Higher values search more of the
+graph, moving the result closer to the exact \code{"dbscan"} answer at the cost
+of query time.}
+
+\item{n_threads_build}{integer or \code{NULL}. \code{"hnsw"} only, ignored otherwise.
+Threads for the index build, default \code{1}. A parallel build is not
+reproducible -- insertion order varies, so neighbours differ slightly
+between runs and that propagates to clustering even with a fixed seed.
+\code{NULL} inherits the search thread count and trades reproducibility for
+speed.}
 }
 \description{
 Constructor and class for k-Nearest-Neighbour network parameters. Pass

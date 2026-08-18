@@ -55,6 +55,7 @@ Suggests:
     magick,
     plotly,
     raster,
+    RcppHNSW,
     remotes,
     reshape2,
     rgl,
@@ -142,6 +143,7 @@ Collate:
     'methods-transpose.R'
     'methods-wrap.R'
     'methods-zoom.R'
+    'nn_search_hnsw.R'
     'provenance.R'
     'python_bento.R'
     'python_environment.R'

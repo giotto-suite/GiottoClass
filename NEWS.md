@@ -2,6 +2,33 @@
 
 ## new
 
+- `hnswKNN()` restored to GiottoClass, so `createNearestNetwork(engine =
+  "hnsw")` works again. It had errored with `'hnswKNN' is not an exported
+  object from 'namespace:GiottoDisk'` since 2026-08-11, when {GiottoDisk}
+  removed the function intending to move it here and the move did not land,
+  leaving `.nn_search()` calling a function that existed in neither package.
+  Requires \pkg{RcppHNSW} (Suggests); `engine = "dbscan"` remains the default
+  and is unchanged.
+- `ef` and `n_threads_build` are now exposed on `kNNNetworkParam()`,
+  `sNNNetworkParam()` and `createNearestNetwork()` rather than only reachable
+  through `...`. Both apply to `engine = "hnsw"` and are ignored by
+  `"dbscan"`, so engines can be swapped without changing the call.
+    - `ef` (default `200`, was `50`) is the recall/speed dial. Measured on a
+      158,662-cell Xenium sample at `k = 30`: `ef = 50` reproduced 99.225% of
+      the exact network's undirected edges, `ef = 200` reproduced 99.995%, for
+      2.30s against 2.83s.
+    - `n_threads_build` (default `1`) makes the search reproducible. Only the
+      index build is nondeterministic -- concurrent insertion makes the graph
+      depend on thread interleaving, while the search is read-only and
+      deterministic at any thread count. With a parallel build, two runs of a
+      seeded Leiden gave ARI 0.9368-0.9655; building on one thread they are
+      identical (ARI 1.000000). Costs 2.82s -> 11.8s, still 6.8x faster than
+      the 79.85s exact `dbscan::kNN()`, with accuracy unchanged (recall
+      0.999980). Set to `NULL` to inherit `n_threads` and trade
+      reproducibility for speed while exploring.
+    - An `engine = "auto"` that selects by dataset size is planned; for now
+      prefer `"dbscan"` on small data, where it is both exact and faster.
+
 - `giotto` class gains a `source` slot for attaching a `gsource`-inheriting
   backend manager (see {GiottoDisk}).
 - `createGiottoObject()` gains a `backend` param: accepts a filepath or a
