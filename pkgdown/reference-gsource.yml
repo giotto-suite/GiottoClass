@@ -23,3 +23,7 @@
   - labelProportionsParam
   - hnswKNN
   - spatRelate
+  # documents subset() on giottoPoints. Neither exported nor keyword-internal,
+  # so pkgdown REQUIRES an index entry -- it errors on any documented topic
+  # that is neither listed nor marked internal.
+  - subset_terravectdata
