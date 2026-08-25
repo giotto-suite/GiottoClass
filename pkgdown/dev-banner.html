@@ -1,0 +1,54 @@
+<!--
+  Banner shown ONLY on the development site
+  (giotto-suite.github.io/GiottoClass/dev/).
+
+  Injected at build time by pkgdown-dev.yaml via
+    override = list(template = list(includes = list(before_body = <this file>)))
+  so it lives in the workflow, NOT in _pkgdown.yml. That matters: the release
+  build reads the same _pkgdown.yml, and must never pick this up.
+
+  pkgdown has no built-in banner. Its own dev signals are a red version badge
+  and a noindex meta tag -- a colour and something invisible, neither of which
+  tells a first-time reader anything.
+
+  Layout: the pkgdown navbar is `fixed-top`, so a banner in normal flow would
+  sit underneath it and never be seen. The banner is therefore also fixed,
+  above the navbar, with the navbar and body offset by its height.
+
+  No JavaScript, and no CSS newer than ~2015 (flexbox `gap` was deliberately
+  avoided -- it only baselined in Safari 14.1).
+-->
+<div id="giotto-dev-banner" role="alert">
+  <span class="gdb-tag">DEVELOPMENT VERSION</span>
+  <span class="gdb-text">Documentation for the unreleased <code>gsource</code>
+  line. Content may change or be removed.</span>
+  <a class="gdb-link" href="https://giotto-suite.github.io/GiottoClass/">View the released documentation &rarr;</a>
+</div>
+<style>
+  #giotto-dev-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1035;
+    height: 2.75rem; display: flex; align-items: center;
+    justify-content: center; flex-wrap: wrap;
+    background: #B45309; color: #fff;
+    font-size: .875rem; line-height: 1.2; padding: 0 1rem;
+    text-align: center;
+  }
+  /* margin rather than flex `gap` -- see note above */
+  #giotto-dev-banner > * { margin: 0 .3rem; }
+  #giotto-dev-banner .gdb-tag {
+    font-weight: 700; letter-spacing: .04em;
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: .25rem; padding: .1rem .45rem;
+  }
+  #giotto-dev-banner .gdb-text code {
+    background: rgba(255,255,255,.18); color: #fff;
+    padding: .05rem .25rem; border-radius: .15rem;
+  }
+  #giotto-dev-banner .gdb-link { color: #fff; text-decoration: underline; }
+  /* push the fixed navbar and the page content clear of the banner */
+  .navbar.fixed-top { top: 2.75rem; }
+  body { padding-top: calc(2.75rem + 3.5rem); }
+  @media (max-width: 575px) {
+    #giotto-dev-banner .gdb-text { display: none; }
+  }
+</style>

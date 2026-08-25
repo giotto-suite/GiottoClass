@@ -1,0 +1,25 @@
+# Reference entries for topics that exist ONLY on the gsource line.
+#
+# Kept out of _pkgdown.yml on purpose. Both the release build and the dev build
+# read that file, and the release build documents v0.5.1, where these topics do
+# not exist -- pkgdown hard-errors on a listed topic it cannot find. So this
+# fragment is spliced in at build time by pkgdown-dev.yaml, ahead of the
+# `internal` section, and only for the dev build.
+#
+# The *Param classes are absent here deliberately: _pkgdown.yml already selects
+# them with ends_with("-class"), which picks up the new ones automatically.
+#
+# When gsource merges into the default branch, fold these into _pkgdown.yml and
+# delete this file along with the splice step.
+- title: New on the gsource line
+  desc: >
+    Generics and helpers introduced on the gsource development line. Not
+    present in the released version.
+- contents:
+  - analyzeData
+  - filterData
+  - reduceData
+  - networkParam
+  - labelProportionsParam
+  - hnswKNN
+  - spatRelate

@@ -1,0 +1,148 @@
+# Builds the DEVELOPMENT documentation for GiottoClass and publishes it to
+# giotto-suite.github.io/GiottoClass/dev/
+#
+# WHY THIS EXISTS
+# The release site (pkgdown.yaml) documents this `website` branch, which tracks
+# main -- v0.5.1. The gsource line adds ~35 exports on top of that: filterData,
+# reduceData, hnswKNN, the *Param classes and the S4 accessor methods. None of
+# them are documented anywhere today. This publishes them without claiming they
+# are released.
+#
+# WHICH REF DOES THIS DOCUMENT?
+# The `giottoclass_ref` input, default `gsource`. This branch owns the website
+# content -- _pkgdown.yml, vignettes, theme -- while the package source is
+# checked out at build time. When gsource merges into a default branch and is
+# retired, change that one default.
+#
+# WHY THE RELEASE SITE CANNOT BE HARMED
+#   * PKGDOWN_DEV_MODE=devel makes pkgdown write ONLY to docs/dev/. Required
+#     here: _pkgdown.yml has no `development:` block, so the default is
+#     `mode: release` and pkgdown would otherwise write to docs/ root.
+#   * the deploy uses target-folder: dev, and `clean: true` is scoped to it.
+#   * the release workflow uses `clean: false`, so it cannot delete dev/ either.
+#   * force: false, so a release deploy landing mid-build is rebased onto.
+
+name: pkgdown (dev)
+
+on:
+  push:
+    branches: [website]
+  workflow_dispatch:
+    inputs:
+      giottoclass_ref:
+        description: "Branch/tag of giotto-suite/GiottoClass to document"
+        default: gsource
+        required: false
+
+jobs:
+  pkgdown-dev:
+    runs-on: ubuntu-latest
+    # SHARE the release workflow's concurrency group so a dev deploy and a
+    # release deploy can never overlap. Expression copied verbatim from
+    # pkgdown.yaml: for any non-PR run it evaluates to the constant
+    # "pkgdown-true", so all runs queue behind one another. A per-run group
+    # would be unique every time and serialise against nothing.
+    concurrency:
+      group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: write
+
+    steps:
+      # 1. website content at the WORKSPACE ROOT, not a subpath. The deploy
+      #    action runs `git config` in GITHUB_WORKSPACE and has no input to
+      #    point it elsewhere, so the root must be a git repository. Checking
+      #    both out into subdirectories leaves the root bare and the deploy
+      #    dies with "fatal: not in a git directory".
+      - uses: actions/checkout@v4
+
+      # 2. the package source, at whichever ref we want documented
+      - uses: actions/checkout@v4
+        with:
+          repository: giotto-suite/GiottoClass
+          ref: ${{ inputs.giottoclass_ref || 'gsource' }}
+          path: pkgsrc
+
+      # 3. lay the website content over the package checkout. REPLACE
+      #    vignettes/ rather than merging: this branch carries three vignettes
+      #    and gsource carries one, and a plain `cp -r` would leave a mixture.
+      #    This branch is the source of truth for site content.
+      - name: Assemble the site source
+        run: |
+          rm -rf pkgsrc/vignettes pkgsrc/pkgdown
+          cp -r vignettes pkgdown pkgsrc/
+          cp    _pkgdown.yml pkgsrc/
+
+          # Splice in the reference entries for gsource-only topics, ahead of
+          # the `internal` section. They cannot live in _pkgdown.yml: the
+          # release build reads the same file against v0.5.1, where these
+          # topics do not exist, and pkgdown hard-errors on a listed topic it
+          # cannot find.
+          awk '/^- title: internal$/ && !done {
+                 while ((getline line < "pkgdown/reference-gsource.yml") > 0)
+                   if (line !~ /^#/) print line
+                 done = 1
+               } {print}' _pkgdown.yml > pkgsrc/_pkgdown.yml
+          echo "documenting giotto-suite/GiottoClass@${{ inputs.giottoclass_ref || 'gsource' }}"
+          echo "version:   $(grep '^Version:' pkgsrc/DESCRIPTION)"
+          echo "vignettes: $(ls pkgsrc/vignettes/*.Rmd 2>/dev/null | wc -l)"
+          echo "gsource-only reference entries spliced: $(grep -c 'New on the gsource line' pkgsrc/_pkgdown.yml) (expect 1)"
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      # No ref pinning needed. GiottoClass@gsource's only Remote is a bare
+      # giotto-suite/GiottoUtils, which resolves to main -- v0.2.5, satisfying
+      # its own `GiottoUtils (>= 0.2.5)`.
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: pkgsrc
+          dependencies: '"hard"'
+          extra-packages: any::pkgdown, bioc::BiocStyle, local::.
+          needs: website
+
+      # Fail loudly rather than publish the release version as if it were dev.
+      - name: Verify the documented version
+        run: |
+          Rscript -e '
+            v <- as.character(utils::packageVersion("GiottoClass"))
+            cat("GiottoClass", v, "\n")
+            if (utils::compareVersion(v, "0.6.0") < 0)
+              stop("expected the gsource line (>= 0.6.0), got ", v)
+          '
+
+      - name: Build dev site
+        working-directory: pkgsrc
+        env:
+          PKGDOWN_DEV_MODE: devel   # REQUIRED -- _pkgdown.yml has no
+                                    # `development:` block, so the default is
+                                    # mode: release and this would land at root
+        run: |
+          Rscript -e '
+            banner <- paste(readLines("pkgdown/dev-banner.html"), collapse = "\n")
+            pkgdown::build_site(
+              install     = FALSE,
+              # Rd examples default to TRUE and add a great deal of time; several
+              # build a Python environment, whose install log then leaks into the
+              # published docs as "example output".
+              examples    = FALSE,
+              new_process = FALSE,
+              override    = list(
+                # dev-only presentation lives HERE, never in _pkgdown.yml, so the
+                # release build reading the same file cannot pick it up
+                template = list(includes = list(before_body = banner))
+              )
+            )'
+
+      - name: Deploy to gh-pages /dev/
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
+        with:
+          branch: gh-pages
+          folder: pkgsrc/docs/dev
+          target-folder: dev
+          clean: true
+          force: false

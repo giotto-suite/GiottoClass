@@ -9,5 +9,13 @@ inst/doc
 codecov.yml
 cell_rna*
 docs
-pkgdown
+# pkgdown/ is a SOURCE directory in pkgdown's layout (favicon, templates,
+# includes), not build output -- that is `docs`, ignored above. Ignore its
+# contents by default but re-include what the site genuinely needs. Has to be
+# `pkgdown/*` rather than `pkgdown`: git cannot re-include a file whose parent
+# directory is itself excluded, which is why the favicons had to be force-added.
+pkgdown/*
+!pkgdown/favicon/
+!pkgdown/dev-banner.html
+!pkgdown/reference-gsource.yml
 .positai
