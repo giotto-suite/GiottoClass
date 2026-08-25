@@ -95,16 +95,27 @@ jobs:
         with:
           use-public-rspm: true
 
-      # RSPM ships units/terra/sf as binaries that dlopen their system
-      # libraries, and pak's sysreqs handling does not cover every one of them
-      # here. Without libudunits2 the build dies deep inside reference
-      # rendering, when downlit loads a namespace to resolve a cross-package
-      # link -- a long way from anything that looks like a missing library.
-      - name: System libraries for units and the geospatial stack
+      # pak resolves NO system requirements in this job -- its metadata comes
+      # back as `"sysreqs": ""` and `"sysreqs_packages": {}` for every package.
+      # So the RSPM binaries install fine and then fail at dlopen, one library
+      # at a time, deep inside reference rendering where downlit loads a
+      # namespace to resolve a cross-package link. Three separate builds died
+      # this way on libproj, libudunits2 and libMagick++ in turn.
+      #
+      # Install the set explicitly rather than discovering it one failed
+      # 25-minute build at a time. Grouped by the R package that needs it.
+      - name: System libraries for the RSPM binaries
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            libudunits2-dev libgdal-dev libgeos-dev libproj-dev
+            libudunits2-dev \
+            libgdal-dev libgeos-dev libproj-dev \
+            libmagick++-dev \
+            libglpk-dev \
+            libhdf5-dev \
+            libxml2-dev libssl-dev libcurl4-openssl-dev \
+            libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev \
+            libpng-dev libtiff5-dev libjpeg-dev
 
       # No ref pinning needed. GiottoClass@gsource's only Remote is a bare
       # giotto-suite/GiottoUtils, which resolves to main -- v0.2.5, satisfying
