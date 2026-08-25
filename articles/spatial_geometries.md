@@ -368,6 +368,12 @@ gpoly@overlaps <- NULL # reset overlaps info
 gpoly <- calculateOverlap(gpoly, gpoints, verbose = FALSE)
 
 gimg <- GiottoData::loadSubObjectMini("giottoLargeImage")
+```
+
+    ## Warning: [rast] unknown extent
+
+``` r
+
 gpoly <- calculateOverlap(gpoly, gimg, verbose = FALSE, progress = FALSE)
 ```
 
@@ -466,7 +472,7 @@ print(intens_mat[1, 1:3, drop = FALSE])
 sessionInfo()
 ```
 
-    ## R version 4.6.0 (2026-04-24)
+    ## R version 4.6.1 (2026-06-24)
     ## Platform: x86_64-pc-linux-gnu
     ## Running under: Ubuntu 24.04.4 LTS
     ## 
@@ -490,39 +496,23 @@ sessionInfo()
     ## [1] GiottoClass_0.5.1
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] SummarizedExperiment_1.42.0 rjson_0.2.23               
-    ##  [3] xfun_0.57                   bslib_0.11.0               
-    ##  [5] raster_3.6-32               htmlwidgets_1.6.4          
-    ##  [7] Biobase_2.72.0              lattice_0.22-9             
-    ##  [9] tools_4.6.0                 generics_0.1.4             
-    ## [11] stats4_4.6.0                proxy_0.4-29               
-    ## [13] GiottoData_0.2.16           Matrix_1.7-5               
-    ## [15] KernSmooth_2.23-26          data.table_1.18.4          
-    ## [17] checkmate_2.3.4             desc_1.4.3                 
-    ## [19] S4Vectors_0.50.1            lifecycle_1.0.5            
-    ## [21] compiler_4.6.0              GiottoUtils_0.2.5          
-    ## [23] textshaping_1.0.5           terra_1.9-27               
-    ## [25] Seqinfo_1.2.0               codetools_0.2-20           
-    ## [27] htmltools_0.5.9             class_7.3-23               
-    ## [29] sass_0.4.10                 yaml_2.3.12                
-    ## [31] pkgdown_2.2.0               exactextractr_0.10.1       
-    ## [33] jquerylib_0.1.4             classInt_0.4-11            
-    ## [35] SingleCellExperiment_1.34.0 DelayedArray_0.38.1        
-    ## [37] cachem_1.1.0                magick_2.9.1               
-    ## [39] abind_1.4-8                 gtools_3.9.5               
-    ## [41] digest_0.6.39               sf_1.1-1                   
-    ## [43] fastmap_1.2.0               grid_4.6.0                 
-    ## [45] cli_3.6.6                   SparseArray_1.12.2         
-    ## [47] magrittr_2.0.5              S4Arrays_1.12.0            
-    ## [49] e1071_1.7-17                backports_1.5.1            
-    ## [51] sp_2.2-1                    rmarkdown_2.31             
-    ## [53] XVector_0.52.0              matrixStats_1.5.0          
-    ## [55] otel_0.2.0                  ragg_1.5.2                 
-    ## [57] SpatialExperiment_1.22.0    evaluate_1.0.5             
-    ## [59] knitr_1.51                  GenomicRanges_1.64.0       
-    ## [61] IRanges_2.46.0              rlang_1.2.0                
-    ## [63] Rcpp_1.1.1-1.1              DBI_1.3.0                  
-    ## [65] BiocGenerics_0.58.1         jsonlite_2.0.0             
-    ## [67] R6_2.6.1                    MatrixGenerics_1.24.0      
-    ## [69] systemfonts_1.3.2           fs_2.1.0                   
-    ## [71] units_1.0-1
+    ##  [1] sass_0.4.10          generics_0.1.4       class_7.3-23        
+    ##  [4] KernSmooth_2.23-26   gtools_3.9.5         lattice_0.22-9      
+    ##  [7] digest_0.6.39        magrittr_2.0.5       evaluate_1.0.5      
+    ## [10] grid_4.6.1           fastmap_1.2.0        jsonlite_2.0.0      
+    ## [13] Matrix_1.7-5         e1071_1.7-17         backports_1.5.1     
+    ## [16] DBI_1.3.0            GiottoData_0.2.16    codetools_0.2-20    
+    ## [19] textshaping_1.0.5    jquerylib_0.1.4      cli_3.6.6           
+    ## [22] rlang_1.3.0          units_1.0-1          XVector_0.52.0      
+    ## [25] Biobase_2.72.0       cachem_1.1.0         yaml_2.3.12         
+    ## [28] otel_0.2.0           tools_4.6.1          raster_3.6-32       
+    ## [31] GiottoUtils_0.2.5    checkmate_2.3.4      BiocGenerics_0.58.1 
+    ## [34] exactextractr_0.10.1 R6_2.6.1             stats4_4.6.1        
+    ## [37] proxy_0.4-29         lifecycle_1.0.5      classInt_0.4-11     
+    ## [40] S4Vectors_0.50.1     fs_2.1.0             htmlwidgets_1.6.4   
+    ## [43] IRanges_2.46.0       ragg_1.5.2           desc_1.4.3          
+    ## [46] pkgdown_2.2.1        terra_1.9-46         bslib_0.12.0        
+    ## [49] data.table_1.18.6.1  Rcpp_1.1.2           sf_1.1-2            
+    ## [52] systemfonts_1.3.2    xfun_0.60            knitr_1.51          
+    ## [55] htmltools_0.5.9      rmarkdown_2.31       compiler_4.6.1      
+    ## [58] sp_2.2-3

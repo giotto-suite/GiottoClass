@@ -374,6 +374,7 @@ a <code><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">spri
 <span class="r-in"><span><span class="va">shp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/toy_poly.shp"</span>, package <span class="op">=</span> <span class="st">"GiottoClass"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># vector inputs do not have params for flipping and shifting</span></span></span>
 <span class="r-in"><span><span class="va">gp2</span> <span class="op">&lt;-</span> <span class="fu">createGiottoPolygon</span><span class="op">(</span><span class="va">shp</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Error : [rast] cannot open this file as a SpatRaster: /home/runner/work/_temp/Library/GiottoClass/extdata/toy_poly.shp</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Selecting attribute "poly_ID" as poly_ID</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Selecting attribute "poly_ID" as poly_ID</span>
 <span class="r-in"><span><span class="fu"><a href="plot-generic.html">plot</a></span><span class="op">(</span><span class="va">gp2</span>, col <span class="op">=</span> <span class="fu">grDevices</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grDevices/palettes.html" class="external-link">hcl.colors</a></span><span class="op">(</span><span class="fl">7</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -417,7 +418,7 @@ a <code><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">spri
 <span class="r-in"><span><span class="va">out1</span> <span class="op">&lt;-</span> <span class="fu">createGiottoPolygon</span><span class="op">(</span><span class="va">dt</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Selecting col "id" as poly_ID column</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Selecting cols "x" and "y" as x and y respectively</span>
-<span class="r-in"><span><span class="fu"><a href="plot-generic.html">plot</a></span><span class="op">(</span><span class="va">out1</span>, col <span class="op">=</span> <span class="fu"><a href="https://drieslab.github.io/GiottoUtils/reference/getRainbowColors.html" class="external-link">getRainbowColors</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="plot-generic.html">plot</a></span><span class="op">(</span><span class="va">out1</span>, col <span class="op">=</span> <span class="fu"><a href="https://giotto-suite.github.io/GiottoUtils/reference/getRainbowColors.html" class="external-link">getRainbowColors</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="createGiottoPolygon-6.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># multipolygons can be generated using the `part_col` param</span></span></span>
@@ -466,7 +467,7 @@ a <code><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">spri
 <span class="r-in"><span><span class="va">out2</span> <span class="op">&lt;-</span> <span class="fu">createGiottoPolygon</span><span class="op">(</span><span class="va">dt</span>, part_col <span class="op">=</span> <span class="st">"part_index"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Selecting col "id" as poly_ID column</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Selecting cols "x" and "y" as x and y respectively</span>
-<span class="r-in"><span><span class="fu"><a href="plot-generic.html">plot</a></span><span class="op">(</span><span class="va">out2</span>, col <span class="op">=</span> <span class="fu"><a href="https://drieslab.github.io/GiottoUtils/reference/getRainbowColors.html" class="external-link">getRainbowColors</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="plot-generic.html">plot</a></span><span class="op">(</span><span class="va">out2</span>, col <span class="op">=</span> <span class="fu"><a href="https://giotto-suite.github.io/GiottoUtils/reference/getRainbowColors.html" class="external-link">getRainbowColors</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="createGiottoPolygon-7.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># For more complex inputs with holes, it is recommended to format into</span></span></span>
@@ -499,7 +500,7 @@ a <code><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">spri
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">createGiottoPolygon</span><span class="op">(</span><span class="va">dt_full</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Selecting col "poly_ID" as poly_ID column</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Selecting cols "x" and "y" as x and y respectively</span>
-<span class="r-in"><span><span class="fu"><a href="plot-generic.html">plot</a></span><span class="op">(</span><span class="va">res</span>, col <span class="op">=</span> <span class="fu"><a href="https://drieslab.github.io/GiottoUtils/reference/getRainbowColors.html" class="external-link">getRainbowColors</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="plot-generic.html">plot</a></span><span class="op">(</span><span class="va">res</span>, col <span class="op">=</span> <span class="fu"><a href="https://giotto-suite.github.io/GiottoUtils/reference/getRainbowColors.html" class="external-link">getRainbowColors</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># additional columns outside of the 3 (+ part_col if provided) or 5 column</span></span></span>
 <span class="r-in"><span><span class="co"># formatting are retained as attributes</span></span></span>
@@ -535,7 +536,7 @@ a <code><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">spri
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

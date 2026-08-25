@@ -33,6 +33,7 @@ character
 
 ``` r
 img <- GiottoData::loadSubObjectMini("giottoLargeImage")
+#> Warning: [rast] unknown extent
 as.character(img)
 #> [1] "<giottoLargeImage> dapi_z0"
 ```

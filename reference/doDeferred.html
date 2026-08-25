@@ -77,11 +77,13 @@ evaluating</p></dd>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">gimg</span> <span class="op">&lt;-</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/GiottoData/man/loadSubObjectMini.html" class="external-link">loadSubObjectMini</a></span><span class="op">(</span><span class="st">"giottoLargeImage"</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">gimg</span> <span class="op">&lt;-</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://giotto-suite.github.io/GiottoData/reference/loadSubObjectMini.html" class="external-link">loadSubObjectMini</a></span><span class="op">(</span><span class="st">"giottoLargeImage"</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>[rast] unknown extent</span>
 <span class="r-in"><span><span class="va">affimg</span> <span class="op">&lt;-</span> <span class="fu"><a href="spin.html">spin</a></span><span class="op">(</span><span class="va">gimg</span>, <span class="fl">45</span><span class="op">)</span> <span class="co"># lazily performs affine</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># force the affine operation and render the output with at least 5e5 px</span></span></span>
 <span class="r-in"><span><span class="va">gimg2</span> <span class="op">&lt;-</span> <span class="fu">doDeferred</span><span class="op">(</span><span class="va">affimg</span>, size <span class="op">=</span> <span class="fl">5e5</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>[rast] unknown extent</span>
 <span class="r-in"><span><span class="co"># **This is mainly intended for visualization.**</span></span></span>
 <span class="r-in"><span><span class="co"># This process saves with image depth of 8.</span></span></span>
 <span class="r-in"><span><span class="co"># Spatially transformed raster values are not preferred for analysis</span></span></span>
@@ -96,7 +98,7 @@ evaluating</p></dd>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

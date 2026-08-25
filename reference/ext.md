@@ -135,16 +135,16 @@ g <- GiottoData::loadGiottoMini("vizgen")
 #>  python version : 3.10
 # giotto %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ext(g) # defaults to checking first giottoPolygon extent
-#> SpatExtent : 6391.46568586489, 6903.57332779812, -5153.89721175534, -4694.86823300896 (xmin, xmax, ymin, ymax)
+#> SpatExtent : 6391.4656858648896, 6903.5733277981199, -5153.8972117553403, -4694.8682330089596 (xmin, xmax, ymin, ymax)
 ext(g, prefer = "spatlocs") # check first spatLocsObj extent
-#> SpatExtent : 6401.14818002375, 6899.3228463116, -5147.19306531348, -4700.15708342436 (xmin, xmax, ymin, ymax)
+#> SpatExtent : 6401.1481800237516, 6899.3228463115965, -5147.1930653134759, -4700.1570834243576 (xmin, xmax, ymin, ymax)
 # first spatLocsObj from a different spat_unit
 ext(g, spat_unit = "aggregate", prefer = "spatlocs")
-#> SpatExtent : 6401.41164725267, 6899.10802819571, -5146.74746408943, -4700.32590047134 (xmin, xmax, ymin, ymax)
+#> SpatExtent : 6401.4116472526739, 6899.108028195712, -5146.7474640894334, -4700.3259004713354 (xmin, xmax, ymin, ymax)
 
 # from first image object
 ext(g, prefer = "image")
-#> SpatExtent : 6400.029, 6900.037, -5150.007, -4699.967 (xmin, xmax, ymin, ymax)
+#> SpatExtent : 6400.0290000000005, 6900.0370000000003, -5150.0069999999996, -4699.9669999999996 (xmin, xmax, ymin, ymax)
 
 # add a dummy image with different spatial extent
 r <- terra::rast(array(seq(25), dim = c(5, 5)))
@@ -154,22 +154,22 @@ g <- setGiotto(g, test) # add image
 
 # combined from all image objects
 ext(g, prefer = "image", name = list(images = list_images_names(g)))
-#> SpatExtent : 6400.029, 110000, -5150.007, 10 (xmin, xmax, ymin, ymax)
+#> SpatExtent : 6400.0290000000005, 110000, -5150.0069999999996, 10 (xmin, xmax, ymin, ymax)
 
 # combined from all spatial data types in giotto object
 ext(g, all_data = TRUE, name = list(images = list_images_names(g)))
-#> SpatExtent : 6391.46568586489, 110000, -5153.89721175534, 10 (xmin, xmax, ymin, ymax)
+#> SpatExtent : 6391.4656858648896, 110000, -5153.8972117553403, 10 (xmin, xmax, ymin, ymax)
 
 # spatLocsObj %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 sl <- getSpatialLocations(g)
 ext(sl)
-#> SpatExtent : 6402.43781589887, 6899.20308651186, -5146.72565198022, -4700.15708342436 (xmin, xmax, ymin, ymax)
+#> SpatExtent : 6402.437815898872, 6899.2030865118604, -5146.7256519802222, -4700.1570834243576 (xmin, xmax, ymin, ymax)
 
 # giottoPolygon %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # get extent
 gpoly <- getPolygonInfo(g, return_giottoPolygon = TRUE)
 ext(gpoly)
-#> SpatExtent : 6399.24384990901, 6903.24298517207, -5152.38959073896, -4694.86823300896 (xmin, xmax, ymin, ymax)
+#> SpatExtent : 6399.2438499090104, 6903.2429851720699, -5152.3895907389597, -4694.8682330089596 (xmin, xmax, ymin, ymax)
 
 # set extent
 plot(gpoly) # before
@@ -182,7 +182,7 @@ plot(gpoly) # after
 # get extent
 gpoints <- getFeatureInfo(g, return_giottoPoints = TRUE)
 ext(gpoints)
-#> SpatExtent : 6400.037, 6900.0317, -5149.9834, -4699.9785 (xmin, xmax, ymin, ymax)
+#> SpatExtent : 6400.0370000000003, 6900.0316999999995, -5149.9834000000001, -4699.9785000000002 (xmin, xmax, ymin, ymax)
 
 # set extent
 plot(gpoints) # before

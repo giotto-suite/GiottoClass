@@ -323,6 +323,7 @@ plot(gpoly2, col = grDevices::hcl.colors(5)) # plot poly
 shp <- system.file("extdata/toy_poly.shp", package = "GiottoClass")
 # vector inputs do not have params for flipping and shifting
 gp2 <- createGiottoPolygon(shp)
+#> Error : [rast] cannot open this file as a SpatRaster: /home/runner/work/_temp/Library/GiottoClass/extdata/toy_poly.shp
 #> Selecting attribute "poly_ID" as poly_ID
 #> Selecting attribute "poly_ID" as poly_ID
 plot(gp2, col = grDevices::hcl.colors(7))

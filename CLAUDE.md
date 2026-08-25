@@ -158,9 +158,9 @@ testthat::test_file("tests/testthat/test_03_accessors.R")
 ```
 
 **Test data** is loaded from the `GiottoData` package via helpers like
-[`GiottoData::loadGiottoMini()`](https://rdrr.io/pkg/GiottoData/man/loadGiottoMini.html)
+[`GiottoData::loadGiottoMini()`](https://giotto-suite.github.io/GiottoData/reference/loadGiottoMini.html)
 and
-[`GiottoData::loadSubObjectMini()`](https://rdrr.io/pkg/GiottoData/man/loadSubObjectMini.html).
+[`GiottoData::loadSubObjectMini()`](https://giotto-suite.github.io/GiottoData/reference/loadSubObjectMini.html).
 Global test setup lives in `tests/testthat/setup.R`, which sets:
 
 ``` r

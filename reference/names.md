@@ -40,6 +40,7 @@ used.
 
 ``` r
 img <- GiottoData::loadSubObjectMini("giottoLargeImage")
+#> Warning: [rast] unknown extent
 names(img)
 #> [1] "mini_dataset_dapi_z0"
 names(img) <- "dapi"

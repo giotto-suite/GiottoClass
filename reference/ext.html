@@ -167,7 +167,7 @@ only "images" at the moment, which produces a combined <code>SpatExtent</code></
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/GiottoData/man/loadGiottoMini.html" class="external-link">loadGiottoMini</a></span><span class="op">(</span><span class="st">"vizgen"</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://giotto-suite.github.io/GiottoData/reference/loadGiottoMini.html" class="external-link">loadGiottoMini</a></span><span class="op">(</span><span class="st">"vizgen"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 1. read Giotto object</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 2. read Giotto feature information</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 3. read Giotto spatial information</span>
@@ -177,16 +177,16 @@ only "images" at the moment, which produces a combined <code>SpatExtent</code></
 <span class="r-msg co"><span class="r-pr">#&gt;</span>  python version : 3.10</span>
 <span class="r-in"><span><span class="co"># giotto %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span></span></span>
 <span class="r-in"><span><span class="fu">ext</span><span class="op">(</span><span class="va">g</span><span class="op">)</span> <span class="co"># defaults to checking first giottoPolygon extent</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6391.46568586489, 6903.57332779812, -5153.89721175534, -4694.86823300896 (xmin, xmax, ymin, ymax)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6391.4656858648896, 6903.5733277981199, -5153.8972117553403, -4694.8682330089596 (xmin, xmax, ymin, ymax)</span>
 <span class="r-in"><span><span class="fu">ext</span><span class="op">(</span><span class="va">g</span>, prefer <span class="op">=</span> <span class="st">"spatlocs"</span><span class="op">)</span> <span class="co"># check first spatLocsObj extent</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6401.14818002375, 6899.3228463116, -5147.19306531348, -4700.15708342436 (xmin, xmax, ymin, ymax)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6401.1481800237516, 6899.3228463115965, -5147.1930653134759, -4700.1570834243576 (xmin, xmax, ymin, ymax)</span>
 <span class="r-in"><span><span class="co"># first spatLocsObj from a different spat_unit</span></span></span>
 <span class="r-in"><span><span class="fu">ext</span><span class="op">(</span><span class="va">g</span>, spat_unit <span class="op">=</span> <span class="st">"aggregate"</span>, prefer <span class="op">=</span> <span class="st">"spatlocs"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6401.41164725267, 6899.10802819571, -5146.74746408943, -4700.32590047134 (xmin, xmax, ymin, ymax)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6401.4116472526739, 6899.108028195712, -5146.7474640894334, -4700.3259004713354 (xmin, xmax, ymin, ymax)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># from first image object</span></span></span>
 <span class="r-in"><span><span class="fu">ext</span><span class="op">(</span><span class="va">g</span>, prefer <span class="op">=</span> <span class="st">"image"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6400.029, 6900.037, -5150.007, -4699.967 (xmin, xmax, ymin, ymax)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6400.0290000000005, 6900.0370000000003, -5150.0069999999996, -4699.9669999999996 (xmin, xmax, ymin, ymax)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># add a dummy image with different spatial extent</span></span></span>
 <span class="r-in"><span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">25</span><span class="op">)</span>, dim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">5</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -196,22 +196,22 @@ only "images" at the moment, which produces a combined <code>SpatExtent</code></
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># combined from all image objects</span></span></span>
 <span class="r-in"><span><span class="fu">ext</span><span class="op">(</span><span class="va">g</span>, prefer <span class="op">=</span> <span class="st">"image"</span>, name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>images <span class="op">=</span> <span class="fu"><a href="list_images_names.html">list_images_names</a></span><span class="op">(</span><span class="va">g</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6400.029, 110000, -5150.007, 10 (xmin, xmax, ymin, ymax)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6400.0290000000005, 110000, -5150.0069999999996, 10 (xmin, xmax, ymin, ymax)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># combined from all spatial data types in giotto object</span></span></span>
 <span class="r-in"><span><span class="fu">ext</span><span class="op">(</span><span class="va">g</span>, all_data <span class="op">=</span> <span class="cn">TRUE</span>, name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>images <span class="op">=</span> <span class="fu"><a href="list_images_names.html">list_images_names</a></span><span class="op">(</span><span class="va">g</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6391.46568586489, 110000, -5153.89721175534, 10 (xmin, xmax, ymin, ymax)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6391.4656858648896, 110000, -5153.8972117553403, 10 (xmin, xmax, ymin, ymax)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># spatLocsObj %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span></span></span>
 <span class="r-in"><span><span class="va">sl</span> <span class="op">&lt;-</span> <span class="fu"><a href="getSpatialLocations.html">getSpatialLocations</a></span><span class="op">(</span><span class="va">g</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ext</span><span class="op">(</span><span class="va">sl</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6402.43781589887, 6899.20308651186, -5146.72565198022, -4700.15708342436 (xmin, xmax, ymin, ymax)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6402.437815898872, 6899.2030865118604, -5146.7256519802222, -4700.1570834243576 (xmin, xmax, ymin, ymax)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># giottoPolygon %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span></span></span>
 <span class="r-in"><span><span class="co"># get extent</span></span></span>
 <span class="r-in"><span><span class="va">gpoly</span> <span class="op">&lt;-</span> <span class="fu"><a href="getPolygonInfo.html">getPolygonInfo</a></span><span class="op">(</span><span class="va">g</span>, return_giottoPolygon <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ext</span><span class="op">(</span><span class="va">gpoly</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6399.24384990901, 6903.24298517207, -5152.38959073896, -4694.86823300896 (xmin, xmax, ymin, ymax)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6399.2438499090104, 6903.2429851720699, -5152.3895907389597, -4694.8682330089596 (xmin, xmax, ymin, ymax)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># set extent</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="plot-generic.html">plot</a></span><span class="op">(</span><span class="va">gpoly</span><span class="op">)</span> <span class="co"># before</span></span></span>
@@ -224,7 +224,7 @@ only "images" at the moment, which produces a combined <code>SpatExtent</code></
 <span class="r-in"><span><span class="co"># get extent</span></span></span>
 <span class="r-in"><span><span class="va">gpoints</span> <span class="op">&lt;-</span> <span class="fu"><a href="getFeatureInfo.html">getFeatureInfo</a></span><span class="op">(</span><span class="va">g</span>, return_giottoPoints <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ext</span><span class="op">(</span><span class="va">gpoints</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6400.037, 6900.0317, -5149.9834, -4699.9785 (xmin, xmax, ymin, ymax)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SpatExtent : 6400.0370000000003, 6900.0316999999995, -5149.9834000000001, -4699.9785000000002 (xmin, xmax, ymin, ymax)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># set extent</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="plot-generic.html">plot</a></span><span class="op">(</span><span class="va">gpoints</span><span class="op">)</span> <span class="co"># before</span></span></span>
@@ -243,7 +243,7 @@ only "images" at the moment, which produces a combined <code>SpatExtent</code></
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

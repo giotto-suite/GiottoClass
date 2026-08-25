@@ -87,7 +87,7 @@
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/GiottoData/man/loadGiottoMini.html" class="external-link">loadGiottoMini</a></span><span class="op">(</span><span class="st">"vizgen"</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://giotto-suite.github.io/GiottoData/reference/loadGiottoMini.html" class="external-link">loadGiottoMini</a></span><span class="op">(</span><span class="st">"vizgen"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 1. read Giotto object</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 2. read Giotto feature information</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 3. read Giotto spatial information</span>
@@ -100,35 +100,7 @@
 <span class="r-in"><span>    spat_units <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"z0"</span>, <span class="st">"z1"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    feat_type <span class="op">=</span> <span class="st">"rna"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> An object of class giotto </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &gt;Active spat_unit:  z0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &gt;Active feat_type:  rna </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> dimensions    : 337, 498 (features, cells)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [SUBCELLULAR INFO]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> polygons      : z0 z1 aggregate </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> features      : rna </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [AGGREGATE INFO]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> expression -----------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [z0][rna] raw</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [z1][rna] raw</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [aggregate][rna] raw normalized scaled pearson</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> spatial locations ----------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [z0] raw</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [z1] raw</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [aggregate] raw</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> spatial networks -----------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [aggregate] Delaunay_network kNN_network</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> spatial enrichments --------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [aggregate][rna] cluster_metagene</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> dim reduction --------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [aggregate][rna] pca umap tsne</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> nearest neighbor networks --------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [aggregate][rna] sNN.pca</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> attached images ------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> images      : 4 items...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Use objHistory() to see steps and params used</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in rbind2(...):</span> argument "x" is missing, with no default</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -140,7 +112,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

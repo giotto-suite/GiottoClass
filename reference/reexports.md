@@ -5,9 +5,9 @@ to see their documentation.
 
 - GiottoUtils:
 
-  [`getDistinctColors()`](https://drieslab.github.io/GiottoUtils/reference/getDistinctColors.html),
-  [`getMonochromeColors()`](https://drieslab.github.io/GiottoUtils/reference/getMonochromeColors.html),
-  [`getRainbowColors()`](https://drieslab.github.io/GiottoUtils/reference/getRainbowColors.html)
+  [`getDistinctColors()`](https://giotto-suite.github.io/GiottoUtils/reference/getDistinctColors.html),
+  [`getMonochromeColors()`](https://giotto-suite.github.io/GiottoUtils/reference/getMonochromeColors.html),
+  [`getRainbowColors()`](https://giotto-suite.github.io/GiottoUtils/reference/getRainbowColors.html)
 
 ## Value
 

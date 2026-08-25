@@ -874,7 +874,7 @@
   [`.bitdepth()`](https://giotto-suite.github.io/GiottoClass/reference/dot-bitdepth.md)
   internal function to detect image bitdepth from sampled values
 - Added: re-export
-  [`getMonochromeColors()`](https://drieslab.github.io/GiottoUtils/reference/getMonochromeColors.html)
+  [`getMonochromeColors()`](https://giotto-suite.github.io/GiottoUtils/reference/getMonochromeColors.html)
   from *GiottoUtils*
 - Added: `giottoPolygon`, `giottoLargeImage` method for
   [`calculateOverlap()`](https://giotto-suite.github.io/GiottoClass/reference/calculateOverlap.md)
@@ -894,7 +894,7 @@
 ### Breaking Changes
 
 - Removed:
-  [`getRainbowColors()`](https://drieslab.github.io/GiottoUtils/reference/getRainbowColors.html)
+  [`getRainbowColors()`](https://giotto-suite.github.io/GiottoUtils/reference/getRainbowColors.html)
   to *GiottoUtils*
 - Removed: `get_prev_fname()` and `get_args()` to *GiottoUtils*
 - Removed: `aggregateStacksPolygonsOLD()`

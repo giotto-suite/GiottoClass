@@ -201,7 +201,7 @@ plot(gbp[c("a", "d")]) # plot features "a" and "d" together
 
 # spatial ------------------------------------------------------- #
 ext(gbp) # spatial extent
-#> SpatExtent : -2.30322375260073, 2.46431165767245, -1.30801840243713, 2.91912824385047 (xmin, xmax, ymin, ymax)
+#> SpatExtent : -2.3032237526007293, 2.4643116576724511, -1.3080184024371273, 2.9191282438504689 (xmin, xmax, ymin, ymax)
 
 d <- Giotto::hexVertices(1)
 #> Error in loadNamespace(x): there is no package called ‘Giotto’

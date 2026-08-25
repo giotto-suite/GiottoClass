@@ -114,34 +114,5 @@ aggregateStacks(g,
 #>  " already exists and will be replaced
 #> 3. Aggregating centroid location data completed
 #> 4. Start aggregating polygon overlap data
-#> 4. Aggregating polygon overlap data completed
-#> An object of class giotto 
-#> >Active spat_unit:  z0 
-#> >Active feat_type:  rna 
-#> dimensions    : 337, 498 (features, cells)
-#> [SUBCELLULAR INFO]
-#> polygons      : z0 z1 aggregate 
-#> features      : rna 
-#> [AGGREGATE INFO]
-#> expression -----------------------
-#>   [z0][rna] raw
-#>   [z1][rna] raw
-#>   [aggregate][rna] raw normalized scaled pearson
-#> spatial locations ----------------
-#>   [z0] raw
-#>   [z1] raw
-#>   [aggregate] raw
-#> spatial networks -----------------
-#>   [aggregate] Delaunay_network kNN_network
-#> spatial enrichments --------------
-#>   [aggregate][rna] cluster_metagene
-#> dim reduction --------------------
-#>   [aggregate][rna] pca umap tsne
-#> nearest neighbor networks --------
-#>   [aggregate][rna] sNN.pca
-#> attached images ------------------
-#> images      : 4 items...
-#> 
-#> 
-#> Use objHistory() to see steps and params used
+#> Error in rbind2(...): argument "x" is missing, with no default
 ```
