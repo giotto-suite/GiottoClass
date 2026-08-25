@@ -95,6 +95,17 @@ jobs:
         with:
           use-public-rspm: true
 
+      # RSPM ships units/terra/sf as binaries that dlopen their system
+      # libraries, and pak's sysreqs handling does not cover every one of them
+      # here. Without libudunits2 the build dies deep inside reference
+      # rendering, when downlit loads a namespace to resolve a cross-package
+      # link -- a long way from anything that looks like a missing library.
+      - name: System libraries for units and the geospatial stack
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libudunits2-dev libgdal-dev libgeos-dev libproj-dev
+
       # No ref pinning needed. GiottoClass@gsource's only Remote is a bare
       # giotto-suite/GiottoUtils, which resolves to main -- v0.2.5, satisfying
       # its own `GiottoUtils (>= 0.2.5)`.
