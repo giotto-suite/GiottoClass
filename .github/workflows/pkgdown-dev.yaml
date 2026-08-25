@@ -84,6 +84,29 @@ jobs:
                    if (line !~ /^#/) print line
                  done = 1
                } {print}' _pkgdown.yml > pkgsrc/_pkgdown.yml
+
+          # spatial_geometries.Rmd does not survive gsource. Its subsetting
+          # chunk fails in
+          #   [ -> subset(x, cell_ids = i) -> .subset_giotto_polygon_object()
+          # which returns a zero-length object, so plot() has nothing to draw.
+          # The same vignette renders fine against the released 0.5.1, and
+          # R/subset.R was rewritten on gsource -- so this is a package-side
+          # behaviour change, not a documentation problem.
+          #
+          # Drop it from the DEV build only, along with its navbar entry, so
+          # the reference documentation for the new API can still publish.
+          # Delete this block once polygon subsetting by cell ID is settled.
+          rm -f pkgsrc/vignettes/spatial_geometries.Rmd
+          # one-line delay so the `- text:` line above the href goes too. Uses a
+          # `have` flag rather than testing prev for emptiness -- that would
+          # silently swallow every blank line in the file.
+          awk '{ if ($0 ~ /articles\/spatial_geometries\.html/) { have=0; next }
+                 if (have) print prev
+                 prev=$0; have=1 }
+               END { if (have) print prev }' \
+            pkgsrc/_pkgdown.yml > pkgsrc/_pkgdown.tmp
+          mv pkgsrc/_pkgdown.tmp pkgsrc/_pkgdown.yml
+          echo "EXCLUDED FROM DEV: spatial_geometries.Rmd (gsource subsetting change)"
           echo "documenting giotto-suite/GiottoClass@${{ inputs.giottoclass_ref || 'gsource' }}"
           echo "version:   $(grep '^Version:' pkgsrc/DESCRIPTION)"
           echo "vignettes: $(ls pkgsrc/vignettes/*.Rmd 2>/dev/null | wc -l)"
