@@ -265,7 +265,7 @@ directory, run the following to create your environment in one step:
 # check default env location
 checkGiottoEnvironment()
 #> Giotto can access environment found at:
-#>  '/usr/share/miniconda/envs/giotto_env/bin/python'
+#>  '/usr/bin/python3'
 #>  If this is the wrong environment, try specifying `envname` param
 #>  or set option "giotto.py_path" with the desired envname or path
 #> [1] TRUE
@@ -273,7 +273,7 @@ checkGiottoEnvironment()
 # use environment name
 checkGiottoEnvironment("giotto_env")
 #> Giotto can access environment found at:
-#>  '/usr/share/miniconda/envs/giotto_env/bin/python'
+#>  '/usr/bin/python3'
 #>  If this is the wrong environment, try specifying `envname` param
 #>  or set option "giotto.py_path" with the desired envname or path
 #> [1] TRUE

@@ -55,8 +55,8 @@ g <- GiottoData::loadGiottoMini("visium")
 #> 3. read Giotto spatial information
 #> 4. read Giotto image information
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 
 create_average_detection_DT(g, meta_data_name = "leiden_clus")
 #>                cluster_2  cluster_5  cluster_1   cluster_3  cluster_6 cluster_7

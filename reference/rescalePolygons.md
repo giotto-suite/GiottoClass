@@ -59,8 +59,8 @@ g <- GiottoData::loadGiottoMini("vizgen")
 #> 3. read Giotto spatial information
 #> 4. read Giotto image information
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 
 rescalePolygons(g, poly_info = "aggregate")
 #> Setting polygon info [rescaled_cell]

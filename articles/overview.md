@@ -22,7 +22,13 @@ vizmini <- GiottoData::loadGiottoMini("vizgen")
     ## a system default python environment was found
 
     ## Using python path:
-    ##  "/usr/share/miniconda/envs/giotto_env/bin/python"
+    ##  "/usr/bin/python3"
+
+    ## Warning: Some of Giotto's expected python module(s) were not found:
+    ## pandas, igraph, leidenalg, community, networkx, sklearn
+    ## (This is fine if python-based functions are not needed)
+    ## 
+    ## ** Python path used: "/usr/bin/python3"
 
 ``` r
 
@@ -576,18 +582,20 @@ sessionInfo()
     ## [31] tools_4.6.1                 GiottoUtils_0.2.5          
     ## [33] checkmate_2.3.4             SpatialExperiment_1.22.0   
     ## [35] SummarizedExperiment_1.42.0 BiocGenerics_0.58.1        
-    ## [37] reticulate_1.46.0           png_0.1-9                  
-    ## [39] R6_2.6.1                    magick_2.9.1               
-    ## [41] matrixStats_1.5.0           stats4_4.6.1               
-    ## [43] lifecycle_1.0.5             Seqinfo_1.2.0              
-    ## [45] S4Vectors_0.50.1            fs_2.1.0                   
-    ## [47] htmlwidgets_1.6.4           IRanges_2.46.0             
-    ## [49] ragg_1.5.2                  pkgconfig_2.0.3            
-    ## [51] desc_1.4.3                  pkgdown_2.2.1              
-    ## [53] terra_1.9-46                bslib_0.12.0               
-    ## [55] data.table_1.18.6.1         Rcpp_1.1.2                 
-    ## [57] systemfonts_1.3.2           xfun_0.60                  
-    ## [59] GenomicRanges_1.64.0        MatrixGenerics_1.24.0      
-    ## [61] knitr_1.51                  rjson_0.2.23               
-    ## [63] igraph_2.3.3                htmltools_0.5.9            
-    ## [65] rmarkdown_2.31              compiler_4.6.1
+    ## [37] reticulate_1.46.0           vctrs_0.7.3                
+    ## [39] png_0.1-9                   R6_2.6.1                   
+    ## [41] magick_2.9.1                matrixStats_1.5.0          
+    ## [43] stats4_4.6.1                lifecycle_1.0.5            
+    ## [45] Seqinfo_1.2.0               S4Vectors_0.50.1           
+    ## [47] fs_2.1.0                    htmlwidgets_1.6.4          
+    ## [49] IRanges_2.46.0              ragg_1.5.2                 
+    ## [51] pkgconfig_2.0.3             desc_1.4.3                 
+    ## [53] pillar_1.11.1               pkgdown_2.2.1              
+    ## [55] terra_1.9-46                bslib_0.12.0               
+    ## [57] glue_1.8.1                  data.table_1.18.6.1        
+    ## [59] Rcpp_1.1.2                  systemfonts_1.3.2          
+    ## [61] xfun_0.60                   GenomicRanges_1.64.0       
+    ## [63] MatrixGenerics_1.24.0       knitr_1.51                 
+    ## [65] rjson_0.2.23                igraph_2.3.3               
+    ## [67] htmltools_0.5.9             rmarkdown_2.31             
+    ## [69] compiler_4.6.1

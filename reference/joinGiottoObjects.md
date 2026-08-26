@@ -117,13 +117,13 @@ rownames(m1) <- rownames(m2) <- paste0("feat_", seq_len(10))
 
 g1 <- createGiottoObject(expression = m1)
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 #> Warning: [createExprObj] param 'expression_matrix_class' is deprecated
 g2 <- createGiottoObject(expression = m2)
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 #> Warning: [createExprObj] param 'expression_matrix_class' is deprecated
 
 joinGiottoObjects(
@@ -152,8 +152,8 @@ viz <- GiottoData::loadGiottoMini("viz")
 #> 3. read Giotto spatial information
 #> 4. read Giotto image information
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 joinGiottoObjects(
     list(viz, viz),
     gobject_names = c("v1", "v2"),

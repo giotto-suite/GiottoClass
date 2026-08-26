@@ -131,8 +131,8 @@ g <- GiottoData::loadGiottoMini("vizgen")
 #> 3. read Giotto spatial information
 #> 4. read Giotto image information
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 # giotto %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ext(g) # defaults to checking first giottoPolygon extent
 #> SpatExtent : 6391.4656858648896, 6903.5733277981199, -5153.8972117553403, -4694.8682330089596 (xmin, xmax, ymin, ymax)

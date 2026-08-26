@@ -88,8 +88,8 @@ Other functions to set data in giotto object:
 ``` r
 g <- createGiottoObject()
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 m <- matrix(rnorm(100), nrow = 10)
 colnames(m) <- paste0("cell_", seq_len(10))
 rownames(m) <- paste0("feat_", seq_len(10))

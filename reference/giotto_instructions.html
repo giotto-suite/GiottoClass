@@ -218,20 +218,20 @@ with modified instructions</p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 3. read Giotto spatial information</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 4. read Giotto image information</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> python already initialized in this session</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  active environment : 'giotto_env'</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  python version : 3.10</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>  active environment : '/usr/bin/python3'</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>  python version : 3.12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># create instructions</span></span></span>
 <span class="r-in"><span><span class="va">ins</span> <span class="op">&lt;-</span> <span class="fu">instructions</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> python already initialized in this session</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  active environment : 'giotto_env'</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  python version : 3.10</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>  active environment : '/usr/bin/python3'</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>  python version : 3.12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># get instructions</span></span></span>
 <span class="r-in"><span><span class="va">instrs</span> <span class="op">&lt;-</span> <span class="fu">instructions</span><span class="op">(</span><span class="va">g</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/force.html" class="external-link">force</a></span><span class="op">(</span><span class="va">instrs</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;giottoInstructions&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> python_path      : /usr/share/miniconda/envs/giotto_env/bin/python</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> python_path      : /usr/bin/python3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> show_plot        : TRUE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> return_plot      : FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> save_plot        : FALSE</span>
@@ -257,7 +257,7 @@ with modified instructions</p>
 <span class="r-in"><span><span class="co"># replace multiple instruction params</span></span></span>
 <span class="r-in"><span><span class="fu">instructions</span><span class="op">(</span><span class="va">g</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;giottoInstructions&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> python_path      : /usr/share/miniconda/envs/giotto_env/bin/python</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> python_path      : /usr/bin/python3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> show_plot        : FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> return_plot      : FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> save_plot        : FALSE</span>
@@ -273,7 +273,7 @@ with modified instructions</p>
 <span class="r-in"><span><span class="fu">instructions</span><span class="op">(</span><span class="va">g</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"show_plot"</span>, <span class="st">"dpi"</span><span class="op">)</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="cn">TRUE</span>, <span class="fl">600</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">instructions</span><span class="op">(</span><span class="va">g</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;giottoInstructions&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> python_path      : /usr/share/miniconda/envs/giotto_env/bin/python</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> python_path      : /usr/bin/python3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> show_plot        : TRUE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> return_plot      : FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> save_plot        : FALSE</span>
@@ -290,12 +290,12 @@ with modified instructions</p>
 <span class="r-in"><span><span class="co"># replace instructions</span></span></span>
 <span class="r-in"><span><span class="va">i</span> <span class="op">&lt;-</span> <span class="fu">createGiottoInstructions</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> python already initialized in this session</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  active environment : 'giotto_env'</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  python version : 3.10</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>  active environment : '/usr/bin/python3'</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>  python version : 3.12</span>
 <span class="r-in"><span><span class="fu">instructions</span><span class="op">(</span><span class="va">g</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">i</span></span></span>
 <span class="r-in"><span><span class="fu">instructions</span><span class="op">(</span><span class="va">g</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;giottoInstructions&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> python_path      : /usr/share/miniconda/envs/giotto_env/bin/python</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> python_path      : /usr/bin/python3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> show_plot        : TRUE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> return_plot      : TRUE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> save_plot        : FALSE</span>

@@ -31,8 +31,8 @@ giotto object
 x <- GiottoData::loadSubObjectMini("giottoPolygon")
 g <- createGiottoObject()
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 
 g <- addGiottoPolygons(gobject = g, gpolygons = list(x))
 ```

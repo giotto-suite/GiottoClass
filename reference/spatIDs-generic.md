@@ -139,8 +139,8 @@ g <- GiottoData::loadGiottoMini("visium")
 #> 3. read Giotto spatial information
 #> 4. read Giotto image information
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 spatIDs(g)
 #>   [1] "AAAGGGATGTAGCAAG-1" "AAATGGCATGTCTTGT-1" "AAATGGTCAATGTGCC-1"
 #>   [4] "AAATTAACGGGTAGCT-1" "AACAACTGGTAGTTGC-1" "AACAGGAAATCGAATA-1"

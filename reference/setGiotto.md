@@ -93,8 +93,8 @@ Other functions to set data in giotto object:
 ``` r
 g <- createGiottoObject()
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 g_expression <- GiottoData::loadSubObjectMini("exprObj")
 
 setGiotto(gobject = g, x = g_expression)

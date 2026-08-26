@@ -67,8 +67,8 @@ g <- GiottoData::loadGiottoMini("visium")
 #> 3. read Giotto spatial information
 #> 4. read Giotto image information
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 td <- tempdir()
 saveGiotto(gobject = g, dir = td)
 #> 1. Start writing feature information
@@ -84,8 +84,8 @@ loadGiotto(path_to_folder = paste0(td, "/saveGiottoDir"))
 #> 3. read Giotto spatial information
 #> 4. read Giotto image information
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 #> An object of class giotto 
 #> >Active spat_unit:  cell 
 #> >Active feat_type:  rna 

@@ -33,8 +33,8 @@ character
 ``` r
 g <- createGiottoObject()
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 
 set_default_feat_type(gobject = g, spat_unit = "cell", feat_type = "rna")
 #> [1] "rna"

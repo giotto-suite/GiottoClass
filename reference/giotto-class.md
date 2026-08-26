@@ -137,8 +137,8 @@ the following steps:
 ``` r
 giotto()
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 #> An object of class giotto 
 #> [SUBCELLULAR INFO]
 #> [AGGREGATE INFO]

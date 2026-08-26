@@ -337,8 +337,8 @@ g <- createGiottoObject
 # (can also use the class generator function)
 g <- giotto()
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 
 # create an object containing an expression matrix
 expr_matrix <- readRDS(system.file("extdata/toy_matrix.RDS",
@@ -347,8 +347,8 @@ expr_matrix <- readRDS(system.file("extdata/toy_matrix.RDS",
 
 createGiottoObject(expression = expr_matrix)
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 #> Warning: [createExprObj] param 'expression_matrix_class' is deprecated
 #> An object of class giotto 
 #> >Active spat_unit:  cell 
@@ -372,16 +372,16 @@ createGiottoObjectSubcellular(
     gpoints = x_gpoints
 )
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 #> polygonlist is not a list
 #> [ cell ] Process polygon info...
 #> Setting spatial locations [aggregate] raw
 #> pointslist is not a list
 #> [ rna ] Process point info...
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 #> An object of class giotto 
 #> [SUBCELLULAR INFO]
 #> polygons      : aggregate 

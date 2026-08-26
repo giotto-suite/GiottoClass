@@ -67,8 +67,8 @@ seuratToGiottoV5(s, spatial_assay = "RNA")
 #> Images for RNA assay not found in the data.
 #>                         Skipping image processing.
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 #> Warning: [createExprObj] param 'expression_matrix_class' is deprecated
 #> > normalized already exists and will be replaced with new values
 #> An object of class giotto 

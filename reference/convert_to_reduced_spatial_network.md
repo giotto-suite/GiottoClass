@@ -28,8 +28,8 @@ g <- GiottoData::loadGiottoMini("visium")
 #> 3. read Giotto spatial information
 #> 4. read Giotto image information
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 spat_net <- getSpatialNetwork(g, output = "networkDT")
 spat_net_full <- convert_to_full_spatial_network(spat_net)
 

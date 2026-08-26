@@ -43,8 +43,8 @@ x_expression <- matrix(seq_len(337 * 2), nrow = 337)
 rownames(x_expression) <- unique(x_points$feat_ID)
 g <- createGiottoObject(expression = x_expression)
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 #> Warning: [createExprObj] param 'expression_matrix_class' is deprecated
 
 g <- addGiottoPoints(gobject = g, gpoints = list(x_points))

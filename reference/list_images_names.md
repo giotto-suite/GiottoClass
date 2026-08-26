@@ -33,8 +33,8 @@ g <- GiottoData::loadGiottoMini("vizgen")
 #> 3. read Giotto spatial information
 #> 4. read Giotto image information
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 list_images_names(g)
 #> [1] "dapi_z0"  "dapi_z1"  "polyT_z0" "polyT_z1"
 list_images_names(g, img_type = "largeImage")

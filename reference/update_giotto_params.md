@@ -58,8 +58,8 @@ g <- GiottoData::loadGiottoMini("visium")
 #> 3. read Giotto spatial information
 #> 4. read Giotto image information
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 
 update_giotto_params(g, toplevel = 1)
 #> An object of class giotto 

@@ -68,16 +68,16 @@ g <- GiottoData::loadGiottoMini("visium")
 #> 3. read Giotto spatial information
 #> 4. read Giotto image information
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 s <- giottoToSeuratV5(g, tech = "Visium")
 #> Meta data updated for assay: rna
 #> Warning: Keys should be one or more alphanumeric characters followed by an underscore, setting key from custom_pca_ to custompca_
 #> Warning: Keys should be one or more alphanumeric characters followed by an underscore, setting key from custom_umap_ to customumap_
 seuratToGiottoV5(s, spatial_assay = "rna")
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 #> Warning: [createExprObj] param 'expression_matrix_class' is deprecated
 #> Warning: 
 #> List item [1]: Not possible to

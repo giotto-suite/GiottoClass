@@ -38,7 +38,12 @@ g <- GiottoData::loadGiottoMini("visium")
 #> checking default envname 'giotto_env'
 #> a system default python environment was found
 #> Using python path:
-#>  "/usr/share/miniconda/envs/giotto_env/bin/python"
+#>  "/usr/bin/python3"
+#> Warning: Some of Giotto's expected python module(s) were not found:
+#> pandas, igraph, leidenalg, community, networkx, sklearn
+#> (This is fine if python-based functions are not needed)
+#> 
+#> ** Python path used: "/usr/bin/python3"
 activeFeatType(g)
 #> [1] "rna"
 ```

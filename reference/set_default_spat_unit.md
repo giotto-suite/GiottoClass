@@ -29,8 +29,8 @@ character
 ``` r
 g <- createGiottoObject()
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 
 set_default_spat_unit(gobject = g, spat_unit = "cell")
 #> [1] "cell"

@@ -27,14 +27,14 @@ g <- GiottoData::loadGiottoMini("visium")
 #> 3. read Giotto spatial information
 #> 4. read Giotto image information
 #> python already initialized in this session
-#>  active environment : 'giotto_env'
-#>  python version : 3.10
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
 
 showGiottoInstructions(g)
 #> Warning: `showGiottoInstructions()` was deprecated in GiottoClass 0.3.5.
 #> ℹ Please use `instructions()` instead.
 #> <giottoInstructions>
-#> python_path      : /usr/share/miniconda/envs/giotto_env/bin/python
+#> python_path      : /usr/bin/python3
 #> show_plot        : TRUE
 #> return_plot      : FALSE
 #> save_plot        : FALSE
