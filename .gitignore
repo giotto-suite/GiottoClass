@@ -18,4 +18,5 @@ pkgdown/*
 !pkgdown/favicon/
 !pkgdown/dev-banner.html
 !pkgdown/reference-gsource.yml
+!pkgdown/pre-build.sh
 .positai
