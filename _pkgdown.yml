@@ -52,7 +52,7 @@ navbar:
       href: news/index.html
     suite:
       text: Suite
-      href: https://giotto-suite.github.io/Giotto/
+      href: https://giottosuite.com
     github:
       icon: fab fa-github fa-lg
       href: https://github.com/giotto-suite/GiottoClass/
