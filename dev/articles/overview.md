@@ -601,7 +601,7 @@ sessionInfo()
     ## [39] png_0.1-9                   R6_2.6.1                   
     ## [41] magick_2.9.1                matrixStats_1.5.0          
     ## [43] stats4_4.6.1                lifecycle_1.0.5            
-    ## [45] Seqinfo_1.2.0               S4Vectors_0.50.1           
+    ## [45] Seqinfo_1.2.0               S4Vectors_0.50.2           
     ## [47] fs_2.1.0                    htmlwidgets_1.6.4          
     ## [49] IRanges_2.46.0              ragg_1.5.2                 
     ## [51] pkgconfig_2.0.3             desc_1.4.3                 

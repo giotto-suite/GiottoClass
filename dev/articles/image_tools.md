@@ -180,7 +180,7 @@ sessionInfo()
     ## [35] R6_2.6.1                    magick_2.9.1               
     ## [37] matrixStats_1.5.0           stats4_4.6.1               
     ## [39] lifecycle_1.0.5             Seqinfo_1.2.0              
-    ## [41] S4Vectors_0.50.1            fs_2.1.0                   
+    ## [41] S4Vectors_0.50.2            fs_2.1.0                   
     ## [43] htmlwidgets_1.6.4           IRanges_2.46.0             
     ## [45] ragg_1.5.2                  desc_1.4.3                 
     ## [47] pkgdown_2.2.1               terra_1.9-46               
