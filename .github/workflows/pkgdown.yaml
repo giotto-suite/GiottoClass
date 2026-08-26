@@ -1,5 +1,13 @@
-# Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
-# Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
+# Builds the RELEASE site: https://giotto-suite.github.io/GiottoClass/
+#
+# The build lives in giotto-suite/.github and is shared across the org. This
+# file only says which site this is. Its dev counterpart is pkgdown-dev.yaml,
+# which publishes the gsource line to /dev/.
+#
+# The shared workflow runs pkgdown/pre-build.sh if present. That hook is
+# dev-only and returns immediately when SITE_MODE is release -- everything it
+# does would corrupt this v0.5.1 build.
+
 name: pkgdown
 
 on:
@@ -12,104 +20,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  pkgdown:
-    runs-on: ubuntu-latest
-    # Only restrict concurrency for non-PR jobs
-    concurrency:
-      group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
-    env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+  site:
     permissions:
       contents: write
-    steps:
-
-      - name: Checkout repo for workflow access
-        uses: actions/checkout@v4
-
-      - name: Setup pandoc
-        uses: r-lib/actions/setup-pandoc@v2
-
-      - name: Setup R environment
-        uses: r-lib/actions/setup-r@v2
-        with:
-          use-public-rspm: true
-
-      - name: Set up dependencies (general)
-        uses: r-lib/actions/setup-r-dependencies@v2
-        env:
-          _R_CHECK_FORCE_SUGGESTS: false
-          _R_CHECK_RD_XREFS: false
-        with:
-          dependencies: '"hard"' # do not use suggested dependencies
-          extra-packages: |
-            any::pkgdown
-            any::rcmdcheck
-            any::testthat
-            any::knitr
-            any::rmarkdown
-            any::rlang
-            any::R.utils
-            any::sp
-            any::stars
-            any::raster
-            any::sf
-            any::scattermore
-            any::exactextractr
-            any::RTriangle
-            any::geometry
-            any::future.apply
-            any::Biobase
-            any::chihaya
-            any::DelayedArray
-            any::DelayedMatrixStats
-            any::HDF5Array
-            any::plotly
-            any::rgl
-            any::rhdf5
-            any::S4Vectors
-            any::ScaledMatrix
-            any::XML
-            any::Seurat
-            any::SeuratObject
-            any::SingleCellExperiment
-            any::SpatialExperiment
-            any::STexampleData
-            any::SummarizedExperiment
-            github::giotto-suite/GiottoData
-          needs: website
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      - name: setup giotto_env
-        shell: Rscript {0}
-        run: |
-          if (!GiottoClass::checkGiottoEnvironment()) {
-            GiottoClass::installGiottoEnvironment()
-          }
-
-          reticulate::conda_install(
-            envname = 'giotto_env',
-            packages = 'scanpy',
-            pip = TRUE
-          )
-
-          path_to_python <- GiottoClass::set_giotto_python_path()
-
-          writeLines(sprintf("RETICULATE_PYTHON=%s", path_to_python),
-                     Sys.getenv("GITHUB_ENV"))
-
-      - name: Build site
-        run: |
-          pkgdown::build_search()
-          pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
-        shell: Rscript {0}
-
-      - name: Deploy to GitHub pages 🚀
-        if: github.event_name != 'pull_request'
-        uses: JamesIves/github-pages-deploy-action@v4.4.1
-        with:
-          clean: false
-          branch: gh-pages
-          folder: docs
+    uses: giotto-suite/.github/.github/workflows/pkgdown-site.yaml@main
+    with:
+      mode: release
+      dependencies: '"hard"'
+      extra-packages: "any::pkgdown, bioc::BiocStyle, local::."

@@ -1,26 +1,21 @@
-# Builds the DEVELOPMENT documentation for GiottoClass and publishes it to
-# giotto-suite.github.io/GiottoClass/dev/
+# Builds the DEVELOPMENT site: https://giotto-suite.github.io/GiottoClass/dev/
 #
-# WHY THIS EXISTS
-# The release site (pkgdown.yaml) documents this `website` branch, which tracks
-# main -- v0.5.1. The gsource line adds ~35 exports on top of that: filterData,
-# reduceData, hnswKNN, the *Param classes and the S4 accessor methods. None of
-# them are documented anywhere today. This publishes them without claiming they
-# are released.
+# The release site documents this `website` branch, which tracks main at
+# v0.5.1. The gsource line adds ~35 exports on top -- filterData, reduceData,
+# hnswKNN, the *Param classes, the S4 accessors -- documented nowhere else.
+# This publishes them without claiming they are released.
 #
 # WHICH REF DOES THIS DOCUMENT?
-# The `giottoclass_ref` input, default `gsource`. This branch owns the website
-# content -- _pkgdown.yml, vignettes, theme -- while the package source is
-# checked out at build time. When gsource merges into a default branch and is
-# retired, change that one default.
+# package-ref below. This branch owns the website content; the package source
+# is checked out at build time. When gsource merges into a default branch and
+# is retired, change that one word.
 #
-# WHY THE RELEASE SITE CANNOT BE HARMED
-#   * PKGDOWN_DEV_MODE=devel makes pkgdown write ONLY to docs/dev/. Required
-#     here: _pkgdown.yml has no `development:` block, so the default is
-#     `mode: release` and pkgdown would otherwise write to docs/ root.
-#   * the deploy uses target-folder: dev, and `clean: true` is scoped to it.
-#   * the release workflow uses `clean: false`, so it cannot delete dev/ either.
-#   * force: false, so a release deploy landing mid-build is rebased onto.
+# No ref pinning is needed: GiottoClass@gsource's only Remote is a bare
+# giotto-suite/GiottoUtils, which resolves to main -- v0.2.5, satisfying its
+# own `GiottoUtils (>= 0.2.5)`.
+#
+# The dev-only config surgery lives in pkgdown/pre-build.sh, which the shared
+# workflow runs after assembling.
 
 name: pkgdown (dev)
 
@@ -29,165 +24,21 @@ on:
     branches: [website]
   workflow_dispatch:
     inputs:
-      giottoclass_ref:
+      package-ref:
         description: "Branch/tag of giotto-suite/GiottoClass to document"
         default: gsource
         required: false
 
 jobs:
-  pkgdown-dev:
-    runs-on: ubuntu-latest
-    # SHARE the release workflow's concurrency group so a dev deploy and a
-    # release deploy can never overlap. Expression copied verbatim from
-    # pkgdown.yaml: for any non-PR run it evaluates to the constant
-    # "pkgdown-true", so all runs queue behind one another. A per-run group
-    # would be unique every time and serialise against nothing.
-    concurrency:
-      group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
-    env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+  site:
     permissions:
       contents: write
-
-    steps:
-      # 1. website content at the WORKSPACE ROOT, not a subpath. The deploy
-      #    action runs `git config` in GITHUB_WORKSPACE and has no input to
-      #    point it elsewhere, so the root must be a git repository. Checking
-      #    both out into subdirectories leaves the root bare and the deploy
-      #    dies with "fatal: not in a git directory".
-      - uses: actions/checkout@v4
-
-      # 2. the package source, at whichever ref we want documented
-      - uses: actions/checkout@v4
-        with:
-          repository: giotto-suite/GiottoClass
-          ref: ${{ inputs.giottoclass_ref || 'gsource' }}
-          path: pkgsrc
-
-      # 3. lay the website content over the package checkout. REPLACE
-      #    vignettes/ rather than merging: this branch carries three vignettes
-      #    and gsource carries one, and a plain `cp -r` would leave a mixture.
-      #    This branch is the source of truth for site content.
-      - name: Assemble the site source
-        run: |
-          rm -rf pkgsrc/vignettes pkgsrc/pkgdown
-          cp -r vignettes pkgdown pkgsrc/
-          cp    _pkgdown.yml pkgsrc/
-
-          # Splice in the reference entries for gsource-only topics, ahead of
-          # the `internal` section. They cannot live in _pkgdown.yml: the
-          # release build reads the same file against v0.5.1, where these
-          # topics do not exist, and pkgdown hard-errors on a listed topic it
-          # cannot find.
-          awk '/^- title: internal$/ && !done {
-                 while ((getline line < "pkgdown/reference-gsource.yml") > 0)
-                   if (line !~ /^#/) print line
-                 done = 1
-               } {print}' _pkgdown.yml > pkgsrc/_pkgdown.yml
-
-          # spatial_geometries.Rmd does not survive gsource. Its subsetting
-          # chunk fails in
-          #   [ -> subset(x, cell_ids = i) -> .subset_giotto_polygon_object()
-          # which returns a zero-length object, so plot() has nothing to draw.
-          # The same vignette renders fine against the released 0.5.1, and
-          # R/subset.R was rewritten on gsource -- so this is a package-side
-          # behaviour change, not a documentation problem.
-          #
-          # Drop it from the DEV build only, along with its navbar entry, so
-          # the reference documentation for the new API can still publish.
-          # Delete this block once polygon subsetting by cell ID is settled.
-          rm -f pkgsrc/vignettes/spatial_geometries.Rmd
-          # one-line delay so the `- text:` line above the href goes too. Uses a
-          # `have` flag rather than testing prev for emptiness -- that would
-          # silently swallow every blank line in the file.
-          awk '{ if ($0 ~ /articles\/spatial_geometries\.html/) { have=0; next }
-                 if (have) print prev
-                 prev=$0; have=1 }
-               END { if (have) print prev }' \
-            pkgsrc/_pkgdown.yml > pkgsrc/_pkgdown.tmp
-          mv pkgsrc/_pkgdown.tmp pkgsrc/_pkgdown.yml
-          echo "EXCLUDED FROM DEV: spatial_geometries.Rmd (gsource subsetting change)"
-          echo "documenting giotto-suite/GiottoClass@${{ inputs.giottoclass_ref || 'gsource' }}"
-          echo "version:   $(grep '^Version:' pkgsrc/DESCRIPTION)"
-          echo "vignettes: $(ls pkgsrc/vignettes/*.Rmd 2>/dev/null | wc -l)"
-          echo "gsource-only reference entries spliced: $(grep -c 'New on the gsource line' pkgsrc/_pkgdown.yml) (expect 1)"
-
-      - uses: r-lib/actions/setup-pandoc@v2
-
-      - uses: r-lib/actions/setup-r@v2
-        with:
-          use-public-rspm: true
-
-      # pak resolves NO system requirements in this job -- its metadata comes
-      # back as `"sysreqs": ""` and `"sysreqs_packages": {}` for every package.
-      # So the RSPM binaries install fine and then fail at dlopen, one library
-      # at a time, deep inside reference rendering where downlit loads a
-      # namespace to resolve a cross-package link. Three separate builds died
-      # this way on libproj, libudunits2 and libMagick++ in turn.
-      #
-      # Install the set explicitly rather than discovering it one failed
-      # 25-minute build at a time. Grouped by the R package that needs it.
-      - name: System libraries for the RSPM binaries
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            libudunits2-dev \
-            libgdal-dev libgeos-dev libproj-dev \
-            libmagick++-dev \
-            libglpk-dev \
-            libhdf5-dev \
-            libxml2-dev libssl-dev libcurl4-openssl-dev \
-            libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev \
-            libpng-dev libtiff5-dev libjpeg-dev
-
-      # No ref pinning needed. GiottoClass@gsource's only Remote is a bare
-      # giotto-suite/GiottoUtils, which resolves to main -- v0.2.5, satisfying
-      # its own `GiottoUtils (>= 0.2.5)`.
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          working-directory: pkgsrc
-          dependencies: '"hard"'
-          extra-packages: any::pkgdown, bioc::BiocStyle, local::.
-          needs: website
-
-      # Fail loudly rather than publish the release version as if it were dev.
-      - name: Verify the documented version
-        run: |
-          Rscript -e '
-            v <- as.character(utils::packageVersion("GiottoClass"))
-            cat("GiottoClass", v, "\n")
-            if (utils::compareVersion(v, "0.6.0") < 0)
-              stop("expected the gsource line (>= 0.6.0), got ", v)
-          '
-
-      - name: Build dev site
-        working-directory: pkgsrc
-        env:
-          PKGDOWN_DEV_MODE: devel   # REQUIRED -- _pkgdown.yml has no
-                                    # `development:` block, so the default is
-                                    # mode: release and this would land at root
-        run: |
-          Rscript -e '
-            banner <- paste(readLines("pkgdown/dev-banner.html"), collapse = "\n")
-            pkgdown::build_site(
-              install     = FALSE,
-              # Rd examples default to TRUE and add a great deal of time; several
-              # build a Python environment, whose install log then leaks into the
-              # published docs as "example output".
-              examples    = FALSE,
-              new_process = FALSE,
-              override    = list(
-                # dev-only presentation lives HERE, never in _pkgdown.yml, so the
-                # release build reading the same file cannot pick it up
-                template = list(includes = list(before_body = banner))
-              )
-            )'
-
-      - name: Deploy to gh-pages /dev/
-        uses: JamesIves/github-pages-deploy-action@v4.4.1
-        with:
-          branch: gh-pages
-          folder: pkgsrc/docs/dev
-          target-folder: dev
-          clean: true
-          force: false
+    uses: giotto-suite/.github/.github/workflows/pkgdown-site.yaml@main
+    with:
+      mode: dev
+      package-repo: giotto-suite/GiottoClass
+      package-ref: ${{ inputs.package-ref || 'gsource' }}
+      overlay-files: "_pkgdown.yml"
+      dependencies: '"hard"'
+      extra-packages: "any::pkgdown, bioc::BiocStyle, local::."
+      expect-versions: "GiottoClass=0.6.0"
