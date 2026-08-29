@@ -2,6 +2,24 @@
 
 ## new
 
+- `objManifest()` returns a machine-readable inventory of a `giotto` object:
+  identity, a summary block, and a slot-by-slot description nested as the
+  object nests it. Derived on demand, so it cannot go stale. `level = "full"`
+  adds content fingerprints. `objManifest_json()` serializes it against the
+  schema in `inst/schema/giotto-manifest-0.1.0.json`.
+- `manifestDiff()` compares two manifests and reports what changed, as data and
+  as one sentence. Pure: manifests in, diff out.
+- `@parameters` entries now carry a structured record (`step_id`, `fn`,
+  `params`, `timestamp`, `seed`, `status`, `diff`) as an attribute; the
+  character entry every existing reader expects is unchanged. `params` holds
+  the deparsed argument expressions, so `1:30` is no longer recorded as `1`.
+  Read them with `ghistory_records()` or `objHistory_ndjson()`.
+- `recordGiottoStep()` logs a failed call or a change made outside a logging
+  function (`status = "error"` / `"unattributed"`).
+- `giotto` objects carry a `uid` in `@versions`, minted at creation and kept
+  through copies and save/load.
+- `saveGiotto()` writes `manifest.json` and `history.ndjson` beside the saved
+  object. Requires \pkg{jsonlite} (Suggests); skipped when absent.
 - `hnswKNN()` restored to GiottoClass, so `createNearestNetwork(engine =
   "hnsw")` works again. It had errored with `'hnswKNN' is not an exported
   object from 'namespace:GiottoDisk'` since 2026-08-11, when {GiottoDisk}

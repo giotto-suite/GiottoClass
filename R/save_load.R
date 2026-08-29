@@ -181,11 +181,49 @@ saveGiotto <- function(
         }
     )
 
+    ## write provenance sidecars
+    # Lightroom-style: the payload above is untouched, the description of it
+    # sits beside it as greppable text. Never allowed to fail a save.
+    .save_sidecars(gobject, dir = use_dir, verbose = verbose)
+
     # effect overwrite
     if (do_overwrite) {
         unlink(x = final_dir, recursive = TRUE)
         file.rename(from = use_dir, to = final_dir)
     }
+}
+
+
+# Write `manifest.json` (what the object is) and `history.ndjson` (why it
+# looks that way) next to a saved object. Both are derived, so a failure to
+# write one is a lost convenience, never lost data - hence the warning rather
+# than an error.
+.save_sidecars <- function(gobject, dir, verbose = TRUE) {
+    if (!requireNamespace("jsonlite", quietly = TRUE)) {
+        vmsg(
+            .v = verbose,
+            "{jsonlite} not installed: manifest sidecars not written"
+        )
+        return(invisible(FALSE))
+    }
+    tryCatch(
+        {
+            objManifest_json(
+                gobject,
+                file = file.path(dir, "manifest.json"), level = "full"
+            )
+            objHistory_ndjson(
+                gobject,
+                file = file.path(dir, "history.ndjson")
+            )
+            invisible(TRUE)
+        },
+        error = function(e) {
+            warning("manifest sidecars not written: ",
+                conditionMessage(e), call. = FALSE)
+            invisible(FALSE)
+        }
+    )
 }
 
 
