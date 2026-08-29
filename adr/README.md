@@ -94,6 +94,7 @@ each record's *References*.
 | [0002](0002-setters-write-through-on-backed-gobjects.md) | Setters write through to the vault on backed gobjects | Accepted | 2026-05-03 |
 | [0003](0003-five-verb-generics.md) | Five analysis verbs, split by return contract | Accepted | 2026-05-19 |
 | [0004](0004-networks-store-igraph-one-constructor.md) | Networks store a graph in `@network`; `createNetwork()` is the one constructor | Accepted | 2026-05-21 |
+| [0005](0005-jpeg2000-ome-tiff-reads-through-a-vsisubfile-vrt.md) | JPEG-2000 OME-TIFF reads through a `/vsisubfile` VRT, not a conversion | Accepted | 2026-08-28 |
 
 ## Backfill candidates
 

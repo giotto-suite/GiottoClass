@@ -158,6 +158,7 @@ Collate:
     'stitch_coordinates.R'
     'subset.R'
     'suite_reexports.R'
+    'tif.R'
     'zzz.R'
 URL: https://giotto-suite.github.io/GiottoClass/
 biocViews: Software, Technology, Spatial
