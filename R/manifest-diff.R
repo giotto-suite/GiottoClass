@@ -57,7 +57,9 @@ NULL
 # columns of a metadata leaf, as a named vector of level counts
 .manifest_colmap <- function(leaf) {
     cols <- leaf$columns
-    if (is.null(cols)) return(character())
+    if (is.null(cols) || length(cols) == 0L) {
+        return(stats::setNames(integer(0), character(0)))
+    }
     if (is.character(cols)) {
         return(stats::setNames(rep(NA_integer_, length(cols)), cols))
     }
@@ -127,6 +129,16 @@ manifestDiff <- function(before, after) {
     for (p in shared) {
         fields <- character()
         for (f in .MANIFEST_CMP_FIELDS) {
+            if (identical(f, "columns")) {
+                # compare as name -> level count, so a reordered column list
+                # is not reported as a change while a changed level count is
+                cb <- .manifest_colmap(fb[[p]])
+                ca <- .manifest_colmap(fa[[p]])
+                if (!identical(cb[sort(names(cb))], ca[sort(names(ca))])) {
+                    fields <- c(fields, f)
+                }
+                next
+            }
             if (!identical(fb[[p]][[f]], fa[[p]][[f]])) fields <- c(fields, f)
         }
         if (length(fields)) {
@@ -235,8 +247,15 @@ manifestDiff <- function(before, after) {
         fields <- modified[[p]]$fields
         label <- .manifest_label(p)
 
+        # Tracks whether this leaf has been accounted for - by a phrase or by
+        # the resize tally. A modified leaf that goes unaccounted reads as
+        # "no state change", which is the one thing a diff must never say
+        # when something did change.
+        accounted <- FALSE
+
         # metadata columns: name the added columns and their level counts,
         # since that is how a clustering result becomes visible
+
         if ("columns" %in% fields) {
             cb <- .manifest_colmap(fb[[p]])
             ca <- .manifest_colmap(fa[[p]])
@@ -257,11 +276,35 @@ manifestDiff <- function(before, after) {
                     paste(gone_cols, collapse = ", ")
                 ))
             }
+            # a column that stayed but was re-levelled: re-clustering writes
+            # its result into the existing column, and the count is the whole
+            # story ("leiden_clus 5 -> 14 levels")
+            kept <- intersect(names(cb), names(ca))
+            relev <- kept[vapply(kept, function(cc) {
+                !identical(cb[[cc]], ca[[cc]])
+            }, logical(1L))]
+            # A subset re-levels every column at once. That is the count
+            # change already stated, not news about the columns, so it joins
+            # the resize tally instead of listing itself.
+            if (length(relev)) {
+                if (length(counts)) {
+                    resized <- resized + 1L
+                } else {
+                    phrases <- c(phrases, sprintf(
+                        "%s changed: %s", label,
+                        paste(sprintf("%s (%s -> %s levels)", relev,
+                            cb[relev], ca[relev]), collapse = ", ")
+                    ))
+                }
+            }
+            accounted <- length(new_cols) > 0L || length(gone_cols) > 0L ||
+                length(relev) > 0L
         }
 
         # a column change already implies the shape change; saying both is
         # noise
         if ("shape" %in% fields && !("columns" %in% fields)) {
+            accounted <- TRUE
             if (length(counts)) {
                 resized <- resized + 1L
             } else {
@@ -275,21 +318,24 @@ manifestDiff <- function(before, after) {
             }
         }
 
-        if ("n" %in% fields && !length(counts)) {
-            phrases <- c(phrases, sprintf(
-                "%s %s: %s -> %s", label, .manifest_leafname(p),
-                modified[[p]]$before$n, modified[[p]]$after$n
-            ))
+        if ("n" %in% fields) {
+            accounted <- TRUE
+            if (!length(counts)) {
+                phrases <- c(phrases, sprintf(
+                    "%s %s: %s -> %s", label, .manifest_leafname(p),
+                    modified[[p]]$before$n, modified[[p]]$after$n
+                ))
+            }
         }
 
-        # content changed but shape did not: only the fingerprint moved
-        content_only <- setdiff(fields, c("columns", "shape", "n"))
-        if (length(content_only) && !length(intersect(
-            fields, c("columns", "shape", "n")
-        ))) {
+        # Anything else the leaf changed - most often just the fingerprint,
+        # meaning a step overwrote content in place while leaving every shape
+        # and name identical.
+        if (!accounted) {
+            rest <- setdiff(fields, c("shape", "n"))
             phrases <- c(phrases, sprintf(
                 "%s %s modified (%s)", label, .manifest_leafname(p),
-                paste(content_only, collapse = ", ")
+                paste(rest, collapse = ", ")
             ))
         }
     }

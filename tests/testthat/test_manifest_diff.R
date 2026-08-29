@@ -160,4 +160,54 @@ describe("manifestDiff", {
         flat <- .manifest_flatten(m$slots)
         expect_named(flat, "nn_network.cell.rna.sNN.sNN.pca")
     })
+
+    it("never reports 'no state change' for a leaf it marked modified", {
+        # a re-clustering rewrites an existing column in place: same column
+        # set, same shape, different values. The leaf was modified, so the
+        # sentence must say so.
+        b <- .mf(list(cell_metadata = list(cell = list(rna =
+            .meta(list(cell_ID = 100L, leiden_clus = 5L))))))
+        a <- .mf(list(cell_metadata = list(cell = list(rna =
+            .meta(list(cell_ID = 100L, leiden_clus = 14L))))))
+        d <- manifestDiff(b, a)
+        expect_true(d$changed)
+        expect_false(identical(d$summary, "no state change"))
+        expect_match(d$summary, "leiden_clus \\(5 -> 14 levels\\)")
+    })
+
+    it("does not treat a reordered column list as a change", {
+        cols <- function(order) {
+            list(class = "cellMetaObj", shape = c(100L, 2L),
+                columns = lapply(order, function(cc) {
+                    list(name = cc, dtype = "numeric", n_levels = 5L)
+                }))
+        }
+        b <- .mf(list(cell_metadata = list(cell = list(rna = cols(c("a", "b"))))))
+        a <- .mf(list(cell_metadata = list(cell = list(rna = cols(c("b", "a"))))))
+        expect_false(manifestDiff(b, a)$changed)
+    })
+
+    it("reports a content-only change on any leaf type", {
+        leaf <- function(fp) list(class = "spatialNetworkObj",
+            name = "Delaunay_network", method = "deldir",
+            n_edges = 1400L, fingerprint = fp)
+        d <- manifestDiff(
+            .mf(list(spatial_network = list(cell = list(
+                Delaunay_network = leaf("aaaa"))))),
+            .mf(list(spatial_network = list(cell = list(
+                Delaunay_network = leaf("bbbb")))))
+        )
+        expect_match(d$summary, "modified \\(fingerprint\\)")
+    })
+
+    it("keeps the resize tally free of spurious extra phrases", {
+        leaves <- function(n) list(expression = list(cell = list(rna = list(
+            raw = .expr("raw", c(50L, n))))))
+        d <- manifestDiff(
+            .mf(leaves(100L), n_cells = list(cell = 100L)),
+            .mf(leaves(40L), n_cells = list(cell = 40L))
+        )
+        expect_match(d$summary, "1 objects resized")
+        expect_false(grepl("modified \\(\\)", d$summary))
+    })
 })

@@ -109,8 +109,11 @@ NULL
 #' becomes `NULL` and its path is listed in the `warnings` element, rather than
 #' erroring the manifest.
 #' @param x giotto object
-#' @param level character. `"summary"` (default) omits fingerprints and is
-#' cheap enough to call on every operation. `"full"` adds them.
+#' @param level character. `"summary"` (default) omits fingerprints.
+#' `"full"` adds them, which is what detects an operation that overwrites a
+#' matrix or a column in place - a change `"summary"` cannot see, since the
+#' shape and the names are identical on both sides. Sampled fingerprints cost
+#' little: they read a fixed number of values regardless of object size.
 #' @param fingerprint character. `"none"`, `"sample"` (hash of a deterministic
 #' fixed-stride slice of the content) or `"full"` (hash of all content).
 #' Defaults to `"none"` for `level = "summary"` and `"sample"` for
@@ -404,9 +407,11 @@ setMethod(".manifest_leaf", signature("nnData"), function(
 
     out <- .manifest_leaf_base(x, wenv, path)
     out$nn_type <- g("nn_type", function() slot(x, "nn_type"))
-    out$n_nodes <- g("n_nodes", function() igraph::vcount(net))
-    out$n_edges <- g("n_edges", function() igraph::ecount(net))
-    out$directed <- g("directed", function() igraph::is_directed(net))
+    out$n_nodes <- g("n_nodes", function() .net_n_nodes(net))
+    out$n_edges <- g("n_edges", function() .net_n_edges(net))
+    out$directed <- g("directed", function() {
+        if (inherits(net, "igraph")) igraph::is_directed(net) else NULL
+    })
     out$fingerprint <- .manifest_fp(x, fp, wenv, path)
     out
 })
@@ -418,7 +423,8 @@ setMethod(".manifest_leaf", signature("spatNetData"), function(
 
     out <- .manifest_leaf_base(x, wenv, path)
     out$method <- g("method", function() slot(x, "method"))
-    out$n_edges <- if (is.null(net)) NULL else nrow(net)
+    out$n_nodes <- g("n_nodes", function() .net_n_nodes(net))
+    out$n_edges <- g("n_edges", function() .net_n_edges(net))
     out$has_unfiltered <- !is.null(
         tryCatch(slot(x, "unfiltered"), error = function(e) NULL)
     )
@@ -534,18 +540,36 @@ setMethod(".manifest_leaf", signature("giottoImage"), function(
     v[unique(as.integer(seq.int(1L, n, length.out = k)))]
 }
 
+# A digest of NULL is a constant, so hashing "nothing" would make every
+# object whose content could not be read look identical to every other - and
+# permanently unchanged. Absent is reported as absent.
 .fp_hash <- function(parts) {
+    if (is.null(parts)) return(NULL)
     digest::digest(parts, algo = "xxhash64")
 }
 
 .fp_n <- function(fp) if (identical(fp, "full")) Inf else .MANIFEST_FP_N
 
-# values of an in-memory matrix; NULL for representations that would have to
-# be materialised (DelayedArray, BPCells, on-disk stores) — those degrade to
-# no fingerprint rather than pulling gigabytes through memory
-.fp_matrix_values <- function(m) {
-    if (inherits(m, "sparseMatrix")) return(slot(m, "x"))
-    if (is.matrix(m)) return(as.vector(m))
+# Sampled values of an in-memory matrix. NULL for representations that would
+# have to be materialised (DelayedArray, BPCells, on-disk stores) - those
+# degrade to no fingerprint rather than pulling gigabytes through memory.
+#
+# Never flattens the matrix first: `as.vector()` on a dense expression matrix
+# copies the whole thing to sample a thousand values from it. Matrix classes
+# expose their values as an `x` slot (sparse and dense alike); a base matrix
+# is indexed linearly at the strided positions.
+.fp_matrix_sample <- function(m, k) {
+    if (methods::.hasSlot(m, "x")) return(.fp_stride(slot(m, "x"), k))
+    if (is.matrix(m)) {
+        n <- length(m)
+        if (n == 0L) return(numeric(0))
+        idx <- if (is.infinite(k) || n <= k) {
+            seq_len(n)
+        } else {
+            unique(as.integer(seq.int(1L, n, length.out = k)))
+        }
+        return(m[idx])
+    }
     NULL
 }
 
@@ -578,12 +602,12 @@ setMethod(".fingerprint", signature("ANY"), function(x, fp, ...) NULL)
 
 setMethod(".fingerprint", signature("exprData"), function(x, fp, ...) {
     m <- slot(x, "exprMat")
-    vals <- .fp_matrix_values(m)
+    vals <- .fp_matrix_sample(m, .fp_n(fp))
     if (is.null(vals)) return(NULL)
     .fp_hash(list(
         dim = dim(m),
         rn = rownames(m), cn = colnames(m),
-        vals = .fp_stride(vals, .fp_n(fp))
+        vals = vals
     ))
 })
 
@@ -600,22 +624,45 @@ setMethod(".fingerprint", signature("dimObj"), function(x, fp, ...) {
     .fp_hash(list(
         dim = dim(co),
         rn = rownames(co), cn = colnames(co),
-        vals = .fp_stride(as.vector(co), .fp_n(fp))
+        vals = .fp_matrix_sample(co, .fp_n(fp))
     ))
 })
 
-setMethod(".fingerprint", signature("nnData"), function(x, fp, ...) {
-    net <- slot(x, "network")
+# A network slot holds an igraph since 0.6.0, but objects saved before the
+# migration still hold a data.table of edges. Both carriers are described the
+# same way, so a migrated object and an unmigrated one do not read as
+# different kinds of thing.
+.net_n_nodes <- function(net) {
     if (is.null(net)) return(NULL)
-    el <- igraph::as_edgelist(net, names = TRUE)
-    .fp_hash(list(
-        v = igraph::vcount(net), e = igraph::ecount(net),
-        edges = .fp_stride(apply(el, 1L, paste, collapse = ">"), .fp_n(fp))
-    ))
+    if (inherits(net, "igraph")) return(as.integer(igraph::vcount(net)))
+    NULL
+}
+
+.net_n_edges <- function(net) {
+    if (is.null(net)) return(NULL)
+    if (inherits(net, "igraph")) return(as.integer(igraph::ecount(net)))
+    if (inherits(net, "data.frame")) return(as.integer(nrow(net)))
+    NULL
+}
+
+.fp_network <- function(net, k) {
+    if (is.null(net)) return(NULL)
+    if (inherits(net, "igraph")) {
+        el <- igraph::as_edgelist(net, names = TRUE)
+        return(list(
+            v = igraph::vcount(net), e = igraph::ecount(net),
+            edges = .fp_stride(apply(el, 1L, paste, collapse = ">"), k)
+        ))
+    }
+    .fp_dt(net, k)
+}
+
+setMethod(".fingerprint", signature("nnData"), function(x, fp, ...) {
+    .fp_hash(.fp_network(slot(x, "network"), .fp_n(fp)))
 })
 
 setMethod(".fingerprint", signature("spatNetData"), function(x, fp, ...) {
-    .fp_hash(.fp_dt(slot(x, "network"), .fp_n(fp)))
+    .fp_hash(.fp_network(slot(x, "network"), .fp_n(fp)))
 })
 
 setMethod(".fingerprint", signature("enrData"), function(x, fp, ...) {

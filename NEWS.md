@@ -8,7 +8,10 @@
   adds content fingerprints. `objManifest_json()` serializes it against the
   schema in `inst/schema/giotto-manifest-0.1.0.json`.
 - `manifestDiff()` compares two manifests and reports what changed, as data and
-  as one sentence. Pure: manifests in, diff out.
+  as one sentence. Pure: manifests in, diff out. Use `level = "full"` on both
+  sides to see a step that overwrote content in place: re-running a clustering
+  or a normalization leaves every shape and name identical, so only the
+  fingerprints move.
 - `@parameters` entries now carry a structured record (`step_id`, `fn`,
   `params`, `timestamp`, `seed`, `status`, `diff`) as an attribute; the
   character entry every existing reader expects is unchanged. `params` holds

@@ -274,3 +274,54 @@ describe("save / load sidecars", {
         # new files, so their source identity legitimately changes
     })
 })
+
+describe("network slots", {
+    it("describes and fingerprints an igraph-carried network", {
+        # spatialNetworkObj/nnNetObj hold an igraph since 0.6.0; objects saved
+        # before that hold an edge data.table. Both must describe the same way
+        sn <- g@spatial_network$cell$Delaunay_network
+        skip_if(is.null(sn))
+        m <- objManifest(g, level = "full")
+        leaf <- m$slots$spatial_network$cell$Delaunay_network
+        expect_false(is.null(leaf$n_edges))
+        expect_gt(leaf$n_edges, 0L)
+        expect_type(leaf$fingerprint, "character")
+    })
+
+    it("gives different networks different fingerprints", {
+        # hashing an unreadable carrier as NULL made every network hash the
+        # same constant, so no network ever appeared to change
+        sn <- g@spatial_network$cell$Delaunay_network
+        nn <- g@nn_network$cell$rna$sNN$sNN.pca
+        skip_if(is.null(sn) || is.null(nn))
+        expect_false(identical(
+            GiottoClass:::.fingerprint(sn, fp = "sample"),
+            GiottoClass:::.fingerprint(nn, fp = "sample")
+        ))
+    })
+
+    it("returns no fingerprint rather than a constant when content is absent", {
+        sn <- g@spatial_network$cell$Delaunay_network
+        skip_if(is.null(sn))
+        sn@network <- NULL
+        expect_null(GiottoClass:::.fingerprint(sn, fp = "sample"))
+    })
+})
+
+describe("fingerprint sampling", {
+    it("samples a dense matrix without copying it", {
+        m <- matrix(seq_len(1e6), nrow = 1000)
+        expect_length(GiottoClass:::.fp_matrix_sample(m, 1000L), 1000L)
+        # Matrix classes expose values through @x, sparse and dense alike
+        mm <- Matrix::Matrix(m[1:50, 1:50])
+        expect_length(GiottoClass:::.fp_matrix_sample(mm, 1000L), 1000L)
+    })
+
+    it("reads a fixed number of values regardless of object size", {
+        small <- Matrix::rsparsematrix(100, 100, density = 0.5)
+        big <- Matrix::rsparsematrix(5000, 5000, density = 0.5)
+        expect_length(GiottoClass:::.fp_matrix_sample(small, 1000L),
+            min(1000L, length(small@x)))
+        expect_length(GiottoClass:::.fp_matrix_sample(big, 1000L), 1000L)
+    })
+})
