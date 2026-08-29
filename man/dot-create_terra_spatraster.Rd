@@ -4,11 +4,14 @@
 \alias{.create_terra_spatraster}
 \title{Load image as a terra spatRaster object}
 \usage{
-.create_terra_spatraster(image_path)
+.create_terra_spatraster(image_path, page = 1L)
 }
 \arguments{
 \item{image_path}{existing full filepath to image to be loaded as a terra
 spatRaster}
+
+\item{page}{integer. 1-based page (IFD) to read from a multi-page tif.
+Only consulted for formats that need the JPEG-2000 VRT route.}
 }
 \value{
 spatRaster object
