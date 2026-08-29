@@ -775,7 +775,8 @@ objManifest_json <- function(x, file = NULL, pretty = TRUE, ...) {
 # count of described leaves under a manifest slot
 .manifest_n_leaves <- function(node) {
     if (!is.list(node)) return(0L)
-    if (!is.null(node[["class"]])) return(1L)
+    # `n` rather than `class` identifies the cell_ID / feat_ID leaves
+    if (!is.null(node[["class"]]) || !is.null(node[["n"]])) return(1L)
     sum(vapply(node, .manifest_n_leaves, integer(1L)))
 }
 
