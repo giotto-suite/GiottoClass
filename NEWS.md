@@ -72,6 +72,9 @@
   lazy form lives in GiottoDisk via methods on `parquetGeomBase`.
 
 ## changes
+- `.ome.tif` and other tifs GDAL cannot open directly are now read through a GDAL VRT built over their JPEG-2000 tiles, so JPEG-2000 images load without python. This covers every 10x Xenium morphology image, and Aperio SVS whole-slide images. `to_simple_tif()` is unchanged and remains the fallback for qptiff and other codecs.
+- `tif_metadata()` reads the XML from the `ImageDescription` tag in R. \pkg{tifffile} is only needed now for formats that keep their metadata in private binary tags (lsm, fluoview, nih, micromanager).
+- `createGiottoPolygon()` on a JPEG-2000 mask now takes the mask workflow. It previously fell through to the vector-file workflow and failed there, because GDAL's missing-codec warning aborted the raster branch.
 
 - `h5_file` param in `createGiottoObject()` is deprecated; use `backend`
   instead.
@@ -112,6 +115,7 @@
   but it duplicates that verb's `mean_expr` and should not be used in new code.
 
 ## bug fixes
+- `tif_metadata(node =)` returns a one-row `data.frame` when exactly one node matches, rather than transposing it into a single column.
 
 - `create_average_DT()` now selects each group's cells by `cell_ID` rather than
   by position. It fetches the expression matrix and the cell metadata
