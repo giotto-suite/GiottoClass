@@ -179,20 +179,24 @@ setMethod("objManifest", signature("giotto"), function(
 }
 
 .manifest_summary <- function(x, wenv) {
-    su <- .mfield(wenv, "summary.spat_units", function() {
-        sort(unique(names(slot(x, "expression"))))
-    })
-    ft <- .mfield(wenv, "summary.feat_types", function() {
-        sort(unique(unlist(lapply(slot(x, "expression"), names))))
-    })
+    # spatUnit() / featType() fold over every subobject the object holds, so a
+    # unit that carries polygons and locations but no expression matrix - a
+    # Xenium `nucleus`, say - is reported. Reading `names(@expression)` instead
+    # dropped exactly those units while `n_cells` still counted them, leaving
+    # the two halves of this block disagreeing.
+    su <- .mfield(wenv, "summary.spat_units", function() spatUnit(x))
+    ft <- .mfield(wenv, "summary.feat_types", function() featType(x))
 
+    # a unit with no ids is an empty slot entry, not a unit
+    nonempty <- function(ids) {
+        n <- vapply(ids, length, integer(1L))
+        as.list(n[n > 0L])
+    }
     n_cells <- .mfield(wenv, "summary.n_cells", function() {
-        ids <- slot(x, "cell_ID")
-        as.list(vapply(ids, length, integer(1L)))
+        nonempty(slot(x, "cell_ID"))
     })
     n_features <- .mfield(wenv, "summary.n_features", function() {
-        ids <- slot(x, "feat_ID")
-        as.list(vapply(ids, length, integer(1L)))
+        nonempty(slot(x, "feat_ID"))
     })
 
     filled <- function(sn) {
@@ -481,6 +485,29 @@ setMethod(".manifest_leaf", signature("terraVectData"), function(
     out
 })
 
+# giottoBinPoints carries `featData` and `giottoSubobject` but not
+# `terraVectData`, so without its own method it matched only the ANY fallback
+# and reported nothing but its class: a binpoints object could be added,
+# rewritten or dropped and no diff would say so. Its geometry lives in
+# `@spatial` and its detections in `@counts`, which is why the generic
+# terra describer does not fit it.
+setMethod(".manifest_leaf", signature("giottoBinPoints"), function(
+        x, fp, wenv, path, ...) {
+    g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
+    out <- .manifest_leaf_base(x, wenv, path)
+    out$n_geom <- g("n_geom", function() {
+        as.integer(terra::nrow(slot(x, "spatial")))
+    })
+    # one record per (bin, feature) detection, which is what nrow() reports
+    out$n_records <- g("n_records", function() as.integer(nrow(x)))
+    out$n_bins <- g("n_bins", function() length(slot(x, "bid")))
+    out$n_feats <- g("n_feats", function() length(slot(x, "fid")))
+    out$compact <- g("compact", function() isTRUE(slot(x, "compact")))
+    out$extent <- g("extent", function() .manifest_ext(x))
+    out$fingerprint <- .manifest_fp(x, fp, wenv, path)
+    out
+})
+
 setMethod(".manifest_leaf", signature("giottoLargeImage"), function(
         x, fp, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
@@ -692,6 +719,20 @@ setMethod(".fingerprint", signature("terraVectData"), function(x, fp, ...) {
         ext = as.vector(terra::ext(sv)),
         crds = terra::crds(sub),
         att = lapply(terra::values(sub), as.character)
+    ))
+})
+
+# The counts table is what changes when a binpoints object is rewritten, and
+# it is already an in-memory data.table - so hash that plus the id vectors and
+# the extent, and leave `@spatial` alone. Materialising the geometry would be
+# the expensive half of the object for no added signal.
+setMethod(".fingerprint", signature("giottoBinPoints"), function(x, fp, ...) {
+    k <- .fp_n(fp)
+    .fp_hash(list(
+        counts = .fp_dt(slot(x, "counts"), k),
+        bid = .fp_stride(slot(x, "bid"), k),
+        fid = .fp_stride(slot(x, "fid"), k),
+        ext = tryCatch(as.vector(ext(x)), error = function(e) NULL)
     ))
 })
 

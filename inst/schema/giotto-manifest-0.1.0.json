@@ -129,6 +129,16 @@
         "n_geom": { "type": "integer" },
         "centroids_cached": { "type": "boolean" },
         "overlaps_computed": { "type": "array", "items": { "type": "string" } },
+        "n_records": {
+          "type": "integer",
+          "description": "giottoBinPoints: one record per (bin, feature) detection."
+        },
+        "n_bins": { "type": "integer" },
+        "n_feats": { "type": "integer" },
+        "compact": {
+          "type": "boolean",
+          "description": "giottoBinPoints: whether the counts table is in its compacted form."
+        },
         "reduction": { "type": "string" },
         "reduction_method": { "type": "string" },
         "nn_type": { "type": "string" },

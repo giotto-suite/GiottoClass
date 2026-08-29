@@ -325,3 +325,71 @@ describe("fingerprint sampling", {
         expect_length(GiottoClass:::.fp_matrix_sample(big, 1000L), 1000L)
     })
 })
+
+describe("summary block", {
+    it("reports a spat_unit that has no expression matrix", {
+        # Xenium's `nucleus` carries polygons, locations and IDs but no
+        # matrix. Reading spat_units off @expression dropped exactly those.
+        gv <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
+        expect_true("z1" %in% names(gv@expression))
+        gv@expression$z1 <- NULL
+
+        m <- objManifest(gv)
+        expect_true("z1" %in% m$summary$spat_units)
+        expect_true("z1" %in% names(m$slots$spatial_info))
+        expect_false("z1" %in% names(m$slots$expression))
+    })
+
+    it("omits units that hold no ids", {
+        gv <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
+        gv@cell_ID$phantom <- character(0)
+        expect_false("phantom" %in% names(objManifest(gv)$summary$n_cells))
+    })
+})
+
+describe("giottoBinPoints leaf", {
+    make_gbp <- function(n_bins = 50L, seed = 1L) {
+        set.seed(seed)
+        ids <- sprintf("bin_%d", seq_len(n_bins))
+        sl <- createSpatLocsObj(rnorm(n_bins * 2L))
+        sl$cell_ID <- ids
+        m <- matrix(floor(runif(n_bins * 10L) * 3),
+            ncol = n_bins, dimnames = list(letters[1:10], ids)
+        )
+        createGiottoBinPoints(createExprObj(m), sl)
+    }
+
+    it("describes counts, bins, features and extent", {
+        gbp <- make_gbp()
+        leaf <- .manifest_leaf(gbp, fp = "sample", wenv = NULL, path = "t")
+
+        expect_identical(leaf$class, "giottoBinPoints")
+        expect_identical(leaf$n_bins, 50L)
+        expect_identical(leaf$n_feats, 10L)
+        expect_identical(leaf$n_records, as.integer(nrow(gbp)))
+        expect_type(leaf$compact, "logical")
+        expect_named(leaf$extent, c("xmin", "xmax", "ymin", "ymax"))
+        expect_type(leaf$fingerprint, "character")
+    })
+
+    it("no longer falls through to the ANY fallback", {
+        leaf <- .manifest_leaf(make_gbp(), fp = "none", wenv = NULL, path = "t")
+        expect_false(identical(names(leaf), c("class", "length")))
+    })
+
+    it("fingerprints differently when the content differs", {
+        a <- .fingerprint(make_gbp(seed = 1L), fp = "sample")
+        b <- .fingerprint(make_gbp(seed = 2L), fp = "sample")
+        expect_type(a, "character")
+        expect_false(identical(a, b))
+    })
+
+    it("is visible to a diff when set on a giotto object", {
+        gv <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
+        before <- objManifest(gv, level = "full")
+        gv@feat_info$binpoints <- make_gbp()
+        d <- manifestDiff(before, objManifest(gv, level = "full"))
+        expect_true(d$changed)
+        expect_match(d$summary, "points added: binpoints")
+    })
+})

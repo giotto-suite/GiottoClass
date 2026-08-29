@@ -70,6 +70,35 @@ NULL
     stats::setNames(lv, nms)
 }
 
+# Is a level count worth saying out loud?
+#
+# "leiden_clus (14 levels)" is the whole point of carrying the count;
+# "total_expr (1428 levels)" over 1522 cells says only that the column is
+# continuous, which the name already told you. The count stays in the manifest
+# either way - this governs the sentence, not the data.
+.manifest_levels_informative <- function(n, nrow = NULL) {
+    if (is.null(n) || is.na(n)) return(FALSE)
+    if (n <= 50L) return(TRUE)
+    if (is.null(nrow) || is.na(nrow) || nrow <= 0L) return(FALSE)
+    n < 0.1 * nrow
+}
+
+# rows of the table a metadata leaf describes, for the test above
+.manifest_leaf_nrow <- function(leaf) {
+    shp <- leaf[["shape"]]
+    if (is.null(shp) || length(shp) == 0L) return(NULL)
+    as.integer(shp[[1L]])
+}
+
+# "name (N levels)" when the count means something, otherwise just "name"
+.manifest_col_label <- function(nm, n, nrow) {
+    if (.manifest_levels_informative(n, nrow)) {
+        sprintf("%s (%s levels)", nm, n)
+    } else {
+        nm
+    }
+}
+
 # fields whose change is worth reporting; everything else is noise
 .MANIFEST_CMP_FIELDS <- c(
     "shape", "dtype", "sparse", "nnz", "n_geom", "n_nodes", "n_edges",
@@ -259,14 +288,14 @@ manifestDiff <- function(before, after) {
         if ("columns" %in% fields) {
             cb <- .manifest_colmap(fb[[p]])
             ca <- .manifest_colmap(fa[[p]])
+            nrow_a <- .manifest_leaf_nrow(fa[[p]])
             new_cols <- setdiff(names(ca), names(cb))
             gone_cols <- setdiff(names(cb), names(ca))
             if (length(new_cols)) {
                 phrases <- c(phrases, sprintf(
                     "%s added: %s", label,
                     paste(vapply(new_cols, function(cc) {
-                        n <- ca[[cc]]
-                        if (is.na(n)) cc else sprintf("%s (%s levels)", cc, n)
+                        .manifest_col_label(cc, ca[[cc]], nrow_a)
                     }, character(1L)), collapse = ", ")
                 ))
             }
@@ -292,8 +321,14 @@ manifestDiff <- function(before, after) {
                 } else {
                     phrases <- c(phrases, sprintf(
                         "%s changed: %s", label,
-                        paste(sprintf("%s (%s -> %s levels)", relev,
-                            cb[relev], ca[relev]), collapse = ", ")
+                        paste(vapply(relev, function(cc) {
+                            keep <- .manifest_levels_informative(
+                                ca[[cc]], nrow_a
+                            )
+                            if (!keep) return(cc)
+                            sprintf("%s (%s -> %s levels)", cc,
+                                cb[[cc]], ca[[cc]])
+                        }, character(1L)), collapse = ", ")
                     ))
                 }
             }

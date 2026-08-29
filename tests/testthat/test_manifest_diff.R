@@ -211,3 +211,48 @@ describe("manifestDiff", {
         expect_false(grepl("modified \\(\\)", d$summary))
     })
 })
+
+describe("level counts in the sentence", {
+    .meta_n <- function(cols, nrow) {
+        list(class = "cellMetaObj", shape = c(nrow, length(cols)),
+            columns = lapply(names(cols), function(cc) {
+                list(name = cc, dtype = "numeric", n_levels = cols[[cc]])
+            }))
+    }
+    wrap <- function(leaf) .mf(list(cell_metadata = list(cell = list(rna = leaf))))
+
+    it("keeps the count for a categorical column", {
+        d <- manifestDiff(
+            wrap(.meta_n(list(cell_ID = 1522L), 1522L)),
+            wrap(.meta_n(list(cell_ID = 1522L, leiden_clus = 11L), 1522L))
+        )
+        expect_match(d$summary, "leiden_clus \\(11 levels\\)")
+    })
+
+    it("drops the count for a near-unique column but still reports it", {
+        # "total_expr (1428 levels)" over 1522 cells only says "continuous"
+        d <- manifestDiff(
+            wrap(.meta_n(list(cell_ID = 1522L), 1522L)),
+            wrap(.meta_n(list(cell_ID = 1522L, total_expr = 1428L), 1522L))
+        )
+        expect_match(d$summary, "added: total_expr")
+        expect_false(grepl("1428 levels", d$summary))
+    })
+
+    it("keeps small counts even when rows are few", {
+        d <- manifestDiff(
+            wrap(.meta_n(list(cell_ID = 20L), 20L)),
+            wrap(.meta_n(list(cell_ID = 20L, hvf = 2L), 20L))
+        )
+        expect_match(d$summary, "hvf \\(2 levels\\)")
+    })
+
+    it("names a re-levelled continuous column without a count", {
+        d <- manifestDiff(
+            wrap(.meta_n(list(total_expr = 1428L), 1522L)),
+            wrap(.meta_n(list(total_expr = 1400L), 1522L))
+        )
+        expect_match(d$summary, "changed: total_expr")
+        expect_false(grepl("levels", d$summary))
+    })
+})
