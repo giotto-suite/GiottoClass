@@ -33,6 +33,10 @@ NULL
     # `[[` rather than `$`: partial matching would make the `slots` list itself
     # look like a leaf, because `slots$n` resolves to `nn_network`
     if (!is.null(node[["class"]]) || !is.null(node[["n"]])) {
+        # Carry the final key alongside the joined path. Splitting the path
+        # back apart loses any key that itself contains a dot, and Giotto
+        # names routinely do - an `sNN.pca` network read as "pca".
+        attr(node, "key") <- if (length(prefix)) prefix[[length(prefix)]] else ""
         out <- list(node)
         names(out) <- paste(prefix, collapse = ".")
         return(out)
@@ -53,6 +57,14 @@ NULL
 
 # trailing key: the name a user recognises ("normalized", "pca.RNA")
 .manifest_leafname <- function(path) sub("^.*\\.", "", path)
+
+# The key a leaf sits under - which is where a reader would go looking for it.
+# Recorded during flattening; the path-tail fallback covers a leaf that reached
+# here without one.
+.manifest_display_name <- function(leaf, path) {
+    key <- attr(leaf, "key")
+    if (is.null(key) || !nzchar(key)) .manifest_leafname(path) else key
+}
 
 # columns of a metadata leaf, as a named vector of level counts
 .manifest_colmap <- function(leaf) {
@@ -259,16 +271,18 @@ manifestDiff <- function(before, after) {
         paths <- group(added)[[grp]]
         phrases <- c(phrases, sprintf(
             "%s added: %s", .MANIFEST_SLOT_LABELS[[grp]] %||% grp,
-            paste(vapply(paths, .manifest_leafname, character(1L)),
-                collapse = ", ")
+            paste(vapply(paths, function(pp) {
+                .manifest_display_name(fa[[pp]], pp)
+            }, character(1L)), collapse = ", ")
         ))
     }
     for (grp in names(group(removed))) {
         paths <- group(removed)[[grp]]
         phrases <- c(phrases, sprintf(
             "%s removed: %s", .MANIFEST_SLOT_LABELS[[grp]] %||% grp,
-            paste(vapply(paths, .manifest_leafname, character(1L)),
-                collapse = ", ")
+            paste(vapply(paths, function(pp) {
+                .manifest_display_name(fb[[pp]], pp)
+            }, character(1L)), collapse = ", ")
         ))
     }
 
@@ -347,7 +361,7 @@ manifestDiff <- function(before, after) {
                 sa <- modified[[p]]$after$shape
                 phrases <- c(phrases, sprintf(
                     "%s %s dimensions %s -> %s",
-                    label, .manifest_leafname(p),
+                    label, .manifest_display_name(fa[[p]], p),
                     paste(sb, collapse = " x "), paste(sa, collapse = " x ")
                 ))
             }
@@ -357,7 +371,8 @@ manifestDiff <- function(before, after) {
             accounted <- TRUE
             if (!length(counts)) {
                 phrases <- c(phrases, sprintf(
-                    "%s %s: %s -> %s", label, .manifest_leafname(p),
+                    "%s %s: %s -> %s", label,
+                    .manifest_display_name(fa[[p]], p),
                     modified[[p]]$before$n, modified[[p]]$after$n
                 ))
             }
@@ -369,7 +384,8 @@ manifestDiff <- function(before, after) {
         if (!accounted) {
             rest <- setdiff(fields, c("shape", "n"))
             phrases <- c(phrases, sprintf(
-                "%s %s modified (%s)", label, .manifest_leafname(p),
+                "%s %s modified (%s)", label,
+                .manifest_display_name(fa[[p]], p),
                 paste(rest, collapse = ", ")
             ))
         }

@@ -256,3 +256,33 @@ describe("level counts in the sentence", {
         expect_false(grepl("levels", d$summary))
     })
 })
+
+describe("display names", {
+    it("does not truncate a leaf name that contains a dot", {
+        # nn_network paths end ".sNN.sNN.pca", so splitting on the last dot
+        # reported an sNN.pca network as "pca"
+        leaf <- function(fp) list(class = "nnNetObj", name = "sNN.pca",
+            nn_type = "sNN", n_edges = 100L, fingerprint = fp)
+        wrap <- function(l) .mf(list(nn_network = list(cell = list(rna = list(
+            sNN = list(sNN.pca = l))))))
+        d <- manifestDiff(wrap(leaf("aaaa")), wrap(leaf("bbbb")))
+        expect_match(d$summary, "sNN\\.pca modified")
+    })
+
+    it("names an added leaf by the key it sits under", {
+        after <- .mf(list(expression = list(cell = list(rna = list(
+            raw = .expr("raw"), pearson.resid = .expr("pearson.resid")
+        )))))
+        before <- .mf(list(expression = list(cell = list(rna = list(
+            raw = .expr("raw")
+        )))))
+        expect_match(manifestDiff(before, after)$summary,
+            "expression added: pearson\\.resid")
+    })
+
+    it("falls back to the path when a leaf carries no name", {
+        b <- .mf(list(cell_ID = list(cell = list(n = 100L))))
+        a <- .mf(list(cell_ID = list(cell = list(n = 40L))))
+        expect_match(manifestDiff(b, a)$summary, "cell IDs cell")
+    })
+})
