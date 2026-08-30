@@ -496,9 +496,27 @@ setMethod(".load_external", signature("SpatVector"), function(x, name_fmt, dir,
         sprintf("[%s] %s", oname, basename(fname_shp))
     )
     sv <- terra::vect(fname_shp)
-    if (read_colnames) {
-        sv_names <- data.table::fread(input = fname_txt, header = FALSE)[["V1"]]
-        names(sv) <- sv_names
+    if (read_colnames && file.exists(fname_txt)) {
+        # an empty names file records a SpatVector that had no attributes.
+        # `fread()` cannot read a zero byte file.
+        sv_names <- character()
+        if (file.size(fname_txt) > 0L) {
+            sv_names <- data.table::fread(
+                input = fname_txt, header = FALSE
+            )[["V1"]]
+        }
+        if (length(sv_names) == 0L) {
+            # GDAL adds a placeholder "FID" field when a shapefile is written
+            # with an empty attribute table. Drop it again.
+            terra::values(sv) <- NULL
+        } else if (length(sv_names) != ncol(sv)) {
+            stop(sprintf(
+                "[%s] %s: %d saved column names for %d attributes",
+                oname, basename(fname_shp), length(sv_names), ncol(sv)
+            ), call. = FALSE)
+        } else {
+            names(sv) <- sv_names
+        }
     }
     sv
 })
