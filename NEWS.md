@@ -104,6 +104,19 @@
   independently, and nothing guarantees the two share a cell order. Where they
   diverged, cells were labelled with another cell's group. **Results will
   change for affected objects**; they were wrong before.
+- `createGiottoPolygonsFromMask()` no longer loses polygons and `poly_ID`s when
+  `mask_method = "single"` is used on a mask that encodes its background as a
+  value instead of `NA`. Polygon parts are now indexed across mask values, so
+  parts of different values no longer collide.
+- `loadGiotto()` can read back a `giottoPolygon` or `giottoPoints` whose
+  `SpatVector` has no attribute columns, which previously failed with
+  `[names<-,SpatVector] incorrect number of names`.
+- `createGiottoPolygon()` and `createGiottoPolygonsFromDfr()` no longer depend
+  on the row order of their `data.frame` input. Vertices are now grouped by
+  `poly_ID` before the `SpatVector` is built; input ordered by coordinate
+  instead of by polygon previously produced too many polygons, with the
+  attributes -- and so `poly_ID` -- dropped. Attributes that do not align with
+  the geometries now raise an error instead of being discarded silently.
 - fix "unused argument (ids = FALSE)" when subsetting a `giottoPolygon` object
 - skip 0-entry `giottoPoints` in subset paths
 - documentation fix in `methods-extract`
