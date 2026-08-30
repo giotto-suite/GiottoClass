@@ -393,3 +393,65 @@ describe("giottoBinPoints leaf", {
         expect_match(d$summary, "points added: binpoints")
     })
 })
+
+describe("geometry fingerprints", {
+    make_poly <- function() {
+        d <- data.table::data.table(
+            poly_ID = rep(c("a", "b"), each = 4L),
+            x = c(0, 4, 4, 0, 10, 14, 14, 10),
+            y = c(0, 0, 4, 4, 0, 0, 4, 4)
+        )
+        createGiottoPolygon(d)
+    }
+
+    it("is invariant to vertex ordering", {
+        # writeVector -> shapefile -> vect returns the same shapes with ring
+        # winding and start vertex normalised. A positional hash called every
+        # saved-and-reloaded object modified.
+        gp <- make_poly()
+        a <- GiottoClass:::.fingerprint(gp, fp = "sample")
+
+        sv <- gp@spatVector
+        gp2 <- gp
+        gp2@spatVector <- rbind(sv[2], sv[1])[c(2L, 1L)]
+        skip_if(!identical(
+            sort(paste(terra::crds(gp@spatVector)[, 1],
+                       terra::crds(gp@spatVector)[, 2])),
+            sort(paste(terra::crds(gp2@spatVector)[, 1],
+                       terra::crds(gp2@spatVector)[, 2]))
+        ), "reordering changed the vertex multiset")
+
+        expect_identical(GiottoClass:::.fingerprint(gp2, fp = "sample"), a)
+    })
+
+    it("still changes when a vertex actually moves", {
+        gp <- make_poly()
+        a <- GiottoClass:::.fingerprint(gp, fp = "sample")
+
+        moved <- terra::shift(gp@spatVector, dx = 0.5)
+        gp2 <- gp
+        gp2@spatVector <- moved
+        expect_false(identical(GiottoClass:::.fingerprint(gp2, fp = "sample"), a))
+    })
+
+    it("survives a saveGiotto / loadGiotto round trip", {
+        gv <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
+        td <- file.path(tempdir(), "geom_rt")
+        unlink(td, recursive = TRUE)
+        dir.create(td, recursive = TRUE)
+        on.exit(unlink(td, recursive = TRUE), add = TRUE)
+
+        saveGiotto(gv, dir = td, foldername = "obj", verbose = FALSE,
+            overwrite = TRUE)
+        gv2 <- loadGiotto(file.path(td, "obj"), verbose = FALSE)
+
+        a <- objManifest(gv, level = "full")
+        b <- objManifest(gv2, level = "full")
+        for (nm in names(a$slots$spatial_info)) {
+            expect_identical(
+                a$slots$spatial_info[[nm]]$fingerprint,
+                b$slots$spatial_info[[nm]]$fingerprint
+            )
+        }
+    })
+})

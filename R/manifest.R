@@ -717,10 +717,27 @@ setMethod(".fingerprint", signature("terraVectData"), function(x, fp, ...) {
     .fp_hash(list(
         n = n,
         ext = as.vector(terra::ext(sv)),
-        crds = terra::crds(sub),
+        crds = .fp_canonical_crds(sub),
         att = lapply(terra::values(sub), as.character)
     ))
 })
+
+# Coordinates as a canonical multiset: same vertices in the same order
+# regardless of how the geometry happens to be laid out.
+#
+# Writing a SpatVector to a shapefile and reading it back returns the same
+# shapes with their ring winding and start vertex normalised, so a positional
+# hash of the coordinates reports every saved-and-reloaded object as modified.
+# Ordering the vertices removes that false positive. Vertex multiplicity is
+# preserved, so a moved, added or dropped vertex still changes the hash; what
+# is given up is sensitivity to a rearrangement that leaves the whole
+# coordinate multiset intact, which `n`, the extent and the attributes are
+# there to catch.
+.fp_canonical_crds <- function(sv) {
+    cr <- terra::crds(sv)
+    if (nrow(cr) == 0L) return(cr)
+    cr[order(cr[, 1L], cr[, 2L]), , drop = FALSE]
+}
 
 # The counts table is what changes when a binpoints object is rewritten, and
 # it is already an in-memory data.table - so hash that plus the id vectors and
