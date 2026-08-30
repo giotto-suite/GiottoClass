@@ -108,6 +108,13 @@ takes ~44 ms and occupies ~120 KB in memory.
 Sampling is stride-based rather than random, so it never touches the RNG and
 never disturbs a seeded analysis.
 
+A fingerprint identifies *values*, not their storage. Numbers are compared to
+12 significant digits and geometry coordinates as an ordered set of vertices,
+so reading back an object you just saved does not report a change merely
+because a file format dropped the last bits of a double or renumbered the
+vertices of a polygon. The same slack means a difference smaller than about
+1e-12 relative is not reported at all.
+
 ## The history log
 
 `ghistory_records()` returns the object's history as structured records rather

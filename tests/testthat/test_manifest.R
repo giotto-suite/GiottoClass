@@ -447,11 +447,81 @@ describe("geometry fingerprints", {
 
         a <- objManifest(gv, level = "full")
         b <- objManifest(gv2, level = "full")
-        for (nm in names(a$slots$spatial_info)) {
-            expect_identical(
-                a$slots$spatial_info[[nm]]$fingerprint,
-                b$slots$spatial_info[[nm]]$fingerprint
-            )
+        # points as well as polygons: a lossy attribute table is what made
+        # feat_info report a change on every save/load
+        for (slot_nm in c("spatial_info", "feat_info")) {
+            for (nm in names(a$slots[[slot_nm]])) {
+                expect_identical(
+                    a$slots[[slot_nm]][[nm]]$fingerprint,
+                    b$slots[[slot_nm]][[nm]]$fingerprint
+                )
+            }
         }
+    })
+})
+
+describe("numeric tolerance", {
+    # Serialization drops the last bits of a double - shapefile DBF stores
+    # numerics as text - and hashing that reported a reloaded object as
+    # modified in the same words as a real edit.
+    ulp <- function(x) x + .Machine$double.eps * abs(x)
+
+    it("ignores a one-ulp change in a metadata column", {
+        cm <- GiottoData::loadSubObjectMini("cellMetaObj")
+        cm[]$total_expr <- as.double(seq_len(nrow(cm)))
+        a <- GiottoClass:::.fingerprint(cm, fp = "full")
+
+        cm2 <- cm
+        cm2[]$total_expr <- ulp(cm2[]$total_expr)
+        expect_false(identical(cm[]$total_expr, cm2[]$total_expr))
+        expect_identical(GiottoClass:::.fingerprint(cm2, fp = "full"), a)
+    })
+
+    it("still sees a change of 1e-9 in a metadata column", {
+        cm <- GiottoData::loadSubObjectMini("cellMetaObj")
+        cm[]$total_expr <- as.double(seq_len(nrow(cm)))
+        a <- GiottoClass:::.fingerprint(cm, fp = "full")
+
+        cm2 <- cm
+        cm2[]$total_expr <- cm2[]$total_expr + 1e-9
+        expect_false(identical(GiottoClass:::.fingerprint(cm2, fp = "full"), a))
+    })
+
+    it("applies the same rule to expression values", {
+        ex <- GiottoData::loadSubObjectMini("exprObj")
+        ex[] <- ex[] * 1.0 # ensure double storage
+        a <- GiottoClass:::.fingerprint(ex, fp = "full")
+
+        nudged <- ex
+        nudged[]@x <- ulp(nudged[]@x)
+        expect_identical(GiottoClass:::.fingerprint(nudged, fp = "full"), a)
+
+        changed <- ex
+        changed[]@x <- changed[]@x + 1e-9
+        expect_false(
+            identical(GiottoClass:::.fingerprint(changed, fp = "full"), a)
+        )
+    })
+
+    it("applies the same rule to SpatVector attributes", {
+        d <- data.table::data.table(
+            poly_ID = rep(c("a", "b"), each = 4L),
+            x = c(0, 4, 4, 0, 10, 14, 14, 10),
+            y = c(0, 0, 4, 4, 0, 0, 4, 4)
+        )
+        gp <- createGiottoPolygon(d)
+        gp@spatVector$score <- c(1.4511308670043945, 2.5)
+        a <- GiottoClass:::.fingerprint(gp, fp = "full")
+
+        nudged <- gp
+        # the exact value DBF returns for that first score
+        nudged@spatVector$score <- c(1.451130867004395, 2.5)
+        expect_identical(GiottoClass:::.fingerprint(nudged, fp = "full"), a)
+
+        changed <- gp
+        changed@spatVector$score <- c(1.4511308680043945, 2.5)
+        expect_false(
+            identical(GiottoClass:::.fingerprint(changed, fp = "full"), a)
+        )
     })
 })

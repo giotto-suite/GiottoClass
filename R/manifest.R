@@ -118,6 +118,12 @@ NULL
 #' fixed-stride slice of the content) or `"full"` (hash of all content).
 #' Defaults to `"none"` for `level = "summary"` and `"sample"` for
 #' `level = "full"`. Overrides `level` when given.
+#'
+#' Numbers are compared to 12 significant digits, so a fingerprint identifies
+#' values rather than bit patterns. Re-reading a saved object does not report a
+#' change when a storage format has dropped the last bits of a double, and by
+#' the same token a difference below roughly 1e-12 relative is not reported at
+#' all.
 #' @param ... additional params (none implemented)
 #' @returns list of class `gmanifest`
 #' @examples
@@ -558,6 +564,21 @@ setMethod(".manifest_leaf", signature("giottoImage"), function(
 # Number of values sampled per object at fingerprint = "sample".
 .MANIFEST_FP_N <- 1000L
 
+# Significant digits a fingerprint compares numbers to.
+#
+# A fingerprint answers "are these the same values", not "are these the same
+# bit patterns". Serialization formats lose the last bits of a double -
+# shapefile DBF stores numerics as fixed-width text, so a coordinate attribute
+# comes back differing by ~5e-16 relative - and hashing that difference reports
+# a reloaded object as modified in exactly the same words as a real edit. Two
+# decimal digits of slack removes that without approaching anything
+# analytically meaningful: a change of 1e-9 relative still registers.
+.MANIFEST_FP_DIGITS <- 12L
+
+.fp_num <- function(x) {
+    if (is.double(x)) signif(x, .MANIFEST_FP_DIGITS) else x
+}
+
 # Deterministic fixed-stride slice. No RNG, so the user's seed is untouched
 # and two calls on unchanged content always agree.
 .fp_stride <- function(v, k = .MANIFEST_FP_N) {
@@ -586,7 +607,9 @@ setMethod(".manifest_leaf", signature("giottoImage"), function(
 # expose their values as an `x` slot (sparse and dense alike); a base matrix
 # is indexed linearly at the strided positions.
 .fp_matrix_sample <- function(m, k) {
-    if (methods::.hasSlot(m, "x")) return(.fp_stride(slot(m, "x"), k))
+    if (methods::.hasSlot(m, "x")) {
+        return(.fp_num(.fp_stride(slot(m, "x"), k)))
+    }
     if (is.matrix(m)) {
         n <- length(m)
         if (n == 0L) return(numeric(0))
@@ -595,7 +618,7 @@ setMethod(".manifest_leaf", signature("giottoImage"), function(
         } else {
             unique(as.integer(seq.int(1L, n, length.out = k)))
         }
-        return(m[idx])
+        return(.fp_num(m[idx]))
     }
     NULL
 }
@@ -605,7 +628,11 @@ setMethod(".manifest_leaf", signature("giottoImage"), function(
     list(
         cols = colnames(dt),
         n = nrow(dt),
-        vals = lapply(dt, function(col) .fp_stride(as.character(col), k))
+        # stride first: converting a whole column to sample a thousandth of it
+        # is work thrown away
+        vals = lapply(dt, function(col) {
+            as.character(.fp_num(.fp_stride(col, k)))
+        })
     )
 }
 
@@ -716,9 +743,9 @@ setMethod(".fingerprint", signature("terraVectData"), function(x, fp, ...) {
     sub <- sv[idx]
     .fp_hash(list(
         n = n,
-        ext = as.vector(terra::ext(sv)),
+        ext = .fp_num(as.vector(terra::ext(sv))),
         crds = .fp_canonical_crds(sub),
-        att = lapply(terra::values(sub), as.character)
+        att = lapply(terra::values(sub), function(cc) as.character(.fp_num(cc)))
     ))
 })
 
@@ -734,7 +761,7 @@ setMethod(".fingerprint", signature("terraVectData"), function(x, fp, ...) {
 # coordinate multiset intact, which `n`, the extent and the attributes are
 # there to catch.
 .fp_canonical_crds <- function(sv) {
-    cr <- terra::crds(sv)
+    cr <- .fp_num(terra::crds(sv))
     if (nrow(cr) == 0L) return(cr)
     cr[order(cr[, 1L], cr[, 2L]), , drop = FALSE]
 }
@@ -749,7 +776,7 @@ setMethod(".fingerprint", signature("giottoBinPoints"), function(x, fp, ...) {
         counts = .fp_dt(slot(x, "counts"), k),
         bid = .fp_stride(slot(x, "bid"), k),
         fid = .fp_stride(slot(x, "fid"), k),
-        ext = tryCatch(as.vector(ext(x)), error = function(e) NULL)
+        ext = tryCatch(.fp_num(as.vector(ext(x))), error = function(e) NULL)
     ))
 })
 
@@ -765,7 +792,7 @@ setMethod(".fingerprint", signature("giottoLargeImage"), function(x, fp, ...) {
         src = src,
         size = info$size,
         mtime = as.character(info$mtime),
-        ext = as.vector(terra::ext(r))
+        ext = .fp_num(as.vector(terra::ext(r)))
     ))
 })
 
