@@ -2,12 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getMultiomics}
 \alias{getMultiomics}
-\alias{getMultiomics,giotto-method}
+\alias{getMultiomics,gAny-method}
 \title{Get multiomics integration results}
 \usage{
 getMultiomics(gobject, spat_unit = NULL, feat_type = NULL, ...)
 
-\S4method{getMultiomics}{giotto}(
+\S4method{getMultiomics}{gAny}(
   gobject,
   spat_unit = NULL,
   feat_type = NULL,

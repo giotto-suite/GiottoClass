@@ -2,12 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setCellMetadata}
 \alias{setCellMetadata}
-\alias{setCellMetadata,giotto-method}
+\alias{setCellMetadata,gAny-method}
 \title{Set cell metadata}
 \usage{
 setCellMetadata(gobject, x, spat_unit = NULL, feat_type = NULL, ...)
 
-\S4method{setCellMetadata}{giotto}(
+\S4method{setCellMetadata}{gAny}(
   gobject,
   x,
   spat_unit = NULL,

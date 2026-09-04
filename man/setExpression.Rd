@@ -3,12 +3,12 @@
 \name{setExpression}
 \alias{setExpression}
 \alias{setExpressionValues}
-\alias{setExpression,giotto-method}
+\alias{setExpression,gAny-method}
 \title{Set expression data}
 \usage{
 setExpression(gobject, x, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
 
-\S4method{setExpression}{giotto}(
+\S4method{setExpression}{gAny}(
   gobject,
   x,
   spat_unit = NULL,
