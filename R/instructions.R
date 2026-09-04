@@ -179,13 +179,9 @@ create_giotto_instructions <- function(python_path = NULL,
 # these directly so that internal access never routes through the deprecated
 # exports (and so never emits their deprecation warning).
 
-#' @keywords internal
-#' @noRd
-.instr_show <- function(gobject) {
-    gobject@instructions
-}
-
-
+# Mirrors the shape of `instructions()` itself: accepts either a `giotto`
+# object or a `giottoInstructions` list, and returns the whole set of
+# instructions when no `param` is named, one value when one is.
 #' @keywords internal
 #' @noRd
 .instr_read <- function(giotto_instructions,
@@ -196,18 +192,18 @@ create_giotto_instructions <- function(python_path = NULL,
         giotto_instructions <- giotto_instructions@instructions
     }
 
-    # stop if parameter is not found
     if (is.null(param)) {
-        stop("\t readGiottoInstructions needs a parameter to work \t")
-    } else if (!param %in% names(giotto_instructions)) {
+        return(giotto_instructions)
+    }
+
+    # stop if parameter is not found
+    if (!param %in% names(giotto_instructions)) {
         if (!missing(default)) {
             return(default)
         }
         stop("\t parameter ", param, " is not in Giotto instructions \t")
-    } else {
-        specific_instruction <- giotto_instructions[[param]]
     }
-    return(specific_instruction)
+    giotto_instructions[[param]]
 }
 
 
@@ -312,6 +308,11 @@ readGiottoInstructions <- function(giotto_instructions,
         with = "instructions()"
     )
 
+    # unlike `instructions()`, this one has always required a param
+    if (is.null(param)) {
+        stop("\t readGiottoInstructions needs a parameter to work \t")
+    }
+
     if (missing(default)) {
         .instr_read(giotto_instructions = giotto_instructions, param = param)
     } else {
@@ -337,7 +338,7 @@ showGiottoInstructions <- function(gobject) {
         with = "instructions()"
     )
 
-    .instr_show(gobject)
+    .instr_read(gobject)
 }
 
 

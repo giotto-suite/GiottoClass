@@ -103,7 +103,7 @@ setMethod(
 setMethod(
     "instructions", signature(gobject = "giotto", param = "missing"),
     function(gobject) {
-        return(.instr_show(gobject))
+        return(.instr_read(gobject))
     }
 )
 
@@ -114,10 +114,7 @@ setMethod(
 setMethod(
     "instructions", signature(gobject = "giotto", param = "character"),
     function(gobject, param) {
-        return(.instr_read(
-            giotto_instructions = .instr_show(gobject),
-            param = param
-        ))
+        return(.instr_read(gobject, param = param))
     }
 )
 
