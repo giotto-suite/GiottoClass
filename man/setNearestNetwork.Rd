@@ -2,7 +2,7 @@
 % Please edit documentation in R/slot_accessors.R
 \name{setNearestNetwork}
 \alias{setNearestNetwork}
-\alias{setNearestNetwork,giotto-method}
+\alias{setNearestNetwork,gAny-method}
 \title{Set nearest neighbor network}
 \usage{
 setNearestNetwork(
@@ -14,7 +14,7 @@ setNearestNetwork(
   ...
 )
 
-\S4method{setNearestNetwork}{giotto}(
+\S4method{setNearestNetwork}{gAny}(
   gobject,
   x,
   spat_unit = NULL,

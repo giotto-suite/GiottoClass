@@ -472,7 +472,7 @@ setGeneric("getCellMetadata",
 
 #' @rdname getCellMetadata
 #' @export
-setMethod("getCellMetadata", signature("giotto"), function(gobject,
+setMethod("getCellMetadata", signature("gAny"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     output = c("cellMetaObj", "data.table"),
@@ -530,7 +530,7 @@ setGeneric("setCellMetadata",
 
 #' @rdname setCellMetadata
 #' @export
-setMethod("setCellMetadata", signature("giotto"), function(gobject,
+setMethod("setCellMetadata", signature("gAny"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
@@ -685,7 +685,7 @@ setGeneric("getFeatureMetadata",
 
 #' @rdname getFeatureMetadata
 #' @export
-setMethod("getFeatureMetadata", signature("giotto"), function(gobject,
+setMethod("getFeatureMetadata", signature("gAny"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     output = c("featMetaObj", "data.table"),
@@ -741,7 +741,7 @@ setGeneric("setFeatureMetadata",
 
 #' @rdname setFeatureMetadata
 #' @export
-setMethod("setFeatureMetadata", signature("giotto"), function(gobject,
+setMethod("setFeatureMetadata", signature("gAny"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
@@ -889,7 +889,7 @@ setGeneric("getExpression",
 
 #' @rdname getExpression
 #' @export
-setMethod("getExpression", signature("giotto"), function(
+setMethod("getExpression", signature("gAny"), function(
         gobject,
         spat_unit = NULL,
         feat_type = NULL,
@@ -994,7 +994,7 @@ setGeneric("setExpression",
 
 #' @rdname setExpression
 #' @export
-setMethod("setExpression", signature("giotto"), function(gobject, x,
+setMethod("setExpression", signature("gAny"), function(gobject, x,
     spat_unit = NULL,
     feat_type = NULL,
     name = NULL,
@@ -1099,8 +1099,12 @@ setMethod("setExpression", signature("giotto"), function(gobject, x,
 
 
     ## 7. Write matrix to disk if needed
+    # Gated on `giotto` rather than `@source` alone: this method dispatches on
+    # gAny, and the single-object write-through path is not the right one for a
+    # federated parent, whose shared-domain artifacts go to its multi-level
+    # source instead.
     memory_matrix <- c("matrix", "Matrix")
-    if (!is.null(gobject@source)) {
+    if (inherits(gobject, "giotto") && !is.null(gobject@source)) {
         gsrc <- .gsource(gobject)
         mat <- x[]
         if (inherits(mat, memory_matrix) || isTRUE(write)) {
@@ -1186,7 +1190,7 @@ setGeneric("setMultiomics",
 
 #' @rdname setMultiomics
 #' @export
-setMethod("setMultiomics", signature("giotto"), function(gobject,
+setMethod("setMultiomics", signature("gAny"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
@@ -1280,7 +1284,7 @@ setGeneric("getMultiomics",
 
 #' @rdname getMultiomics
 #' @export
-setMethod("getMultiomics", signature("giotto"), function(gobject,
+setMethod("getMultiomics", signature("gAny"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     integration_method = "WNN",
@@ -1598,7 +1602,7 @@ setGeneric("getDimReduction",
 
 #' @rdname getDimReduction
 #' @export
-setMethod("getDimReduction", signature("giotto"), function(gobject,
+setMethod("getDimReduction", signature("gAny"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     name = NULL,
@@ -1685,7 +1689,7 @@ setGeneric("setDimReduction",
 
 #' @rdname setDimReduction
 #' @export
-setMethod("setDimReduction", signature("giotto"), function(gobject,
+setMethod("setDimReduction", signature("gAny"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
@@ -1826,7 +1830,7 @@ setGeneric("getNearestNetwork",
 
 #' @rdname getNearestNetwork
 #' @export
-setMethod("getNearestNetwork", signature("giotto"), function(gobject,
+setMethod("getNearestNetwork", signature("gAny"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     name = NULL,
@@ -1924,7 +1928,7 @@ setGeneric("setNearestNetwork",
 
 #' @rdname setNearestNetwork
 #' @export
-setMethod("setNearestNetwork", signature("giotto"), function(gobject,
+setMethod("setNearestNetwork", signature("gAny"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,
@@ -2034,7 +2038,9 @@ setMethod("setNearestNetwork", signature("giotto"), function(gobject,
     # project vault. `type` is plumbed through so the resulting store's
     # @type slot reflects the actual network kind (kNN vs sNN) instead
     # of the storeWrite default.
-    if (!is.null(gobject@source)) {
+    # Gated on `giotto` for the same reason as setExpression above — this
+    # method dispatches on gAny.
+    if (inherits(gobject, "giotto") && !is.null(gobject@source)) {
         gsrc <- .gsource(gobject)
         if (!inherits(x@network, "dataStore")) {
             store <- GiottoDisk::sourceWrite(gsrc, x@network,
@@ -2995,7 +3001,7 @@ setGeneric("getSpatialEnrichment",
 
 #' @rdname getSpatialEnrichment
 #' @export
-setMethod("getSpatialEnrichment", signature("giotto"), function(gobject,
+setMethod("getSpatialEnrichment", signature("gAny"), function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     name = "DWLS",
@@ -3080,7 +3086,7 @@ setGeneric("setSpatialEnrichment",
 
 #' @rdname setSpatialEnrichment
 #' @export
-setMethod("setSpatialEnrichment", signature("giotto"), function(gobject,
+setMethod("setSpatialEnrichment", signature("gAny"), function(gobject,
     x,
     spat_unit = NULL,
     feat_type = NULL,

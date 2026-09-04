@@ -2,12 +2,12 @@
 % Please edit documentation in R/slot_accessors.R
 \name{getCellMetadata}
 \alias{getCellMetadata}
-\alias{getCellMetadata,giotto-method}
+\alias{getCellMetadata,gAny-method}
 \title{getCellMetadata}
 \usage{
 getCellMetadata(gobject, spat_unit = NULL, feat_type = NULL, ...)
 
-\S4method{getCellMetadata}{giotto}(
+\S4method{getCellMetadata}{gAny}(
   gobject,
   spat_unit = NULL,
   feat_type = NULL,
