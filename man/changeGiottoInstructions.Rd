@@ -30,7 +30,7 @@ giotto object with changed instructions, or the instructions
 list when \code{return_gobject = FALSE}
 }
 \description{
-Changes one or more instruction values. Superseded by
-\code{instructions(gobject, param) <- value}.
+Deprecated. Use \code{instructions(gobject, param) <- value}
+instead.
 }
 \keyword{internal}

@@ -13,7 +13,6 @@ showGiottoInstructions(gobject)
 named list of giotto instructions
 }
 \description{
-Extracts the full instructions slot. Superseded by
-\code{\link[=instructions]{instructions()}}.
+Deprecated. Use \code{\link[=instructions]{instructions()}} instead.
 }
 \keyword{internal}

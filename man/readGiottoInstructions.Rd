@@ -18,7 +18,6 @@ absent \code{param} is an error.}
 the value of the requested instruction param
 }
 \description{
-Retrieves the value associated with a single instruction
-param. Superseded by \code{\link[=instructions]{instructions()}}.
+Deprecated. Use \code{\link[=instructions]{instructions()}} instead.
 }
 \keyword{internal}

@@ -97,6 +97,14 @@
   but it duplicates that verb's `mean_expr` and should not be used in new code.
 
 ## bug fixes
+- `instructions()` and `instructions<-()` no longer emit a deprecation
+  warning on every access. They were implemented on top of the deprecated
+  `showGiottoInstructions()` / `readGiottoInstructions()` /
+  `changeGiottoInstructions()` / `replaceGiottoInstructions()`, so each read
+  or write raised the warning belonging to a function the caller never used.
+  The implementation now lives in internals; the four deprecated functions
+  remain exported and keep warning, but only for code that calls them
+  directly.
 - `tif_metadata(node =)` returns a one-row `data.frame` when exactly one node matches, rather than transposing it into a single column.
 
 - `create_average_DT()` now selects each group's cells by `cell_ID` rather than

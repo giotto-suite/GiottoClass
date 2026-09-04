@@ -103,7 +103,7 @@ setMethod(
 setMethod(
     "instructions", signature(gobject = "giotto", param = "missing"),
     function(gobject) {
-        return(showGiottoInstructions(gobject))
+        return(.instr_show(gobject))
     }
 )
 
@@ -114,9 +114,8 @@ setMethod(
 setMethod(
     "instructions", signature(gobject = "giotto", param = "character"),
     function(gobject, param) {
-        instrs <- showGiottoInstructions(gobject = gobject)
-        return(readGiottoInstructions(
-            giotto_instructions = instrs,
+        return(.instr_read(
+            giotto_instructions = .instr_show(gobject),
             param = param
         ))
     }
@@ -141,7 +140,7 @@ setMethod(
         param = "missing", initialize = "missing", value = "ANY"
     ),
     function(gobject, initialize, value) {
-        gobject <- replaceGiottoInstructions(gobject,
+        gobject <- .instr_replace(gobject,
             instructions = value,
             init_gobject = TRUE
         )
@@ -157,7 +156,7 @@ setMethod(
         param = "missing", initialize = "logical", value = "ANY"
     ),
     function(gobject, initialize, value) {
-        gobject <- replaceGiottoInstructions(gobject,
+        gobject <- .instr_replace(gobject,
             instructions = value,
             init_gobject = initialize
         )
@@ -176,7 +175,7 @@ setMethod(
         param = "character", initialize = "missing", value = "ANY"
     ),
     function(gobject, param, initialize, value) {
-        gobject <- changeGiottoInstructions(
+        gobject <- .instr_change(
             gobject = gobject,
             params = param,
             new_values = value,
@@ -195,7 +194,7 @@ setMethod(
         param = "character", initialize = "logical", value = "ANY"
     ),
     function(gobject, param, initialize, value) {
-        gobject <- changeGiottoInstructions(
+        gobject <- .instr_change(
             gobject = gobject,
             params = param,
             new_values = value,

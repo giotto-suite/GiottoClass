@@ -173,29 +173,22 @@ create_giotto_instructions <- function(python_path = NULL,
 
 
 
-# deprecated ####
+# instructions internals ####
 
-# Superseded by `instructions()` / `instructions<-()`. They will stop being
-# exported in a future version of GiottoClass.
-#
-# The `deprecate_soft()` call these four used to carry is gone: the
-# `instructions()` S4 method calls them on every access, and the accumulated
-# lifecycle-warning call-stack captures were tipping R's expression limit
-# during long test runs. They stay exported — downstream suite packages
-# (GiottoData among them) still call them, so de-exporting is a separate
-# deliberate deprecation, not a side effect of a warning fix.
+# Implementation for `instructions()` / `instructions<-()`. The accessors call
+# these directly so that internal access never routes through the deprecated
+# exports (and so never emits their deprecation warning).
 
-#' @title Read a giotto instruction
-#' @description Retrieves the value associated with a single instruction
-#' param. Superseded by [instructions()].
-#' @param giotto_instructions giotto object or a `giottoInstructions` list
-#' @param param parameter to retrieve
-#' @param default value to return when `param` is absent. When missing, an
-#' absent `param` is an error.
-#' @returns the value of the requested instruction param
 #' @keywords internal
-#' @export
-readGiottoInstructions <- function(giotto_instructions,
+#' @noRd
+.instr_show <- function(gobject) {
+    gobject@instructions
+}
+
+
+#' @keywords internal
+#' @noRd
+.instr_read <- function(giotto_instructions,
     param = NULL,
     default) {
     # get instructions if provided the giotto object
@@ -218,33 +211,9 @@ readGiottoInstructions <- function(giotto_instructions,
 }
 
 
-#' @title Show giotto instructions
-#' @description Extracts the full instructions slot. Superseded by
-#' [instructions()].
-#' @param gobject giotto object
-#' @returns named list of giotto instructions
 #' @keywords internal
-#' @export
-showGiottoInstructions <- function(gobject) {
-    gobject@instructions
-}
-
-
-#' @title Change giotto instructions
-#' @description Changes one or more instruction values. Superseded by
-#' `instructions(gobject, param) <- value`.
-#' @param gobject giotto object
-#' @param params parameter(s) to change
-#' @param new_values new value(s) for `params`
-#' @param return_gobject logical. Return the giotto object (default `TRUE`)
-#' rather than the instructions list alone.
-#' @param init_gobject logical. Re-initialize the object when returning it
-#' (default `TRUE`)
-#' @returns giotto object with changed instructions, or the instructions
-#' list when `return_gobject = FALSE`
-#' @keywords internal
-#' @export
-changeGiottoInstructions <- function(gobject,
+#' @noRd
+.instr_change <- function(gobject,
     params = NULL,
     new_values = NULL,
     return_gobject = TRUE,
@@ -295,18 +264,9 @@ changeGiottoInstructions <- function(gobject,
 
 
 
-#' @title Replace giotto instructions
-#' @description Replaces the entire instructions slot. Superseded by
-#' `instructions(gobject) <- value`.
-#' @param gobject giotto object
-#' @param instructions named list of all instructions, as produced by
-#' [createGiottoInstructions()]
-#' @param init_gobject logical. Re-initialize the object before returning it
-#' (default `TRUE`)
-#' @returns giotto object with replaced instructions
 #' @keywords internal
-#' @export
-replaceGiottoInstructions <- function(gobject,
+#' @noRd
+.instr_replace <- function(gobject,
     instructions = NULL,
     init_gobject = TRUE) {
     instrs_needed <- names(create_giotto_instructions())
@@ -322,6 +282,124 @@ replaceGiottoInstructions <- function(gobject,
         if (isTRUE(init_gobject)) gobject <- initialize(gobject)
         return(gobject)
     }
+}
+
+
+# deprecated ####
+
+# Thin aliases over the internals above, kept only so that direct callers get
+# a warning pointing at `instructions()` / `instructions<-()`. They stay
+# exported because downstream suite packages still call them; de-exporting is
+# a separate breaking change. Nothing inside GiottoClass calls these — the
+# accessors use the `.instr_*` internals, so the warning fires for user code
+# only and cannot accumulate across internal access.
+
+#' @title Read a giotto instruction
+#' @description Deprecated. Use [instructions()] instead.
+#' @param giotto_instructions giotto object or a `giottoInstructions` list
+#' @param param parameter to retrieve
+#' @param default value to return when `param` is absent. When missing, an
+#' absent `param` is an error.
+#' @returns the value of the requested instruction param
+#' @keywords internal
+#' @export
+readGiottoInstructions <- function(giotto_instructions,
+    param = NULL,
+    default) {
+    deprecate_soft(
+        when = "0.3.5",
+        what = "readGiottoInstructions()",
+        with = "instructions()"
+    )
+
+    if (missing(default)) {
+        .instr_read(giotto_instructions = giotto_instructions, param = param)
+    } else {
+        .instr_read(
+            giotto_instructions = giotto_instructions,
+            param = param,
+            default = default
+        )
+    }
+}
+
+
+#' @title Show giotto instructions
+#' @description Deprecated. Use [instructions()] instead.
+#' @param gobject giotto object
+#' @returns named list of giotto instructions
+#' @keywords internal
+#' @export
+showGiottoInstructions <- function(gobject) {
+    deprecate_soft(
+        when = "0.3.5",
+        what = "showGiottoInstructions()",
+        with = "instructions()"
+    )
+
+    .instr_show(gobject)
+}
+
+
+#' @title Change giotto instructions
+#' @description Deprecated. Use `instructions(gobject, param) <- value`
+#' instead.
+#' @param gobject giotto object
+#' @param params parameter(s) to change
+#' @param new_values new value(s) for `params`
+#' @param return_gobject logical. Return the giotto object (default `TRUE`)
+#' rather than the instructions list alone.
+#' @param init_gobject logical. Re-initialize the object when returning it
+#' (default `TRUE`)
+#' @returns giotto object with changed instructions, or the instructions
+#' list when `return_gobject = FALSE`
+#' @keywords internal
+#' @export
+changeGiottoInstructions <- function(gobject,
+    params = NULL,
+    new_values = NULL,
+    return_gobject = TRUE,
+    init_gobject = TRUE) {
+    deprecate_soft(
+        when = "0.3.5",
+        what = "changeGiottoInstructions()",
+        with = "`instructions<-`()"
+    )
+
+    .instr_change(
+        gobject = gobject,
+        params = params,
+        new_values = new_values,
+        return_gobject = return_gobject,
+        init_gobject = init_gobject
+    )
+}
+
+
+#' @title Replace giotto instructions
+#' @description Deprecated. Use `instructions(gobject) <- value` instead.
+#' @param gobject giotto object
+#' @param instructions named list of all instructions, as produced by
+#' [createGiottoInstructions()]
+#' @param init_gobject logical. Re-initialize the object before returning it
+#' (default `TRUE`)
+#' @returns giotto object with replaced instructions
+#' @keywords internal
+#' @export
+replaceGiottoInstructions <- function(gobject,
+    instructions = NULL,
+    init_gobject = TRUE) {
+    deprecate_soft(
+        when = "0.3.5",
+        what = "replaceGiottoInstructions()",
+        with = "`instructions<-`()"
+    )
+
+    .instr_replace(
+        gobject = gobject,
+        instructions = instructions,
+        init_gobject = init_gobject
+    )
 }
 
 

@@ -19,7 +19,6 @@ replaceGiottoInstructions(gobject, instructions = NULL, init_gobject = TRUE)
 giotto object with replaced instructions
 }
 \description{
-Replaces the entire instructions slot. Superseded by
-\code{instructions(gobject) <- value}.
+Deprecated. Use \code{instructions(gobject) <- value} instead.
 }
 \keyword{internal}
