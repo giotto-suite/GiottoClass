@@ -55,7 +55,8 @@ recorded as; \verb{[[<-} replaces or (with \code{NULL}) drops one.
 \item \code{v[i, j]} — the value of attribute \code{j} on step \code{i}
 \item \code{length(v)} / \code{names(v)} — step count / step types, in recorded order
 \item \code{as.list(v)} — the plain nested form
-\item \code{v1 + v2} — concatenate steps
+\item \code{v1 + v2} — concatenate steps. Unconditional: each crop step carries
+its own frame, so there is nothing to reconcile.
 }
 }
 \examples{

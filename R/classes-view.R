@@ -10,10 +10,10 @@
 # Views handle subsets, crops, and sample-selection only. The two compose at
 # the consumer-function API: `plot(g, space = "atlas", view = "tumor")`.
 #
-# A view may optionally reference a named space via `space`. This is what
-# defines the coordinate frame in which extent-based crops are meaningful:
-# a recorded crop region is interpreted in that frame, so the resolver
-# positions the data before evaluating the region against it.
+# A crop step may name a `space`, the coordinate frame its region was drawn
+# in. The resolver positions the data into that frame before evaluating the
+# region against it. The frame sits on the STEP, not on the view: a region
+# is a set of numbers, and it is the numbers that need a frame.
 #
 # Shape — views are built through the gobject, by name:
 #   g <- subset(g, cluster == "A", view = "tumor_focus")
@@ -28,7 +28,6 @@
 # A view is a `giottoView` holding
 #
 #   @steps  list(<step>, ...)      where a step is `list(type = "<tag>", ...)`
-#   @space  NA_character_          name of the frame crops are drawn in
 #
 # Q7 made the *steps* plain lists, and that is where the serialization
 # guarantees live (see below) -- so the container is free to be a class
@@ -45,6 +44,16 @@
 # Validation runs in `setValidity()` and, for the same reasons as before,
 # also at record time -- that is where the user's call site is still in
 # scope for a good error message.
+#
+# The pre-Q8 class carried `@space` on the container. That was forced by a
+# constructor -- `giottoView(space = "atlas") |> crop(...)` declared the
+# frame before any step existed, so the container was the only place it
+# could go -- and it brought a rebind guard with it, because one field then
+# served every region in the view. Recording replaced the constructor, so
+# the frame now arrives on the call that builds the step. On the step it
+# also composes: `v1 + v2` concatenates unconditionally, `v[i]` carries
+# exactly the frames its steps need, and a view may legitimately crop in
+# one frame and then another.
 #
 # The reason the recorded form is normalized: a recipe must survive
 # `saveRDS` and reach a parallel worker. Three payloads made that false, and
@@ -63,7 +72,7 @@
 #
 # Step taxonomy (subset-flavor only — transforms live on giottoSpace):
 #   type = "filter"    predicate-style row filter (deparsed NSE)
-#   type = "crop"      region-based crop (region meaningful in `space`)
+#   type = "crop"      region-based crop (region read in the step's `space`)
 #   type = "samples"   gmulti-only child filter
 #
 # Cell-keyed propagation:
@@ -190,11 +199,18 @@
 #' `"poly"` with a warning, and the step records the **effective** value, so
 #' a recorded recipe never claims to do something other than what it will
 #' do.
+#'
+#' `space` names the frame the region's coordinates were read in, or
+#' `NA_character_` for the object's native frame. A region is a set of
+#' numbers and numbers mean nothing without a frame, so the frame belongs
+#' on the step beside them — the step then states its whole question and
+#' can be lifted, subset or concatenated without losing it.
 #' @noRd
 .view_step_crop <- function(region, relation = "intersects",
-    geom = "centroid") {
+    geom = "centroid", space = NA_character_) {
     checkmate::assert_string(relation, .var.name = "relation")
     checkmate::assert_string(geom, .var.name = "geom")
+    checkmate::assert_string(space, na.ok = TRUE, .var.name = "space")
     if (!relation %in% .view_crop_relations) {
         stop("[view step] crop relation '", relation, "' is not available. ",
             "One of: ", paste(.view_crop_relations, collapse = ", "),
@@ -217,7 +233,8 @@
         type = "crop",
         region = region,
         relation = relation,
-        geom = geom
+        geom = geom,
+        space = as.character(space)
     ))
 }
 
@@ -266,6 +283,8 @@
                 .var.name = "step$relation")
             checkmate::assert_choice(step$geom, .view_crop_geoms,
                 .var.name = "step$geom")
+            checkmate::assert_string(step$space, na.ok = TRUE,
+                .var.name = "step$space")
             # Unreachable via .view_step_crop(), which promotes instead.
             # Catches a hand-poked step whose declaration cannot answer
             # its own relation.
@@ -298,9 +317,10 @@
 
 # The fields a view carries, and the field set `as.list()` exports. The
 # dropped slots were `name` (redundant -- the name is the key under
-# `gobject@view`), `source` (documented as reserved, never read), and
-# `misc` (no reader and no writer anywhere).
-.view_fields <- c("steps", "space")
+# `gobject@view`), `source` (documented as reserved, never read), `misc`
+# (no reader and no writer anywhere), and `space` (moved onto the crop
+# step, which is what it describes).
+.view_fields <- "steps"
 
 #' @title Class for subset / narrowing recipes
 #' @name giottoView-class
@@ -317,9 +337,8 @@
 #' @slot steps `list` of recorded steps, in order. Each step is a tagged
 #'   plain list -- `list(type = "filter" | "crop" | "samples", ...)` -- and
 #'   carries no closure and no external pointer, so a recipe survives
-#'   `saveRDS()` and reaches a parallel worker.
-#' @slot space `character(1)`. Name of the [giottoSpace-class] frame a
-#'   recorded crop region is drawn in, or `NA_character_`.
+#'   `saveRDS()` and reaches a parallel worker. A `crop` step also carries
+#'   the `space` its region was drawn in.
 #' @returns a `giottoView` object
 #' @seealso [giottoView()] for the gobject-level accessors;
 #'   [giottoSpace-class] for the coordinate-frame recipe
@@ -330,8 +349,8 @@
 #' as.list(v)
 #' @exportClass giottoView
 setClass("giottoView",
-    representation(steps = "list", space = "character"),
-    prototype = prototype(steps = list(), space = NA_character_)
+    representation(steps = "list"),
+    prototype = prototype(steps = list())
 )
 
 #' Construct a view recipe.
@@ -339,8 +358,8 @@ setClass("giottoView",
 #' The single place a view's shape is written down, so a field added here
 #' reaches every producer.
 #' @noRd
-.new_view <- function(steps = list(), space = NA_character_) {
-    new("giottoView", steps = steps, space = as.character(space))
+.new_view <- function(steps = list()) {
+    new("giottoView", steps = steps)
 }
 
 #' Coerce whatever a caller supplied into a `giottoView`.
@@ -363,10 +382,7 @@ setClass("giottoView",
             ". A view holds: ", paste(.view_fields, collapse = ", "),
             call. = FALSE)
     }
-    .new_view(
-        steps = view$steps %null% list(),
-        space = view$space %null% NA_character_
-    )
+    .new_view(steps = view$steps %null% list())
 }
 
 #' Validate a whole view, whatever produced it.
@@ -379,8 +395,6 @@ setClass("giottoView",
     view <- .as_giotto_view(view, .var.name = .var.name)
     checkmate::assert_list(view@steps,
         .var.name = paste0(.var.name, "@steps"))
-    checkmate::assert_character(view@space, len = 1L,
-        .var.name = paste0(.var.name, "@space"))
     lapply(view@steps, .validate_view_step)
     view
 }

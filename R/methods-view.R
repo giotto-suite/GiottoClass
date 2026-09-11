@@ -7,8 +7,8 @@ NULL
 # methods-view.R — the view recorder and accessors
 #
 # Views are subset/narrowing recipes only — no transforms. Transforms live on
-# the space recipe (see methods-space.R). A view may reference a slotted
-# space by name; crop regions are then meaningful in that frame.
+# the space recipe (see methods-space.R). A crop step may name a slotted
+# space; its region is then meaningful in that frame.
 #
 # There is no view-receiver surface: every op reaches a view through the
 # gobject method that takes `view = `, which records the step onto the named
@@ -208,26 +208,6 @@ NULL
 }
 
 
-# Bind a view to a named space. First call sets `space`; later calls with
-# the same name are a no-op; later calls with a different name error.
-# `space = NULL` is a no-op (leave whatever's there).
-.view_bind_space <- function(view, space) {
-    if (is.null(space)) return(view)
-    checkmate::assert_character(space, len = 1L, any.missing = FALSE)
-    cur <- view@space
-    if (is.na(cur)) {
-        view@space <- space
-        return(view)
-    }
-    if (!identical(cur, space)) {
-        stop("view is already bound to space '", cur, "'; ",
-            "cannot rebind to '", space, "'. ",
-            "Build a fresh view if a different frame is needed.",
-            call. = FALSE)
-    }
-    view
-}
-
 
 # selectSamples() — gmulti-only sample selector ####
 
@@ -405,9 +385,13 @@ setMethod("giottoViews", signature(gobject = "gAny"),
 #'
 #' @param gobject a `giotto` object
 #' @param view either a `giottoView` or a `character(1)` slot key
-#' @param space `character(1)` optional — name of a slotted `giottoSpace` to
-#'   resolve in. If `NULL`, uses the view's own `@space` reference (which
-#'   may itself be `NA`).
+#' @param space `character(1)` optional — name of a slotted `giottoSpace`
+#'   naming the frame to return the data in. `NULL` means the native frame.
+#'   This is the OUTPUT frame, and it is deliberately independent of the
+#'   frame a crop step names, which says only which frame that step's region
+#'   coordinates were read in. Defaulting one to the other is the conflation
+#'   that made a `space`-bound view silently return transformed coordinates
+#'   from a plain getter.
 #' @param coordinator a [viewCoordinator-class]-inheriting object brokering
 #'   IDs and joins between storage backings. Defaults to the coordinator
 #'   selected from `gobject@source` (in-memory for non-disk gobjects).

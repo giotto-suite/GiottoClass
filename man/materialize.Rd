@@ -19,9 +19,13 @@ materialize(gobject, view, ...)
 
 \item{...}{reserved}
 
-\item{space}{\code{character(1)} optional — name of a slotted \code{giottoSpace} to
-resolve in. If \code{NULL}, uses the view's own \verb{@space} reference (which
-may itself be \code{NA}).}
+\item{space}{\code{character(1)} optional — name of a slotted \code{giottoSpace}
+naming the frame to return the data in. \code{NULL} means the native frame.
+This is the OUTPUT frame, and it is deliberately independent of the
+frame a crop step names, which says only which frame that step's region
+coordinates were read in. Defaulting one to the other is the conflation
+that made a \code{space}-bound view silently return transformed coordinates
+from a plain getter.}
 
 \item{coordinator}{a \link[=viewCoordinator-class]{viewCoordinator}-inheriting object brokering
 IDs and joins between storage backings. Defaults to the coordinator

@@ -30,14 +30,25 @@ reaches a worker. The **containers** are classes, because they are the handle:
 
 ```
 giottoView    @steps   list(<step>, ...)
-              @space   NA_character_          name of the frame crops are drawn in
 giottoSpace   @spaces  list("<frame>" = list("<sample>" = list(<step>, ...)))
 
 step (view)   list(type = "filter",    predicate = , scope_args = )
-              list(type = "crop",      region = , relation = , geom = )
+              list(type = "crop",      region = , relation = , geom = , space = )
               list(type = "samples",   samples = )
 step (space)  list(type = "transform", op = , args = )
 ```
+
+**The crop step names its own frame.** A region is a set of numbers and
+numbers mean nothing without one, so `space` sits beside `region` exactly as
+`relation` and `geom` do — the step states its whole question. The pre-Q8
+class carried it on the container, but that was forced by a constructor:
+`giottoView(space = "atlas") |> crop(...)` declared the frame before any step
+existed, so the container was the only place it could go, and it brought a
+rebind guard with it because one field then served every region in the view.
+Recording replaced the constructor, and the frame now arrives on the call that
+builds the step. Three things follow: `+` concatenates unconditionally, `v[i]`
+carries exactly the frames its steps need, and a view may legitimately crop in
+one frame and then another.
 
 Q8 had made the containers lists too, which removed the *write* surface — the
 builder verbs — and left recipe edits to hand-built lists at every call site. The
@@ -46,13 +57,14 @@ construction history (`(a + b) |> spin(30)` differing from `(a |> spin(30)) + b`
 is answered by scoping through `[` rather than through construction order, not by
 removing the container. The dropped slots stay dropped: `name` (redundant — the
 name is the key under `@view` / `@spaces`), `source` (documented as reserved,
-never read), and `misc` (no reader and no writer anywhere).
+never read), and `misc` (no reader and no writer anywhere). `space` moved onto the crop step,
+which is what it describes.
 
 **Three things the API covers, one place each.**
 
 | | view | space |
 |---|---|---|
-| **access** | `v[i]` steps `i`, class-preserving · `v[[i]]` the step · `v[i, j]` one attribute · `length` / `names` | `sp[i]` frames `i` · `sp[i, j]` scoped to sample `j` · `sp[[i]]` the frame · `sp[[i, j]]` the step list · `length` / `names` |
+| **access** | `v[i]` steps `i`, class-preserving · `v[[i]]` the step · `v[i, j]` one attribute (`v[2, "space"]` is the frame) · `length` / `names` | `sp[i]` frames `i` · `sp[i, j]` scoped to sample `j` · `sp[[i]]` the frame · `sp[[i, j]]` the step list · `length` / `names` |
 | **append** | `subset()` · `crop()` · `selectSamples()` · `+` | `spin()` · `spatShift()` · `affine()` · `flip()` · `rescale()` · `shear()` · `zoom()` · `+` |
 | **export** | `as.list()` | `as.list()` |
 
@@ -304,6 +316,14 @@ extents.
 transform. If it does, folding is not only ~N× cheaper but *more faithful* — one
 resample instead of N — which would make this a correctness improvement for images
 rather than a pure optimisation.
+
+**Known gap — `.apply_crops_geometrically()` ignores the step's frame.** The
+points and image path clips with the recorded region and no reference to the
+frame it was drawn in, so a crop naming a non-native frame mismatches on those
+slots. This predates the frame moving onto the step — it fires for any view
+bound to a non-identity space — and closing it needs the region-reprojection
+machinery {GiottoDisk} has (`.project_region_between_spaces()`) and GiottoClass
+does not.
 
 **The editable handle — done.** See the access / append / export grid in
 [§1](#1-what-this-is). `sp["atlas", "sample_b"]` scopes, the transform verbs

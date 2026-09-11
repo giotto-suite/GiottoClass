@@ -3909,7 +3909,7 @@ spatValues <- function(gobject,
         options(giotto.spatValues_view_active = TRUE)
         on.exit(options(giotto.spatValues_view_active = old_opt),
             add = TRUE)
-        # Predicate frame is read from v@space inside .surviving_cell_ids;
+        # Predicate frame is read per crop step inside .surviving_cell_ids;
         # the explicit `space` arg here only affects coord transforms on
         # value cols (not implemented for spatValues -- doc above).
         keep <- .cached_surviving_cell_ids(gobject, v, coord)

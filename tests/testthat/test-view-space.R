@@ -11,7 +11,7 @@ options("giotto.use_conda" = FALSE)
 # Build the plain `as.list()` form, which also exercises the setter's
 # coercion and validator.
 .empty_view <- function() {
-    list(steps = list(), space = NA_character_)
+    list(steps = list())
 }
 
 # fixture — visium mini with leiden clusters in metadata
@@ -52,7 +52,6 @@ test_that("recording onto an unused name creates the view", {
     expect_identical(giottoViews(g), "v")
     v <- giottoView(g, "v")
     expect_s4_class(v, "giottoView")
-    expect_true(is.na(v@space))
     expect_length(v, 1L)
     expect_identical(names(v), "filter")
 })
@@ -288,12 +287,10 @@ test_that("giottoView(g, name) <- NULL removes", {
 test_that("the setter validates a hand-built recipe", {
     g <- giotto()
     expect_error({
-        giottoView(g, "bad") <- list(steps = list(), space = NA_character_,
-            typo = 1)
+        giottoView(g, "bad") <- list(steps = list(), typo = 1)
     }, "unknown field")
     expect_error({
-        giottoView(g, "bad") <- list(steps = list(list(type = "nope")),
-            space = NA_character_)
+        giottoView(g, "bad") <- list(steps = list(list(type = "nope")))
     }, "unknown type")
     expect_error({
         giottoSpace(g, "bad") <- list(s = list(list()))
@@ -1030,10 +1027,8 @@ test_that("an unknown step type is rejected at record and validate time", {
         "unknown transform")
     # a malformed hand-built recipe is caught by the recipe validator,
     # which the setter runs now that there is no class validity function
-    v <- list(
-        steps = list(list(type = "filter", predicate = "cluster ==",
-            scope_args = list())),
-        space = NA_character_)
+    v <- list(steps = list(list(type = "filter",
+        predicate = "cluster ==", scope_args = list())))
     expect_error(GiottoClass:::.validate_view(v), "does not parse")
     gg <- giotto()
     expect_error({ giottoView(gg, "bad") <- v }, "does not parse")
@@ -1394,11 +1389,24 @@ test_that("`+` concatenates view steps and merges space frames", {
     expect_length(twice[["atlas", "a"]], 2L)
 })
 
-test_that("`+` refuses to compose views bound to different frames", {
-    g <- crop(giotto(), c(0, 10, 0, 10), view = "v", space = "one")
-    g <- spatShift(g, dx = 1, space = "two")
+test_that("a crop step records the frame its region was read in", {
+    g <- spatShift(giotto(), dx = 1, space = "atlas")
+    g <- crop(g, c(0, 10, 0, 10), view = "v", space = "atlas")
+    g <- crop(g, c(0, 5, 0, 5), view = "v")
+    expect_identical(giottoView(g, "v")[1L, "space"], "atlas")
+    expect_true(is.na(giottoView(g, "v")[2L, "space"]))
+})
+
+test_that("`+` composes views naming different frames", {
+    # the frame is per step, so concatenation cannot reinterpret either
+    # side and there is nothing to reconcile
+    g <- spatShift(giotto(), dx = 1, space = "one")
+    g <- spatShift(g, dx = 2, space = "two")
+    g <- crop(g, c(0, 10, 0, 10), view = "v", space = "one")
     g <- crop(g, c(0, 10, 0, 10), view = "w", space = "two")
-    expect_error(giottoView(g, "v") + giottoView(g, "w"), "already bound")
+    both <- giottoView(g, "v") + giottoView(g, "w")
+    expect_length(both, 2L)
+    expect_identical(unlist(both[, "space"]), c("one", "two"))
 })
 
 test_that("builder verbs on a recipe record what the gobject route records", {
@@ -1421,7 +1429,7 @@ test_that("as.list() is the export seam and round-trips losslessly", {
     v <- .demo_view()
     lv <- as.list(v)
     expect_type(lv, "list")
-    expect_named(lv, c("steps", "space"))
+    expect_named(lv, "steps")
 
     g <- giotto()
     giottoView(g, "from_obj") <- v
@@ -1466,4 +1474,37 @@ test_that("validObject rejects a hand-poked recipe", {
 test_that("show() prints without error for both recipes", {
     expect_output(show(.demo_view()), "giottoView")
     expect_output(show(.demo_space()), "giottoSpace")
+})
+
+
+test_that("crop steps in different frames resolve in their own frames", {
+    # The frame is per step, so one view can crop in an alternate frame and
+    # then in the native one. Under a view-level field this was an error.
+    g <- .fixture_giotto()
+    sl <- getSpatialLocations(g, output = "data.table")
+    box <- c(mean(range(sl$sdimx)) - 1500, mean(range(sl$sdimx)) + 1500,
+             mean(range(sl$sdimy)) - 1500, mean(range(sl$sdimy)) + 1500)
+    dx <- 3000
+    g <- spatShift(g, dx = dx, space = "shifted")
+
+    # same box, read once in the shifted frame and once natively
+    g <- crop(g, box + c(dx, dx, 0, 0), view = "mixed", space = "shifted")
+    g <- crop(g, box, view = "mixed")
+    v <- giottoView(g, "mixed")
+    expect_identical(unlist(v[, "space"]), c("shifted", NA_character_))
+
+    # each step is evaluated in the frame it names, so the two select the
+    # same cells and the intersection equals either one alone.
+    #
+    # `slots =` keeps this on the cell axis: `.apply_crops_geometrically()`
+    # clips points and images with the recorded region and no reference to
+    # any frame, so a non-native-frame crop reaching them mismatches. That
+    # gap predates the frame moving onto the step -- it fires for any view
+    # bound to a non-identity space -- and closing it needs the
+    # region-reprojection machinery GiottoClass does not have yet.
+    g <- crop(g, box, view = "native_only")
+    keyed <- c("cell_metadata", "spatial_locs", "expression")
+    expect_setequal(
+        pDataDT(materialize(g, "mixed", slots = keyed))$cell_ID,
+        pDataDT(materialize(g, "native_only", slots = keyed))$cell_ID)
 })

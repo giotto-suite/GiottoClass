@@ -23,10 +23,8 @@ plain nested form with \code{\link[=as.list]{as.list()}}.
 \item{\code{steps}}{\code{list} of recorded steps, in order. Each step is a tagged
 plain list -- \code{list(type = "filter" | "crop" | "samples", ...)} -- and
 carries no closure and no external pointer, so a recipe survives
-\code{saveRDS()} and reaches a parallel worker.}
-
-\item{\code{space}}{\code{character(1)}. Name of the \link[=giottoSpace-class]{giottoSpace} frame a
-recorded crop region is drawn in, or \code{NA_character_}.}
+\code{saveRDS()} and reaches a parallel worker. A \code{crop} step also carries
+the \code{space} its region was drawn in.}
 }}
 
 \examples{

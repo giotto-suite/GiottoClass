@@ -16,10 +16,9 @@ NULL
 #   export   `as.list()`, the coercion back to the plain nested form the
 #            `giotto` slots and any external consumer accept.
 #
-# Nothing else needs `@`: a consumer that wants steps asks `[[` for them.
-# The single exception is `view@space`, the name of the frame a recorded
-# crop region is drawn in, which is a field of the container rather than
-# anything `[` addresses.
+# Nothing else needs `@`: a consumer that wants steps asks `[[` for them,
+# and a step carries everything needed to evaluate it -- a crop's frame
+# included.
 # =============================================================================
 
 
@@ -37,7 +36,8 @@ NULL
 #' * `v[i, j]` — the value of attribute `j` on step `i`
 #' * `length(v)` / `names(v)` — step count / step types, in recorded order
 #' * `as.list(v)` — the plain nested form
-#' * `v1 + v2` — concatenate steps
+#' * `v1 + v2` — concatenate steps. Unconditional: each crop step carries
+#'   its own frame, so there is nothing to reconcile.
 #'
 #' @param x a `giottoView`
 #' @param i step selector — `numeric` or `logical`
@@ -103,18 +103,16 @@ setMethod("names", signature(x = "giottoView"),
 #' @rdname giottoView-access
 #' @export
 setMethod("as.list", signature(x = "giottoView"),
-    function(x, ...) list(steps = x@steps, space = x@space))
+    function(x, ...) list(steps = x@steps))
 
 #' @rdname giottoView-access
 #' @export
 setMethod("+", signature(e1 = "giottoView", e2 = "giottoView"),
     function(e1, e2) {
-        # `space` is the predicate frame; two views that name different
-        # ones cannot be composed without silently reinterpreting one
-        # side's crop regions.
-        out <- .view_bind_space(e1, if (is.na(e2@space)) NULL else e2@space)
-        out@steps <- c(e1@steps, e2@steps)
-        out
+        # No reconciliation: a crop step names the frame its own region was
+        # read in, so concatenating cannot reinterpret either side.
+        e1@steps <- c(e1@steps, e2@steps)
+        e1
     }
 )
 
@@ -122,7 +120,6 @@ setMethod("+", signature(e1 = "giottoView", e2 = "giottoView"),
 #' @export
 setMethod("show", signature(object = "giottoView"), function(object) {
     cat("An object of class giottoView\n")
-    cat("space :", object@space, "\n")
     cat("steps :", length(object@steps), "\n")
     for (i in seq_along(object@steps)) {
         cat(sprintf("  [%d] %s\n", i, .view_step_line(object@steps[[i]])))
@@ -135,7 +132,8 @@ setMethod("show", signature(object = "giottoView"), function(object) {
 .view_step_line <- function(step) {
     switch(step$type,
         filter = sprintf("filter  %s", step$predicate),
-        crop = sprintf("crop    %s on %s", step$relation, step$geom),
+        crop = sprintf("crop    %s on %s%s", step$relation, step$geom,
+            if (is.na(step$space)) "" else sprintf(" [%s]", step$space)),
         samples = sprintf("samples %s",
             paste(step$samples, collapse = ", ")),
         step$type

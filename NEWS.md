@@ -7,9 +7,12 @@
   recorded, so one object can carry several competing narrowings and frames
   at once. A view is a chain of `filter` / `crop` / `samples` steps; a space
   is a chain of transform steps keyed by sample.
-- `giottoView` and `giottoSpace` classes. A view holds `@steps` and the
-  `@space` it is bound to; a space holds `@spaces`, a collection of named
-  frames keyed by sample. Access with `[` (class-preserving, so the result is
+- `giottoView` and `giottoSpace` classes. A view holds `@steps`; a space
+  holds `@spaces`, a collection of named frames keyed by sample. A `crop`
+  step records the `space` its region was read in, alongside `region`,
+  `relation` and `geom` — so a step states its whole question, two views
+  naming different frames compose, and one view may crop in more than one
+  frame. Access with `[` (class-preserving, so the result is
   still editable) and `[[` (extracts the plain form); append with the builder
   verbs or `+`; export with `as.list()`. `sp[i, j]` resolves the sample —
   named key, else the shared default, else an empty step list — so a

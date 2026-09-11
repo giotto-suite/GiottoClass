@@ -381,8 +381,9 @@ setMethod("crop", signature(x = "giottoView", y = "ANY"),
         region <- .normalize_crop_region(y)
         # vocabulary checks and the poly-only promotion live in the step
         # constructor, so they fire before anything is recorded
-        step <- .view_step_crop(region, relation, geom)
-        .view_record_step(.view_bind_space(x, space), step)
+        step <- .view_step_crop(region, relation, geom,
+            space = space %null% NA_character_)
+        .view_record_step(x, step)
     }
 )
 

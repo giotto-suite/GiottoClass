@@ -298,16 +298,18 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # whole design exists to remove.
 #' @keywords internal
 #' @noRd
-.cells_in_crop_step <- function(gobject, step, pts, space, coordinator,
+.cells_in_crop_step <- function(gobject, step, carriers, coordinator,
                                 spat_unit = NULL) {
     region <- .materialize_crop_region(step$region)
     if (is.null(region)) return(NULL)
     switch(step$geom,
-        centroid = spatRelate(pts, region,
-            relation = step$relation)$cell_ID,
+        centroid = {
+            pts <- carriers$points(step$space)
+            if (is.null(pts)) return(NULL)
+            spatRelate(pts, region, relation = step$relation)$cell_ID
+        },
         poly = {
-            polys <- .get_projected_polys(gobject, space, coordinator,
-                spat_unit = spat_unit)
+            polys <- carriers$polys(step$space)
             if (is.null(polys)) {
                 stop(sprintf(paste0(
                     "[crop] geom = \"poly\" was requested (relation '%s'), ",
@@ -319,6 +321,50 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
             spatIDs(spatRelate(polys, region, relation = step$relation))
         },
         stop("[crop] unknown geom '", step$geom, "'", call. = FALSE)
+    )
+}
+
+# Carriers for the crop arms, built lazily and memoised PER FRAME.
+#
+# Per frame, because the frame is a property of the step: two crop steps in
+# one view may name different spaces, and each needs its geometry projected
+# into its own. Steps sharing a frame -- the common case, and the only case
+# before the frame moved onto the step -- share one build.
+#
+# A `NULL` build is a real answer ("this object has no spatial locations"),
+# so it is cached too and the warning fires once per frame rather than once
+# per step.
+#' @keywords internal
+#' @noRd
+.crop_carriers <- function(gobject, coordinator, spat_unit = NULL) {
+    memo <- new.env(parent = emptyenv())
+    memoised <- function(kind, space_name, build) {
+        key <- paste0(kind, ":", if (is.na(space_name)) "" else space_name)
+        if (!exists(key, envir = memo, inherits = FALSE)) {
+            sp <- if (is.na(space_name)) NULL else {
+                .resolve_space(gobject, space_name)
+            }
+            assign(key, build(sp), envir = memo)
+        }
+        base::get(key, envir = memo)
+    }
+    list(
+        points = function(space_name) {
+            out <- memoised("pts", space_name, function(sp) {
+                .get_projected_spatlocs(gobject, sp, coordinator)
+            })
+            if (is.null(out)) {
+                warning("crop step skipped: no spatial locations available",
+                    call. = FALSE)
+            }
+            out
+        },
+        polys = function(space_name) {
+            memoised("poly", space_name, function(sp) {
+                .get_projected_polys(gobject, sp, coordinator,
+                    spat_unit = spat_unit)
+            })
+        }
     )
 }
 
@@ -449,27 +495,16 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
         surviving <- intersect(surviving, keep)
     }
     if (length(crop_steps) > 0L) {
-        pred_space <- if (!is.na(view@space)) {
-            .resolve_space(gobject, view@space)
-        } else NULL
-        # Centroids are only fetched if some step declares it needs them,
-        # so an all-poly recipe on a polygon-only object does not warn
-        # about missing spatial locations.
-        needs_centroid <- any(vapply(crop_steps,
-            function(s) identical(s$geom, "centroid"), logical(1L)))
-        pts <- if (needs_centroid) {
-            .get_projected_spatlocs(gobject, pred_space, coordinator)
-        } else NULL
-        if (needs_centroid && is.null(pts)) {
-            warning("crop step skipped: no spatial locations available",
-                call. = FALSE)
-            crop_steps <- Filter(
-                function(s) identical(s$geom, "poly"), crop_steps)
-        }
+        # Carriers are built lazily and per frame, so an all-poly recipe on
+        # a polygon-only object never asks for spatial locations and never
+        # warns about their absence.
+        carriers <- .crop_carriers(gobject, coordinator)
         for (step in crop_steps) {
-            keep <- .cells_in_crop_step(gobject, step, pts,
-                pred_space, coordinator)
-            if (is.null(keep)) next  # step recorded no region
+            keep <- .cells_in_crop_step(gobject, step, carriers, coordinator)
+            # NULL = this step could not be evaluated (no region recorded,
+            # or no centroid source), which is a skip rather than an empty
+            # result.
+            if (is.null(keep)) next
             surviving <- intersect(surviving, keep)
         }
     }
