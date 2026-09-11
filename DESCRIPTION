@@ -140,6 +140,7 @@ Collate:
     'methods-overlaps.R'
     'methods-plot.R'
     'methods-rbind.R'
+    'methods-recipe.R'
     'methods-reconnect.R'
     'methods-relate.R'
     'methods-rescale.R'

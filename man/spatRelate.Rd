@@ -2,12 +2,18 @@
 % Please edit documentation in R/methods-relate.R
 \name{spatRelate}
 \alias{spatRelate}
+\alias{spatRelate,SpatVector,SpatVector-method}
+\alias{spatRelate,spatLocsObj,SpatVector-method}
 \alias{spatRelate,giottoSpatial,SpatVector-method}
 \alias{spatRelate,giottoSpatial,character-method}
 \alias{spatRelate,giottoSpatial,sf-method}
 \alias{spatRelate,giottoSpatial,giottoSpatial-method}
 \title{Spatial relationship as a filter}
 \usage{
+\S4method{spatRelate}{SpatVector,SpatVector}(x, y, relation = "intersects", engine = NULL, ...)
+
+\S4method{spatRelate}{spatLocsObj,SpatVector}(x, y, relation = "intersects", engine = NULL, ...)
+
 \S4method{spatRelate}{giottoSpatial,SpatVector}(x, y, relation = "intersects", engine = NULL, ...)
 
 \S4method{spatRelate}{giottoSpatial,character}(x, y, relation = "intersects", ...)

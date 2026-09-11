@@ -14,6 +14,7 @@
 \alias{affine,giottoAffineImage,matrix-method}
 \alias{affine,affine2d,matrix-method}
 \alias{affine,giottoMulti,ANY-method}
+\alias{affine,giottoSpace,ANY-method}
 \title{Affine transformations}
 \usage{
 \S4method{affine}{giotto,matrix}(
@@ -48,6 +49,8 @@
 \S4method{affine}{affine2d,matrix}(x, y, inv = FALSE, pre_multiply = FALSE, ...)
 
 \S4method{affine}{giottoMulti,ANY}(x, y, inv = FALSE, space = NULL, samples = NULL, ...)
+
+\S4method{affine}{giottoSpace,ANY}(x, y, inv = FALSE, samples = NULL, ...)
 }
 \arguments{
 \item{x}{object to affine transform or a \code{matrix}}

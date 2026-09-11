@@ -8,6 +8,7 @@
 \alias{crop,spatLocsObj,ANY-method}
 \alias{crop,giottoPoints,ANY-method}
 \alias{crop,giottoPolygon,ANY-method}
+\alias{crop,giottoView,ANY-method}
 \alias{crop,gAny,ANY-method}
 \title{Crop to a spatial subset}
 \usage{
@@ -22,6 +23,16 @@
 \S4method{crop}{giottoPoints,ANY}(x, y, DT = TRUE, xmin = NULL, xmax = NULL, ymin = NULL, ymax = NULL, ...)
 
 \S4method{crop}{giottoPolygon,ANY}(x, y, DT = TRUE, xmin = NULL, xmax = NULL, ymin = NULL, ymax = NULL, ...)
+
+\S4method{crop}{giottoView,ANY}(
+  x,
+  y,
+  relation = "intersects",
+  geom = c("centroid", "poly"),
+  ...,
+  view = NULL,
+  space = NULL
+)
 
 \S4method{crop}{gAny,ANY}(
   x,
@@ -63,10 +74,10 @@ independently}
 \item{relation}{\code{character(1)}. Spatial predicate. A crop narrows the
 \strong{cell set}, so each cell is reduced to a geometry (see \code{geom}) and
 tested against the region. One of \code{"intersects"} (default),
-\code{"disjoint"}, \code{"within"}, \code{"touches"}, \code{"contains"}, \code{"covers"},
-\code{"overlaps"}, \code{"crosses"}. The last four are always \code{FALSE} against a
-centroid, so requesting one promotes \code{geom} to \code{"poly"} with a warning.
-(\code{"covered_by"} is not a terra predicate and is rejected.)}
+\code{"disjoint"}, \code{"within"}, \code{"covered_by"}, \code{"touches"}, \code{"contains"},
+\code{"covers"}, \code{"overlaps"}, \code{"crosses"}. The last four are always
+\code{FALSE} against a centroid, so requesting one promotes \code{geom} to
+\code{"poly"} with a warning.}
 
 \item{geom}{\code{character(1)}. What represents a cell when the predicate is
 evaluated: \code{"centroid"} (default) uses the cell's \code{spatial_locs} row —

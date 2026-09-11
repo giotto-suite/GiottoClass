@@ -2,20 +2,23 @@
 % Please edit documentation in R/methods-view.R
 \name{selectSamples}
 \alias{selectSamples}
+\alias{selectSamples,giottoView-method}
 \alias{selectSamples,gAny-method}
 \title{Select samples within a gmulti-scoped view}
 \usage{
 selectSamples(x, ..., view)
 
+\S4method{selectSamples}{giottoView}(x, ..., view)
+
 \S4method{selectSamples}{gAny}(x, ..., view)
 }
 \arguments{
-\item{x}{a \code{giotto} or \code{giottoMulti} object}
+\item{x}{a \code{giotto} / \code{giottoMulti} object, or a \link[=giottoView-class]{giottoView}}
 
 \item{...}{\code{character} child names (or a single \code{character} vector)}
 
 \item{view}{\code{character(1)}. Name of the view to record onto; created if
-it does not exist yet.}
+it does not exist yet. Not used when \code{x} is already a \code{giottoView}.}
 }
 \value{
 \code{x}, with the sample-select step recorded on the named view
@@ -30,4 +33,7 @@ resolution time if the parent is not a \code{giottoMulti}.
 g <- giotto()
 g <- selectSamples(g, "sample1", "sample2", view = "pair")
 giottoViews(g)
+
+# or directly on the recipe
+selectSamples(giottoView(g, "pair"), "sample3")
 }

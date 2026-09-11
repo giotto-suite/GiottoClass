@@ -169,14 +169,11 @@ setMethod(
         if (inherits(x@spatVector, "SpatVector")) {
             # getting as list first is more performant
             out <- terra::as.list(x@spatVector)$poly_ID
-            if (uniques) out <- unique(out)
         } else {
-            uid <- x@spatVector[, "poly_ID"]
-            if (uniques) uid <- unique(uid)
-            out <- as.vector(uid)[[1L]]
+            out <- spatIDs(x@spatVector, uniques = uniques, ...)
         }
-        out <- as.character(out)
-        return(out)
+        if (uniques) out <- unique(out)
+        return(as.character(out))
     }
 )
 
@@ -308,14 +305,11 @@ setMethod(
         if (inherits(x@spatVector, "SpatVector")) {
             # getting as list is more performant than directly using `$`
             out <- terra::as.list(x@spatVector)$feat_ID
-            if (uniques) out <- unique(out)
         } else {
-            uid <- x@spatVector[, "feat_ID"]
-            if (uniques) uid <- unique(uid)
-            out <- as.vector(uid)[[1L]]
+            out <- featIDs(x@spatVector, uniques = uniques, ...)
         }
-        out <- as.character(out)
-        return(out)
+        if (uniques) out <- unique(out)
+        return(as.character(out))
     }
 )
 

@@ -351,10 +351,10 @@ setMethod(
 #' @param relation `character(1)`. Spatial predicate. A crop narrows the
 #'   **cell set**, so each cell is reduced to a geometry (see `geom`) and
 #'   tested against the region. One of `"intersects"` (default),
-#'   `"disjoint"`, `"within"`, `"touches"`, `"contains"`, `"covers"`,
-#'   `"overlaps"`, `"crosses"`. The last four are always `FALSE` against a
-#'   centroid, so requesting one promotes `geom` to `"poly"` with a warning.
-#'   (`"covered_by"` is not a terra predicate and is rejected.)
+#'   `"disjoint"`, `"within"`, `"covered_by"`, `"touches"`, `"contains"`,
+#'   `"covers"`, `"overlaps"`, `"crosses"`. The last four are always
+#'   `FALSE` against a centroid, so requesting one promotes `geom` to
+#'   `"poly"` with a warning.
 #' @param geom `character(1)`. What represents a cell when the predicate is
 #'   evaluated: `"centroid"` (default) uses the cell's `spatial_locs` row —
 #'   cheap, and the conventional choice, but a cell whose polygon straddles
@@ -373,6 +373,21 @@ setMethod(
 #'   leaves the view in whatever frame it was already bound to (or the
 #'   gobject's native frame if unbound).
 #' @export
+setMethod("crop", signature(x = "giottoView", y = "ANY"),
+    function(x, y, relation = "intersects", geom = c("centroid", "poly"),
+             ..., view = NULL, space = NULL) {
+        checkmate::assert_character(relation, len = 1L, any.missing = FALSE)
+        geom <- match.arg(geom)
+        region <- .normalize_crop_region(y)
+        # vocabulary checks and the poly-only promotion live in the step
+        # constructor, so they fire before anything is recorded
+        step <- .view_step_crop(region, relation, geom)
+        .view_record_step(.view_bind_space(x, space), step)
+    }
+)
+
+#' @rdname crop
+#' @export
 setMethod("crop", signature(x = "gAny", y = "ANY"),
     function(x, y, relation = "intersects", geom = c("centroid", "poly"),
              ..., view = NULL, space = NULL) {
@@ -383,12 +398,8 @@ setMethod("crop", signature(x = "gAny", y = "ANY"),
                 "apply it with `materialize(x, \"<name>\")`.",
                 call. = FALSE)
         }
-        checkmate::assert_character(relation, len = 1L, any.missing = FALSE)
-        geom <- match.arg(geom)
-        region <- .normalize_crop_region(y)
-        # vocabulary checks and the poly-only promotion live in the step
-        # constructor, so they fire before anything is recorded on x
-        step <- .view_step_crop(region, relation, geom)
-        .record_view_on_gobject(x, view, step, space = space)
+        .record_view_on_gobject(x, view, function(v) {
+            crop(v, y, relation = relation, geom = geom, space = space)
+        })
     }
 )

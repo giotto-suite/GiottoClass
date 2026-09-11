@@ -23,22 +23,28 @@
 # `.record_view_on_gobject()` creates the named view on first use and
 # appends on later calls, so there is no separate construction step.
 #
-# RECIPES ARE PLAIN LISTS, NOT S4 (decisions Q7 + Q8)
-# ---------------------------------------------------
-# A view is
+# STEPS ARE PLAIN LISTS; THE CONTAINER IS S4 (decisions Q7 + Q8)
+# --------------------------------------------------------------
+# A view is a `giottoView` holding
 #
-#   list(steps = list(<step>, ...), space = NA_character_, misc = list())
+#   @steps  list(<step>, ...)      where a step is `list(type = "<tag>", ...)`
+#   @space  NA_character_          name of the frame crops are drawn in
 #
-# and a step is `list(type = "<tag>", ...)`. Q7 made the steps lists; Q8
-# made the container follow, because the S4 class was not load-bearing:
-# `@view` is `nullOrList` so it enforced nothing, the class was never a
-# dispatch target outside its own builder verbs, and those verbs were a
-# second copy of the gobject-side surface.
+# Q7 made the *steps* plain lists, and that is where the serialization
+# guarantees live (see below) -- so the container is free to be a class
+# again. It is one, because it is the handle: `[` / `[[` read it, the
+# builder verbs append to it, and `as.list()` exports it. Q8 had removed
+# the class along with those verbs, which left recipe edits to hand-built
+# lists at every call site.
 #
-# Validation moved with the shape rather than disappearing:
-# `.validate_view()` and `.validate_view_step()` run in the recorder and in
-# the `giottoView<-` setter, so the check still happens at the boundary
-# where the user's call site is in scope for the error message.
+# Q8's actual objection was to scope inherited from construction history
+# (`(a + b) |> spin(30)` differing from `(a |> spin(30)) + b`). That is
+# answered by scoping through `[` rather than through construction order,
+# not by removing the container.
+#
+# Validation runs in `setValidity()` and, for the same reasons as before,
+# also at record time -- that is where the user's call site is still in
+# scope for a good error message.
 #
 # The reason the recorded form is normalized: a recipe must survive
 # `saveRDS` and reach a parallel worker. Three payloads made that false, and
@@ -99,10 +105,11 @@
 # resolvers in {GiottoDisk} can read it instead of re-deriving it.
 .view_crop_geoms <- c("centroid", "poly")
 
-# Predicates terra accepts for point/polygon pairs. Note "covered_by" is
-# NOT among them despite appearing in some terra docs — it errors.
+# Predicate vocabulary. sf/sedona spelling, which {GiottoDisk} uses too, so
+# a recorded step names the same predicate on either side; `spatRelate()`
+# translates "covered_by" for terra, which spells it without the underscore.
 .view_crop_relations <- c("intersects", "disjoint", "within", "touches",
-    "contains", "covers", "overlaps", "crosses")
+    "contains", "covers", "overlaps", "crosses", "covered_by")
 
 # Always FALSE when one side is reduced to a point: a point cannot contain
 # or cover a polygon, cannot overlap it (that needs equal dimensions), and
@@ -279,48 +286,75 @@
 
 #' Steps of one type, in recorded order.
 #'
-#' Replaces the `Filter(function(s) inherits(s, "<class>"), steps)` idiom
-#' the S4 steps needed. Tolerates a `NULL` view so callers can stay
-#' branch-free.
+#' Tolerates a `NULL` view so callers can stay branch-free.
 #' @noRd
 .view_steps_of <- function(view, type) {
     if (is.null(view)) return(list())
-    Filter(function(s) identical(s$type, type), view$steps)
+    Filter(function(s) identical(s$type, type), view@steps)
 }
 
 
 # view recipe ####
 
-# The fields a view carries. `misc` holds provenance / cache keys; nothing
-# reads it internally. The dropped S4 slots were `name` (redundant -- the
-# name is the key under `gobject@view`) and `source` (documented as
-# reserved, never read).
-.view_fields <- c("steps", "space", "misc")
+# The fields a view carries, and the field set `as.list()` exports. The
+# dropped slots were `name` (redundant -- the name is the key under
+# `gobject@view`), `source` (documented as reserved, never read), and
+# `misc` (no reader and no writer anywhere).
+.view_fields <- c("steps", "space")
+
+#' @title Class for subset / narrowing recipes
+#' @name giottoView-class
+#' @description
+#' A `giottoView` is a deferred, read-only NARROWING of a [giotto-class] or
+#' [giottoMulti-class] object: a recipe, re-resolved against the object's
+#' current state each time it is consumed, rather than a snapshot.
+#'
+#' Access it with `[` (class-preserving, so the result stays editable) and
+#' `[[` (extracts a step). Append to it with the builder verbs [subset()],
+#' [crop()], and [selectSamples()], or compose two with `+`. Export the
+#' plain nested form with [as.list()].
+#'
+#' @slot steps `list` of recorded steps, in order. Each step is a tagged
+#'   plain list -- `list(type = "filter" | "crop" | "samples", ...)` -- and
+#'   carries no closure and no external pointer, so a recipe survives
+#'   `saveRDS()` and reaches a parallel worker.
+#' @slot space `character(1)`. Name of the [giottoSpace-class] frame a
+#'   recorded crop region is drawn in, or `NA_character_`.
+#' @returns a `giottoView` object
+#' @seealso [giottoView()] for the gobject-level accessors;
+#'   [giottoSpace-class] for the coordinate-frame recipe
+#' @examples
+#' g <- crop(giotto(), c(0, 10, 0, 10), view = "v")
+#' v <- giottoView(g, "v")
+#' v[[1L]]
+#' as.list(v)
+#' @exportClass giottoView
+setClass("giottoView",
+    representation(steps = "list", space = "character"),
+    prototype = prototype(steps = list(), space = NA_character_)
+)
 
 #' Construct a view recipe.
 #'
 #' The single place a view's shape is written down, so a field added here
 #' reaches every producer.
 #' @noRd
-.new_view <- function(steps = list(), space = NA_character_,
-    misc = list()) {
-    list(
-        steps = steps,
-        space = as.character(space),
-        misc = misc
-    )
+.new_view <- function(steps = list(), space = NA_character_) {
+    new("giottoView", steps = steps, space = as.character(space))
 }
 
-#' Validate a whole view, whatever produced it.
+#' Coerce whatever a caller supplied into a `giottoView`.
 #'
-#' Runs in the recorder and in `giottoView<-`. Rejecting unknown fields is
-#' deliberate: a recipe is hand-editable now, and a typo'd field would
-#' otherwise be carried silently and ignored at resolve time.
+#' The plain nested form is the export format (`as.list()`), so it is also
+#' accepted back -- that is what makes the round-trip lossless. Rejecting
+#' unknown fields is deliberate: a hand-edited recipe with a typo'd field
+#' would otherwise be carried silently and ignored at resolve time.
 #' @noRd
-.validate_view <- function(view, .var.name = "view") {
+.as_giotto_view <- function(view, .var.name = "view") {
+    if (inherits(view, "giottoView")) return(view)
     if (!is.list(view)) {
-        stop("[view] `", .var.name, "` must be a list (got '",
-            class(view)[[1L]], "')", call. = FALSE)
+        stop("[view] `", .var.name, "` must be a giottoView or a list ",
+            "(got '", class(view)[[1L]], "')", call. = FALSE)
     }
     unknown <- setdiff(names(view), .view_fields)
     if (length(unknown) > 0L) {
@@ -329,11 +363,32 @@
             ". A view holds: ", paste(.view_fields, collapse = ", "),
             call. = FALSE)
     }
-    checkmate::assert_list(view$steps, .var.name = paste0(.var.name, "$steps"))
-    checkmate::assert_character(view$space, len = 1L,
-        .var.name = paste0(.var.name, "$space"))
-    checkmate::assert_list(view$misc, null.ok = TRUE,
-        .var.name = paste0(.var.name, "$misc"))
-    lapply(view$steps, .validate_view_step)
+    .new_view(
+        steps = view$steps %null% list(),
+        space = view$space %null% NA_character_
+    )
+}
+
+#' Validate a whole view, whatever produced it.
+#'
+#' Shared by `setValidity()` and by the recorder, which runs it while the
+#' user's call site is still in scope for the error message. Returns the
+#' view so it can be used as a pass-through.
+#' @noRd
+.validate_view <- function(view, .var.name = "view") {
+    view <- .as_giotto_view(view, .var.name = .var.name)
+    checkmate::assert_list(view@steps,
+        .var.name = paste0(.var.name, "@steps"))
+    checkmate::assert_character(view@space, len = 1L,
+        .var.name = paste0(.var.name, "@space"))
+    lapply(view@steps, .validate_view_step)
     view
 }
+
+setValidity("giottoView", function(object) {
+    err <- tryCatch({
+        .validate_view(object, .var.name = "object")
+        NULL
+    }, error = function(e) conditionMessage(e))
+    err %null% TRUE
+})

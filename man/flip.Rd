@@ -11,6 +11,7 @@
 \alias{flip,giottoAffineImage-method}
 \alias{flip,affine2d-method}
 \alias{flip,giottoMulti-method}
+\alias{flip,giottoSpace-method}
 \title{Flip an object}
 \usage{
 \S4method{flip}{giotto}(
@@ -47,6 +48,8 @@
   samples = NULL,
   ...
 )
+
+\S4method{flip}{giottoSpace}(x, direction = "vertical", x0 = 0, y0 = 0, samples = NULL, ...)
 }
 \arguments{
 \item{x}{object}

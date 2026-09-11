@@ -550,11 +550,13 @@ setMethod("subset", "giottoMulti",
                     "required. To narrow by ID instead, drop `view` and ",
                     "pass `cells = ` / `features = `.", call. = FALSE)
             }
-            if (negate) pred <- call("!", pred)
             pred <- .eager_substitute_env(pred,
                 .find_predicate_env(pred, parent.frame()))
-            return(.record_view_on_gobject(x, view,
-                .view_step_filter(pred, scope_args = list(...))))
+            scope_args <- list(...)
+            return(.record_view_on_gobject(x, view, function(v) {
+                .view_record_filter(v, pred, negate = negate,
+                    scope_args = scope_args)
+            }))
         }
         subsetGiotto(
             gobject = x,
@@ -973,6 +975,25 @@ setMethod(
     parts <- Filter(Negate(is.null), parts)
     if (length(parts) == 0L) return(NULL)
     data.table::rbindlist(parts)
+}
+
+# Promote a child's LOCAL cell IDs to the joint (global) vocabulary.
+#
+# `@id_map$cells` is the identity registry -- it already holds `global_id`
+# per `(object, local_id)` -- so consult it rather than re-deriving the
+# prefix. IDs the registry does not cover fall back to the build-time rule,
+# which is what every other site in the package does by hand.
+#' @noRd
+.gm_global_cell_ids <- function(gobject, object_name, local_ids,
+                                sep = "::") {
+    object <- NULL  # NSE
+    fallback <- paste(object_name, local_ids, sep = sep)
+    m <- gobject@id_map$cells
+    if (is.null(m) || nrow(m) == 0L) return(fallback)
+    sub <- m[object == object_name]
+    if (nrow(sub) == 0L) return(fallback)
+    out <- sub$global_id[match(local_ids, sub$local_id)]
+    data.table::fifelse(is.na(out), fallback, out)
 }
 
 #' @noRd

@@ -20,8 +20,28 @@ NULL
 
 # Internal helper ####
 .view_record_step <- function(view, step) {
-    view$steps <- c(view$steps, list(step))
+    view@steps <- c(view@steps, list(step))
     view
+}
+
+# Append a filter step from an ALREADY-CAPTURED predicate.
+#
+# This is the one construction path for a filter step, and the reason it is
+# a named helper rather than the `subset()` method itself: the gobject-side
+# methods have a formal named `subset`, so a `subset(v, ...)` call in their
+# body forces that promise -- the user's unevaluated predicate -- while R
+# checks whether the binding is callable. Which is exactly the evaluation
+# recording exists to avoid.
+.view_record_filter <- function(view, predicate, negate = FALSE,
+                                scope_args = list()) {
+    # `negate` is folded into the predicate, exactly as the eager path does
+    # it (`sub_s <- call("!", sub_s)`), so the step records the EFFECTIVE
+    # predicate. Keeping it as a separate field would be a second way to
+    # say the same thing, and `spatValues()` -- which the step's scope_args
+    # are forwarded to -- has no concept of negation to hand it to.
+    if (negate) predicate <- call("!", predicate)
+    .view_record_step(view, .view_step_filter(predicate,
+        scope_args = scope_args))
 }
 
 
@@ -29,7 +49,11 @@ NULL
 # `giotto` accept `view = <name>` and record the step rather than
 # executing eagerly. Returns the gobject with the named view slotted /
 # appended.
-.record_view_on_gobject <- function(gobject, view, step, space = NULL) {
+#
+# `f` is the builder verb applied to the named view -- the SAME method a
+# caller holding the view would use -- so a step has one construction path
+# whichever surface asked for it.
+.record_view_on_gobject <- function(gobject, view, f) {
     # view contract: character(1) name. Views are identified by name only —
     # passing a recipe inline was considered and rejected (see
     # vignettes/articles/DESIGN_gmulti_federation.md), because it would make
@@ -42,9 +66,7 @@ NULL
     } else {
         .new_view()
     }
-    existing <- .view_bind_space(existing, space)
-    new_view <- .view_record_step(existing, step)
-    giottoView(gobject, view) <- new_view
+    giottoView(gobject, view) <- f(existing)
     gobject
 }
 
@@ -192,9 +214,9 @@ NULL
 .view_bind_space <- function(view, space) {
     if (is.null(space)) return(view)
     checkmate::assert_character(space, len = 1L, any.missing = FALSE)
-    cur <- view$space
+    cur <- view@space
     if (is.na(cur)) {
-        view$space <- space
+        view@space <- space
         return(view)
     }
     if (!identical(cur, space)) {
@@ -217,25 +239,37 @@ NULL
 #' resolution. The step is resolved FIRST, before any other step. Warns at
 #' resolution time if the parent is not a `giottoMulti`.
 #'
-#' @param x a `giotto` or `giottoMulti` object
+#' @param x a `giotto` / `giottoMulti` object, or a [giottoView-class]
 #' @param ... `character` child names (or a single `character` vector)
 #' @param view `character(1)`. Name of the view to record onto; created if
-#'   it does not exist yet.
+#'   it does not exist yet. Not used when `x` is already a `giottoView`.
 #' @returns `x`, with the sample-select step recorded on the named view
 #' @examples
 #' g <- giotto()
 #' g <- selectSamples(g, "sample1", "sample2", view = "pair")
 #' giottoViews(g)
+#'
+#' # or directly on the recipe
+#' selectSamples(giottoView(g, "pair"), "sample3")
 #' @export
 setGeneric("selectSamples",
     function(x, ..., view) standardGeneric("selectSamples"))
 
 #' @rdname selectSamples
 #' @export
-setMethod("selectSamples", signature(x = "gAny"),
+setMethod("selectSamples", signature(x = "giottoView"),
     function(x, ..., view) {
         samples <- unlist(list(...), use.names = FALSE)
-        .record_view_on_gobject(x, view, .view_step_samples(samples))
+        .view_record_step(x, .view_step_samples(samples))
+    }
+)
+
+#' @rdname selectSamples
+#' @export
+setMethod("selectSamples", signature(x = "gAny"),
+    function(x, ..., view) {
+        .record_view_on_gobject(x, view,
+            function(v) selectSamples(v, ...))
     }
 )
 
@@ -253,18 +287,19 @@ setMethod("selectSamples", signature(x = "gAny"),
 #' * `giottoView(g, "name") <- NULL` — remove a view
 #' * `giottoViews(g)` — list view names
 #'
-#' A view is a plain list — `list(steps = , space = , misc = )`. There is no
-#' standalone constructor: record onto a name with `subset(g, ...,
-#' view = "name")` or `crop(g, ..., view = "name")` and the view is created
-#' on first use. The setter exists to copy a recipe between objects and to
-#' remove one.
+#' A view is a [giottoView-class]. There is no standalone constructor:
+#' record onto a name with `subset(g, ..., view = "name")` or
+#' `crop(g, ..., view = "name")` and the view is created on first use. The
+#' setter exists to copy a recipe between objects, to slot one edited
+#' through [giottoView-access], and to remove one. It also accepts the
+#' plain nested `as.list()` form, so an exported recipe reads back in.
 #'
 #' Views are subset/narrowing recipes; for coordinate-frame recipes see
 #' [giottoSpace].
 #'
 #' @param gobject a `giotto` object
 #' @param name `character(1)`. The slot key.
-#' @param value a view `list`, or `NULL` to remove.
+#' @param value a `giottoView`, its `as.list()` form, or `NULL` to remove.
 #' @param ... additional arguments, currently unused
 #' @returns the view, an updated gobject, or a character vector of view names
 #' @examples
@@ -319,11 +354,12 @@ setMethod("giottoView", signature(gobject = "gAny", name = "missing"),
 #' @rdname giottoView
 #' @export
 setMethod("giottoView<-",
-    signature(gobject = "gAny", name = "character", value = "list"),
+    signature(gobject = "gAny", name = "character", value = "ANY"),
     function(gobject, name, ..., value) {
         checkmate::assert_character(name, len = 1L)
-        # the class is gone, so this setter is where a hand-built or
-        # copied-in recipe gets checked
+        # coerces the `as.list()` export form and re-checks a hand-edited
+        # recipe, so the boundary where a recipe enters an object is also
+        # where it is validated
         value <- .validate_view(value, .var.name = "value")
         if (is.null(gobject@view)) gobject@view <- list()
         gobject@view[[name]] <- value
@@ -513,7 +549,9 @@ setMethod("materialize",
     # scope.
     out@objects <- stats::setNames(lapply(selected, function(samp) {
         child <- out@objects[[samp]]
-        child_space <- .scope_space_to_sample(space_obj, samp)
+        # `[` owns the sample-resolution rule; the child then reads as a
+        # single-sample object against the handle it is handed.
+        child_space <- if (is.null(space_obj)) NULL else space_obj[, samp]
         .materialize_giotto_resolved(child, view, space = child_space,
             coordinator = coordinator, slots = slots, ...)
     }), selected)

@@ -35,11 +35,14 @@ setGeneric("giottoSpaces",
 
 # Internal helpers ####
 
-# Append a transform step to a space, scoped to `samples`.
+# Append a transform step to every frame a handle holds, scoped to
+# `samples`.
 #
-# `samples = NULL` means "every sample already keyed in this space", which
-# for a fresh space is the `:default:` sentinel alone. That is the
-# single-`giotto` case and the "move the whole layout" case.
+# `samples = NULL` means "every sample already keyed in this frame", which
+# for a fresh frame is the `:default:` sentinel alone. That covers the
+# single-`giotto` case, the "move the whole layout" case, and -- because
+# `sp[s, k]` returns a handle keyed on exactly `k` -- appending to one
+# sample without naming it twice.
 #
 # Naming samples that are not yet keyed CREATES those keys, which is how a
 # cross-sample layout is built one call at a time:
@@ -47,29 +50,26 @@ setGeneric("giottoSpaces",
 #   mg <- affine(mg, M_a, space = "atlas", samples = "sample_a")
 #   mg <- spatShift(mg, dx = 8000, space = "atlas", samples = "sample_b")
 #
-# Q8 note: this replaces `+`. The previous version appended to every keyed
-# sample unconditionally, so the scope of a transform depended on how much
-# of the recipe had been merged before it — invisible at the call site and
-# unrecoverable from the recorded steps. Scope is now stated per call.
+# Q8 note on `+`: the pre-Q8 version appended to every keyed sample
+# unconditionally, so the scope of a transform depended on how much of the
+# recipe had been merged before it — invisible at the call site and
+# unrecoverable from the recorded steps. Scope is stated per call now, and
+# `+` merges two already-scoped handles rather than seeding scope.
 .space_record <- function(space, op, args, samples = NULL) {
     step <- .space_step_transform(op, args)
-    if (is.null(samples)) {
-        # nothing keyed yet: this is the single-`giotto` case, or a gmulti
-        # transform meant to move every child together
-        if (length(space$samples) == 0L) {
-            space$samples <- stats::setNames(list(list(step)),
-                .space_default_sample)
-            return(space)
+    space@spaces <- lapply(space@spaces, function(keyed) {
+        if (is.null(samples)) {
+            if (length(keyed) == 0L) {
+                return(stats::setNames(list(list(step)),
+                    .space_default_sample))
+            }
+            return(lapply(keyed, function(steps) c(steps, list(step))))
         }
-        space$samples <- lapply(space$samples,
-            function(steps) c(steps, list(step)))
-        return(space)
-    }
-    checkmate::assert_character(samples, min.len = 1L, any.missing = FALSE,
-        .var.name = "samples")
-    for (samp in unique(samples)) {
-        space$samples[[samp]] <- c(space$samples[[samp]], list(step))
-    }
+        for (samp in unique(samples)) {
+            keyed[[samp]] <- c(keyed[[samp]], list(step))
+        }
+        keyed
+    })
     space
 }
 
@@ -79,9 +79,11 @@ setGeneric("giottoSpaces",
 # accept `space = "<name>"` and record the transform as a step instead of
 # applying it. Returns the gobject with the named space created or appended.
 #
-# `samples` is passed straight through to `.space_record()`; see there for
-# the scoping rules. It will also accept `@groups` names once those land
-# (stage 7), resolved through `.gm_slice_to_samples()`.
+# Recording runs through `.space_record()`, the same builder the handle
+# methods use, so a step has one construction path whichever surface asked
+# for it. `samples` is passed straight through; see there for the scoping
+# rules. It will also accept `@groups` names once those land (stage 7),
+# resolved through `.gm_slice_to_samples()`.
 .record_space_on_gobject <- function(gobject, space, op, args,
     samples = NULL) {
     if (!is.character(space)) {
@@ -107,7 +109,7 @@ setGeneric("giottoSpaces",
     existing <- if (space %in% giottoSpaces(gobject)) {
         giottoSpace(gobject, space)
     } else {
-        .new_space()
+        .new_space(stats::setNames(list(list()), space))
     }
     new_space <- .space_record(existing, op, args, samples = samples)
     giottoSpace(gobject, space) <- new_space
@@ -196,6 +198,88 @@ setMethod("rescale", signature(x = "giottoMulti"),
 )
 
 
+# Record methods on the transform generics — giottoSpace ####
+#
+# The append half of the handle API: the same seven verbs, applied to a
+# recipe rather than through a gobject. `samples = NULL` appends to every
+# sample the handle is keyed on, so scoping with `[` first is how a single
+# sample is targeted:
+#
+#   sp <- giottoSpace(mg, "atlas")
+#   giottoSpace(mg, "atlas") <- sp + spin(sp["atlas", "sample_b"], 30)
+#
+# All seven route through `.space_record()`, which is also what the
+# gobject-level `space = ` arms call.
+
+#' @rdname spin
+#' @export
+setMethod("spin", signature(x = "giottoSpace"),
+    function(x, angle, x0 = NULL, y0 = NULL, samples = NULL, ...) {
+        .space_record(x, "spin", list(angle = angle, x0 = x0, y0 = y0),
+            samples = samples)
+    }
+)
+
+#' @rdname spatShift
+#' @export
+setMethod("spatShift", signature(x = "giottoSpace"),
+    function(x, dx = 0, dy = 0, samples = NULL, ...) {
+        .space_record(x, "spatShift", list(dx = dx, dy = dy),
+            samples = samples)
+    }
+)
+
+#' @rdname affine
+#' @export
+setMethod("affine", signature(x = "giottoSpace", y = "ANY"),
+    function(x, y, inv = FALSE, samples = NULL, ...) {
+        .space_record(x, "affine", c(list(y = y, inv = inv), list(...)),
+            samples = samples)
+    }
+)
+
+#' @rdname flip
+#' @export
+setMethod("flip", signature(x = "giottoSpace"),
+    function(x, direction = "vertical", x0 = 0, y0 = 0, samples = NULL,
+             ...) {
+        .space_record(x, "flip",
+            list(direction = direction, x0 = x0, y0 = y0),
+            samples = samples)
+    }
+)
+
+#' @rdname rescale
+#' @export
+setMethod("rescale", signature(x = "giottoSpace"),
+    function(x, fx = 1, fy = fx, x0, y0, samples = NULL, ...) {
+        args <- list(fx = fx, fy = fy)
+        if (!missing(x0)) args$x0 <- x0
+        if (!missing(y0)) args$y0 <- y0
+        .space_record(x, "rescale", args, samples = samples)
+    }
+)
+
+#' @rdname shear
+#' @export
+setMethod("shear", signature(x = "giottoSpace"),
+    function(x, fx = 0, fy = 0, x0, y0, samples = NULL, ...) {
+        args <- list(fx = fx, fy = fy)
+        if (!missing(x0)) args$x0 <- x0
+        if (!missing(y0)) args$y0 <- y0
+        .space_record(x, "shear", args, samples = samples)
+    }
+)
+
+#' @rdname zoom
+#' @export
+setMethod("zoom", signature(x = "giottoSpace"),
+    function(x, f = 1, samples = NULL, ...) {
+        .space_record(x, "zoom", list(f = f), samples = samples)
+    }
+)
+
+
 # Accessors ####
 
 #' @title Slotted spaces on a giotto object
@@ -213,16 +297,21 @@ setMethod("rescale", signature(x = "giottoMulti"),
 #' same gobject. Consumer functions opt into a frame via the `space =`
 #' parameter.
 #'
-#' A space is a plain list — `list(samples = , misc = )`. There is no
-#' standalone constructor: record onto a name with a transform verb, e.g.
+#' A space is a [giottoSpace-class]. There is no standalone constructor:
+#' record onto a name with a transform verb, e.g.
 #' `spatShift(g, dx = 10, space = "shifted")`, and the space is created on
 #' first use. On a `giottoMulti`, `samples =` scopes the transform to named
-#' children. The setter exists to copy a recipe between objects and to
-#' remove one.
+#' children. The setter exists to copy a recipe between objects, to slot
+#' one edited through [giottoSpace-access], and to remove one. It also
+#' accepts the plain nested `as.list()` form, so an exported recipe reads
+#' back in.
+#'
+#' `giottoSpace(g)` with no `name` returns every slotted frame in one
+#' handle; `giottoSpace(g, "name")` returns just that one.
 #'
 #' @param gobject a `giotto` object
 #' @param name `character(1)`. The slot key.
-#' @param value a space `list`, or `NULL` to remove.
+#' @param value a `giottoSpace`, its `as.list()` form, or `NULL` to remove.
 #' @param ... additional arguments (none currently used)
 #' @returns the space, an updated gobject, or a character vector of space names
 #' @examples
@@ -253,21 +342,31 @@ setMethod("giottoSpace", signature(gobject = "gAny", name = "missing"),
     function(gobject, name, ...) {
         nm <- giottoSpaces(gobject)
         if (length(nm) == 0L) return(NULL)
-        if (length(nm) == 1L) return(gobject@spaces[[nm]])
-        stop("multiple spaces slotted; specify `name`. ",
-            "Available: ", paste(nm, collapse = ", "), call. = FALSE)
+        # the whole collection in one handle -- `sp[name]` narrows it
+        Reduce(`+`, gobject@spaces)
     }
 )
 
 #' @rdname giottoSpace
 #' @export
 setMethod("giottoSpace<-",
-    signature(gobject = "gAny", name = "character", value = "list"),
+    signature(gobject = "gAny", name = "character", value = "ANY"),
     function(gobject, name, ..., value) {
         checkmate::assert_character(name, len = 1L)
-        # the class is gone, so this setter is where a hand-built or
-        # copied-in recipe gets checked
+        # coerces the `as.list()` export form and re-checks a hand-edited
+        # recipe, so the boundary where a recipe enters an object is also
+        # where it is validated
         value <- .validate_space(value, .var.name = "value")
+        # A slotted entry holds exactly the frame it is keyed under; `[`
+        # and `+` can produce a handle over several, and silently keeping
+        # the extras would put a frame under a name that is not its own.
+        if (length(value) > 1L) {
+            stop("[space] `value` holds ", length(value), " frames (",
+                paste(names(value), collapse = ", "),
+                "); slot one at a time, e.g. `value[\"", name, "\"]`.",
+                call. = FALSE)
+        }
+        if (length(value) == 1L) names(value@spaces) <- name
         if (is.null(gobject@spaces)) gobject@spaces <- list()
         gobject@spaces[[name]] <- value
         gobject
@@ -294,24 +393,3 @@ setMethod("giottoSpaces", signature(gobject = "gAny"),
         if (is.null(nm)) character() else nm
     }
 )
-
-
-# Scope a multi-sample space down to one child. Returns a space whose
-# `samples` carries only the transforms for `sample_name`, re-keyed under
-# the single-sample sentinel so the child's per-sample resolver picks them
-# up naturally. Falls back to NULL if the child has no matching key — the
-# resolver treats that as "no space transform for this child."
-#' @keywords internal
-#' @noRd
-.scope_space_to_sample <- function(space, sample_name) {
-    if (is.null(space)) return(NULL)
-    keys <- names(space$samples)
-    pick <- if (sample_name %in% keys) sample_name
-        else if (.space_default_sample %in% keys) .space_default_sample
-        else NULL
-    if (is.null(pick)) return(NULL)
-    out <- space
-    out$samples <- stats::setNames(list(space$samples[[pick]]),
-        .space_default_sample)
-    out
-}

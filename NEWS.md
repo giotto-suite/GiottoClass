@@ -6,9 +6,16 @@
   coordinate transform means, resolved on read rather than applied when
   recorded, so one object can carry several competing narrowings and frames
   at once. A view is a chain of `filter` / `crop` / `samples` steps; a space
-  is a chain of transform steps keyed by sample. Both are plain lists, not
-  S4: a view is `list(steps = , space = , misc = )` and a space is
-  `list(samples = , misc = )`.
+  is a chain of transform steps keyed by sample.
+- `giottoView` and `giottoSpace` classes. A view holds `@steps` and the
+  `@space` it is bound to; a space holds `@spaces`, a collection of named
+  frames keyed by sample. Access with `[` (class-preserving, so the result is
+  still editable) and `[[` (extracts the plain form); append with the builder
+  verbs or `+`; export with `as.list()`. `sp[i, j]` resolves the sample —
+  named key, else the shared default, else an empty step list — so a
+  transform can be appended to a sample that does not exist yet. The steps
+  themselves stay plain tagged lists, which is what keeps a recipe
+  serializable.
 - `giotto` gains `@view` and `@spaces` slots. Objects saved by an earlier
   version gain both on `loadGiotto()` / `updateGiottoObject()`.
 - Recipes are built by **recording onto a name**, not by a constructor.
@@ -30,8 +37,8 @@
   that is not a child of the object is rejected when the step is recorded,
   rather than creating a chain nothing resolves against.
 - `crop()` gains `relation =` — the spatial predicate a crop step evaluates
-  (`intersects`, `disjoint`, `within`, `touches`, `contains`, `covers`,
-  `overlaps`, `crosses`) — and `geom = c("centroid", "poly")`, which declares
+  (`intersects`, `disjoint`, `within`, `covered_by`, `touches`, `contains`,
+  `covers`, `overlaps`, `crosses`) — and `geom = c("centroid", "poly")`, which declares
   what represents a cell when the predicate is evaluated. Centroids are the
   conventional approximation and remain the default; `geom = "poly"` tests
   the cell polygon itself, and a cell straddling the region boundary is kept
@@ -46,10 +53,16 @@
   transform generics thread `view =` / `space =` through to it.
 - `spatRelate()` gains `SpatVector`, `character` (WKT), and `sf` methods on
   its `y` side, so a `giottoSpatial` `x` can be narrowed against any of them
-  while keeping its carrier class. `engine =` is validated rather than
-  silently ignored: in memory only `NULL` / `"auto"` / `"terra"` are
-  honoured, and naming a SQL engine fails instead of quietly returning a
-  terra answer.
+  while keeping its carrier class. The `(giottoSpatial, SpatVector)` method
+  delegates to whoever owns the geometry, so a disk-backed `@spatVector`
+  dispatches to its own method and brings its own engines. `engine =` is
+  validated rather than silently ignored: in memory only `NULL` / `"auto"` /
+  `"terra"` are honoured, and naming a SQL engine fails instead of quietly
+  returning a terra answer.
+- `spatRelate()` on points narrows by bounding box before calling terra, and
+  answers exactly from the bounding box alone when the region is an
+  axis-aligned rectangle. `disjoint` is computed as the complement of
+  `intersects`, which is both exact and the cheaper of the two.
 
 - `giottoMulti` class — container federating several `giotto` objects into one
   analysable unit. Spatial information stays per-child; non-spatial content is

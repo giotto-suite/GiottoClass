@@ -6,7 +6,7 @@
 \alias{giottoViews}
 \alias{giottoView,gAny,character-method}
 \alias{giottoView,gAny,missing-method}
-\alias{giottoView<-,gAny,character,list-method}
+\alias{giottoView<-,gAny,character,ANY-method}
 \alias{giottoView<-,gAny,character,NULL-method}
 \alias{giottoViews,gAny-method}
 \title{Slotted views on a giotto object}
@@ -21,7 +21,7 @@ giottoViews(gobject, ...)
 
 \S4method{giottoView}{gAny,missing}(gobject, name, ...)
 
-\S4method{giottoView}{gAny,character,list}(gobject, name, ...) <- value
+\S4method{giottoView}{gAny,character,ANY}(gobject, name, ...) <- value
 
 \S4method{giottoView}{gAny,character,NULL}(gobject, name, ...) <- value
 
@@ -34,7 +34,7 @@ giottoViews(gobject, ...)
 
 \item{...}{additional arguments, currently unused}
 
-\item{value}{a view \code{list}, or \code{NULL} to remove.}
+\item{value}{a \code{giottoView}, its \code{as.list()} form, or \code{NULL} to remove.}
 }
 \value{
 the view, an updated gobject, or a character vector of view names
@@ -49,10 +49,12 @@ List, retrieve, attach, or remove the view recipes held in a
 \item \code{giottoViews(g)} — list view names
 }
 
-A view is a plain list — \code{list(steps = , space = , misc = )}. There is no
-standalone constructor: record onto a name with \code{subset(g, ..., view = "name")} or \code{crop(g, ..., view = "name")} and the view is created
-on first use. The setter exists to copy a recipe between objects and to
-remove one.
+A view is a \link[=giottoView-class]{giottoView}. There is no standalone constructor:
+record onto a name with \code{subset(g, ..., view = "name")} or
+\code{crop(g, ..., view = "name")} and the view is created on first use. The
+setter exists to copy a recipe between objects, to slot one edited
+through \link{giottoView-access}, and to remove one. It also accepts the
+plain nested \code{as.list()} form, so an exported recipe reads back in.
 
 Views are subset/narrowing recipes; for coordinate-frame recipes see
 \link{giottoSpace}.

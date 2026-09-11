@@ -6,7 +6,7 @@
 \alias{giottoSpaces}
 \alias{giottoSpace,gAny,character-method}
 \alias{giottoSpace,gAny,missing-method}
-\alias{giottoSpace<-,gAny,character,list-method}
+\alias{giottoSpace<-,gAny,character,ANY-method}
 \alias{giottoSpace<-,gAny,character,NULL-method}
 \alias{giottoSpaces,gAny-method}
 \title{Slotted spaces on a giotto object}
@@ -21,7 +21,7 @@ giottoSpaces(gobject, ...)
 
 \S4method{giottoSpace}{gAny,missing}(gobject, name, ...)
 
-\S4method{giottoSpace}{gAny,character,list}(gobject, name, ...) <- value
+\S4method{giottoSpace}{gAny,character,ANY}(gobject, name, ...) <- value
 
 \S4method{giottoSpace}{gAny,character,NULL}(gobject, name, ...) <- value
 
@@ -34,7 +34,7 @@ giottoSpaces(gobject, ...)
 
 \item{...}{additional arguments (none currently used)}
 
-\item{value}{a space \code{list}, or \code{NULL} to remove.}
+\item{value}{a \code{giottoSpace}, its \code{as.list()} form, or \code{NULL} to remove.}
 }
 \value{
 the space, an updated gobject, or a character vector of space names
@@ -53,12 +53,17 @@ Multiple slotted spaces serve as named alternate coordinate frames of the
 same gobject. Consumer functions opt into a frame via the \verb{space =}
 parameter.
 
-A space is a plain list — \code{list(samples = , misc = )}. There is no
-standalone constructor: record onto a name with a transform verb, e.g.
+A space is a \link[=giottoSpace-class]{giottoSpace}. There is no standalone constructor:
+record onto a name with a transform verb, e.g.
 \code{spatShift(g, dx = 10, space = "shifted")}, and the space is created on
 first use. On a \code{giottoMulti}, \verb{samples =} scopes the transform to named
-children. The setter exists to copy a recipe between objects and to
-remove one.
+children. The setter exists to copy a recipe between objects, to slot
+one edited through \link{giottoSpace-access}, and to remove one. It also
+accepts the plain nested \code{as.list()} form, so an exported recipe reads
+back in.
+
+\code{giottoSpace(g)} with no \code{name} returns every slotted frame in one
+handle; \code{giottoSpace(g, "name")} returns just that one.
 }
 \examples{
 g <- giotto()

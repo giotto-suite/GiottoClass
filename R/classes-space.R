@@ -49,18 +49,24 @@
 # with the shape and the exactness argument, in
 # vignettes/articles/IMPLEMENTATION_viewspace.md section 5.
 #
-# A space is
+# A `giottoSpace` is a handle over a COLLECTION of frames, nested
 #
-#   list(samples = list("<sample>" = list(<step>, ...)), misc = list())
+#   @spaces  list("<frame>" = list("<sample>" = list(<step>, ...)))
 #
-# Both the steps and the container are plain lists, for the reasons given at
-# the top of `R/classes-view.R` (decisions Q7 and Q8). `args` is whitelisted
-# to serializable types at record time so the recipe survives `saveRDS` and
+# so `sp[["atlas"]]` answers with that frame and every sample in it. Most
+# handles hold one frame -- that is what `gobject@spaces[[name]]` stores --
+# but `giottoSpace(g)` with no name gives the whole collection, and `+`
+# merges two.
+#
+# The steps stay plain lists, for the reasons given at the top of
+# `R/classes-view.R` (decisions Q7 and Q8). `args` is whitelisted to
+# serializable types at record time so the recipe survives `saveRDS` and
 # reaches a parallel worker.
 #
 # Storage on gobject:
-#   `gobject@spaces` — named list of space recipes. Sentinel sample name
-#   `:default:` is used for single-giotto entries (no explicit sample).
+#   `gobject@spaces` — named list of single-frame `giottoSpace` handles.
+#   Sentinel sample name `:default:` is used for single-giotto entries (no
+#   explicit sample); `[` owns that rule, so no consumer re-implements it.
 #
 # See `R/classes-view.R` for the subset/narrowing recipe.
 # See `R/methods-space.R` for the recorder and the accessors.
@@ -157,59 +163,113 @@
 
 # space recipe ####
 
-# The fields a space carries. Dropped with the S4 class: `name` (redundant
-# -- the name is the key under `gobject@spaces`) and `source` (documented
-# as reserved, never read).
-.space_fields <- c("samples", "misc")
+#' @title Class for coordinate-frame recipes
+#' @name giottoSpace-class
+#' @description
+#' A `giottoSpace` is a handle over one or more named coordinate frames. A
+#' frame is a deferred set of spatial transforms, keyed by sample, that
+#' consumer functions opt into with `space = "<name>"`.
+#'
+#' Access it with `[` (class-preserving, so the result stays editable) and
+#' `[[` (extracts a frame, or one sample's step list). Append to it with
+#' the transform verbs -- [spin()], [spatShift()], [affine()], [flip()],
+#' [rescale()], [shear()], [zoom()] -- or compose two with `+`. Export the
+#' plain nested form with [as.list()].
+#'
+#' @slot spaces `list` nested frame name -> sample name -> `list` of steps.
+#'   Each step is a tagged plain list -- `list(type = "transform", op = ,
+#'   args = )` -- carrying no closure and no external pointer, so a recipe
+#'   survives `saveRDS()` and reaches a parallel worker.
+#' @returns a `giottoSpace` object
+#' @seealso [giottoSpace()] for the gobject-level accessors;
+#'   [giottoView-class] for the subset/narrowing recipe
+#' @examples
+#' g <- spatShift(giotto(), dx = 10, space = "shifted")
+#' sp <- giottoSpace(g, "shifted")
+#' sp[["shifted"]]
+#' as.list(sp)
+#' @exportClass giottoSpace
+setClass("giottoSpace",
+    representation(spaces = "list"),
+    prototype = prototype(spaces = list())
+)
 
 #' Construct a space recipe.
 #'
 #' The single place a space's shape is written down.
 #'
-#' Starts with NO sample keys. The `:default:` sentinel is added by
+#' A frame starts with NO sample keys. The `:default:` sentinel is added by
 #' `.space_record()` only when a transform is recorded without a `samples`
 #' scope -- seeding it here instead would leave an empty sentinel chain
-#' beside the real keys on every per-sample space, which then reads as a
-#' third participating sample and makes `.scope_space_to_sample()` fall
-#' back to it for children that should have matched nothing.
+#' beside the real keys on every per-sample frame, which then reads as an
+#' extra participating sample and makes `[` fall back to it for children
+#' that should have matched nothing.
 #' @noRd
-.new_space <- function(samples = list(), misc = list()) {
-    list(samples = samples, misc = misc)
+.new_space <- function(spaces = list()) {
+    new("giottoSpace", spaces = spaces)
+}
+
+#' Coerce whatever a caller supplied into a `giottoSpace`.
+#'
+#' Accepts the `as.list()` export form -- a nested frame -> sample -> steps
+#' list -- so the round-trip is lossless. A bare sample -> steps list (one
+#' unnamed frame) is accepted under `name`, which is what `giottoSpace<-`
+#' passes when a single frame is being slotted by key.
+#' @noRd
+.as_giotto_space <- function(space, name = NULL, .var.name = "space") {
+    if (inherits(space, "giottoSpace")) return(space)
+    if (!is.list(space)) {
+        stop("[space] `", .var.name, "` must be a giottoSpace or a list ",
+            "(got '", class(space)[[1L]], "')", call. = FALSE)
+    }
+    .new_space(space)
+}
+
+#' Validate one frame's sample -> steps mapping.
+#' @noRd
+.validate_space_samples <- function(samples, .var.name = "samples") {
+    checkmate::assert_list(samples, .var.name = .var.name)
+    if (length(samples) == 0L) return(samples)
+    nms <- names(samples)
+    if (is.null(nms) || any(is.na(nms)) || any(!nzchar(nms))) {
+        stop("[space] `", .var.name, "` must be a named list ",
+            "(sample name -> step list)", call. = FALSE)
+    }
+    for (steps in samples) {
+        checkmate::assert_list(steps,
+            .var.name = paste0(.var.name, "[[i]]"))
+        lapply(steps, .validate_space_step)
+    }
+    samples
 }
 
 #' Validate a whole space, whatever produced it.
 #'
-#' Runs in the recorder and in `giottoSpace<-`. Unknown fields are rejected
-#' for the same reason as in `.validate_view()`: recipes are hand-editable,
-#' and a typo'd field would otherwise be ignored at resolve time.
+#' Shared by `setValidity()` and by the recorder, which runs it while the
+#' user's call site is still in scope for the error message.
 #' @noRd
 .validate_space <- function(space, .var.name = "space") {
-    if (!is.list(space)) {
-        stop("[space] `", .var.name, "` must be a list (got '",
-            class(space)[[1L]], "')", call. = FALSE)
-    }
-    unknown <- setdiff(names(space), .space_fields)
-    if (length(unknown) > 0L) {
-        stop("[space] unknown field(s): ",
-            paste(sprintf("`%s`", unknown), collapse = ", "),
-            ". A space holds: ", paste(.space_fields, collapse = ", "),
-            call. = FALSE)
-    }
-    checkmate::assert_list(space$samples,
-        .var.name = paste0(.var.name, "$samples"))
-    checkmate::assert_list(space$misc, null.ok = TRUE,
-        .var.name = paste0(.var.name, "$misc"))
-    if (length(space$samples) > 0L) {
-        nms <- names(space$samples)
+    space <- .as_giotto_space(space, .var.name = .var.name)
+    checkmate::assert_list(space@spaces,
+        .var.name = paste0(.var.name, "@spaces"))
+    if (length(space@spaces) > 0L) {
+        nms <- names(space@spaces)
         if (is.null(nms) || any(is.na(nms)) || any(!nzchar(nms))) {
-            stop("[space] `", .var.name, "$samples` must be a named list ",
-                "(sample name -> step list)", call. = FALSE)
+            stop("[space] `", .var.name, "@spaces` must be a named list ",
+                "(frame name -> samples)", call. = FALSE)
         }
-        for (steps in space$samples) {
-            checkmate::assert_list(steps,
-                .var.name = paste0(.var.name, "$samples[[i]]"))
-            lapply(steps, .validate_space_step)
+        for (nm in nms) {
+            .validate_space_samples(space@spaces[[nm]],
+                .var.name = sprintf("%s@spaces[[\"%s\"]]", .var.name, nm))
         }
     }
     space
 }
+
+setValidity("giottoSpace", function(object) {
+    err <- tryCatch({
+        .validate_space(object, .var.name = "object")
+        NULL
+    }, error = function(e) conditionMessage(e))
+    err %null% TRUE
+})

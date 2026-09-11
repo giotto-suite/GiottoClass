@@ -199,38 +199,27 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 .resolve_space <- function(gobject, space = NULL) {
     if (is.null(space)) return(NULL)
     # already-resolved recipe passed through internally
-    if (is.list(space)) return(space)
+    if (inherits(space, "giottoSpace")) return(space)
     if (is.character(space)) return(giottoSpace(gobject, space))
-    stop("`space` must be NULL, a character(1) name, or a space list",
+    stop("`space` must be NULL, a character(1) name, or a giottoSpace",
         call. = FALSE)
-}
-
-# Pick the right sample key from a giottoSpace for the current gobject.
-# Single-giotto: prefer ":default:", else the only key, else NULL (no
-# matching transform). Multi-giotto child resolution handled by caller.
-#' @keywords internal
-#' @noRd
-.space_sample_key_for <- function(gobject, space) {
-    if (is.null(space)) return(NULL)
-    keys <- names(space$samples)
-    if (length(keys) == 0L) return(NULL)
-    if (.space_default_sample %in% keys) return(.space_default_sample)
-    if (length(keys) == 1L) return(keys[[1L]])
-    NULL
 }
 
 # Apply a giottoSpace's transforms to a subobject via existing eager
 # GiottoClass dispatch. Each transform step becomes
-# `do.call(op, c(list(x = subobj), args))`. No-op if space is NULL or no
-# matching sample key.
+# `do.call(op, c(list(x = subobj), args))`.
+#
+# `sample` names the sample identity of `subobj` -- a gmulti child's name,
+# or `NA_character_` for a plain `giotto`, which holds one sample. `[[`
+# owns the resolution of that name against the frame's keys (including the
+# `:default:` sentinel), so this walks whatever it hands back and no rule
+# is re-implemented here.
 #' @keywords internal
 #' @noRd
-.apply_space_to_subobj <- function(subobj, gobject, space, coordinator) {
+.apply_space_to_subobj <- function(subobj, gobject, space, coordinator,
+                                   sample = NA_character_) {
     if (is.null(space)) return(subobj)
-    key <- .space_sample_key_for(gobject, space)
-    if (is.null(key)) return(subobj)
-    steps <- space$samples[[key]]
-    for (step in steps) {
+    for (step in space[[1L, sample]]) {
         subobj <- do.call(step$op, c(list(x = subobj), step$args))
     }
     subobj
@@ -259,66 +248,6 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # evaluates against the gobject's polygon source and the resulting cell_ID
 # set narrows any target downstream.
 
-# Is this region an axis-aligned rectangle?
-#
-# Pure optimization sitting UNDER the centroid path: a recorded region is
-# always WKT (Q7), so the numeric-extent fast path can no longer be
-# selected by the stored type. It is recovered from the geometry instead —
-# a single-part polygon with exactly two distinct x and two distinct y
-# values IS its own bounding box, so an AABB test answers `intersects`
-# exactly and terra::is.related can be skipped.
-#' @keywords internal
-#' @noRd
-.region_is_rect <- function(region) {
-    if (!inherits(region, "SpatVector")) return(FALSE)
-    if (nrow(region) != 1L) return(FALSE)
-    if (!identical(terra::geomtype(region), "polygons")) return(FALSE)
-    g <- tryCatch(terra::geom(region), error = function(e) NULL)
-    if (is.null(g)) return(FALSE)
-    if (length(unique(g[, "part"])) != 1L) return(FALSE)
-    length(unique(g[, "x"])) == 2L && length(unique(g[, "y"])) == 2L
-}
-
-# CENTROID PATH. Given a spatLocs data.table (with cell_ID, sdimx, sdimy),
-# a region (SpatVector, materialized from the recorded WKT), and a
-# centroid-meaningful relation, return the cell_IDs whose centroid
-# satisfies the relation.
-#
-#   * axis-aligned rectangle + "intersects" → AABB-only (fast path)
-#   * otherwise → AABB pre-filter narrows candidates, then
-#     terra::is.related gives the precise survival set
-#
-# `disjoint` cannot use the AABB pre-filter: the survivors are the points
-# OUTSIDE the region, so narrowing to bbox candidates first would drop
-# exactly the cells that survive.
-#' @keywords internal
-#' @noRd
-.cells_in_region <- function(sl_dt, region, relation = "intersects") {
-    if (is.null(region)) return(sl_dt$cell_ID)
-    sdimx <- sdimy <- NULL  # NSE
-
-    if (identical(relation, "disjoint")) {
-        pts <- terra::vect(as.matrix(sl_dt[, .(sdimx, sdimy)]),
-            type = "points")
-        return(sl_dt$cell_ID[terra::is.related(pts, region, "disjoint")])
-    }
-
-    bbox <- terra::ext(region)[]
-    in_bbox <- sl_dt$sdimx >= bbox[[1L]] & sl_dt$sdimx <= bbox[[2L]] &
-               sl_dt$sdimy >= bbox[[3L]] & sl_dt$sdimy <= bbox[[4L]]
-
-    if (identical(relation, "intersects") && .region_is_rect(region)) {
-        return(sl_dt$cell_ID[in_bbox])
-    }
-
-    candidates <- sl_dt[in_bbox]
-    if (nrow(candidates) == 0L) return(character())
-    pts <- terra::vect(
-        as.matrix(candidates[, .(sdimx, sdimy)]), type = "points")
-    surv <- terra::is.related(pts, region, relation)
-    candidates$cell_ID[surv]
-}
-
 # Fetch the polygon source for `geom = "poly"`, in the predicate frame.
 #
 # Returns a `giottoPolygon`, not a bare SpatVector, so `spatRelate()`
@@ -333,22 +262,18 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 #' @noRd
 .get_projected_polys <- function(gobject, space, coordinator,
                                  spat_unit = NULL) {
-    one <- function(g, sp) {
+    one <- function(g, samp) {
         gp <- tryCatch(
             getPolygonInfo(g, name = spat_unit,
                 return_giottoPolygon = TRUE, verbose = FALSE),
             error = function(e) NULL)
         if (!inherits(gp, "giottoPolygon")) return(NULL)
-        if (!is.null(sp)) {
-            gp <- .apply_space_to_subobj(gp, g, sp, coordinator)
-        }
-        gp
+        .apply_space_to_subobj(gp, g, space, coordinator, sample = samp)
     }
 
     if (inherits(gobject, "giottoMulti")) {
         parts <- lapply(names(gobject@objects), function(nm) {
-            gp <- one(gobject@objects[[nm]],
-                .scope_space_to_sample(space, nm))
+            gp <- one(gobject@objects[[nm]], nm)
             if (is.null(gp)) return(NULL)
             sv <- gp@spatVector
             sv$poly_ID <- paste(nm, terra::values(sv)$poly_ID, sep = "::")
@@ -361,7 +286,7 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
         if (length(parts) == 1L) return(parts[[1L]])
         return(do.call(rbind, parts))
     }
-    one(gobject, space)
+    one(gobject, NA_character_)
 }
 
 # Route one crop step and return its surviving cell_IDs.
@@ -373,11 +298,13 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # whole design exists to remove.
 #' @keywords internal
 #' @noRd
-.cells_in_crop_step <- function(gobject, step, sl_dt, space, coordinator,
+.cells_in_crop_step <- function(gobject, step, pts, space, coordinator,
                                 spat_unit = NULL) {
     region <- .materialize_crop_region(step$region)
+    if (is.null(region)) return(NULL)
     switch(step$geom,
-        centroid = .cells_in_region(sl_dt, region, step$relation),
+        centroid = spatRelate(pts, region,
+            relation = step$relation)$cell_ID,
         poly = {
             polys <- .get_projected_polys(gobject, space, coordinator,
                 spat_unit = spat_unit)
@@ -395,14 +322,21 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     )
 }
 
-# Pull the gobject's spatLocs (active spat_unit) as a data.table, optionally
-# applying the relevant space's transforms first. Used by .surviving_cell_ids
-# for crop-step interpretation.
+# Pull the gobject's spatLocs (active spat_unit) as a points `SpatVector` in
+# the predicate frame, optionally applying the relevant space's transforms
+# first. Consumed by `.cells_in_crop_step()`'s centroid arm.
+#
+# A bare points `SpatVector` is the common representation the predicate
+# primitive works on, and `as.points()` passes the whole coordinate table
+# through, so `cell_ID` rides along as an attribute and survivors are read
+# off by ID rather than recovered positionally.
 #
 # giottoMulti: getSpatialLocations returns a per-child named list (spatial
 # locations live per-child, no joint slot). Scope the space to each child,
-# apply, and rbind the coordinate DTs with `<sample>::` prefixed cell_IDs
-# so crop-step results match the joint cell_metadata vocabulary.
+# apply, promote each child's IDs to the joint vocabulary, then fold with
+# `rbind2()` -- a data.table rbind -- and convert ONCE at the end. Folding
+# first costs one terra allocation instead of one per child. Promote before
+# folding, or `.check_id_dups()` fires on IDs the children share.
 #' @keywords internal
 #' @noRd
 .get_projected_spatlocs <- function(gobject, space, coordinator) {
@@ -410,27 +344,25 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     sl <- tryCatch(getSpatialLocations(gobject, output = "spatLocsObj"),
         error = function(e) NULL)
     if (is.null(sl)) return(NULL)
+
     if (is.list(sl) && !inherits(sl, "spatLocsObj")) {
         parts <- lapply(names(sl), function(nm) {
             child_sl <- sl[[nm]]
             if (!inherits(child_sl, "spatLocsObj")) return(NULL)
-            child_space <- .scope_space_to_sample(space, nm)
-            if (!is.null(child_space)) {
-                child_sl <- .apply_space_to_subobj(child_sl, gobject,
-                    child_space, coordinator)
-            }
-            dt <- data.table::copy(child_sl@coordinates)
-            dt[, cell_ID := paste(nm, cell_ID, sep = "::")]
-            dt
+            child_sl <- .apply_space_to_subobj(child_sl, gobject,
+                space, coordinator, sample = nm)
+            dt <- data.table::copy(child_sl[])
+            dt[, cell_ID := .gm_global_cell_ids(gobject, nm, cell_ID)]
+            child_sl[] <- dt
+            child_sl
         })
         parts <- Filter(Negate(is.null), parts)
         if (length(parts) == 0L) return(NULL)
-        return(data.table::rbindlist(parts, use.names = TRUE, fill = TRUE))
-    }
-    if (!is.null(space)) {
+        sl <- Reduce(rbind2, parts)
+    } else if (!is.null(space)) {
         sl <- .apply_space_to_subobj(sl, gobject, space, coordinator)
     }
-    sl@coordinates
+    as.points(sl)
 }
 
 # JIT helper for getters: apply view/space projection to a single subobject
@@ -517,26 +449,27 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
         surviving <- intersect(surviving, keep)
     }
     if (length(crop_steps) > 0L) {
-        pred_space <- if (!is.na(view$space)) {
-            .resolve_space(gobject, view$space)
+        pred_space <- if (!is.na(view@space)) {
+            .resolve_space(gobject, view@space)
         } else NULL
         # Centroids are only fetched if some step declares it needs them,
         # so an all-poly recipe on a polygon-only object does not warn
         # about missing spatial locations.
         needs_centroid <- any(vapply(crop_steps,
             function(s) identical(s$geom, "centroid"), logical(1L)))
-        sl_dt <- if (needs_centroid) {
+        pts <- if (needs_centroid) {
             .get_projected_spatlocs(gobject, pred_space, coordinator)
         } else NULL
-        if (needs_centroid && is.null(sl_dt)) {
+        if (needs_centroid && is.null(pts)) {
             warning("crop step skipped: no spatial locations available",
                 call. = FALSE)
             crop_steps <- Filter(
                 function(s) identical(s$geom, "poly"), crop_steps)
         }
         for (step in crop_steps) {
-            keep <- .cells_in_crop_step(gobject, step, sl_dt,
+            keep <- .cells_in_crop_step(gobject, step, pts,
                 pred_space, coordinator)
+            if (is.null(keep)) next  # step recorded no region
             surviving <- intersect(surviving, keep)
         }
     }

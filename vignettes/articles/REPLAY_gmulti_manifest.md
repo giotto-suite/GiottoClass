@@ -410,7 +410,9 @@ base is **`b351ed2b`** (§3), and the fresh branch is cut from the post-merge `g
       relation-routing table. Both broadcast claims were run before being written down,
       and are asserted in a test.
 
-  **Still owed to stage 6:** delete the two GiottoDisk patches by replacing the
+  **Still owed to stage 6** (as written at the time — **the second half of this is
+  wrong, see the stage-6 entry below and `adr/0015`**): delete the two GiottoDisk patches
+  by replacing the
   `is.null(.cache)` test in `.push_view_to_pstore` with
   `identical(step$geom, "centroid")` — eager `id_filter` for the centroid arm, the
   existing lazy `spat_relate` op for the poly arm. Nothing to export; the field is on the
@@ -435,35 +437,59 @@ base is **`b351ed2b`** (§3), and the fresh branch is cut from the post-merge `g
   package does not even build, because `pkg_imports.R` imports `giottoView` /
   `giottoSpace` as classes.
 
-  **A7 needed a second axis, not just `step$geom`.** The above prescription is right about
-  crops but incomplete: whether a store can evaluate a crop on its own geometry depends on
-  whether one store row IS one cell. Three cases, and `.cache` decides none of them:
-    - cell-keyed geom store (a cell-polygon store) + `geom = "poly"` → lazy
-      `spat_relate` on its own geom column. **This is the case the forced cache made
-      unreachable.**
-    - cell-keyed store + `geom = "centroid"` → eager cell_ID set. The store's geom column
-      is the polygon, not the centroid, so pushing the predicate down there would answer a
-      different question. This is why the centroid arm is eager *even on a geom store*.
-    - non-cell-keyed store (transcript points) → always lazy on its own geometry; a crop
-      there means "clip these points", matching the in-memory path. Expressed as
-      `cell_keyed = FALSE` rather than by forcing `.cache = NULL`.
+  **A7's own prescription was wrong, and so was my first fix of it.** The prescription
+  above — "eager `id_filter` for the centroid arm, the existing lazy `spat_relate` op for
+  the poly arm" — reverses `IMPLEMENTATION_viewspace.md` §4, which requires every
+  cell-keyed target to narrow via a **cell_ID set** ("one usage layer per predicate") and
+  gives the geom-pushdown path to points only. I followed the prescription, gave the
+  polygon store its own lazy arm, and broke the invariant. **Reverted; see GiottoDisk
+  `adr/0015`**, which is now the authority on the resolution contract.
 
-  `.cache` is now memoization plus an eager/lazy choice for FILTER steps only — with a
-  cache they fold into one `id_filter`, without one each narrows the store on its own and
-  keeps the lazy cross-store `[`-join for atlas-scale owners. It holds three
-  target-independent slots (`filter_ids`, `crop_ids:centroid`, `crop_ids:poly`) rather than
-  one, which is what lets a polygon store take the filter arm eagerly while pushing its own
-  poly crops down. One shared cache per `materialize()` is still safe because no slot
-  depends on the target.
+  Corrected shape: a crop step resolves to a cell_ID set for every cell-keyed target,
+  polygon store included; `geom` picks the geometry that derives the set and `engine`
+  picks who evaluates it. A crop reaching a transcript points store stays a geometric
+  clip on its own geometry — parity with in-memory `.apply_crops_geometrically()`, and a
+  consequence of the **subcellular-point axis not being modelled yet**, not a property of
+  points. Three subset axes exist (cells, features, subcellular points); v1 of the
+  coordinators does cells only, and features + subcellular points are deferred to v2
+  together.
+
+  `.cache` is memoization plus an eager/lazy choice for FILTER steps only — with a cache
+  they fold into one `id_filter`, without one each narrows the store on its own and keeps
+  the lazy cross-store `[`-join for atlas-scale owners. It holds **one**
+  target-independent slot, `surviving_cell_ids`: every cell-keyed target consumes the
+  same set, so there is nothing to split, and one shared cache per `materialize()` is
+  safe because the answer does not depend on the target. The steps are walked in
+  recorded order and intersected, rather than gathered by type — order is information a
+  read-time collapse needs, and it is also what removed the last reason anything wanted
+  to select steps by type.
+
+  **What let this happen — three stale design notes**, and it is the reusable lesson from
+  stage 6. `class-viewCoordinator.R`'s 2026-05-28 sketch asserted "No I/O at coordinator
+  time" and that engine choice was "deferred to `storeRead()` consume time via its
+  `output =` argument", both written before `spatRelate()` gained `engine`.
+  `methods-spatRelate.R`'s header claimed the arrow backend "errors loudly" on a spatial
+  predicate — false since the checkpoint model. And §4 itself said "centroid-derived
+  cell_ID set", written before `geom` existed, so the surviving invariant (*cell_ID set*)
+  read as if it were about centroids. All three are now corrected, and the argument moved
+  into `adr/0015` so the next reader gets it at the point of the tempting edit.
 
   **Deleted a divergent duplicate.** GiottoDisk had its own `.cells_in_region_dt` /
   `.cells_in_region_for_view`, and they had silently drifted: no `disjoint` fix, no `geom`
-  arm. Crop semantics now come from `GiottoClass:::.cells_in_crop_step()` for both arms;
-  GiottoDisk keeps only the *fetch* (`.projected_spatlocs_dt`), which it has to own because
-  `spatLocsObj@coordinates` may be a store and GiottoClass's fetch cannot `storeRead`.
-  `.scope_space_to_sample_local` went with them. `.apply_space_to_subobj` stays local and
-  deliberately differs — it dispatches transforms on the inner `parquetBase` rather than on
-  the wrapper, which is the whole point on a backed geometry.
+  arm. Crop semantics are now one public expression on both sides —
+  `spatIDs(spatRelate(<carrier>, region, relation))` — so there is one implementation and
+  nothing to reach for. GiottoDisk keeps only the *fetch* (`.projected_points`,
+  `.projected_polys`), which it has to own because `spatLocsObj@coordinates` may be a
+  store and GiottoClass's fetch cannot `storeRead`. `.apply_space_to_subobj` stays local
+  and deliberately differs — it dispatches transforms on the inner `parquetBase` rather
+  than on the wrapper, which is the whole point on a backed geometry.
+
+  **No `:::` reaches.** `grep -rc "GiottoClass:::" R/` in GiottoDisk is **0**, and the
+  only `@` access left is `view@space`. Getting there is what motivated restoring the
+  `giottoView` / `giottoSpace` classes with a real access / append / export surface:
+  `view@steps` walked per step, `sp[i, j]` for sample scoping (which owns the
+  `":default:"` rule, so GiottoDisk never spells the sentinel), and `sp[[i, j]]` for the
+  step list. Six reaches closed; see `IMPLEMENTATION_viewspace.md` §1.
 
   **Two latent bugs the port surfaced, both fixed:**
     - `.space_composite_affine()` probed the space's transforms against a bare

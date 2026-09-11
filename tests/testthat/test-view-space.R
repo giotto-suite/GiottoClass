@@ -5,12 +5,13 @@
 rlang::local_options(lifecycle_verbosity = "quiet")
 options("giotto.use_conda" = FALSE)
 
-# Q8 left no constructor: a view is created by recording a step onto a
+# There is no constructor: a view is created by recording a step onto a
 # name. An EMPTY recipe therefore has no call that produces it, and is only
 # interesting to tests asserting that an empty recipe resolves to identity.
-# Build the literal, which also exercises the setter's validator.
+# Build the plain `as.list()` form, which also exercises the setter's
+# coercion and validator.
 .empty_view <- function() {
-    list(steps = list(), space = NA_character_, misc = list())
+    list(steps = list(), space = NA_character_)
 }
 
 # fixture — visium mini with leiden clusters in metadata
@@ -50,22 +51,24 @@ test_that("recording onto an unused name creates the view", {
     g <- subset(g, cluster == "A", view = "v")
     expect_identical(giottoViews(g), "v")
     v <- giottoView(g, "v")
-    expect_true(is.list(v))
-    expect_false(isS4(v))
-    expect_named(v, c("steps", "space", "misc"))
-    expect_true(is.na(v$space))
+    expect_s4_class(v, "giottoView")
+    expect_true(is.na(v@space))
+    expect_length(v, 1L)
+    expect_identical(names(v), "filter")
 })
 
-test_that("the container classes are gone", {
-    # Q8: recipes are plain lists. Nothing should be able to construct or
-    # dispatch on the old classes.
-    expect_null(getClassDef("giottoView"))
-    expect_null(getClassDef("giottoSpace"))
+test_that("the containers are classes; the steps are plain lists", {
+    # Q7 put the serialization guarantees on the STEPS, which is why the
+    # container can be a class without giving them up.
+    expect_s4_class(giottoView(
+        subset(giotto(), x > 0, view = "v"), "v"), "giottoView")
+    expect_s4_class(giottoSpace(
+        spatShift(giotto(), dx = 1, space = "s"), "s"), "giottoSpace")
 })
 
 test_that("subset() records a filter step", {
     g <- subset(giotto(), cluster == "A", view = "v")
-    steps <- giottoView(g, "v")$steps
+    steps <- giottoView(g, "v")@steps
     expect_length(steps, 1L)
     expect_identical(steps[[1L]]$type, "filter")
     expect_identical(steps[[1L]]$predicate, 'cluster == "A"')
@@ -74,7 +77,7 @@ test_that("subset() records a filter step", {
 test_that("subset() records the scope args spatValues will receive", {
     g <- subset(giotto(), x > 0, spat_unit = "cell", feat_type = "rna",
         view = "v")
-    sa <- giottoView(g, "v")$steps[[1L]]$scope_args
+    sa <- giottoView(g, "v")@steps[[1L]]$scope_args
     expect_identical(sa$spat_unit, "cell")
     expect_identical(sa$feat_type, "rna")
 })
@@ -90,7 +93,7 @@ test_that("scope args are limited to what spatValues accepts", {
 test_that("negate folds into the predicate rather than becoming a field", {
     # matches the eager path, which does `sub_s <- call(\"!\", sub_s)`
     g <- subset(giotto(), cluster == "A", negate = TRUE, view = "v")
-    step <- giottoView(g, "v")$steps[[1L]]
+    step <- giottoView(g, "v")@steps[[1L]]
     expect_identical(step$predicate, '!cluster == "A"')
     expect_null(step$negate)
     # `!` binds looser than `==` in R, so the deparsed form re-parses with
@@ -101,7 +104,7 @@ test_that("negate folds into the predicate rather than becoming a field", {
 
 test_that("crop() records a crop step", {
     g <- crop(giotto(), c(0, 100, 0, 100), view = "v")
-    steps <- giottoView(g, "v")$steps
+    steps <- giottoView(g, "v")@steps
     expect_length(steps, 1L)
     expect_identical(steps[[1L]]$type, "crop")
     # Q7: numeric extents are normalized to WKT at record time, so the
@@ -114,7 +117,7 @@ test_that("crop() records a crop step", {
 
 test_that("crop() with custom relation records it", {
     g <- crop(giotto(), c(0, 100, 0, 100), relation = "within", view = "v")
-    expect_identical(giottoView(g, "v")$steps[[1L]]$relation, "within")
+    expect_identical(giottoView(g, "v")@steps[[1L]]$relation, "within")
 })
 
 test_that("crop() with polygon region works", {
@@ -124,7 +127,7 @@ test_that("crop() with polygon region works", {
         c(4000, -5000)
     ), type = "polygons")
     g <- crop(giotto(), poly, view = "v")
-    step <- giottoView(g, "v")$steps[[1L]]
+    step <- giottoView(g, "v")@steps[[1L]]
     expect_identical(step$type, "crop")
     # SpatVector polygon regions are normalized to WKT at ingest so the
     # recipe is serializable (no live C++ pointer). See methods-view.R
@@ -152,7 +155,7 @@ test_that("materialize with polygon crop narrows by region", {
 
 test_that("selectSamples() records a samples step", {
     g <- selectSamples(giotto(), "a", "b", view = "v")
-    steps <- giottoView(g, "v")$steps
+    steps <- giottoView(g, "v")@steps
     expect_length(steps, 1L)
     expect_identical(steps[[1L]]$type, "samples")
     expect_identical(steps[[1L]]$samples, c("a", "b"))
@@ -163,7 +166,7 @@ test_that("steps append in call order onto one name", {
     g <- subset(g, x > 0, view = "v")
     g <- crop(g, c(0, 100, 0, 100), view = "v")
     g <- selectSamples(g, "a", view = "v")
-    steps <- giottoView(g, "v")$steps
+    steps <- giottoView(g, "v")@steps
     expect_length(steps, 3L)
     expect_identical(vapply(steps, function(s) s$type, character(1L)),
         c("filter", "crop", "samples"))
@@ -176,11 +179,10 @@ test_that("recording onto an unused name creates the space", {
     g <- spatShift(giotto(), dx = 10, space = "s")
     expect_identical(giottoSpaces(g), "s")
     s <- giottoSpace(g, "s")
-    expect_true(is.list(s))
-    expect_false(isS4(s))
-    expect_named(s, c("samples", "misc"))
+    expect_s4_class(s, "giottoSpace")
+    expect_identical(names(s), "s")
     # a plain giotto has one sample, so the sentinel key is the only key
-    expect_named(s$samples, ":default:")
+    expect_named(s[["s"]], ":default:")
 })
 
 test_that("transform generics record onto a named space", {
@@ -189,7 +191,7 @@ test_that("transform generics record onto a named space", {
     g <- spin(g, 30, space = "s")
     g <- affine(g, M, space = "s")
     g <- spatShift(g, dx = 10, space = "s")
-    steps <- giottoSpace(g, "s")$samples[[1L]]
+    steps <- giottoSpace(g, "s")[[1L]][[1L]]
     expect_length(steps, 3L)
     expect_identical(vapply(steps, function(x) x$op, character(1L)),
         c("spin", "affine", "spatShift"))
@@ -197,14 +199,14 @@ test_that("transform generics record onto a named space", {
 
 test_that("spin/affine record (0,0) anchor by default", {
     g <- spin(giotto(), 45, space = "s")
-    args <- giottoSpace(g, "s")$samples[[1L]][[1L]]$args
+    args <- giottoSpace(g, "s")[[1L]][[1L]][[1L]]$args
     expect_equal(args$x0, 0)
     expect_equal(args$y0, 0)
 })
 
 test_that("user-supplied anchor overrides default", {
     g <- spin(giotto(), 45, x0 = 100, y0 = 200, space = "s")
-    args <- giottoSpace(g, "s")$samples[[1L]][[1L]]$args
+    args <- giottoSpace(g, "s")[[1L]][[1L]][[1L]]$args
     expect_equal(args$x0, 100)
     expect_equal(args$y0, 200)
 })
@@ -217,16 +219,16 @@ test_that("samples= keys transforms per child, replacing `+`", {
     mg <- spin(mg, 30, space = "atlas", samples = "a")
     mg <- spatShift(mg, dx = 8000, space = "atlas", samples = "b")
     s <- giottoSpace(mg, "atlas")
-    expect_named(s$samples, c("a", "b"))
-    expect_length(s$samples[["a"]], 1L)
-    expect_length(s$samples[["b"]], 1L)
+    expect_named(s[[1L]], c("a", "b"))
+    expect_length(s[[1L]][["a"]], 1L)
+    expect_length(s[[1L]][["b"]], 1L)
 })
 
 test_that("recording twice against one sample concatenates in order", {
     mg <- .fixture_gmulti()
     mg <- spin(mg, 30, space = "atlas", samples = "a")
     mg <- spatShift(mg, dx = 10, space = "atlas", samples = "a")
-    steps <- giottoSpace(mg, "atlas")$samples[["a"]]
+    steps <- giottoSpace(mg, "atlas")[[1L]][["a"]]
     expect_length(steps, 2L)
     expect_identical(vapply(steps, function(x) x$op, character(1L)),
         c("spin", "spatShift"))
@@ -236,9 +238,9 @@ test_that("samples= accepts several children at once", {
     mg <- .fixture_gmulti()
     mg <- spin(mg, 30, space = "atlas", samples = c("a", "b"))
     s <- giottoSpace(mg, "atlas")
-    expect_named(s$samples, c("a", "b"))
-    expect_length(s$samples[["a"]], 1L)
-    expect_length(s$samples[["b"]], 1L)
+    expect_named(s[[1L]], c("a", "b"))
+    expect_length(s[[1L]][["a"]], 1L)
+    expect_length(s[[1L]][["b"]], 1L)
 })
 
 test_that("scope is stated per call, not inherited from build order", {
@@ -250,8 +252,8 @@ test_that("scope is stated per call, not inherited from build order", {
     mg <- spin(mg, 30, space = "atlas", samples = "a")
     mg <- spatShift(mg, dx = 10, space = "atlas", samples = "b")
     s <- giottoSpace(mg, "atlas")
-    expect_length(s$samples[["a"]], 1L)
-    expect_identical(s$samples[["a"]][[1L]]$op, "spin")
+    expect_length(s[[1L]][["a"]], 1L)
+    expect_identical(s[[1L]][["a"]][[1L]]$op, "spin")
 })
 
 test_that("a gmulti transform requires a space, and samples= is gmulti-only", {
@@ -291,10 +293,10 @@ test_that("the setter validates a hand-built recipe", {
     }, "unknown field")
     expect_error({
         giottoView(g, "bad") <- list(steps = list(list(type = "nope")),
-            space = NA_character_, misc = list())
+            space = NA_character_)
     }, "unknown type")
     expect_error({
-        giottoSpace(g, "bad") <- list(samples = list(list()), misc = list())
+        giottoSpace(g, "bad") <- list(s = list(list()))
     }, "named list")
 })
 
@@ -302,8 +304,8 @@ test_that("giottoSpace accessor and lookup", {
     g <- spin(giotto(), 30, space = "atlas")
     expect_identical(giottoSpaces(g), "atlas")
     out <- giottoSpace(g, "atlas")
-    expect_true(is.list(out))
-    expect_false(isS4(out))
+    expect_s4_class(out, "giottoSpace")
+    expect_identical(names(out), "atlas")
 })
 
 test_that("missing slotted name errors clearly", {
@@ -729,7 +731,7 @@ test_that("giottoView accessors work on giottoMulti via gAny", {
     giottoView(mg, "tumor") <- v
     expect_identical(giottoViews(mg), "tumor")
     out <- giottoView(mg, "tumor")
-    expect_true(is.list(out))
+    expect_s4_class(out, "giottoView")
 })
 
 test_that("giottoSpace accessors work on giottoMulti via gAny", {
@@ -738,36 +740,49 @@ test_that("giottoSpace accessors work on giottoMulti via gAny", {
     mg <- spin(mg, 45, space = "atlas", samples = "b")
     expect_identical(giottoSpaces(mg), "atlas")
     out <- giottoSpace(mg, "atlas")
-    expect_named(out$samples, c("a", "b"))
+    expect_named(out[[1L]], c("a", "b"))
 })
 
-test_that(".scope_space_to_sample picks the right key for a child", {
+test_that("`[` scopes a space to a named child", {
     mg <- .fixture_gmulti()
     mg <- spin(mg, 30, space = "atlas", samples = "a")
     mg <- spin(mg, 45, space = "atlas", samples = "b")
     s <- giottoSpace(mg, "atlas")
-    sa <- GiottoClass:::.scope_space_to_sample(s, "a")
-    expect_named(sa$samples, GiottoClass:::.space_default_sample)
-    expect_length(sa$samples[[1L]], 1L)
-    expect_equal(sa$samples[[1L]][[1L]]$op, "spin")
-    expect_equal(sa$samples[[1L]][[1L]]$args$angle, 30)
 
-    sb <- GiottoClass:::.scope_space_to_sample(s, "b")
-    expect_equal(sb$samples[[1L]][[1L]]$args$angle, 45)
+    sa <- s["atlas", "a"]
+    expect_s4_class(sa, "giottoSpace")
+    expect_named(sa[["atlas"]], "a")
+    expect_length(s[["atlas", "a"]], 1L)
+    expect_equal(s[["atlas", "a"]][[1L]]$op, "spin")
+    expect_equal(s[["atlas", "a"]][[1L]]$args$angle, 30)
+    expect_equal(s[["atlas", "b"]][[1L]]$args$angle, 45)
 })
 
-test_that(".scope_space_to_sample falls back to :default: key", {
+test_that("`[` falls back to the :default: key for an unkeyed sample", {
     s <- giottoSpace(spin(giotto(), 15, space = "s"), "s")
-    out <- GiottoClass:::.scope_space_to_sample(s, "any_sample_name")
-    expect_equal(out$samples[[1L]][[1L]]$args$angle, 15)
+    expect_equal(s[["s", "any_sample_name"]][[1L]]$args$angle, 15)
+    # and NA -- no sample identity at all -- resolves the same way
+    expect_equal(s[["s", NA_character_]][[1L]]$args$angle, 15)
 })
 
-test_that(".scope_space_to_sample returns NULL when no matching key", {
+test_that("`[` auto-vivifies rather than returning NULL", {
     mg <- .fixture_gmulti()
     mg <- spin(mg, 15, space = "atlas", samples = "a")
     s <- giottoSpace(mg, "atlas")
-    out <- GiottoClass:::.scope_space_to_sample(s, "missing")
-    expect_null(out)
+    # "b" is unkeyed and there is no sentinel: an empty step list, so a
+    # caller can append to it without a branch
+    expect_identical(s[["atlas", "missing"]], list())
+    scoped <- s["atlas", "missing"]
+    expect_named(scoped[["atlas"]], "missing")
+    expect_length(spin(scoped, 30)[["atlas", "missing"]], 1L)
+})
+
+test_that("`[` with two keys and no sentinel does not guess", {
+    mg <- .fixture_gmulti()
+    mg <- spin(mg, 30, space = "atlas", samples = "a")
+    mg <- spin(mg, 45, space = "atlas", samples = "b")
+    s <- giottoSpace(mg, "atlas")
+    expect_identical(s[["atlas", NA_character_]], list())
 })
 
 test_that("materialize on giottoMulti narrows children via selectSamples", {
@@ -866,22 +881,19 @@ test_that("steps and recipes are plain tagged lists, not S4", {
     g <- crop(g, c(0, 10, 0, 10), view = "v")
     g <- selectSamples(g, "a", view = "v")
     v <- giottoView(g, "v")
-    # Q8: the container is a list too, not only its steps
-    expect_type(v, "list")
-    expect_false(isS4(v))
-    for (s in v$steps) {
+    # Q7 put the guarantees on the STEPS: no closure, no external
+    # pointer. The container is a class; that changes nothing here.
+    for (s in v@steps) {
         expect_type(s, "list")
         expect_false(isS4(s))
         expect_true(is.character(s$type))
     }
     expect_identical(
-        vapply(v$steps, function(s) s$type, character(1L)),
+        vapply(v@steps, function(s) s$type, character(1L)),
         c("filter", "crop", "samples"))
 
     s <- giottoSpace(spin(giotto(), 30, space = "s"), "s")
-    expect_type(s, "list")
-    expect_false(isS4(s))
-    step <- s$samples[[1L]][[1L]]
+    step <- s[["s", NA_character_]][[1L]]
     expect_type(step, "list")
     expect_false(isS4(step))
     expect_identical(step$type, "transform")
@@ -892,14 +904,14 @@ test_that("a filter step carries no environment; the predicate is a string", {
     g <- giotto()
     g <- subset(g, cluster == target, view = "tmp")
     v <- giottoView(g, "tmp")
-    step <- v$steps[[1L]]
+    step <- v@steps[[1L]]
     expect_null(step$env)
     expect_type(step$predicate, "character")
     # the VALUE of target was substituted in at record time, so the recipe
     # does not change when the binding does
     expect_identical(step$predicate, 'cluster == "A"')
     target <- "B"
-    expect_identical(v$steps[[1L]]$predicate, 'cluster == "A"')
+    expect_identical(v@steps[[1L]]$predicate, 'cluster == "A"')
 })
 
 test_that("a view recipe round-trips through saveRDS and still resolves", {
@@ -910,7 +922,7 @@ test_that("a view recipe round-trips through saveRDS and still resolves", {
     on.exit(unlink(f), add = TRUE)
     saveRDS(v, f)
     v2 <- readRDS(f)
-    expect_identical(v$steps, v2$steps)
+    expect_identical(v@steps, v2@steps)
 
     # and the deserialized recipe resolves to the same cells
     giottoView(g, "a") <- v
@@ -927,7 +939,7 @@ test_that("a space recipe round-trips through saveRDS and still resolves", {
     on.exit(unlink(f), add = TRUE)
     saveRDS(s, f)
     s2 <- readRDS(f)
-    expect_identical(s$samples, s2$samples)
+    expect_identical(s[[1L]], s2[[1L]])
 
     giottoSpace(g, "s2") <- s2
     sl <- getSpatialLocations(g, output = "data.table")
@@ -942,14 +954,14 @@ test_that("a recorded crop region is WKT, and terra objects do not leak in", {
     g <- giotto()
     g <- crop(g, poly, view = "tmp")
     v <- giottoView(g, "tmp")
-    region <- v$steps[[1L]]$region
+    region <- v@steps[[1L]]$region
     expect_type(region, "character")
     expect_match(region, "^POLYGON")
     # serializable: a SpatVector would not survive this
     f <- tempfile(fileext = ".rds")
     on.exit(unlink(f), add = TRUE)
     saveRDS(v, f)
-    expect_identical(readRDS(f)$steps[[1L]]$region, region)
+    expect_identical(readRDS(f)@steps[[1L]]$region, region)
 })
 
 test_that("WKT round-trip does not shift a crop boundary", {
@@ -974,7 +986,7 @@ test_that("crop accepts WKT directly as the canonical entry", {
     g <- giotto()
     g <- crop(g, wkt, view = "tmp")
     v <- giottoView(g, "tmp")
-    expect_identical(v$steps[[1L]]$region, wkt)
+    expect_identical(v@steps[[1L]]$region, wkt)
     expect_error(crop(giotto(), view = "v", "not wkt at all"), "not valid WKT")
 })
 
@@ -988,9 +1000,9 @@ test_that("multi-feature crop regions are unioned into one geometry", {
     g <- giotto()
     g <- crop(g, both, view = "tmp")
     v <- giottoView(g, "tmp")
-    expect_length(v$steps[[1L]]$region, 1L)
+    expect_length(v@steps[[1L]]$region, 1L)
     # the union's extent spans both parts
-    expect_equal(unname(terra::ext(terra::vect(v$steps[[1L]]$region))[]),
+    expect_equal(unname(terra::ext(terra::vect(v@steps[[1L]]$region))[]),
         c(0, 6, 0, 6))
 })
 
@@ -1021,28 +1033,68 @@ test_that("an unknown step type is rejected at record and validate time", {
     v <- list(
         steps = list(list(type = "filter", predicate = "cluster ==",
             scope_args = list())),
-        space = NA_character_, misc = list())
+        space = NA_character_)
     expect_error(GiottoClass:::.validate_view(v), "does not parse")
     gg <- giotto()
     expect_error({ giottoView(gg, "bad") <- v }, "does not parse")
 })
 
+.relate_regions <- list(
+    rect = terra::vect(terra::ext(c(0, 10, 0, 10))),
+    tri = terra::vect(rbind(c(0, 0), c(10, 0), c(5, 10), c(0, 0)),
+        type = "polygons"),
+    empty = terra::vect(terra::ext(c(100, 110, 100, 110))),
+    all = terra::vect(terra::ext(c(-100, 100, -100, 100)))
+)
+
+.relate_pts <- function() {
+    as.points(createSpatLocsObj(data.table::data.table(
+        cell_ID = c("a", "b", "c", "d"),
+        sdimx = c(1, 9, 5, 50), sdimy = c(1, 9, 1, 50))))
+}
+
 test_that("a rectangular region takes the AABB path; a polygon does not", {
-    rect <- terra::vect(terra::ext(c(0, 10, 0, 10)))
-    expect_true(GiottoClass:::.region_is_rect(rect))
-    tri <- terra::vect(rbind(c(0, 0), c(10, 0), c(5, 10), c(0, 0)),
-        type = "polygons")
-    expect_false(GiottoClass:::.region_is_rect(tri))
-    # both give the same answer for points, which is what matters
-    sl <- data.table::data.table(
-        cell_ID = c("a", "b", "c"),
-        sdimx = c(1, 9, 5), sdimy = c(1, 9, 1))
-    expect_setequal(
-        GiottoClass:::.cells_in_region(sl, rect, "intersects"),
-        c("a", "b", "c"))
-    expect_setequal(
-        GiottoClass:::.cells_in_region(sl, tri, "intersects"),
-        c("a", "c"))
+    expect_true(GiottoClass:::.region_is_rect(.relate_regions$rect))
+    expect_false(GiottoClass:::.region_is_rect(.relate_regions$tri))
+    # both shapes go through the same primitive and must agree with terra
+    pts <- .relate_pts()
+    for (nm in names(.relate_regions)) {
+        region <- .relate_regions[[nm]]
+        expect_setequal(
+            spatRelate(pts, region, relation = "intersects")$cell_ID,
+            pts$cell_ID[terra::is.related(pts, region, "intersects")]
+        )
+    }
+})
+
+test_that("disjoint is the exact complement of intersects", {
+    pts <- .relate_pts()
+    all_ids <- pts$cell_ID
+    for (nm in names(.relate_regions)) {
+        region <- .relate_regions[[nm]]
+        hit <- spatRelate(pts, region, relation = "intersects")$cell_ID
+        miss <- spatRelate(pts, region, relation = "disjoint")$cell_ID
+        expect_setequal(c(hit, miss), all_ids)
+        expect_length(intersect(hit, miss), 0L)
+        # and it is what terra would have said
+        expect_setequal(miss,
+            all_ids[terra::is.related(pts, region, "disjoint")])
+    }
+})
+
+test_that("other predicates agree with terra on both region shapes", {
+    pts <- .relate_pts()
+    # left: the sf/sedona spelling a recipe records. right: terra's.
+    rels <- c(within = "within", touches = "touches", covered_by = "coveredby")
+    for (rel in names(rels)) {
+        for (nm in c("rect", "tri")) {
+            region <- .relate_regions[[nm]]
+            expect_setequal(
+                spatRelate(pts, region, relation = rel)$cell_ID,
+                pts$cell_ID[terra::is.related(pts, region, rels[[rel]])]
+            )
+        }
+    }
 })
 
 
@@ -1063,10 +1115,10 @@ test_that("geom defaults to centroid and is recorded on the step", {
     g <- giotto()
     g <- crop(g, c(0, 10, 0, 10), view = "tmp")
     v <- giottoView(g, "tmp")
-    expect_identical(v$steps[[1L]]$geom, "centroid")
+    expect_identical(v@steps[[1L]]$geom, "centroid")
     v2 <- giottoView(crop(giotto(), c(0, 10, 0, 10), geom = "poly",
         view = "v"), "v")
-    expect_identical(v2$steps[[1L]]$geom, "poly")
+    expect_identical(v2@steps[[1L]]$geom, "poly")
 })
 
 test_that("the centroid-capable relations record geom = centroid", {
@@ -1076,7 +1128,7 @@ test_that("the centroid-capable relations record geom = centroid", {
     for (r in c("intersects", "disjoint", "within", "touches")) {
         g <- crop(giotto(), c(0, 10, 0, 10), relation = r, view = "tmp")
         v <- giottoView(g, "tmp")
-        expect_identical(v$steps[[1L]]$geom, "centroid", info = r)
+        expect_identical(v@steps[[1L]]$geom, "centroid", info = r)
     }
 })
 
@@ -1088,7 +1140,7 @@ test_that("the poly-only relations warn and record geom = poly", {
             v <- giottoView(crop(giotto(), c(0, 10, 0, 10),
                 relation = r, view = "v"), "v"),
             "always FALSE", info = r)
-        expect_identical(v$steps[[1L]]$geom, "poly", info = r)
+        expect_identical(v@steps[[1L]]$geom, "poly", info = r)
     }
     # declaring poly explicitly is silent
     expect_no_warning(
@@ -1097,9 +1149,6 @@ test_that("the poly-only relations warn and record geom = poly", {
 })
 
 test_that("an unavailable relation or geom is rejected", {
-    # covered_by reads like a terra predicate but errors in terra
-    expect_error(crop(giotto(), view = "v", c(0, 10, 0, 10),
-        relation = "covered_by"), "not available")
     expect_error(crop(giotto(), view = "v", c(0, 10, 0, 10),
         relation = "nonsense"), "not available")
     expect_error(crop(giotto(), view = "v", c(0, 10, 0, 10), geom = "blah"))
@@ -1107,14 +1156,14 @@ test_that("an unavailable relation or geom is rejected", {
 
 test_that("crop(g, view = ) inherits the vocabulary and the promotion", {
     g <- .fixture_giotto()
-    expect_error(crop(g, c(0, 10, 0, 10), relation = "covered_by",
+    expect_error(crop(g, c(0, 10, 0, 10), relation = "nonsense",
         view = "v"), "not available")
     # nothing recorded on the failed call
     expect_false("v" %in% giottoViews(g))
 
     expect_warning(g2 <- crop(g, c(0, 10, 0, 10), relation = "contains",
         view = "v"), "always FALSE")
-    expect_identical(giottoView(g2, "v")$steps[[1L]]$geom, "poly")
+    expect_identical(giottoView(g2, "v")@steps[[1L]]$geom, "poly")
 })
 
 test_that("intersects and disjoint partition the cell set", {
@@ -1201,7 +1250,7 @@ test_that("a hand-poked incoherent step fails validity", {
     v <- giottoView(g, "tmp")
     # a recipe is a plain list, so nothing stops a field being poked; the
     # validator is what catches it, on demand or at the setter
-    v$steps[[1L]]$relation <- "contains"
+    v@steps[[1L]]$relation <- "contains"
     expect_error(GiottoClass:::.validate_view(v), "cannot be evaluated")
     expect_error({ giottoView(g, "poked") <- v }, "cannot be evaluated")
 })
@@ -1212,7 +1261,7 @@ test_that("geom survives the saveRDS round-trip", {
     f <- tempfile(fileext = ".rds")
     on.exit(unlink(f), add = TRUE)
     saveRDS(v, f)
-    expect_identical(readRDS(f)$steps, v$steps)
+    expect_identical(readRDS(f)@steps, v@steps)
 })
 
 test_that("samples = NULL broadcasts over the keys already recorded", {
@@ -1226,10 +1275,10 @@ test_that("samples = NULL broadcasts over the keys already recorded", {
     mg <- spin(mg, 45, space = "atlas", samples = "b")
     mg <- spatShift(mg, dx = 100, space = "atlas")   # no samples = broadcast
     s <- giottoSpace(mg, "atlas")
-    expect_length(s$samples$a, 2L)
-    expect_length(s$samples$b, 2L)
-    expect_identical(s$samples$a[[2L]]$op, "spatShift")
-    expect_identical(s$samples$b[[2L]]$op, "spatShift")
+    expect_length(s[[1L]]$a, 2L)
+    expect_length(s[[1L]]$b, 2L)
+    expect_identical(s[[1L]]$a[[2L]]$op, "spatShift")
+    expect_identical(s[[1L]]$b[[2L]]$op, "spatShift")
 })
 
 test_that("a mistyped sample name is rejected at record time", {
@@ -1238,4 +1287,183 @@ test_that("a mistyped sample name is rejected at record time", {
     mg <- .fixture_gmulti()
     expect_error(spin(mg, 30, space = "atlas", samples = "typo"),
         "not children of this giottoMulti")
+})
+
+
+# --- the handle API: access, append, export --------------------------------
+#
+# Q7's guarantees live on the STEPS, so the containers are free to be
+# classes. What the classes buy is a surface for the three things a recipe
+# has to support: reading it, adding to it, and getting the plain form back
+# out. These test that surface rather than the storage shape.
+
+.demo_view <- function() {
+    g <- giotto()
+    g <- subset(g, cluster == "A", view = "v")
+    g <- crop(g, c(0, 10, 0, 10), relation = "within", view = "v")
+    g <- selectSamples(g, "a", "b", view = "v")
+    giottoView(g, "v")
+}
+
+.demo_space <- function() {
+    mg <- .fixture_gmulti()
+    mg <- spin(mg, 30, space = "atlas", samples = "a")
+    mg <- spatShift(mg, dx = 100, space = "atlas", samples = "b")
+    giottoSpace(mg, "atlas")
+}
+
+test_that("giottoView `[` preserves the class and stays appendable", {
+    v <- .demo_view()
+    expect_length(v, 3L)
+    expect_identical(names(v), c("filter", "crop", "samples"))
+
+    expect_s4_class(v[2L], "giottoView")
+    expect_identical(names(v[2L]), "crop")
+    expect_identical(names(v[-2L]), c("filter", "samples"))
+    expect_identical(names(v[c(1L, 3L)]), c("filter", "samples"))
+    # class-preserving means a subset can still be built on
+    expect_length(crop(v[1L], c(0, 5, 0, 5)), 2L)
+})
+
+test_that("giottoView `[[` extracts the step; `[i, j]` one attribute", {
+    v <- .demo_view()
+    step <- v[[2L]]
+    expect_type(step, "list")
+    expect_false(isS4(step))
+    expect_identical(step$type, "crop")
+    expect_identical(v[2L, "relation"], "within")
+    expect_identical(v[1L, "type"], "filter")
+})
+
+test_that("giottoView `[[<-` edits and drops steps, and validates", {
+    v <- .demo_view()
+    v[[2L]] <- NULL
+    expect_identical(names(v), c("filter", "samples"))
+
+    v2 <- .demo_view()
+    step <- v2[[2L]]
+    step$relation <- "intersects"
+    v2[[2L]] <- step
+    expect_identical(v2[2L, "relation"], "intersects")
+    # a hand-poked step that cannot answer its own relation is rejected
+    bad <- v2[[2L]]
+    bad$relation <- "contains"
+    bad$geom <- "centroid"
+    expect_error({ v2[[2L]] <- bad }, "cannot be evaluated")
+})
+
+test_that("giottoSpace `[` / `[[` address frames and samples", {
+    sp <- .demo_space()
+    expect_identical(names(sp), "atlas")
+    expect_length(sp, 1L)
+
+    # [[frame]] is that frame and every sample in it, nothing else
+    expect_named(sp[["atlas"]], c("a", "b"))
+    expect_error(sp[["nope"]], "no frame named")
+
+    # [[frame, sample]] is the ordered step list
+    expect_identical(sp[["atlas", "a"]][[1L]]$op, "spin")
+    expect_identical(sp[["atlas", "b"]][[1L]]$op, "spatShift")
+
+    # [frame, sample] is a scoped handle, so it stays appendable
+    scoped <- sp["atlas", "a"]
+    expect_s4_class(scoped, "giottoSpace")
+    expect_named(scoped[["atlas"]], "a")
+    expect_length(spin(scoped, 45)[["atlas", "a"]], 2L)
+})
+
+test_that("`giottoSpace(g)` with no name gives the whole collection", {
+    g <- spin(giotto(), 30, space = "one")
+    g <- spatShift(g, dx = 5, space = "two")
+    all_sp <- giottoSpace(g)
+    expect_s4_class(all_sp, "giottoSpace")
+    expect_setequal(names(all_sp), c("one", "two"))
+    expect_identical(names(all_sp["one"]), "one")
+})
+
+test_that("`+` concatenates view steps and merges space frames", {
+    v1 <- .demo_view()[1L]
+    v2 <- .demo_view()[2L]
+    expect_identical(names(v1 + v2), c("filter", "crop"))
+
+    sp <- .demo_space()
+    merged <- sp["atlas", "a"] + sp["atlas", "b"]
+    expect_named(merged[["atlas"]], c("a", "b"))
+    # colliding sample keys concatenate rather than overwrite
+    twice <- sp["atlas", "a"] + sp["atlas", "a"]
+    expect_length(twice[["atlas", "a"]], 2L)
+})
+
+test_that("`+` refuses to compose views bound to different frames", {
+    g <- crop(giotto(), c(0, 10, 0, 10), view = "v", space = "one")
+    g <- spatShift(g, dx = 1, space = "two")
+    g <- crop(g, c(0, 10, 0, 10), view = "w", space = "two")
+    expect_error(giottoView(g, "v") + giottoView(g, "w"), "already bound")
+})
+
+test_that("builder verbs on a recipe record what the gobject route records", {
+    # the point of moving the verbs onto the classes is that there is one
+    # construction path, so the two surfaces must produce identical objects
+    g <- crop(giotto(), c(0, 10, 0, 10), relation = "within", view = "v")
+    direct <- crop(new("giottoView"), c(0, 10, 0, 10), relation = "within")
+    expect_identical(giottoView(g, "v")@steps, direct@steps)
+
+    g2 <- selectSamples(giotto(), "a", "b", view = "v")
+    expect_identical(giottoView(g2, "v")@steps,
+        selectSamples(new("giottoView"), "a", "b")@steps)
+
+    g3 <- spin(giotto(), 30, space = "s")
+    direct_sp <- spin(new("giottoSpace", spaces = list(s = list())), 30)
+    expect_identical(giottoSpace(g3, "s")@spaces, direct_sp@spaces)
+})
+
+test_that("as.list() is the export seam and round-trips losslessly", {
+    v <- .demo_view()
+    lv <- as.list(v)
+    expect_type(lv, "list")
+    expect_named(lv, c("steps", "space"))
+
+    g <- giotto()
+    giottoView(g, "from_obj") <- v
+    giottoView(g, "from_list") <- lv
+    expect_identical(giottoView(g, "from_obj"), giottoView(g, "from_list"))
+
+    sp <- .demo_space()
+    lsp <- as.list(sp)
+    expect_named(lsp, "atlas")
+    expect_named(lsp$atlas, c("a", "b"))
+    mg <- .fixture_gmulti()
+    giottoSpace(mg, "atlas") <- lsp
+    expect_identical(giottoSpace(mg, "atlas")@spaces, sp@spaces)
+})
+
+test_that("the recipe classes carry no closure and no external pointer", {
+    # Q7's guarantee, restated against the class container: a recipe has to
+    # survive saveRDS and reach a worker, and that is a property of the
+    # steps, which the class only holds.
+    .no_live_refs <- function(x) {
+        if (is.function(x)) return(FALSE)
+        if (inherits(x, "externalptr") ||
+            identical(typeof(x), "externalptr")) return(FALSE)
+        if (is.environment(x)) return(FALSE)
+        if (is.list(x)) return(all(vapply(x, .no_live_refs, logical(1L))))
+        TRUE
+    }
+    expect_true(.no_live_refs(.demo_view()@steps))
+    expect_true(.no_live_refs(.demo_space()@spaces))
+})
+
+test_that("validObject rejects a hand-poked recipe", {
+    v <- .demo_view()
+    v@steps[[1L]]$predicate <- "cluster =="
+    expect_error(validObject(v), "does not parse")
+
+    sp <- .demo_space()
+    sp@spaces$atlas$a[[1L]]$op <- "teleport"
+    expect_error(validObject(sp), "unknown transform")
+})
+
+test_that("show() prints without error for both recipes", {
+    expect_output(show(.demo_view()), "giottoView")
+    expect_output(show(.demo_space()), "giottoSpace")
 })

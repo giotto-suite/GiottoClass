@@ -24,12 +24,14 @@ against a gobject.
 - **view** — read-only narrowing: which cells and features are in scope
 - **space** — coordinate frame: where the data sits. *Not* read-only; running an analysis in a non-native frame is fine, the coordinates just differ, and mutations still target the underlying data in its native frame
 
-**Recipe layout.** Q7 made the steps plain tagged lists; Q8 made the containers follow,
-so nothing here is S4:
+**Recipe layout.** Q7 made the **steps** plain tagged lists, and that is where the
+serialization guarantees live — no closure, no external pointer, survives `saveRDS`,
+reaches a worker. The **containers** are classes, because they are the handle:
 
 ```
-view    list(steps = list(<step>, ...), space = NA_character_, misc = list())
-space   list(samples = list("<sample>" = list(<step>, ...)), misc = list())
+giottoView    @steps   list(<step>, ...)
+              @space   NA_character_          name of the frame crops are drawn in
+giottoSpace   @spaces  list("<frame>" = list("<sample>" = list(<step>, ...)))
 
 step (view)   list(type = "filter",    predicate = , scope_args = )
               list(type = "crop",      region = , relation = , geom = )
@@ -37,11 +39,40 @@ step (view)   list(type = "filter",    predicate = , scope_args = )
 step (space)  list(type = "transform", op = , args = )
 ```
 
-The dropped S4 slots were `name` (redundant — the name is the key under `@view` /
-`@spaces`) and `source` (documented as reserved, never read). Validation moved with the
-shape rather than disappearing: `.validate_view()` / `.validate_space()` and the
-per-step validators run in the recorder and in the `giottoView<-` / `giottoSpace<-`
-setters, which is where a hand-built or copied-in recipe gets checked.
+Q8 had made the containers lists too, which removed the *write* surface — the
+builder verbs — and left recipe edits to hand-built lists at every call site. The
+classes are back for that reason. Q8's actual objection, scope inherited from
+construction history (`(a + b) |> spin(30)` differing from `(a |> spin(30)) + b`),
+is answered by scoping through `[` rather than through construction order, not by
+removing the container. The dropped slots stay dropped: `name` (redundant — the
+name is the key under `@view` / `@spaces`), `source` (documented as reserved,
+never read), and `misc` (no reader and no writer anywhere).
+
+**Three things the API covers, one place each.**
+
+| | view | space |
+|---|---|---|
+| **access** | `v[i]` steps `i`, class-preserving · `v[[i]]` the step · `v[i, j]` one attribute · `length` / `names` | `sp[i]` frames `i` · `sp[i, j]` scoped to sample `j` · `sp[[i]]` the frame · `sp[[i, j]]` the step list · `length` / `names` |
+| **append** | `subset()` · `crop()` · `selectSamples()` · `+` | `spin()` · `spatShift()` · `affine()` · `flip()` · `rescale()` · `shear()` · `zoom()` · `+` |
+| **export** | `as.list()` | `as.list()` |
+
+`giottoSpace` is a handle over a *collection* of frames, so `sp[["atlas"]]`
+answers with that frame and every sample in it. The gobject-level `view =` /
+`space =` parameters route through the same builders, so a step has one
+construction path whichever surface asked for it, and the `<-` setters accept the
+`as.list()` form so an exported recipe reads back in.
+
+**`sp[i, j]` owns the `":default:"` rule and nothing else needs to know it
+exists.** Exact sample match, else the sentinel, else an empty step list — so
+`spin(sp["atlas", "new_sample"], 30)` works on a sample that does not exist yet.
+`NA_character_` means "no sample identity", which is what a plain `giotto`
+presents: sentinel, else the sole key, else empty. Two keys and no sentinel does
+not guess. {GiottoDisk} resolves samples entirely through `[` and never spells the
+sentinel.
+
+Validation runs in `setValidity()` and, for the same reason as before, also at
+record time — that is where the user's call site is still in scope for the error
+message.
 
 - resolving a recipe does not mutate a gobject — `materialize()` returns a new one, or a name is passed per-call to a getter. Detaching is not passing it. Recording a step is the one write, and it touches only the recipe
 - **created by recording, not construction** — the first `subset()` / `crop()` / `selectSamples()` call naming a view creates it; likewise a transform verb naming a space. There is no constructor
@@ -49,7 +80,7 @@ setters, which is where a hand-built or copied-in recipe gets checked.
 - **`gobject@spaces` *is* the multi-space registry** — several frames falls out of slotting several spaces, no separate mechanism
 - **read-only enforced by signature** — functions taking `view =` return a result. Q8 nuance: `subset(g, ..., view = )` and friends *do* return a modified gobject, because recording is a write to the recipe. The data is never touched either way
 - **lazy** on a disk-backed gobject: predicates and crops push into the backend query plan; the pull happens when a downstream call collects
-- files (after Q8): `classes-view.R` (339), `classes-space.R` (208), `methods-view.R` (585), `methods-space.R` (317), resolver `classes-resolver.R` (95) + `methods-resolver.R` (715)
+- files: `classes-view.R`, `classes-space.R`, `methods-view.R`, `methods-space.R`, `methods-recipe.R` (the access / export surface), resolver `classes-resolver.R` + `methods-resolver.R`
 
 **Why two classes rather than one.** An earlier unified `giottoView` carried transforms,
 filters, crops, and sample selection together, leaving four things unresolved:
@@ -150,39 +181,67 @@ getSpatialLocations(g, view = "test", space = "rotate")
 
 ---
 
-## 4. Centroid routing for backed-polygon crops — Complete, refactor pending
+## 4. A crop resolves to a cell_ID set — Complete
 
-Guarantees a view recipe narrows identically no matter which slot you read it through.
+**The invariant: one usage layer per predicate.** A crop step resolves to a
+surviving cell_ID set, and every cell-keyed target narrows by that same set —
+spatial locations, cell metadata, expression, and a backed polygon store alike.
+A recipe cannot mean different things depending on which slot you read it through.
 
-- `viewCrop` against the backed parquet polygon store always narrows via the centroid-derived cell_ID set (`.surviving_cell_ids_arrow`), regardless of caller path
-- that keeps **one usage layer per predicate** — narrowing is the same across spatial locations, cell metadata, polygons, and expression
-- the polygon-geom `spat_relate` path is reserved for `giottoPoints` (not cell-aggregatable) and for a future explicit polygon-vs-polygon step ([§11](#11-viewspatrelate-step-type--not-started))
+What derives the set is declared on the step, not inferred: `geom = "centroid" |
+"poly"` picks the geometry that represents a cell. `engine` picks who evaluates
+it. Neither is a function of the target's storage kind.
 
-**Remaining — the mechanism is a workaround.** Routing is currently decided by
-*target storage kind* and implemented through cache allocation: the polygon's
-`resolveSubobject` allocates a one-shot cache environment when none is provided,
-which is what forces `.push_view_to_pstore` down the centroid pathway. Two patches
-ride on this — force-cache for polygons, force-`NULL`-cache for points.
+> **Read the invariant as "cell_ID set", not as "centroid".** This section used
+> to say "always narrows via the *centroid-derived* cell_ID set", written before
+> `geom` existed, when centroid was the only way to derive one. `geom` changed
+> how the set is computed, not that it is a set. Stage 6 of the replay read the
+> stale half, gave the polygon store its own `spat_relate` pushdown, and broke
+> the invariant — see GiottoDisk `adr/0015`, which is now the authority on the
+> resolution contract and records what that cost.
 
-**Resolved in GiottoClass — the step declares it.** The refactor decouples semantic
-routing from cache memoization by making the choice a recorded field: a crop step
-carries `geom = "centroid" | "poly"`, and the resolver reads it instead of deriving
-anything. The cache sits underneath the centroid arm as pure optimization.
+Both arms are one public expression on either side of the boundary:
 
-An earlier attempt *inferred* the choice from the relation name, via an internal
-predicate that was then going to be exported so GiottoDisk could share the inference.
-That was the wrong shape twice over: the earlier prescription here — "decide per step
-on `(predicate relation, polygon source availability)`" — reads as licence to infer,
-and inference means a recorded recipe cannot state which question it asks. Declaration
-also removes the shared-contract problem entirely, since there is nothing to share:
-GiottoDisk reads the field.
+```r
+spatIDs(spatRelate(<carrier>, region, relation))
+```
 
-Still owed on the GiottoDisk side: both patches go away by replacing the
-`is.null(.cache)` test in `.push_view_to_pstore` with `identical(step$geom,
-"centroid")` — eager `id_filter` for the centroid arm, the existing lazy
-`spat_relate` op for the poly arm. Note the patches are currently *class*-keyed
-(polygon → forced cache → centroid; points → forced NULL cache → geom), so a backed
-`giottoPolygon` crop cannot honour `geom = "poly"` until this lands.
+`spatRelate()` is carrier-agnostic — the `(giottoSpatial, SpatVector)` method
+delegates to whoever owns the geometry, so a backed `@spatVector` dispatches to
+{GiottoDisk}'s store method and brings its own engines. The terra primitive sits
+at `(SpatVector, SpatVector)` and owns the optimizer: an AABB pre-filter for
+points, an exact fast path when the region is its own bounding box, and
+`disjoint` answered as the complement of `intersects` rather than as its own
+predicate — which keeps the fast paths available for it and computes the
+smaller of the two sets.
+
+**Three subset axes exist; only cells is modelled.**
+
+| axis | key | status |
+|---|---|---|
+| cells | `cell_ID` | resolved — this section |
+| features | `feat_ID` | not modelled (fed 18; `resolveSubobject(featMetaObj)` returns its input untouched for this reason) |
+| subcellular points | transcript id | not modelled |
+
+A crop reaching a transcript points store therefore cannot yet be expressed as an
+ID set and is applied as a geometric clip on the store's own geometry — parity
+with the in-memory path, which clips points the same way via
+`.apply_crops_geometrically()`. This section previously described that path as
+"reserved for `giottoPoints` (not cell-aggregatable)", which reads as permanent.
+It is not: points can carry tracked transcript IDs and are subject to feature
+subsets, so once those axes land a points crop resolves to an ID set like any
+other. Features and subcellular points are deferred together to a v2 of the
+coordinators.
+
+**History.** An earlier attempt *inferred* `geom` from the relation name, via an
+internal predicate that was then going to be exported so GiottoDisk could share
+the inference. That was the wrong shape twice over: the earlier prescription here
+— "decide per step on `(predicate relation, polygon source availability)`" —
+reads as licence to infer, and inference means a recorded recipe cannot state
+which question it asks. Declaration removes the shared-contract problem entirely,
+since there is nothing to share: GiottoDisk reads the field. The routing mechanism
+it replaced was worse still — a one-shot cache environment allocated by the
+polygon's `resolveSubobject`, which made *cache allocation* the semantic switch.
 
 ---
 
@@ -194,7 +253,7 @@ Records deferred spatial transforms, keyed by sample.
 - at resolution the receiving object is spliced in as the first argument and `do.call` dispatches to the method that already exists, so spaces add **no new transform implementations**
 - `samples` is a named list: sample name → ordered step list
 - `:default:` is the sentinel for sample-anonymous (single-giotto) recording
-- **Q8 update:** there is no constructor. A space is created by recording a transform onto a
+- there is no constructor. A space is created by recording a transform onto a
   name (`spin(g, 30, space = "s")`), and `samples =` on the `giottoMulti` methods says which
   children a step applies to. The sentinel is added only when a step is recorded with no
   `samples` scope, so a per-sample space carries no stray empty key
@@ -202,7 +261,7 @@ Records deferred spatial transforms, keyed by sample.
 Properties that follow from the storage shape:
 
 - **the space owns the transforms, not the objects** — nothing is written to the data. That's what lets one object participate in several frames at once and makes per-object composition well-defined
-- **participation is `names(space$samples)`** — consumers auto-derive the sample narrowing from those keys, so `plot(mg, space = "atlas")` needs nothing else. Samples outside the key set error rather than silently falling back, preserving the "spaces enumerate their participating samples" contract. Q8 note: a child that should sit untransformed in the space is no longer expressed by adding an empty `giottoSpace("a")`, since there is no constructor — leave it unkeyed and it resolves at identity
+- **participation is `names(sp[["<frame>"]])`** — consumers auto-derive the sample narrowing from those keys, so `plot(mg, space = "atlas")` needs nothing else. Samples outside the key set error rather than silently falling back, preserving the "spaces enumerate their participating samples" contract. a child that should sit untransformed is left unkeyed, and `sp[i, j]` auto-vivifies it to an empty step list, so it resolves at identity
 - **anchor defaults to `(0, 0)`** for `spin` / `affine` recorded onto a space, not the data's centre, so a recorded rotation is reproducible independent of the extent. Overridable per call
 - **sample-uniform scope, deliberately** — within a sample, cells, polygons, points, images and spatlocs all move together. Per-element overrides are unsupported; the documented path is `materialize()` plus per-element transforms afterwards. This does put image-versus-polygon registration, the hard alignment problem, out of scope
 
@@ -246,12 +305,19 @@ transform. If it does, folding is not only ~N× cheaper but *more faithful* — 
 resample instead of N — which would make this a correctness improvement for images
 rather than a pure optimisation.
 
+**The editable handle — done.** See the access / append / export grid in
+[§1](#1-what-this-is). `sp["atlas", "sample_b"]` scopes, the transform verbs
+append, `+` composes two *already-scoped* handles — which is why it does not
+reintroduce the broadcast ambiguity
+[§6](#6-composition-and-the-broadcast-rule--resolved-by-q8) describes; that came
+from `+` mutating construction-time scope, not from `+` itself.
+
 ---
 
 ## 6. Composition and the broadcast rule — resolved by Q8
 
-**Superseded.** `+` is gone, and with it the ordering subtlety this section was written
-to document.
+**Superseded.** `+` no longer seeds scope, and with it the ordering subtlety this
+section was written to document.
 
 The problem it described: `.space_record()` appended a step to **every sample currently
 keyed in the space**, so composition was order-sensitive —
@@ -270,6 +336,11 @@ mg <- spatShift(mg, dx = 8000, space = "atlas", samples = "b")  # b only
 mg <- affine(mg, M, space = "atlas")                        # every keyed sample
 mg <- spin(mg, 30, space = "atlas", samples = c("a", "b"))  # both, explicitly
 ```
+
+`+` is back, but only as a merge of two handles that are **already scoped** — it
+concatenates step lists under matching frame/sample keys and cannot change whose
+steps they are. That is a different operation from the one described above, which
+mutated construction-time scope.
 
 The broadcast case survives as `samples = NULL` (omitted), which still means "every
 sample this space already keys" — but it is now the *only* implicit form, and it reads
@@ -375,42 +446,44 @@ covers current needs.
 
 ---
 
-## 11. `viewSpatRelate` step type — Not started
+## 11. `viewSpatRelate` step type — Dropped as specified
 
-Record a polygon-versus-polygon spatial predicate as a view step, with an indirect form
-`spatRelate(g, ..., view = ...)`.
+Was: record a polygon-versus-polygon spatial predicate as a view step, with an
+indirect form `spatRelate(g, ..., view = ...)`.
 
-**Why — the original motivation is now handled elsewhere, see below.**
-[§4](#4-centroid-routing-for-backed-polygon-crops--complete-refactor-pending)
-narrowed crops by centroid, which is right for `intersects`-style questions on
-cell-aggregatable content but wrong for predicates that genuinely need geometry.
-A distinct step type was the proposed way for a view to declare that it means the
-geometric predicate rather than the centroid approximation.
+**Never implemented anywhere** — not on `feature/gmulti-federation-design`,
+`feature/gmulti2`, `merge/federation-into-gsource`, GiottoDisk's
+`feature/giotto-view` or `merge/federation-into-dev`. This item was always a plan
+entry, so nothing is lost by closing it.
 
-**That declaration now lives on the crop step itself** as `geom = "centroid" | "poly"`
-(§4), which is a cheaper answer to the same requirement and does not need a second
-step type. Two corrections to the reasoning above, both measured against terra rather
-than assumed: `within` and `touches` *are* well defined on a centroid (strict interior
-and boundary-only respectively), so they were never in the geometry-only set; and only
-`contains`, `covers`, `overlaps`, `crosses` are always `FALSE` against a point.
-`covered_by` is not a terra predicate at all.
+**Its stated motivation is answered by [§4](#4-a-crop-resolves-to-a-cell_id-set--complete).**
+The original argument was that centroid narrowing is wrong for predicates that
+genuinely need geometry, and that a distinct step type was how a view would declare
+it meant the geometric predicate. That declaration now lives on the crop step as
+`geom = "centroid" | "poly"` — cheaper, and no second step type. Two corrections to
+the original reasoning, measured against terra rather than assumed: `within` and
+`touches` *are* well defined on a centroid (strict interior and boundary-only), so
+they were never in the geometry-only set; only `contains`, `covers`, `overlaps`,
+`crosses` are always `FALSE` against a point, and `covered_by` is spelled without the
+underscore in terra, which `spatRelate()` translates so a recorded step names the
+same predicate on either side of the in-memory / backed boundary.
 
-**What is left of this item** is the narrower case it also mentions: recording a
-general polygon-versus-polygon `spatRelate` as a view step, for relating arbitrary
-geometry rather than narrowing cells by a region. Still deferred, and no longer
-blocking geometry-accurate crops. The 1-signature-vs-8 prerequisite below is partly
-closed — GiottoClass's `spatRelate` now takes `character` (WKT), `SpatVector` and `sf`
-on the y side, mirroring GiottoDisk's cascade in reverse (SpatVector is canonical in
-memory, WKT on disk, each side canonicalizing to what its engine consumes).
+**Polygon-versus-polygon already has two straightforward routes**, neither needing
+a new step type or generic:
 
-**Related.** The `spatRelate` generic and its `(giottoSpatial, giottoSpatial)` method
-are already upstream on both `dev` and `gsource`, as is `spatQuery` for the
-gobject-level multi-filter pipeline — so the predicate machinery exists and this is
-about recording it as a recipe step. Note GiottoClass's `spatRelate` currently has
-only the one signature, while GiottoDisk carries seven `parquetGeomBase` y-forms
-(WKT `character`, `SpatVector`, `sf`, `giottoPolygon`, `giottoPoints`, `spatLocsObj`,
-`parquetGeomBase`); the in-memory side would want widening to match before a view step
-leans on it.
+- *recorded* — a crop step whose region is an arbitrary polygon, with
+  `geom = "poly"`. That is a polygon-versus-polygon predicate, evaluated through
+  `spatRelate()`, and it round-trips through `saveRDS` as WKT.
+- *ad hoc* — call `spatRelate(x, y, relation)` directly. The generic and its
+  `(giottoSpatial, giottoSpatial)` method are upstream on both `dev` and `gsource`,
+  GiottoDisk carries the `parquetGeomBase` y-forms, and GiottoClass's y side was
+  widened in stage 5 to `character` (WKT), `SpatVector` and `sf`. So the
+  "1-signature-vs-8" prerequisite this section used to name is closed.
+
+**The only case neither covers** is a predicate whose y side is another *live
+subobject* of the same gobject — "keep cells intersecting the vessels layer" —
+rather than a literal recorded region. Nothing has asked for it. Reopen this
+section, with that as the actual scope, if something does.
 
 ---
 

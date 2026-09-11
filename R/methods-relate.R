@@ -210,28 +210,138 @@ NULL
         call. = FALSE)
 }
 
+# The named DE-9IM predicates, minus `disjoint`. Every one of them implies
+# that x's bounding box meets y's, so a bbox test is a valid pre-filter for
+# each. `relation` also accepts a raw DE-9IM mask, which carries no such
+# guarantee, so anything outside this vocabulary skips the pre-filter.
+.RELATE_BBOX_MONOTONE <- c(
+    "intersects", "touches", "crosses", "overlaps",
+    "within", "contains", "covers", "covered_by"
+)
+
+# The user-facing vocabulary is sf/sedona's, which {GiottoDisk} also uses,
+# so a recorded step names the same predicate on either side. terra spells
+# one of them without the underscore.
+#' @keywords internal
+#' @noRd
+.relate_terra_name <- function(relation) {
+    if (identical(relation, "covered_by")) "coveredby" else relation
+}
+
+# Is this geometry an axis-aligned rectangle?
+#
+# A single-part polygon with exactly two distinct x and two distinct y
+# values IS its own bounding box, so an AABB test answers `intersects`
+# exactly and the terra call can be skipped outright. This is the common
+# case for a recorded crop region, which comes from a numeric extent.
+#' @keywords internal
+#' @noRd
+.region_is_rect <- function(region) {
+    if (!inherits(region, "SpatVector")) return(FALSE)
+    if (nrow(region) != 1L) return(FALSE)
+    if (!identical(terra::geomtype(region), "polygons")) return(FALSE)
+    g <- tryCatch(terra::geom(region), error = function(e) NULL)
+    if (is.null(g)) return(FALSE)
+    if (length(unique(g[, "part"])) != 1L) return(FALSE)
+    length(unique(g[, "x"])) == 2L && length(unique(g[, "y"])) == 2L
+}
+
+# Which rows of `x` have a chance of satisfying `relation` against `y`?
+#
+# `NULL` means "no cheap answer, test everything". Only points get one:
+# their coordinates are their bounding boxes, so the test is four vectorized
+# comparisons. Anything else would need per-feature extents, which costs
+# about what the predicate does.
+#' @keywords internal
+#' @noRd
+.relate_bbox_prefilter <- function(x, y, relation) {
+    if (!relation %in% .RELATE_BBOX_MONOTONE) return(NULL)
+    if (!identical(terra::geomtype(x), "points")) return(NULL)
+    bb <- terra::ext(y)[]
+    # `geom()` rather than `crds()`: it is one row per point, in row order,
+    # with no NA-dropping to knock the result out of alignment.
+    g <- terra::geom(x)
+    g[, "x"] >= bb[[1L]] & g[, "x"] <= bb[[2L]] &
+        g[, "y"] >= bb[[3L]] & g[, "y"] <= bb[[4L]]
+}
+
+# Row indices of `x` satisfying `relation` against any feature of `y`.
+#' @keywords internal
+#' @noRd
+.relate_hits <- function(x, y, relation, ...) {
+    in_bbox <- .relate_bbox_prefilter(x, y, relation)
+    cand <- if (is.null(in_bbox)) seq_len(nrow(x)) else which(in_bbox)
+
+    # The pre-filter already answered exactly when the region is its own
+    # bounding box.
+    if (identical(relation, "intersects") && .region_is_rect(y) &&
+        !is.null(in_bbox)) {
+        return(cand)
+    }
+    if (length(cand) == 0L) return(integer(0L))
+
+    pairs <- terra::relate(
+        x[cand], y,
+        relation = .relate_terra_name(relation), pairs = TRUE, ...
+    )
+    if (nrow(pairs) == 0L) return(integer(0L))
+    cand[sort(unique(pairs[, 1L]))]
+}
+
 #' @rdname spatRelate
 #' @param engine `character` or `NULL`. Predicate engine. In-memory objects
 #'   support only `"terra"` (the default when `NULL`); backed stores in
 #'   \pkg{GiottoDisk} additionally offer `"sedona"` and `"duckdb"`.
 #' @export
 setMethod(
-    "spatRelate", signature(x = "giottoSpatial", y = "SpatVector"),
+    "spatRelate", signature(x = "SpatVector", y = "SpatVector"),
     function(x, y, relation = "intersects", engine = NULL, ...) {
         .assert_relate_engine(engine)
-        # The single terra call site for the in-memory spatRelate family;
-        # every other y-form coerces and recurses into here. `relate()` is
-        # not reused because its own y-side is `giottoSpatial`-only, and
-        # widening the relation-matrix API is a separate concern from
-        # widening the filter form.
-        pairs <- terra::relate(
-            .as_relate_geom(x), y,
-            relation = relation, pairs = TRUE, ...
-        )
-        if (nrow(pairs) == 0L) {
-            return(x[integer(0L)])
+        # Bottom of the cascade: every other x- and y-form coerces and
+        # recurses into here. `relate()` is not reused because its y-side
+        # is `giottoSpatial`-only.
+
+        # `disjoint` is the definitional negation of `intersects`, so it is
+        # answered by complement. That is not just tidiness: the bbox
+        # pre-filter would drop exactly the geometries `disjoint` keeps, so
+        # asking terra for it directly forfeits the fast paths -- and the
+        # complement is usually the smaller of the two sets to compute.
+        if (identical(relation, "disjoint")) {
+            hit <- .relate_hits(x, y, "intersects", ...)
+            return(x[setdiff(seq_len(nrow(x)), hit)])
         }
-        x[sort(unique(pairs[, 1L]))]
+        x[.relate_hits(x, y, relation, ...)]
+    }
+)
+
+#' @rdname spatRelate
+#' @export
+setMethod(
+    "spatRelate", signature(x = "spatLocsObj", y = "SpatVector"),
+    function(x, y, relation = "intersects", engine = NULL, ...) {
+        # Geometry is derived, not stored — `as.points()` rebuilds it
+        # from `@coordinates` — so there is no slot to write back to.
+        # The conversion carries every column, so `cell_ID` rides along
+        # and the surviving rows are recovered by ID, not position.
+        res <- spatRelate(as.points(x), y, relation = relation,
+            engine = engine, ...)
+        x[x$cell_ID %in% res$cell_ID]
+    }
+)
+
+#' @rdname spatRelate
+#' @export
+setMethod(
+    "spatRelate", signature(x = "giottoSpatial", y = "SpatVector"),
+    function(x, y, relation = "intersects", engine = NULL, ...) {
+        # Delegate to whoever owns the geometry — a SpatVector, an `sf`,
+        # or a {GiottoDisk} store, which brings its own engines. `x[]`
+        # rather than `.as_relate_geom(x)`: the carrier must stay
+        # uncoerced to dispatch to its own method. Geometry is stored
+        # here, so write it back and refresh the ID cache as `[` does.
+        x[] <- spatRelate(x[], y, relation = relation,
+            engine = engine, ...)
+        .refresh_id_cache(x)
     }
 )
 

@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods-space.R, R/methods-spatShift.R
 \name{spatShift,giottoMulti-method}
 \alias{spatShift,giottoMulti-method}
+\alias{spatShift,giottoSpace-method}
 \alias{spatShift}
 \alias{spatShift,giotto-method}
 \alias{spatShift,SpatExtent-method}
@@ -16,6 +17,8 @@
 \title{Spatially shift an object}
 \usage{
 \S4method{spatShift}{giottoMulti}(x, dx = 0, dy = 0, space = NULL, samples = NULL, ...)
+
+\S4method{spatShift}{giottoSpace}(x, dx = 0, dy = 0, samples = NULL, ...)
 
 \S4method{spatShift}{giotto}(
   x,

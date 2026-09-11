@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods-space.R, R/methods-spin.R
 \name{spin,giottoMulti-method}
 \alias{spin,giottoMulti-method}
+\alias{spin,giottoSpace-method}
 \alias{spin}
 \alias{spin,giotto-method}
 \alias{spin,giottoPolygon-method}
@@ -14,6 +15,8 @@
 \title{Spin an object}
 \usage{
 \S4method{spin}{giottoMulti}(x, angle, x0 = NULL, y0 = NULL, space = NULL, samples = NULL, ...)
+
+\S4method{spin}{giottoSpace}(x, angle, x0 = NULL, y0 = NULL, samples = NULL, ...)
 
 \S4method{spin}{giotto}(
   x,

@@ -7,6 +7,7 @@
 \alias{[,giotto,missing,gIndex,missing-method}
 \alias{[,giotto,gIndex,gIndex,missing-method}
 \alias{[,giotto,missing,missing,missing-method}
+\alias{subset,giottoView-method}
 \alias{subset,giotto-method}
 \title{Subset a \code{giotto} object}
 \usage{
@@ -17,6 +18,16 @@
 \S4method{[}{giotto,gIndex,gIndex,missing}(x, i, j, ..., drop = TRUE)
 
 \S4method{[}{giotto,missing,missing,missing}(x, i, j, ..., drop = TRUE)
+
+\S4method{subset}{giottoView}(
+  x,
+  subset,
+  spat_unit = NULL,
+  feat_type = NULL,
+  negate = FALSE,
+  quote = TRUE,
+  ...
+)
 
 \S4method{subset}{giotto}(
   x,
@@ -41,11 +52,6 @@ subset param}
 
 \item{subset}{Logical expression evaluated in expression values}
 
-\item{feat_ids, i}{character vector. Feature IDs to subset the object for.}
-
-\item{cell_ids, j}{character vector. Cell/spatial IDs to subset the object
-for.}
-
 \item{spat_unit}{character. Controls which spatial unit to pull subsetting
 information from when using \code{cell_ids}/\code{j} and \code{subset} params. However,
 all spatial units will always be affected by the subset.}
@@ -60,6 +66,11 @@ are selected}
 \code{substitute()}. Set this to \code{FALSE} when calling from a function, although
 that may not be recommended since NSE output can be unexpected when not used
 interactively.}
+
+\item{feat_ids, i}{character vector. Feature IDs to subset the object for.}
+
+\item{cell_ids, j}{character vector. Cell/spatial IDs to subset the object
+for.}
 }
 \value{
 giotto object
