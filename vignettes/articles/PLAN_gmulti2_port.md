@@ -79,8 +79,8 @@ Plus 8 new `Collate:` entries in DESCRIPTION, and edits to `subset.R`,
 | 8 | joint slots as cache + ground truth | Complete | **Re-decide** | The dual role *is* the root cause of the §17 bug. See Q5 |
 | 9 | carry-keys discipline | Partial | **Port, staged separately** | Confirmed absent upstream. Spans 3 repos / 9 sites, and makes existing positional producers hard-error. Not a gmulti PR |
 | 10 | `federatedReadHandle` | Partial | **Drop** | Zero consumers; its own doc says so. Re-add with its first real consumer (viewspace §12) |
-| 11 | `@groups` | Not started | **Build** | Design settled, ~9-line resolution point. Gated on Q1–Q3 |
-| 12 | combined defaults | Not started | **Build** | Real correctness bug for heterogeneous federations; cheap |
+| 11 | `@groups` | **Built — stage 7** | **Build** | Design settled. The "~9-line resolution point" was wrong; see §6.3 |
+| 12 | combined defaults | **Built — stage 7** | **Build** | Real correctness bug for heterogeneous federations; cheap |
 | 13 | gmulti-level spatial content | Not started, unsolved | **Defer** | Genuinely unsolved. Needs its own pass; blocks nothing today |
 | 14 | joint `@spatial_network` | Not started | **Defer** | Wide accessor fan-out; wants the combined-space story first |
 | 15 | `getSpatialLocations` unification | Not started | **Re-decide** | Output-shape break with wide consumer ripple. See Q6 |
@@ -121,8 +121,8 @@ Resolve before writing the code that assumes an answer.
 | Q | question | gates | status |
 |---|---|---|---|
 | Q1 | `@mapping` entry rename — warn-and-drop dependent joint state, or block pending opt-in? Currently drops | fed 5, 11 | **decided — block on expansion**, see §6.1 |
-| Q2 | `@groups` name collision handling — reject at registration, at resolution, or both? | fed 11 | open |
-| Q3 | Does `giottoSpace(group=)` expand at construction (needs a gobject) or stay symbolic and expand at resolution? Symbolic breaks `names(space@samples)` as the participation set | fed 11, vs 9 | open |
+| Q2 | `@groups` name collision handling — reject at registration, at resolution, or both? | fed 11 | **decided — registration, both directions**, see §6.3 |
+| Q3 | Does `giottoSpace(group=)` expand at construction (needs a gobject) or stay symbolic and expand at resolution? Symbolic breaks `names(space@samples)` as the participation set | fed 11, vs 9 | **decided — late-bound everywhere except `@spaces`**, see §6.3 |
 | Q4 | **Does `space =` earn 57 formals?** Porting the wide surface then trimming is a breaking change; porting narrow then widening is not | vs 7 — port scope | **decided — port all 57**, see §6.2 |
 | Q5 | Should joint slots stay both lazy cache *and* ground truth? The duality caused the §17 no-op — see below for what the audit found | fed 8, 12, 17 | decided, see below |
 | Q6 | `getSpatialLocations(mg)` — named per-child list, or one `sample::id` table? Consistency with the other joint getters vs a consumer-wide break | fed 15, 18 | open |
@@ -175,6 +175,48 @@ for a uniform API. Both knobs land together so the same signatures are touched o
 Staging consequence worth stating in the NEWS entry: 48 of those formals are GiottoClass
 and land with the recipe subsystem, but the other 52 are GiottoVisuals — so the surface is
 not actually uniform until the GiottoVisuals stage.
+
+### 6.3 Q2 / Q3 — `@groups` collisions and binding time (decided 2026-09-11)
+
+**Q2 — reject at registration, from both directions.** `gmultiGroup<-` refuses a
+name a child already holds; `[[<-` and `names<-` refuse a child name a group
+already holds. Resolution therefore never has to break a tie, which is the
+point — a tie-break rule makes the answer depend on registration order.
+Self-reference is also caught at registration; longer cycles cannot be, because
+a group may legitimately name one that does not exist yet, so
+`.gm_expand_groups()` guards them at resolution with a `seen` set of
+already-expanded *group* names. Deduping the output instead does not terminate:
+the output converges while the worklist does not.
+
+**Q3 — late-bound, with `@spaces` the one exception.** A group stores the names
+it was given and expands when *used*, so it tracks the current child
+population — the same reason filter predicates resolve against current
+metadata. `@spaces` expands at record time instead, because a space keys its
+step chains **by sample**: a symbolic key leaves a child reachable through both
+its own key and a group's, with two chains and no defined order between them.
+Expanding also makes the recorded frame mean what the group meant when the user
+asked for it, so a later group edit cannot reach back and change which children
+a transform already applies to.
+
+PLAN's stated cost for symbolic — "breaks `names(space@samples)` as the
+participation set" — turned out not to bind. Nothing reads a space's sample keys
+as participation; the only consumers are `.space_pick_sample()` and `show`, and
+expression participation comes from the mapping (`e@misc$gmulti$participation`).
+The ordering problem above is the real cost, and PLAN did not have it.
+
+**Federation §11's "nine lines and the sole place a name becomes a child" was
+wrong**, and it is the finding worth carrying forward. `.gm_resolve_objects()`
+existed but served only `object =`. `samples =` validated against
+`names(@objects)` at **five** separate sites with five error strings —
+`.gm_slice_to_samples()`, the joint getter's up-front typo check,
+`getFeatureMetadata`, `.record_space_on_gobject`, plus a sixth check against
+*participation* rather than `@objects`. Inserting expansion at the one site PLAN
+named would have left four sites rejecting a valid group name before expansion
+ever ran, so `getCellMetadata(mg, samples = "tumor_pair")` would error while
+`.gm_slice_to_samples` was never reached. Stage 7's first move was converging
+them onto `.gm_resolve_samples()`. Same shape as stage 6's `.cells_in_region_dt`
+duplicate: the copies had already drifted, and only one of them was on the path
+the new feature needed.
 
 ### Q5 — joint slots: ground truth, lazily populated
 

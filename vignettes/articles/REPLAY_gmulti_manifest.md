@@ -186,7 +186,10 @@ banner, both false — `materialize()` has three real methods and 24 test uses.
 
 ### Stage 7 — `@groups`, combined defaults (fed 11, 12)
 
-Build fresh; nothing exists on either track. Gated on **D2/D3** below.
+Build fresh; nothing exists on either track — confirmed by pickaxe across every branch
+in all three repos for `gmultiGroup` / `expand_groups` / `gmultiSpatialAlias`, which
+returns doc commits only. The sole prior art is DESIGN §7's `gmultiSpatialAlias`, which
+federation §11 already rejected. Gated on **D2/D3** below. **Landed 2026-09-11.**
 
 ### Stage 8 — carry-keys (fed 9)
 
@@ -297,8 +300,9 @@ base is **`b351ed2b`** (§3), and the fresh branch is cut from the post-merge `g
 - **D6 — finish the removal in stage 3.** `combine_metadata.R` is replayed there anyway and
   the access layer it should route through lands in the same stage. Federation §7's claim
   becomes true instead of amended, and stage 9's injection commit stays dropped.
-- **D2 / D3 — stay open.** They gate only stage 7 (build-fresh) and stage 4's
-  `.resolve_samples` seam; decide when stage 7 starts, block nothing before it.
+- **D2 / D3 — decided at the start of stage 7, as planned.** D2: reject collisions at
+  registration, from both directions. D3: late-bound, except `@spaces`, which keys step
+  chains by sample and so expands at record time. Full argument in PLAN §6.3.
 - **D4 confirmed** — upstream hnsw intent is checked separately, never on this branch.
   **D5 confirmed** — keep the checkpoint's per-child list shape.
 - **Stage 2 commit checklist:** the "staged `subset.R` +87 supersedes checkpoint +92 —
@@ -588,6 +592,48 @@ base is **`b351ed2b`** (§3), and the fresh branch is cut from the post-merge `g
   better than `+`, which inherited scope from construction history — see Q8 in
   [PLAN_gmulti2_port.md](PLAN_gmulti2_port.md) for the full argument, the target
   representation, and the `@groups` resolution guards owed to stage 7.
+
+- **2026-09-11 — stage 7 landed** (`c0d2422d` fed 11, `d45c265a` fed 12). Suite
+  **1855 pass / 0 fail / 0 skip**, from 1816. D2 and D3 were decided at the start, as
+  §9 planned; the arguments are in PLAN §6.3 and are not repeated here.
+
+  **§11's "nine lines and the sole place a name becomes a child" was the estimate that
+  was wrong**, and it cost the stage its shape. `.gm_resolve_objects()` existed but
+  served only `object =`; `samples =` validated against `names(@objects)` at **five**
+  separate sites with five error strings. Group expansion has to run *before* that
+  check, so inserting it at the one site §11 named would have left four sites rejecting
+  a valid group name before expansion ever ran — `getCellMetadata(mg, samples =
+  "tumor_pair")` erroring while `.gm_slice_to_samples()` was never reached. Converging
+  them onto `.gm_resolve_samples()` was the first move, not the feature. Same shape as
+  stage 6's `.cells_in_region_dt`: copies that had already drifted, and only one of them
+  on the path the new work needed. Both docs are corrected.
+
+  **Two guards §11 listed turned out to need splitting by where they can be enforced.**
+  Self-reference is catchable at registration; longer cycles are not, because a group may
+  legitimately name one that does not exist yet — so registration cannot demand a
+  complete graph and `.gm_expand_groups()` holds the cycle guard at resolution. The
+  `seen` set tracks already-expanded *group* names rather than output names, which is
+  what makes `A = "B"`, `B = "A"` terminate: the output converges while the worklist does
+  not.
+
+  **`@spaces` is the one place a group expands eagerly** — it keys step chains by sample,
+  so a symbolic key leaves a child reachable through both its own key and a group's, with
+  two chains and no defined order between them. PLAN's stated cost for symbolic
+  (`names(space@samples)` as the participation set) did not bind; nothing reads those
+  keys as participation. The ordering problem is the real one and PLAN did not have it.
+
+  **fed 12 was reachable only by building a heterogeneous fixture.** `@mapping` already
+  unions every child's handles, so `names(axis_map)[[1L]]` was the *first child's*
+  convention standing for the federation. The existing suite could not see it — every
+  fixture was homogeneous, which is exactly what §12 predicted ("current paths work only
+  because typical use is homogeneous"). The regression test builds two children carrying
+  different spat_units before the bug is reachable at all. Computed on demand rather than
+  at init, against §12's wording: the child population and the mapping both move, and a
+  cached default is one more thing to invalidate.
+
+  **Not touched, deliberately:** `updateGiottoObject()`. It hard-errors on anything that
+  is not a `giotto`, and `giottoMulti` has never been released, so a new slot on it needs
+  no migration.
 
 ---
 

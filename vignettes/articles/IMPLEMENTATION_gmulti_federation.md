@@ -230,9 +230,9 @@ in-memory consumers concat at Arrow level at use time.
 
 ---
 
-## 11. `@groups` registered sample handles — Not started
+## 11. `@groups` registered sample handles — Complete (stage 7)
 
-Design settled, nothing written. **Supersedes design doc §7.**
+**Supersedes design doc §7.**
 
 Lets a name refer to several samples at once, usable anywhere a sample name is — so no
 new parameter appears anywhere.
@@ -257,18 +257,25 @@ asserts `types = "giotto"`; `names()` / `length()` would count groups as childre
 `.gm_compute_sig` all iterate children; `show()` sums cells and features. Storage stays
 separate; only the *namespace* is shared, because only *resolution* is shared.
 
-Resolution — `.gm_resolve_objects()` is nine lines and the sole place a name becomes a
-child (`samples =`, `object =`, every getter, the dispatcher all funnel through it):
+Resolution — `.gm_resolve_samples()` is the sole place a name becomes a child
+(`samples =`, `object =`, every getter, the dispatcher all funnel through it).
+
+**Built stage 7, and the "sole place" claim was aspirational, not descriptive.**
+`.gm_resolve_objects()` existed and served only `object =`; `samples =` validated
+against `names(@objects)` at five separate sites with five error strings. Expansion
+has to precede that check, so inserting it at one site would have left the other four
+rejecting valid group names. They were converged onto `.gm_resolve_samples()` first —
+see PLAN §6.3. The shape below is what `.gm_resolve_objects()` now delegates to:
 
 ```r
-.gm_resolve_objects <- function(x, object = NULL) {
-    if (is.null(object)) return(names(x))
-    checkmate::assert_character(object)
-    object <- .gm_expand_groups(x, object)   # recursive, then unique()
-    bad <- setdiff(object, names(x))
-    if (length(bad) > 0L) stop("unknown object(s): ", ...)
-    object
-}
+.gm_resolve_samples <- function(x, samples, site, what = "sample") {
+    if (is.null(samples)) return(NULL)          # "no selection", not "all"
+    checkmate::assert_character(samples, min.len = 1L, any.missing = FALSE)
+    resolved <- .gm_expand_groups(x, samples)   # recursive, cycle-guarded,
+                                                # unique() first-appearance
+    bad <- setdiff(resolved, names(x@objects))
+    if (length(bad) > 0L) stop(...)             # blames a typo or a stale
+}                                               # group, separately
 ```
 
 Lookup order: recursively expand against `@groups`, then resolve collected names against
@@ -283,20 +290,29 @@ Lookup order: recursively expand against `@groups`, then resolve collected names
 | value shape | named char vector; `names()` NULL = pure membership, named = per-child content handle. Same shape as a `@mapping` entry |
 | collisions | reject group names colliding with a child on `gmultiGroup<-`; reject child names colliding with a group on `[[<-` / `names<-` |
 
-Open before building — hub §5 Q1–Q3.
+Q2 / Q3 decided before building — see PLAN §6.3.
 
 ---
 
-## 12. Combined defaults — Not started
+## 12. Combined defaults — Complete (stage 7)
 
-A gmulti's default `spat_unit` / `feat_type` should be the **union of child defaults**,
-not one child's.
+A gmulti's default `spat_unit` / `feat_type` is **combined across children**, not taken
+from one child's.
 
 - heterogeneous federation is supported — different modalities or spat_unit conventions across samples
-- picking one child's default to stand for the whole multi silently misroutes calls when others disagree
+- `@mapping` already unions every child's handles, so the axis map is **not** a set of
+  synonyms. Taking `names(axis_map)[[1L]]` therefore let the *first child's* convention
+  stand for the whole federation, and routed the others to a handle they may not carry
 - don't assume `set_default_spat_unit(mg)` agrees with `set_default_spat_unit(child)`
-- fix: compute a combined default at init, propagate mapping-aware to per-child calls
-- current paths work only because typical use is homogeneous
+- rule: prefer a handle every current child participates in; else the sole declared
+  handle (its `NA`s are declared skips, not a disagreement); else error naming the
+  handles and who carries each. Same discipline the `values` axis already applied when
+  no `"raw"` handle exists
+- computed **on demand, not at init** — the child population and the mapping both move,
+  and a cached default is one more thing to invalidate for no gain
+- current paths worked only because typical use is homogeneous, which is also why the
+  suite caught nothing: the regression test had to build a federation whose children
+  carry different spat_units before the bug was reachable
 
 ---
 
