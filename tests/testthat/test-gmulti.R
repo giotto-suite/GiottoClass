@@ -1027,3 +1027,62 @@ test_that("a space step expands its group at record time", {
     expect_identical(sort(names(sp[["atlas"]])), c("a", "b"))
     expect_false("pair" %in% names(sp[["atlas"]]))
 })
+
+# combined defaults (stage 7, fed 12) ####
+
+# A child whose expression sits under a non-default spat_unit, so a
+# federation can be genuinely heterogeneous.
+.mk_unit <- function(ncell, nfeat, su) {
+    g <- .mk_minimal(ncell, nfeat)
+    e <- getExpression(g, output = "exprObj")
+    spatUnit(e) <- su
+    setExpression(createGiottoObject(verbose = FALSE), e, verbose = FALSE)
+}
+
+test_that("a shared spat_unit is the combined default", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(5, 4), b = .mk_minimal(3, 4)))
+    expect_identical(set_default_spat_unit(mg), "cell")
+    expect_identical(.gm_resolve_axis(mg, "spat_unit", NULL)$handle, "cell")
+})
+
+test_that("children that disagree on spat_unit have no default, loudly", {
+    # @mapping unions child handles, so the axis map is not a set of
+    # synonyms. Taking the first declared handle would answer 'cell' here
+    # and route sample b -- which has no 'cell' -- to it.
+    mg <- createGiottoMulti(list(
+        a = .mk_unit(5, 4, "cell"), b = .mk_unit(3, 4, "nucleus")
+    ))
+    expect_identical(names(mg@mapping$spat_unit), c("cell", "nucleus"))
+    expect_error(set_default_spat_unit(mg), "do not share one")
+    expect_error(.gm_resolve_axis(mg, "spat_unit", NULL), "do not share one")
+    # the error names the handles and who carries each
+    expect_error(set_default_spat_unit(mg), "'cell' \\(a\\)")
+    expect_error(set_default_spat_unit(mg), "'nucleus' \\(b\\)")
+})
+
+test_that("an explicit handle still resolves on a heterogeneous multi", {
+    mg <- createGiottoMulti(list(
+        a = .mk_unit(5, 4, "cell"), b = .mk_unit(3, 4, "nucleus")
+    ))
+    # Only the default is ambiguous. Naming one is not.
+    expect_identical(set_default_spat_unit(mg, spat_unit = "nucleus"), "nucleus")
+    expect_identical(.gm_resolve_axis(mg, "spat_unit", "cell")$map, c(a = "cell"))
+})
+
+test_that("a handle every child shares wins over one only some carry", {
+    mg <- createGiottoMulti(list(
+        a = .mk_unit(5, 4, "cell"), b = .mk_unit(3, 4, "nucleus")
+    ))
+    # Declare a handle both participate in; it outranks 'cell', which is
+    # first in discovery order but covers only `a`.
+    gmultiMapping(mg, "spat_unit", "shared") <- c(a = "cell", b = "nucleus")
+    expect_identical(.gm_resolve_axis(mg, "spat_unit", NULL)$handle, "shared")
+})
+
+test_that("a single declared handle stays the default despite NA skips", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(5, 4), b = .mk_minimal(3, 4)))
+    gmultiMapping(mg, "spat_unit") <- list(cell = c(a = "cell", b = NA_character_))
+    # One handle is unambiguous — its NAs are declared skips, not a
+    # disagreement about which handle to mean.
+    expect_identical(.gm_resolve_axis(mg, "spat_unit", NULL)$handle, "cell")
+})

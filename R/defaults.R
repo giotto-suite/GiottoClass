@@ -33,10 +33,10 @@ set_default_spat_unit <- function(gobject,
         if (!is.null(gobject@expression) && length(gobject@expression) > 0L) {
             spat_unit <- names(gobject@expression)[[1L]]
         } else if (inherits(gobject, "giottoMulti")) {
-            # giottoMulti has no @spatial_info. Prefer the mapping's first
-            # declared handle (the authoritative universe); fall back to the
-            # first child's live default, read fresh each call.
-            spat_unit <- names(gobject@mapping$spat_unit)[1L]
+            # giottoMulti has no @spatial_info. Prefer the mapping's
+            # combined default (the authoritative universe); fall back to
+            # the first child's live default, read fresh each call.
+            spat_unit <- .gm_combined_default_or_null(gobject, "spat_unit")
             if (is.null(spat_unit) || is.na(spat_unit)) {
                 first_child <- gobject@objects[[1L]]
                 spat_unit <- if (!is.null(first_child)) {
@@ -98,10 +98,10 @@ set_default_feat_type <- function(gobject,
                                 spat_unit"))
             }
         } else if (inherits(gobject, "giottoMulti")) {
-            # giottoMulti has no @feat_info. Prefer the mapping's first
-            # declared handle (the authoritative universe); fall back to the
-            # first child's live default, read fresh each call.
-            feat_type <- names(gobject@mapping$feat_type)[1L]
+            # giottoMulti has no @feat_info. Prefer the mapping's combined
+            # default (the authoritative universe); fall back to the first
+            # child's live default, read fresh each call.
+            feat_type <- .gm_combined_default_or_null(gobject, "feat_type")
             if (is.null(feat_type) || is.na(feat_type)) {
                 first_child <- gobject@objects[[1L]]
                 feat_type <- if (!is.null(first_child)) {

@@ -103,6 +103,14 @@
   except on `@spaces`, which keys step chains by sample and therefore
   expands at record time. `@groups` is deliberately not pruned when a child
   is removed; a group naming a departed child errors at use, naming both.
+- A `giottoMulti`'s default `spat_unit` / `feat_type` is now **combined**
+  across children rather than taken from the first declared handle, which
+  was the first child's. `@mapping` unions every child's handles, so the
+  axis map is not a set of synonyms: the default is a handle every current
+  child participates in, or the sole declared handle, and children that
+  genuinely disagree are an error naming the handles and who carries each.
+  Previously a heterogeneous federation silently routed every sample to the
+  first child's convention. Naming a handle explicitly is unaffected.
 - Shared-domain getters (`getExpression`, `getCellMetadata`,
   `getFeatureMetadata`) gain `giottoMulti` methods: the joint slot is read
   when populated, otherwise content is assembled from children per the

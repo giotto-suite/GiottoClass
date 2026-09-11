@@ -1370,6 +1370,60 @@ setMethod(
 #   (NA-keyed samples are declared skips and excluded). Empty `map` means
 #   "fall back to legacy per-child defaults."
 #' @noRd
+# The gmulti-level default for `spat_unit` / `feat_type`.
+#
+# A federation may be heterogeneous -- different modalities, or different
+# spat_unit conventions across samples -- and `@mapping` unions every child's
+# handles, so the axis map is not a set of synonyms. Taking the first
+# declared handle therefore lets the FIRST CHILD's convention stand for the
+# whole multi, and every call for the others is silently routed to a handle
+# they may not carry. That works only because typical use is homogeneous.
+#
+# Combined instead: prefer a handle every current child participates in.
+# Absent one, a single declared handle is still unambiguous (its NAs are
+# declared skips). Several handles and no shared one is a genuine
+# disagreement, and any pick misroutes someone -- so it is an error naming
+# who carries what, the same discipline the `values` axis already applies
+# when no "raw" handle exists.
+#' @noRd
+.gm_combined_default <- function(gobject, axis, axis_map) {
+    present <- names(gobject@objects)
+    participates <- function(entry) {
+        entry <- entry[names(entry) %in% present]
+        length(entry) == length(present) && !anyNA(entry)
+    }
+
+    universal <- Filter(participates, axis_map)
+    if (length(universal) > 0L) return(names(universal)[[1L]])
+    if (length(axis_map) == 1L) return(names(axis_map)[[1L]])
+
+    carriers <- vapply(names(axis_map), function(h) {
+        entry <- axis_map[[h]]
+        entry <- entry[names(entry) %in% present]
+        paste(names(entry)[!is.na(entry)], collapse = "/")
+    }, character(1L))
+    stop(sprintf(paste0(
+        "[gmulti] no default %s: the children do not share one. Declared ",
+        "handles and who carries them -- %s. Pass %s explicitly, or set an ",
+        "active default with instructions()."),
+        axis,
+        paste(sprintf("'%s' (%s)", names(carriers), carriers),
+            collapse = ", "),
+        axis), call. = FALSE)
+}
+
+# As above, but `NULL` when the axis is undeclared rather than an error.
+# Used by `set_default_*()`, whose chain falls back to the first child's
+# live default when @mapping has nothing to say. An *undeclared* axis is
+# that case; a declared axis the children disagree on is not, and stays
+# loud — falling back there is exactly the silent misroute.
+#' @noRd
+.gm_combined_default_or_null <- function(gobject, axis) {
+    axis_map <- gobject@mapping[[axis]] %||% list()
+    if (length(axis_map) == 0L) return(NULL)
+    .gm_combined_default(gobject, axis, axis_map)
+}
+
 .gm_resolve_axis <- function(gobject, axis, handle = NULL) {
     axis_map <- gobject@mapping[[axis]] %||% list()
 
@@ -1389,7 +1443,7 @@ setMethod(
                     "). Specify one explicitly.", call. = FALSE)
             }
         } else {
-            names(axis_map)[[1L]]
+            .gm_combined_default(gobject, axis, axis_map)
         }
     }
 
