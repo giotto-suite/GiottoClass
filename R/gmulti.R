@@ -59,6 +59,14 @@
 #'   Every entry keys every sample; `NA_character_` is the deliberate-skip
 #'   sentinel ("this sample does not contribute to this handle").
 #'   Auto-discovered at construction; edited via [gmultiMapping()].
+#' @slot groups named `list` of character vectors declaring that a name
+#'   refers to several samples at once. Usable anywhere a sample name is,
+#'   so no `samples =` formal changes. Entries may name other groups
+#'   (resolved recursively); membership is expanded at **resolution**, not
+#'   at registration, so a group tracks the current child population.
+#'   Edited via [gmultiGroup()]. Unlike every other registry here,
+#'   `@groups` is **not** reset when the child population changes — see
+#'   the note in `initialize()`.
 #'
 #' @slot expression shared expression matrices (rows = union of features,
 #'   cols = global cell IDs)
@@ -96,6 +104,7 @@ giottoMulti <- setClass(
         id_map              = "list",
         id_sig              = "list",
         mapping             = "list",
+        groups              = "list",
 
         # shared-domain (names aligned with giotto)
         expression          = "nullOrList",
@@ -124,6 +133,7 @@ giottoMulti <- setClass(
         id_sig              = list(),
         mapping             = list(spat_unit = list(), feat_type = list(),
             values = list()),
+        groups              = list(),
 
         expression          = NULL,
         expression_feat     = NULL,
@@ -192,6 +202,14 @@ setMethod("initialize", signature("giottoMulti"), function(.Object, objects = NU
     # letting a new child silently inherit whatever narrowing the parent
     # carries — would report a filter that child never went through, so
     # narrowing is treated as eager state tied to a specific population.
+    #
+    # `@groups` is deliberately NOT reset here, and is the only registry on
+    # this class that opts out. The others cache *derived* state, so a
+    # population change makes them wrong and recomputing is free. A group is
+    # a user's declaration of intent — silently dropping a member because a
+    # child went away discards something no recompute can recover. A group
+    # naming a departed child is caught at resolution instead, where the
+    # error can name the missing member.
     cur_sig <- .gm_compute_sig(.Object@objects)
     if (!identical(cur_sig, .Object@id_sig)) {
         .Object@id_map$cells <- .gm_build_cell_idmap(.Object@objects)
@@ -294,6 +312,15 @@ setMethod("[[", signature(x = "giottoMulti", i = "ANY", j = "missing"),
 setReplaceMethod("[[",
     signature(x = "giottoMulti", i = "ANY", j = "missing", value = "giotto"),
     function(x, i, j, ..., initialize = TRUE, value) {
+        # Collision, arriving from the child side. See `gmultiGroup<-` for
+        # the group side and for why neither side defers to resolution.
+        if (is.character(i) && length(i) == 1L && i %in% names(x@groups)) {
+            stop("[giottoMulti] '", i, "' is already a registered group ",
+                "(see gmultiGroups()). A child and a group cannot share a ",
+                "name; drop the group first with gmultiGroup(x, '", i,
+                "') <- NULL.", call. = FALSE)
+        }
+
         # Detect populated joint slots BEFORE mutation so we can warn
         # if the add leaves them incomplete for the new sample's cells.
         is_new <- !(i %in% names(x@objects))
@@ -355,6 +382,13 @@ setMethod("[", signature(x = "giottoMulti", i = "ANY"),
         # every-entry-keys-every-sample invariant holds for the survivors.
         out@mapping <- .gm_prune_mapping_samples(out@mapping, sel)
 
+        # @groups is NOT pruned, on purpose. Its members are a declaration,
+        # not a cache keyed by the population, so dropping the ones that no
+        # longer resolve would quietly rewrite what the user asked for --
+        # and `mg["a"]["a"]` would then differ from `mg["a"]` in what it
+        # still remembers. A group naming a departed child errors at
+        # resolution, naming the member.
+
         # rebuild id_map for the new child set
         out@id_sig <- list()
         initialize(out)
@@ -374,6 +408,13 @@ setReplaceMethod("names", signature(x = "giottoMulti", value = "character"),
         if (anyDuplicated(value)) {
             stop("[giottoMulti] child names must be unique", call. = FALSE)
         }
+        clash <- intersect(value, names(x@groups))
+        if (length(clash) > 0L) {
+            stop("[giottoMulti] ",
+                paste(sprintf("'%s'", clash), collapse = ", "),
+                " already registered as group(s) (see gmultiGroups()). A ",
+                "child and a group cannot share a name.", call. = FALSE)
+        }
 
         # Rewrite sample::id prefix across every joint shared slot that
         # carries cell-axis keys. Features are never sample-namespaced
@@ -392,6 +433,13 @@ setReplaceMethod("names", signature(x = "giottoMulti", value = "character"),
         # or every entry silently stops matching and resolution falls back
         # to the legacy child-scan path.
         x@mapping <- .gm_rename_mapping_samples(x@mapping, old_to_new)
+
+        # @groups members name samples, so they follow a rename. This is the
+        # opposite of what `[` does, and the difference is whether a correct
+        # rewrite exists: a rename has exactly one, a removal has none. Group
+        # *names* are a separate namespace and are left alone.
+        x@groups <- lapply(x@groups, .gm_rename_group_members,
+            old_to_new = old_to_new)
 
         names(x@objects) <- value
         # id_map embeds the old names in object column AND in global_id;
@@ -648,13 +696,10 @@ setMethod(
 #' @noRd
 .gm_resolve_objects <- function(x, object = NULL) {
     if (is.null(object)) return(names(x))
-    checkmate::assert_character(object)
-    bad <- setdiff(object, names(x))
-    if (length(bad) > 0L) {
-        stop("[giottoMulti] unknown object(s): ",
-            paste(bad, collapse = ", "), call. = FALSE)
-    }
-    object
+    # `object =` and `samples =` are the same namespace, so a group name
+    # works in both. The only difference is the NULL case: here it means
+    # "all children" rather than "no selection".
+    .gm_resolve_samples(x, object, "giottoMulti", what = "object")
 }
 
 # Decide the multi's @source slot from a (possibly-NULL) explicit value and
@@ -1482,15 +1527,7 @@ setMethod(
 #' @noRd
 .gm_slice_to_samples <- function(x, samples, gobject) {
     if (is.null(samples)) return(x)
-    checkmate::assert_character(samples, min.len = 1L, any.missing = FALSE)
-    bad <- setdiff(samples, names(gobject@objects))
-    if (length(bad) > 0L) {
-        stop(sprintf(
-            "[gmulti getter] sample(s) '%s' not in @objects (have: %s)",
-            paste(bad, collapse = ", "),
-            paste(names(gobject@objects), collapse = ", ")),
-            call. = FALSE)
-    }
+    samples <- .gm_resolve_samples(gobject, samples, "gmulti getter")
     prefixes <- paste0(samples, "::")
     starts_any <- function(ids) {
         # OR across prefixes: TRUE for ids that start with any of them.
@@ -2239,6 +2276,251 @@ setMethod("gmultiMapping<-", "giottoMulti",
 }
 
 
+# groups accessor — one name for several samples ####
+
+#' @title gmulti sample group accessor
+#' @name gmultiGroup
+#' @description
+#' Get or set the `@groups` slot: registers a name that refers to several
+#' samples at once. A group name is usable **anywhere a sample name is** —
+#' `samples =`, `object =`, every getter — so registering one adds no new
+#' parameter to any signature.
+#'
+#' ```r
+#' gmultiGroup(mg, "tumor_pair") <- c("B191", "B215")
+#' getCellMetadata(mg, samples = "tumor_pair")
+#' spatPlot2D(mg, samples = "tumor_pair")
+#' ```
+#'
+#' Groups may name other groups; membership is resolved recursively at use
+#' time, deduplicated with [unique()] in first-appearance order, so
+#' overlapping groups never read a child twice. Assigning `NULL` drops a
+#' group.
+#'
+#' @section Late binding:
+#' A group stores the names it was given, not the samples they resolved to
+#' at the time. Membership is expanded when the group is *used*, so a group
+#' keeps tracking the child population as it changes. The same reason
+#' filter predicates resolve against current metadata rather than against
+#' a snapshot.
+#'
+#' The consequence is that a group naming a child that has since been
+#' removed is an error at use time, not at removal time — `@groups` is
+#' deliberately not pruned by `[`. Renaming a child *does* rewrite group
+#' members, because a rename has one correct rewrite and a removal has
+#' none.
+#'
+#' @section Collisions:
+#' A group and a child may not share a name, and the clash is rejected at
+#' registration from whichever side arrives second — `gmultiGroup<-` refuses
+#' a name already held by a child, and `[[<-` / `names<-` refuse a child
+#' name already held by a group. Resolution therefore never has to break a
+#' tie, which is the point: a tie-break rule would make the answer depend
+#' on registration order.
+#'
+#' @param x a `giottoMulti`
+#' @param group `character(1)`. Group name.
+#' @param value `character` of member names (samples or other groups), or
+#'   `NULL` to drop the group. May be named, in which case the **names**
+#'   are the members and the values are per-child content handles, matching
+#'   the shape of a `@mapping` entry.
+#' @param ... additional arguments, currently unused
+#' @returns `gmultiGroup()` the member vector, or `NULL` if unregistered;
+#'   `gmultiGroups()` the registered group names
+#' @examples
+#' \dontrun{
+#' gmultiGroup(mg, "tumor_pair") <- c("B191", "B215")
+#' gmultiGroup(mg, "all_tumor") <- c("tumor_pair", "B651")  # nested
+#' gmultiGroups(mg)
+#' gmultiGroup(mg, "tumor_pair") <- NULL
+#' }
+#' @export
+setGeneric("gmultiGroup",
+    function(x, group, ...) standardGeneric("gmultiGroup"))
+
+#' @rdname gmultiGroup
+#' @export
+setMethod("gmultiGroup", signature(x = "giottoMulti"),
+    function(x, group, ...) {
+        checkmate::assert_string(group, .var.name = "group")
+        x@groups[[group]]
+    }
+)
+
+#' @rdname gmultiGroup
+#' @export
+setGeneric("gmultiGroup<-",
+    function(x, group, ..., value) standardGeneric("gmultiGroup<-"))
+
+#' @rdname gmultiGroup
+#' @export
+setMethod("gmultiGroup<-", signature(x = "giottoMulti"),
+    function(x, group, ..., value) {
+        checkmate::assert_string(group, .var.name = "group")
+        if (is.null(value)) {
+            x@groups[[group]] <- NULL
+            return(x)
+        }
+        checkmate::assert_character(value, min.len = 1L, any.missing = FALSE,
+            .var.name = "value")
+
+        # Collision, arriving from the group side. The child side of the
+        # same rule lives in `[[<-` and `names<-`.
+        if (group %in% names(x@objects)) {
+            stop("[gmultiGroup<-] '", group, "' is already a child of this ",
+                "giottoMulti. A group and a sample cannot share a name -- ",
+                "resolution would have to break the tie, and the winner ",
+                "would depend on which was registered first.", call. = FALSE)
+        }
+
+        # Self-reference is the one cycle cheap enough to catch here. Longer
+        # cycles need the whole graph, so `.gm_expand_groups()` guards them
+        # at resolution -- a group may legitimately name one that does not
+        # exist yet, so registration cannot demand a complete graph.
+        if (group %in% .gm_group_members(value)) {
+            stop("[gmultiGroup<-] '", group, "' cannot name itself",
+                call. = FALSE)
+        }
+
+        x@groups[[group]] <- value
+        x
+    }
+)
+
+#' @rdname gmultiGroup
+#' @export
+setGeneric("gmultiGroups", function(x, ...) standardGeneric("gmultiGroups"))
+
+#' @rdname gmultiGroup
+#' @export
+setMethod("gmultiGroups", signature(x = "giottoMulti"),
+    function(x, ...) names(x@groups) %||% character())
+
+# The members of a group entry. An unnamed vector is pure membership; a
+# named one carries per-child content handles, so the *names* are the
+# members. Same shape rule as a `@mapping` entry.
+#' @noRd
+.gm_group_members <- function(entry) {
+    if (is.null(entry)) return(character())
+    names(entry) %||% unname(entry)
+}
+
+# Rewrite the member names of one group entry through a rename map,
+# preserving whichever of the two shapes it is in.
+#' @noRd
+.gm_rename_group_members <- function(entry, old_to_new) {
+    if (is.null(entry) || length(entry) == 0L) return(entry)
+    if (is.null(names(entry))) {
+        hit <- match(unname(entry), names(old_to_new))
+        entry[!is.na(hit)] <- old_to_new[hit[!is.na(hit)]]
+        return(entry)
+    }
+    hit <- match(names(entry), names(old_to_new))
+    names(entry)[!is.na(hit)] <- old_to_new[hit[!is.na(hit)]]
+    entry
+}
+
+# Expand any group names in `names` to their member samples, recursively.
+#
+# Three guards the naive form does not have, each one a way for this to look
+# like it worked:
+#
+#   * cycles terminate. `seen` tracks already-expanded GROUP names, not
+#     output names -- deduping the output instead lets `A = "B"`, `B = "A"`
+#     re-expand forever, because the output converges while the worklist
+#     does not.
+#   * first-appearance order survives, and `unique()` runs once at the end,
+#     so overlapping groups do not read a child twice.
+#   * expanding to nothing is an error. An empty group resolves to an empty
+#     sample set, which every downstream caller reads as "no narrowing" --
+#     the same silent-no-op shape as the stage-2 `subset(giottoMulti)` bug.
+#
+# Names that are not groups pass through untouched; whether they are valid
+# children is the caller's check, made after expansion so the error can
+# name what the user actually typed.
+#' @noRd
+.gm_expand_groups <- function(x, names_in) {
+    groups <- x@groups
+    if (length(groups) == 0L) return(names_in)
+
+    out <- character()
+    seen <- character()
+    worklist <- names_in
+    while (length(worklist) > 0L) {
+        nm <- worklist[[1L]]
+        worklist <- worklist[-1L]
+        if (!nm %in% names(groups)) {
+            out <- c(out, nm)
+            next
+        }
+        if (nm %in% seen) next
+        seen <- c(seen, nm)
+        worklist <- c(.gm_group_members(groups[[nm]]), worklist)
+    }
+
+    out <- unique(out)
+    if (length(out) == 0L) {
+        stop("[giottoMulti] ",
+            paste(sprintf("'%s'", names_in), collapse = ", "),
+            " expanded to no samples. A group that resolves to nothing ",
+            "reads downstream as 'no narrowing', which is not what an ",
+            "explicit selection means.", call. = FALSE)
+    }
+    out
+}
+
+# THE place a `samples =` value becomes a set of child names.
+#
+# Every `samples =` formal routes through here, which is the point: group
+# expansion has to happen before the names are checked against @objects, and
+# a site that validates on its own would reject a perfectly good group name
+# before expansion ever ran. Before this existed the check was copied at four
+# sites with four error strings, and only one of them was reachable by the
+# path groups needed.
+#
+# `NULL` means "no selection" and is returned untouched -- callers read it as
+# "all samples", and turning it into `names(x@objects)` here would erase the
+# difference between asking for everything and not asking.
+#' @noRd
+.gm_resolve_samples <- function(x, samples, site = "giottoMulti",
+    what = "sample") {
+    if (is.null(samples)) return(NULL)
+    checkmate::assert_character(samples, min.len = 1L, any.missing = FALSE,
+        .var.name = "samples")
+
+    resolved <- .gm_expand_groups(x, samples)
+    bad <- setdiff(resolved, names(x@objects))
+    if (length(bad) == 0L) return(resolved)
+
+    # Split the blame: a bad name the user typed is a typo, one that only
+    # appeared after expansion is a group holding a member that has since
+    # left. They need different fixes, so they get different messages.
+    typed <- intersect(bad, samples)
+    via_group <- setdiff(bad, samples)
+    # No group involved: `bad` is entirely what the user typed.
+    msg <- sprintf("[%s] unknown %s(s): %s not in @objects. Available: %s",
+        site, what, paste(sprintf("'%s'", typed), collapse = ", "),
+        paste(names(x@objects), collapse = ", "))
+    if (length(via_group) > 0L) {
+        holders <- Filter(function(g) {
+            any(via_group %in% .gm_group_members(x@groups[[g]]))
+        }, names(x@groups))
+        msg <- sprintf(paste0(
+            "[%s] group(s) %s name %s(s) %s not in @objects. ",
+            "Groups are not pruned when a child is removed -- re-register ",
+            "with gmultiGroup(). Available: %s"), site,
+            paste(sprintf("'%s'", holders), collapse = ", "), what,
+            paste(sprintf("'%s'", via_group), collapse = ", "),
+            paste(names(x@objects), collapse = ", "))
+        if (length(typed) > 0L) {
+            msg <- paste0(msg, "\nAlso unknown: ",
+                paste(sprintf("'%s'", typed), collapse = ", "))
+        }
+    }
+    stop(msg, call. = FALSE)
+}
+
+
 # SHARED-DOMAIN OVERRIDES ON giottoMulti ####
 
 #' @rdname getExpression
@@ -2290,18 +2572,13 @@ setMethod("getExpression", "giottoMulti",
             }
         }
 
-        # unknown samples error up front (participation is checked after
-        # assembly, but a typo should not read as non-participation)
-        if (!is.null(samples)) {
-            bad <- setdiff(samples, names(gobject@objects))
-            if (length(bad) > 0L) {
-                stop(sprintf(
-                    "[gmulti getter] sample(s) '%s' not in @objects (have: %s)",
-                    paste(bad, collapse = ", "),
-                    paste(names(gobject@objects), collapse = ", ")),
-                    call. = FALSE)
-            }
-        }
+        # Expand groups and error on unknown samples up front (participation
+        # is checked after assembly, but a typo should not read as
+        # non-participation). Expansion has to happen here rather than at the
+        # participation check, which compares against the mapping's
+        # participant list and would see a group name as a non-participant.
+        samples <- .gm_resolve_samples(gobject, samples,
+            "gmulti getExpression")
 
         # Capture before default resolution so the assembly path can tell
         # user-supplied from defaulted (children may have different
@@ -2489,17 +2766,9 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
 
     # Feature IDs aren't sample-namespaced (passthrough) — `samples = ` is
     # accepted for API symmetry but is a no-op at the featmeta level. It
-    # validates against @objects so a typo still errors loudly.
-    if (!is.null(samples)) {
-        checkmate::assert_character(samples,
-            min.len = 1L, any.missing = FALSE)
-        bad <- setdiff(samples, names(gobject@objects))
-        if (length(bad) > 0L) {
-            stop(sprintf(
-                "[gmulti getFeatureMetadata] sample(s) '%s' not in @objects",
-                paste(bad, collapse = ", ")), call. = FALSE)
-        }
-    }
+    # still resolves, so a typo or a stale group errors as loudly here as
+    # anywhere the argument does something.
+    .gm_resolve_samples(gobject, samples, "gmulti getFeatureMetadata")
     joint <- if (!is.null(spat_unit) && !is.null(feat_type)) {
         gobject@feat_metadata[[spat_unit]][[feat_type]]
     } else {

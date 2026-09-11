@@ -81,9 +81,8 @@ setGeneric("giottoSpaces",
 #
 # Recording runs through `.space_record()`, the same builder the handle
 # methods use, so a step has one construction path whichever surface asked
-# for it. `samples` is passed straight through; see there for the scoping
-# rules. It will also accept `@groups` names once those land (stage 7),
-# resolved through `.gm_slice_to_samples()`.
+# for it. `samples` accepts child names or `@groups` names; see below for
+# why groups expand here rather than at resolution.
 .record_space_on_gobject <- function(gobject, space, op, args,
     samples = NULL) {
     if (!is.character(space)) {
@@ -94,17 +93,18 @@ setGeneric("giottoSpaces",
     checkmate::assert_character(space, len = 1L, any.missing = FALSE)
     # `.space_record()` creates whatever key it is given, so a mistyped
     # sample name would record a chain that no child ever resolves against
-    # -- a step that looks recorded and does nothing. Check it here, where
+    # -- a step that looks recorded and does nothing. Resolve here, where
     # the children are known.
+    #
+    # Group names expand NOW, unlike the `samples =` getters, which stay
+    # late-bound. A space keys its step chains by sample, so a symbolic key
+    # would leave a child reachable through both its own key and a group's
+    # with two chains and no defined order between them. Expanding also
+    # makes the recorded frame mean what the group meant when the user
+    # asked for it: a later group edit does not silently reach back and
+    # change which children a transform already applies to.
     if (!is.null(samples) && inherits(gobject, "giottoMulti")) {
-        avail <- names(gobject@objects)
-        bad <- setdiff(samples, avail)
-        if (length(bad) > 0L) {
-            stop(sprintf(
-                "[%s] sample(s) '%s' are not children of this giottoMulti (have: %s)",
-                op, paste(bad, collapse = ", "),
-                paste(avail, collapse = ", ")), call. = FALSE)
-        }
+        samples <- .gm_resolve_samples(gobject, samples, op)
     }
     existing <- if (space %in% giottoSpaces(gobject)) {
         giottoSpace(gobject, space)

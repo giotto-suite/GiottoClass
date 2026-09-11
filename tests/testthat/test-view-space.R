@@ -1281,7 +1281,7 @@ test_that("a mistyped sample name is rejected at record time", {
     # typo would record a chain no child ever resolves against.
     mg <- .fixture_gmulti()
     expect_error(spin(mg, 30, space = "atlas", samples = "typo"),
-        "not children of this giottoMulti")
+        "unknown sample")
 })
 
 

@@ -908,3 +908,122 @@ test_that("combineMetadata(mg) walks children with joint-only columns added", {
     expect_true("leiden" %in% names(out$a))
     expect_identical(nrow(out$b), 3L)
 })
+
+# @groups — one name for several samples (stage 7) ####
+
+.mk_grouped <- function() {
+    mg <- createGiottoMulti(list(
+        a = .mk_minimal(5, 4), b = .mk_minimal(3, 4), c = .mk_minimal(2, 4)
+    ))
+    gmultiGroup(mg, "pair") <- c("a", "b")
+    mg
+}
+
+test_that("giottoMulti declares @groups, empty by default", {
+    expect_true("groups" %in% slotNames("giottoMulti"))
+    expect_identical(new("giottoMulti")@groups, list())
+    expect_identical(gmultiGroups(new("giottoMulti")), character())
+})
+
+test_that("gmultiGroup registers, reads back and drops", {
+    mg <- .mk_grouped()
+    expect_identical(gmultiGroup(mg, "pair"), c("a", "b"))
+    expect_identical(gmultiGroups(mg), "pair")
+    expect_null(gmultiGroup(mg, "never_registered"))
+
+    gmultiGroup(mg, "pair") <- NULL
+    expect_identical(gmultiGroups(mg), character())
+})
+
+test_that("a group is usable anywhere a sample name is", {
+    mg <- .mk_grouped()
+    expect_identical(
+        getCellMetadata(mg, samples = "pair", output = "data.table"),
+        getCellMetadata(mg, samples = c("a", "b"), output = "data.table")
+    )
+    expect_identical(spatIDs(mg, object = "pair"), spatIDs(mg, object = c("a", "b")))
+})
+
+test_that("groups nest, and expansion is recursive", {
+    mg <- .mk_grouped()
+    gmultiGroup(mg, "all") <- c("pair", "c")
+    expect_identical(.gm_expand_groups(mg, "all"), c("a", "b", "c"))
+})
+
+test_that("overlapping groups do not read a child twice", {
+    mg <- .mk_grouped()
+    # "pair" covers a and b; naming `a` again must not duplicate it
+    expect_identical(.gm_expand_groups(mg, c("pair", "a")), c("a", "b"))
+    # first-appearance order, not sorted
+    gmultiGroup(mg, "rev") <- c("c", "a")
+    expect_identical(.gm_expand_groups(mg, c("rev", "pair")), c("c", "a", "b"))
+})
+
+test_that("a cycle terminates instead of expanding forever", {
+    mg <- .mk_grouped()
+    # Registration cannot see a cycle (a group may name one that does not
+    # exist yet), so the guard has to hold at resolution.
+    mg@groups$A <- "B"
+    mg@groups$B <- "A"
+    expect_error(.gm_expand_groups(mg, "A"), "expanded to no samples")
+})
+
+test_that("a group resolving to nothing is an error, not a silent no-op", {
+    mg <- .mk_grouped()
+    mg@groups$empty <- character()
+    expect_error(.gm_resolve_samples(mg, "empty"), "expanded to no samples")
+})
+
+test_that("a group and a child may not share a name, from either side", {
+    mg <- .mk_grouped()
+    expect_error(gmultiGroup(mg, "a") <- "b", "already a child")
+    expect_error(gmultiGroup(mg, "self") <- c("a", "self"), "cannot name itself")
+
+    expect_error(mg[["pair"]] <- .mk_minimal(2, 4), "already a registered group")
+    expect_error(names(mg) <- c("pair", "b", "c"), "already registered as group")
+})
+
+test_that("@groups survives a population change, and errors at use", {
+    mg <- .mk_grouped()
+    # Deliberately NOT pruned by `[` — the declaration is user intent, and
+    # unlike the derived registries there is no recompute that recovers it.
+    sub <- mg["a"]
+    expect_identical(gmultiGroups(sub), "pair")
+    expect_error(getCellMetadata(sub, samples = "pair"), "'b'")
+    # and it names the group holding the departed member
+    expect_error(getCellMetadata(sub, samples = "pair"), "'pair'")
+})
+
+test_that("renaming a child rewrites group members", {
+    mg <- .mk_grouped()
+    names(mg) <- c("a2", "b", "c")
+    expect_identical(gmultiGroup(mg, "pair"), c("a2", "b"))
+    expect_identical(spatIDs(mg, object = "pair"), spatIDs(mg, object = c("a2", "b")))
+})
+
+test_that("a named group entry keys membership by name", {
+    mg <- .mk_grouped()
+    # Named form: names are the members, values are per-child content
+    # handles — the same shape as a @mapping entry.
+    gmultiGroup(mg, "roi") <- c(a = "tumor_roi", b = "epithelium_roi")
+    expect_identical(.gm_expand_groups(mg, "roi"), c("a", "b"))
+})
+
+test_that("an unknown name still errors, and is not blamed on a group", {
+    mg <- .mk_grouped()
+    err <- tryCatch(getCellMetadata(mg, samples = "nope"),
+        error = function(e) conditionMessage(e))
+    expect_match(err, "unknown sample")
+    expect_false(grepl("group", err))
+})
+
+test_that("a space step expands its group at record time", {
+    mg <- .mk_grouped()
+    mg <- spatShift(mg, dx = 5, space = "atlas", samples = "pair")
+    sp <- giottoSpace(mg, "atlas")
+    # Keys are the expanded children, not the group name: a space keys its
+    # step chains by sample, so a symbolic key would leave a child with two
+    # chains and no order between them.
+    expect_identical(sort(names(sp[["atlas"]])), c("a", "b"))
+    expect_false("pair" %in% names(sp[["atlas"]]))
+})

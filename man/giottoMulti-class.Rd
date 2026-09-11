@@ -33,6 +33,15 @@ Every entry keys every sample; \code{NA_character_} is the deliberate-skip
 sentinel ("this sample does not contribute to this handle").
 Auto-discovered at construction; edited via \code{\link[=gmultiMapping]{gmultiMapping()}}.}
 
+\item{\code{groups}}{named \code{list} of character vectors declaring that a name
+refers to several samples at once. Usable anywhere a sample name is,
+so no \verb{samples =} formal changes. Entries may name other groups
+(resolved recursively); membership is expanded at \strong{resolution}, not
+at registration, so a group tracks the current child population.
+Edited via \code{\link[=gmultiGroup]{gmultiGroup()}}. Unlike every other registry here,
+\verb{@groups} is \strong{not} reset when the child population changes — see
+the note in \code{initialize()}.}
+
 \item{\code{expression}}{shared expression matrices (rows = union of features,
 cols = global cell IDs)}
 

@@ -92,6 +92,17 @@
   Mapping edits invalidate joint content per affected universe, and expanding
   a handle's participation is blocked once its universe holds materialized
   joint content — drop the content, then re-declare.
+- `gmultiGroup()` / `gmultiGroup<-` / `gmultiGroups()` and the `@groups` slot
+  — register a name that refers to several samples at once. A group name is
+  usable anywhere a sample name is (`samples =`, `object =`, every getter),
+  so registering one adds no parameter to any signature. Groups may name
+  other groups and resolve recursively, deduplicated in first-appearance
+  order. A group and a child may not share a name; the clash is rejected at
+  registration from whichever side arrives second. Membership is resolved
+  when a group is *used*, so a group tracks the current child population —
+  except on `@spaces`, which keys step chains by sample and therefore
+  expands at record time. `@groups` is deliberately not pruned when a child
+  is removed; a group naming a departed child errors at use, naming both.
 - Shared-domain getters (`getExpression`, `getCellMetadata`,
   `getFeatureMetadata`) gain `giottoMulti` methods: the joint slot is read
   when populated, otherwise content is assembled from children per the
