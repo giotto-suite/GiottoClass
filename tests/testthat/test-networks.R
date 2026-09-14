@@ -322,4 +322,101 @@ test_that("as.igraph re-dispatches when @network is backed", {
 })
 
 
+# carrier dispatch ####
+#
+# The container methods forward to whatever `@network` holds rather than
+# testing for it, so a carrier is reached by registering a method on it. These
+# cover the contract GiottoDisk's parquetEdgeStore relies on, without needing
+# GiottoDisk installed -- the store-backed tests above skip whenever it is not.
+
+# Stands in for a store: any class that is not an igraph and brings its own
+# spatIDs method. Declared at file level because setMethod() resolves the
+# class name against the generic's namespace, and a class created inside a
+# test frame is not visible there.
+setClass("fakeIdNet", representation(ids = "character"))
+setMethod("spatIDs", "fakeIdNet", function(x, ...) x@ids)
+
+test_that("spatIDs() reads an igraph carrier directly", {
+    ring <- igraph::make_ring(4)
+    igraph::V(ring)$name <- letters[1:4]
+
+    expect_setequal(spatIDs(ring), letters[1:4])
+    # isolated vertices are nodes of the graph and are reported
+    expect_length(spatIDs(igraph::add_vertices(ring, 1, name = "e")), 5L)
+})
+
+test_that("spatIDs() on the containers forwards to the carrier", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    sn <- .sn_fixture()
+    nn <- getNearestNetwork(g, output = "nnNetObj")
+
+    expect_identical(spatIDs(sn), spatIDs(slot(sn, "network")))
+    expect_identical(spatIDs(nn), spatIDs(slot(nn, "network")))
+})
+
+test_that("spatIDs() re-dispatches when @network is backed", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    sn <- .sn_fixture()
+    slot(sn, "network") <- new("fakeIdNet", ids = c("x", "y", "z"))
+    expect_identical(spatIDs(sn), c("x", "y", "z"))
+
+    nn <- getNearestNetwork(g, output = "nnNetObj")
+    slot(nn, "network") <- new("fakeIdNet", ids = c("x", "y"))
+    expect_identical(spatIDs(nn), c("x", "y"))
+})
+
+
+# as.data.table ####
+
+test_that("as.data.table returns the edge table of an in-memory network", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    sn <- .sn_fixture()
+    nn <- getNearestNetwork(g, output = "nnNetObj")
+
+    for (obj in list(sn, nn)) {
+        dt <- data.table::as.data.table(obj)
+        expect_s3_class(dt, "data.table")
+        expect_true(all(c("from", "to") %in% names(dt)))
+        expect_equal(nrow(dt), igraph::ecount(slot(obj, "network")))
+    }
+})
+
+test_that("as.data.table reads @unfiltered, which holds a bare carrier", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    # createSpatialNetwork() leaves @unfiltered NULL; the slot is filled by
+    # createSpatNetObj(), the legacy migration and the Seurat conversion. It
+    # holds the graph directly rather than a subobject, so it cannot go
+    # through as.data.table() -- hence the carrier-level reader.
+    full <- igraph::make_ring(5)
+    igraph::V(full)$name <- letters[1:5]
+    trimmed <- igraph::delete_edges(full, igraph::E(full)[1])
+
+    sn <- createSpatNetObj(network = trimmed, unfiltered = full,
+                           name = "unf.test")
+    unf <- slot(sn, "unfiltered")
+    expect_s3_class(unf, "igraph")
+
+    dt <- GiottoClass:::.network_as_dt(unf)
+    expect_s3_class(dt, "data.table")
+    expect_true(all(c("from", "to") %in% names(dt)))
+    # the unfiltered graph is a superset of the filtered one
+    expect_equal(nrow(dt), igraph::ecount(full))
+    expect_gt(nrow(dt), nrow(data.table::as.data.table(sn)))
+})
+
+test_that("as.data.table re-dispatches when @network is backed", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    setClass("fakeDtNet", representation(dt = "ANY"))
+    on.exit(removeClass("fakeDtNet"), add = TRUE)
+    edges <- data.table::data.table(from = c("a", "b"), to = c("b", "c"))
+    registerS3method("as.data.table", "fakeDtNet", function(x, ...) x@dt,
+        envir = asNamespace("data.table"))
+
+    sn <- .sn_fixture()
+    slot(sn, "network") <- new("fakeDtNet", dt = edges)
+
+    expect_identical(data.table::as.data.table(sn), edges)
+})
+
+
 options("lifecycle_verbosity" = lifecycle_opt)

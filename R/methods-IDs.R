@@ -129,21 +129,31 @@ setMethod(
         as.character(x[]$cell_ID)
     }
 )
+# `@network` holds an igraph (canonical since 0.6.0, adr/0004) or a GiottoDisk
+# dataStore on a backed project. The two container methods below forward to
+# whichever it is instead of testing for it, so adding a carrier means
+# registering a method on it -- GiottoClass never enumerates them. GiottoDisk
+# registers spatIDs(parquetEdgeStore).
+#
+# Carrier methods answer *node* identity. That they are reached through
+# spatIDs() rather than a node-specific generic is only correct while every
+# network in the suite is over cells; the first feature-keyed network wants
+# featIDs() on the container, and the carrier answers both.
+
+#' @rdname spatIDs-generic
+#' @export
+setMethod(
+    "spatIDs", signature(x = "igraph"),
+    function(x, ...) {
+        as.character(unique(names(igraph::V(x))))
+    }
+)
 #' @rdname spatIDs-generic
 #' @export
 setMethod(
     "spatIDs", signature(x = c("spatialNetworkObj")),
     function(x, ...) {
-        net <- x@network
-        # Disk-backed networks (parquetEdgeStore from GiottoDisk's setter
-        # auto-write or sourceAdopt path) dispatch to their own spatIDs
-        # method instead of the igraph accessor below.
-        if (inherits(net, "dataStore")) return(spatIDs(net, ...))
-        # `@network` has held an igraph since 0.6.0. This read used to be
-        # `unique(c(x[]$from, x[]$to))`, which is `$` on an igraph -- NULL --
-        # so every in-memory network reported zero nodes. Same expression as
-        # the nnNetObj method below.
-        as.character(unique(names(igraph::V(net))))
+        spatIDs(x@network, ...)
     }
 )
 #' @rdname spatIDs-generic
@@ -242,12 +252,7 @@ setMethod(
 setMethod(
     "spatIDs", signature(x = "nnNetObj"),
     function(x, ...) {
-        net <- x@network
-        # Disk-backed networks delegate to their own spatIDs method
-        # (e.g. parquetEdgeStore in GiottoDisk). Falls back to igraph
-        # vertex names for the canonical in-memory case.
-        if (inherits(net, "dataStore")) return(spatIDs(net, ...))
-        as.character(unique(names(igraph::V(net))))
+        spatIDs(x@network, ...)
     }
 )
 
