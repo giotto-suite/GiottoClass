@@ -1891,12 +1891,8 @@ setMethod("getNearestNetwork", signature("gAny"), function(gobject,
     }
 
     if (output == "nnNetObj") return(nnNet)
-    if (output == "igraph") {
-        return(.network_as_igraph(slot(nnNet, "network")))
-    }
-    if (output == "data.table") {
-        return(.network_as_dt(slot(nnNet, "network")))
-    }
+    if (output == "igraph") return(igraph::as.igraph(nnNet))
+    if (output == "data.table") return(data.table::as.data.table(nnNet))
 })
 
 
@@ -2071,49 +2067,6 @@ setMethod("setNearestNetwork", signature("gAny"), function(gobject,
 
 ## spatial network slot ####
 
-# network @network slot readers ####
-
-# The `network` slot of both spatialNetworkObj and nnNetObj holds an igraph
-# (canonical as of 0.6.0) or a GiottoDisk dataStore on a backed project. Every
-# accessor that promises an igraph or an edge table has to handle both: without
-# this, an edge-table request hands a parquetEdgeStore to as.data.table() and
-# every downstream consumer -- annotateSpatialNetwork() and everything built on
-# it -- fails on a backed object with "cannot coerce class parquetEdgeStore".
-# Shared by getSpatialNetwork() and getNearestNetwork() so the two accessors
-# cannot drift apart again.
-
-.network_read_store <- function(g, what) {
-    package_check("GiottoDisk", repository = "github:giotto-suite/GiottoDisk")
-    GiottoDisk::storeRead(g, output = what)
-}
-
-.network_as_dt <- function(g) {
-    if (inherits(g, "dataStore")) {
-        dt <- data.table::as.data.table(.network_read_store(g, "tibble"))
-        # edge stores name their endpoints from_id/to_id; the edge-table
-        # contract is from/to
-        for (nm in c("from", "to")) {
-            old_nm <- paste0(nm, "_id")
-            if (old_nm %in% names(dt) && !nm %in% names(dt)) {
-                data.table::setnames(dt, old_nm, nm)
-            }
-        }
-        return(dt)
-    }
-    if (inherits(g, "igraph")) {
-        return(data.table::as.data.table(
-            igraph::as_data_frame(g, what = "edges")
-        ))
-    }
-    g
-}
-
-.network_as_igraph <- function(g) {
-    if (inherits(g, "dataStore")) return(.network_read_store(g, "igraph"))
-    g
-}
-
-
 #' @title Get spatial network
 #' @name getSpatialNetwork
 #' @description Function to get a spatial network
@@ -2208,11 +2161,15 @@ setMethod("getSpatialNetwork", signature("giotto"), function(gobject,
     names(out) <- NULL
 
     # igraph is copy-on-modify so `copy_obj` is a no-op here.
+    #
+    # The coercion methods read `@network` whatever it holds, so a backed
+    # network resolves by dispatch. `@unfiltered` holds a carrier rather than a
+    # subobject, hence the carrier-level reader.
     out <- lapply(out, function(x) {
         switch(output,
             "spatialNetworkObj" = x,
-            "igraph" = .network_as_igraph(x[]),
-            "networkDT" = .network_as_dt(x[]),
+            "igraph" = igraph::as.igraph(x),
+            "networkDT" = data.table::as.data.table(x),
             "unfiltered" = .network_as_dt(x@unfiltered),
             "outputObj" = x@outputObj
         )

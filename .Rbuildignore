@@ -12,3 +12,4 @@ test
 ^\.positai$
 ^\.claude$
 ^adr$
+^notes$

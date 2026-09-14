@@ -343,7 +343,7 @@ networkParam <- function(type = c("kNN", "sNN", "delaunay", "radius"), ...) {
 # and emit per the param's `output` slot. Centralizes node_id substitution,
 # column trim, directionality handling, and output dispatch.
 .finalize_network <- function(network_dt, x, node_ids, type, directed, param,
-        backend = NULL) {
+        backend = NULL, verbose = NULL) {
     # NSE vars
     from <- to <- NULL
 
@@ -370,7 +370,7 @@ networkParam <- function(type = c("kNN", "sNN", "delaunay", "radius"), ...) {
     # cell count quietly disagree with the input.
     n_dropped <- nrow(x) - length(all_index)
     if (n_dropped > 0L) {
-        vmsg(sprintf(
+        vmsg(.v = verbose, sprintf(
             "%d of %d node(s) have no edges and are omitted from the network",
             n_dropped, nrow(x)
         ))
@@ -431,7 +431,8 @@ setMethod("createNetwork", signature("matrix", "kNNNetworkParam"),
             verbose = verbose, ...
         )
         .finalize_network(dt, x = x, node_ids = node_ids,
-            type = "kNN", directed = TRUE, param = param, backend = backend)
+            type = "kNN", directed = TRUE, param = param, backend = backend,
+            verbose = verbose)
     }
 )
 
@@ -455,7 +456,7 @@ setMethod("createNetwork", signature("matrix", "radiusNetworkParam"),
         )
         .finalize_network(dt, x = x, node_ids = node_ids,
             type = "radius", directed = FALSE, param = param,
-            backend = backend)
+            backend = backend, verbose = verbose)
     }
 )
 
@@ -484,7 +485,8 @@ setMethod("createNetwork", signature("matrix", "sNNNetworkParam"),
         # `rank` is per-source and ill-defined after symmetrization — dropped.
         dt <- .undirected_unique(dt)
         .finalize_network(dt, x = x, node_ids = node_ids,
-            type = "sNN", directed = FALSE, param = param, backend = backend)
+            type = "sNN", directed = FALSE, param = param, backend = backend,
+            verbose = verbose)
     }
 )
 
@@ -521,7 +523,7 @@ setMethod("createNetwork", signature("matrix", "delaunayNetworkParam"),
         dt <- do.call(helper, c(helper_args, list(...)))$delaunay_network_DT
         .finalize_network(dt, x = x, node_ids = node_ids,
             type = "delaunay", directed = FALSE, param = param,
-            backend = backend)
+            backend = backend, verbose = verbose)
     }
 )
 
@@ -1118,11 +1120,11 @@ edge_distances <- function(x, y, x_node_ids = NULL) {
     checkmate::assert_data_table(y)
     y <- .edge_int_index(y, x_node_ids)
 
-    # One vectorized pass over the endpoint rows. The general machinery below
-    # (.edge_coords_array + .calc_edge_dist) supports any stats::dist method,
-    # but does so with one dist() call per edge -- measured 556x slower, and
-    # this function has only ever asked for euclidean. Non-euclidean callers
-    # still have .calc_edge_dist().
+    # One vectorized pass over the endpoint rows. This replaced a general
+    # stats::dist() path that supported any method but made one dist() call per
+    # edge -- measured 556x slower. Euclidean is the only metric this has ever
+    # been asked for; a non-euclidean caller would reintroduce the general
+    # form rather than find it waiting.
     #
     # Index into the original coordinates rather than reusing any coordinates
     # a triangulation backend hands back: deldir's delsgs$x1/y1/x2/y2 are
@@ -1134,9 +1136,8 @@ edge_distances <- function(x, y, x_node_ids = NULL) {
 }
 
 
-# Resolve a network table's from/to to integer row indices of the coord matrix.
-# Shared by edge_distances() and .edge_coords_array() so the character-index
-# handling has one implementation.
+# Resolve a network table's from/to to integer row indices of the coord matrix,
+# so the character-index handling has one implementation.
 #' @keywords internal
 #' @noRd
 .edge_int_index <- function(y, x_node_ids = NULL) {
@@ -1154,59 +1155,6 @@ edge_distances <- function(x, y, x_node_ids = NULL) {
     }
     y
 }
-
-
-
-# Nodes row order is assumed to be the same as the network indices
-#' @title Numerical array of edge start and end
-#' @name .edge_coords_array
-#' @description
-#' Generate a \eqn{2} x \eqn{j} x \eqn{k} numerical array of edge start and end
-#' coordinates. Rows correspond  to start and end. Cols are for each variable
-#' ie x, y, (z) or whatever other variable is used to measure sample location
-#' in graph space. The third dim is for each sample. This layout makes it easy
-#' to iterate across matrix slices of this array with `[stats::dist()]`.
-#' @param x matrix of nodes info with coords
-#' @param y network data.table with `from` and `to` cols
-#' @param x_node_ids if y is indexed by character in from and to cols, then the
-#' node IDs that apply to the coords in x must be supplied as a character vector
-#' @returns numeric
-#' @keywords internal
-.edge_coords_array <- function(x, y, x_node_ids = NULL) {
-    checkmate::assert_matrix(x)
-    checkmate::assert_data_table(y)
-
-    y <- .edge_int_index(y, x_node_ids)
-
-    edge_coords_array <- array(
-        dim = c(nrow(y), ncol(x), 2),
-        dimnames = list(
-            c(),
-            paste0("dim_", seq(ncol(x))),
-            c("start", "end")
-        )
-    )
-
-    edge_coords_array[, , 1] <- x[y$from, ]
-    edge_coords_array[, , 2] <- x[y$to, ]
-    edge_coords_array <- aperm(edge_coords_array, perm = c(3, 2, 1))
-    class(edge_coords_array) <- c("edge_coords_array", class(edge_coords_array))
-
-    return(edge_coords_array)
-}
-
-# x should be an edge_coords_array
-.calc_edge_dist <- function(x, method = "euclidean", ...) {
-    checkmate::assert_class(x, "edge_coords_array")
-
-    vapply(
-        seq(dim(x)[3L]),
-        function(pair_i) stats::dist(x[, , pair_i], method = method, ...),
-        FUN.VALUE = numeric(1L)
-    )
-}
-
-
 
 
 
