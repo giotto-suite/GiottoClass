@@ -95,6 +95,12 @@
 - `createNearestNetwork()`, `createSpatialDelaunayNetwork()`, and
   `createSpatialKNNnetwork()` are now thin wrappers over `createNetwork()`.
   Behavior is preserved.
+- `spatIDs()` gained an `igraph` method, and the `spatialNetworkObj` /
+  `nnNetObj` methods now forward to whatever `@network` holds rather than
+  testing its class. A backed network is reached by its own class registering
+  a `spatIDs()` method. Results are unchanged.
+- `as.data.table()` methods added for `spatialNetworkObj` and `nnNetObj`,
+  returning the edge table. Same re-dispatch shape as `as.igraph()`.
 
 ## breaking changes
 
