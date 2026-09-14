@@ -20,31 +20,8 @@ setClass("NNNetworkParam", contains = c("networkParam", "VIRTUAL"))
 #' asymmetric (`a`'s k-nearest neighbours are not necessarily those for
 #' which `a` is among the k-nearest), so the resulting graph is
 #' **directed** when promoted to igraph.
-#' @slot k integer. number of nearest neighbours per node.
-#' @slot filter logical. apply `minimum_k`/`maximum_distance` post-filter.
-#' @slot maximum_distance numeric or NULL. drop edges longer than this.
-#' @slot minimum_k integer. minimum neighbours per node when filtering.
-#' @slot weight_fun function. weight = `weight_fun(distance)`.
-#' @slot include_weight,include_distance logical. include columns.
-#' @slot output character. one of `"auto"`, `"data.table"`, `"igraph"`,
-#'   `"parquet"`. See [createNetwork()].
 #' @exportClass kNNNetworkParam
-setClass("kNNNetworkParam",
-    contains = "NNNetworkParam",
-    slots = list(
-        k = "integer",
-        filter = "logical",
-        maximum_distance = "ANY",
-        minimum_k = "integer",
-        weight_fun = "function",
-        include_weight = "logical",
-        include_distance = "logical",
-        output = "character",
-        engine = "character",
-        ef = "numeric",
-        n_threads_build = "ANY"
-    )
-)
+setClass("kNNNetworkParam", contains = "NNNetworkParam")
 
 #' @rdname sNNNetworkParam-class
 #' @title sNNNetworkParam — Shared-Nearest-Neighbour Network Param
@@ -52,29 +29,8 @@ setClass("kNNNetworkParam",
 #' Constructor and class for shared-Nearest-Neighbour network parameters.
 #' sNN edges are symmetric by definition (`|N(a) ∩ N(b)| = |N(b) ∩ N(a)|`),
 #' so the resulting graph is **undirected** — one edge per pair.
-#' @slot k integer. number of nearest neighbours used to compute sharing.
-#' @slot top_shared integer. keep at least this many edges per node.
-#' @slot minimum_shared integer. keep edges with at least this many shared
-#'   neighbours.
-#' @slot weight_fun function. weight = `weight_fun(distance)`.
-#' @slot include_weight,include_distance logical. include columns.
-#' @slot output character. See [createNetwork()].
 #' @exportClass sNNNetworkParam
-setClass("sNNNetworkParam",
-    contains = "NNNetworkParam",
-    slots = list(
-        k = "integer",
-        top_shared = "integer",
-        minimum_shared = "integer",
-        weight_fun = "function",
-        include_weight = "logical",
-        include_distance = "logical",
-        output = "character",
-        engine = "character",
-        ef = "numeric",
-        n_threads_build = "ANY"
-    )
-)
+setClass("sNNNetworkParam", contains = "NNNetworkParam")
 
 #' @rdname delaunayNetworkParam-class
 #' @title delaunayNetworkParam — Delaunay Network Param
@@ -82,35 +38,8 @@ setClass("sNNNetworkParam",
 #' Constructor and class for Delaunay triangulation network parameters.
 #' Delaunay edges are an undirected geometric relation, so the resulting
 #' graph is **undirected** — one edge per pair.
-#' @slot method character. backend: `"deldir"`, `"RTriangle"`, or
-#'   `"geometry"`.
-#' @slot maximum_distance numeric, `"auto"`, or NULL.
-#' @slot minimum_k integer. minimum neighbours per node when filtering.
-#' @slot weight_fun function. weight = `weight_fun(distance)`.
-#' @slot include_weight,include_distance logical. include columns.
-#' @slot output character. See [createNetwork()].
-#' @slot options character. *geometry only.* passed to `geometry::delaunayn`.
-#' @slot Y,j logical; S numeric. *RTriangle only.* passed to
-#'   `RTriangle::triangulate`.
 #' @exportClass delaunayNetworkParam
-setClass("delaunayNetworkParam",
-    contains = "networkParam",
-    slots = list(
-        method = "character",
-        maximum_distance = "ANY",
-        minimum_k = "integer",
-        weight_fun = "function",
-        include_weight = "logical",
-        include_distance = "logical",
-        output = "character",
-        # geometry-only
-        options = "character",
-        # RTriangle-only
-        Y = "logical",
-        j = "logical",
-        S = "numeric"
-    )
-)
+setClass("delaunayNetworkParam", contains = "networkParam")
 
 
 # networkParam constructors ####
@@ -150,18 +79,28 @@ kNNNetworkParam <- function(k = 30L, filter = FALSE,
         engine = c("dbscan", "hnsw"), ef = 200, n_threads_build = 1L) {
     output <- match.arg(output)
     engine <- match.arg(engine)
-    new("kNNNetworkParam",
-        k = as.integer(k), filter = filter,
-        maximum_distance = maximum_distance,
-        minimum_k = as.integer(minimum_k),
-        weight_fun = weight_fun,
-        include_weight = include_weight,
-        include_distance = include_distance,
-        output = output,
-        engine = engine,
-        ef = as.numeric(ef),
-        n_threads_build = n_threads_build
-    )
+    checkmate::assert_count(k, positive = TRUE)
+    checkmate::assert_count(minimum_k)
+    checkmate::assert_flag(filter)
+    checkmate::assert_number(maximum_distance, null.ok = TRUE)
+    checkmate::assert_function(weight_fun)
+    checkmate::assert_flag(include_weight)
+    checkmate::assert_flag(include_distance)
+    checkmate::assert_number(ef, lower = 1)
+
+    p <- new("kNNNetworkParam", param = list())
+    p$k <- as.integer(k)
+    p$filter <- filter
+    p$maximum_distance <- maximum_distance
+    p$minimum_k <- as.integer(minimum_k)
+    p$weight_fun <- weight_fun
+    p$include_weight <- include_weight
+    p$include_distance <- include_distance
+    p$output <- output
+    p$engine <- engine
+    p$ef <- as.numeric(ef)
+    p$n_threads_build <- n_threads_build
+    p
 }
 
 #' @rdname sNNNetworkParam-class
@@ -197,18 +136,26 @@ sNNNetworkParam <- function(k = 30L, top_shared = 3L, minimum_shared = 5L,
         engine = c("dbscan", "hnsw"), ef = 200, n_threads_build = 1L) {
     output <- match.arg(output)
     engine <- match.arg(engine)
-    new("sNNNetworkParam",
-        k = as.integer(k),
-        top_shared = as.integer(top_shared),
-        minimum_shared = as.integer(minimum_shared),
-        weight_fun = weight_fun,
-        include_weight = include_weight,
-        include_distance = include_distance,
-        output = output,
-        engine = engine,
-        ef = as.numeric(ef),
-        n_threads_build = n_threads_build
-    )
+    checkmate::assert_count(k, positive = TRUE)
+    checkmate::assert_count(top_shared)
+    checkmate::assert_count(minimum_shared)
+    checkmate::assert_function(weight_fun)
+    checkmate::assert_flag(include_weight)
+    checkmate::assert_flag(include_distance)
+    checkmate::assert_number(ef, lower = 1)
+
+    p <- new("sNNNetworkParam", param = list())
+    p$k <- as.integer(k)
+    p$top_shared <- as.integer(top_shared)
+    p$minimum_shared <- as.integer(minimum_shared)
+    p$weight_fun <- weight_fun
+    p$include_weight <- include_weight
+    p$include_distance <- include_distance
+    p$output <- output
+    p$engine <- engine
+    p$ef <- as.numeric(ef)
+    p$n_threads_build <- n_threads_build
+    p
 }
 
 #' @rdname delaunayNetworkParam-class
@@ -230,16 +177,32 @@ delaunayNetworkParam <- function(
         options = "Pp", Y = TRUE, j = TRUE, S = 0) {
     method <- match.arg(method)
     output <- match.arg(output)
-    new("delaunayNetworkParam",
-        method = method,
-        maximum_distance = maximum_distance,
-        minimum_k = as.integer(minimum_k),
-        weight_fun = weight_fun,
-        include_weight = include_weight,
-        include_distance = include_distance,
-        output = output,
-        options = options, Y = Y, j = j, S = S
-    )
+    checkmate::assert_count(minimum_k)
+    checkmate::assert_function(weight_fun)
+    checkmate::assert_flag(include_weight)
+    checkmate::assert_flag(include_distance)
+    # maximum_distance takes "auto" as well as a number, so it is checked by
+    # hand rather than with assert_number()
+    if (!is.null(maximum_distance) &&
+            !identical(maximum_distance, "auto") &&
+            !checkmate::test_number(maximum_distance)) {
+        stop("[delaunayNetworkParam] `maximum_distance` must be a number, ",
+             '"auto", or NULL', call. = FALSE)
+    }
+
+    p <- new("delaunayNetworkParam", param = list())
+    p$method <- method
+    p$maximum_distance <- maximum_distance
+    p$minimum_k <- as.integer(minimum_k)
+    p$weight_fun <- weight_fun
+    p$include_weight <- include_weight
+    p$include_distance <- include_distance
+    p$output <- output
+    p$options <- options
+    p$Y <- Y
+    p$j <- j
+    p$S <- S
+    p
 }
 
 #' @title networkParam — Dispatcher constructor
@@ -287,13 +250,13 @@ networkParam <- function(type = c("kNN", "sNN", "delaunay"), ...) {
     # cols to keep
     keep_cols <- c("from", "to")
     all_index <- network_dt[, unique(unlist(.SD)), .SDcols = keep_cols]
-    if (isTRUE(param@include_weight)) keep_cols <- c(keep_cols, "weight")
-    if (isTRUE(param@include_distance)) keep_cols <- c(keep_cols, "distance")
+    if (isTRUE(param$include_weight)) keep_cols <- c(keep_cols, "weight")
+    if (isTRUE(param$include_distance)) keep_cols <- c(keep_cols, "distance")
     if (type == "sNN") keep_cols <- c(keep_cols, "shared")
     network_dt <- network_dt[, keep_cols, with = FALSE]
 
     # resolve output
-    output <- param@output
+    output <- param$output
     if (output == "auto") {
         output <- if (is.null(backend)) "data.table" else "parquet"
     }
@@ -330,15 +293,15 @@ setMethod("createNetwork", signature("matrix", "kNNNetworkParam"),
             ))
         }
         dt <- .net_dt_knn(
-            x = x, k = param@k, filter = param@filter,
-            maximum_distance = param@maximum_distance,
-            minimum_k = param@minimum_k,
-            weight_fun = param@weight_fun,
-            include_weight = param@include_weight,
-            include_distance = param@include_distance,
-            engine = param@engine,
-            ef = param@ef,
-            n_threads_build = param@n_threads_build,
+            x = x, k = param$k, filter = param$filter,
+            maximum_distance = param$maximum_distance,
+            minimum_k = param$minimum_k,
+            weight_fun = param$weight_fun,
+            include_weight = param$include_weight,
+            include_distance = param$include_distance,
+            engine = param$engine,
+            ef = param$ef,
+            n_threads_build = param$n_threads_build,
             verbose = verbose, ...
         )
         .finalize_network(dt, x = x, node_ids = node_ids,
@@ -356,15 +319,15 @@ setMethod("createNetwork", signature("matrix", "sNNNetworkParam"),
             ))
         }
         dt <- .net_dt_snn(
-            x = x, k = param@k,
-            top_shared = param@top_shared,
-            minimum_shared = param@minimum_shared,
-            weight_fun = param@weight_fun,
-            include_weight = param@include_weight,
-            include_distance = param@include_distance,
-            engine = param@engine,
-            ef = param@ef,
-            n_threads_build = param@n_threads_build,
+            x = x, k = param$k,
+            top_shared = param$top_shared,
+            minimum_shared = param$minimum_shared,
+            weight_fun = param$weight_fun,
+            include_weight = param$include_weight,
+            include_distance = param$include_distance,
+            engine = param$engine,
+            ef = param$ef,
+            n_threads_build = param$n_threads_build,
             verbose = verbose, ...
         )
         # sNN: symmetric relation, collapse to undirected unique pairs.
@@ -384,7 +347,7 @@ setMethod("createNetwork", signature("matrix", "delaunayNetworkParam"),
                 No network can be generated"
             ))
         }
-        helper <- switch(param@method,
+        helper <- switch(param$method,
             deldir    = .net_dt_del_deldir,
             RTriangle = .net_dt_del_rtriangle,
             geometry  = .net_dt_del_geometry
@@ -393,17 +356,17 @@ setMethod("createNetwork", signature("matrix", "delaunayNetworkParam"),
         # don't forward irrelevant Param slots.
         helper_args <- list(
             x = x,
-            include_weight = param@include_weight,
-            maximum_distance = param@maximum_distance,
-            minimum_k = param@minimum_k,
-            weight_fun = param@weight_fun
+            include_weight = param$include_weight,
+            maximum_distance = param$maximum_distance,
+            minimum_k = param$minimum_k,
+            weight_fun = param$weight_fun
         )
-        if (param@method == "geometry") {
-            helper_args$options <- param@options
-        } else if (param@method == "RTriangle") {
-            helper_args$Y <- param@Y
-            helper_args$j <- param@j
-            helper_args$S <- param@S
+        if (param$method == "geometry") {
+            helper_args$options <- param$options
+        } else if (param$method == "RTriangle") {
+            helper_args$Y <- param$Y
+            helper_args$j <- param$j
+            helper_args$S <- param$S
         }
         dt <- do.call(helper, c(helper_args, list(...)))$delaunay_network_DT
         .finalize_network(dt, x = x, node_ids = node_ids,

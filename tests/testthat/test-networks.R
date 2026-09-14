@@ -420,3 +420,108 @@ test_that("as.data.table re-dispatches when @network is backed", {
 
 
 options("lifecycle_verbosity" = lifecycle_opt)
+
+# networkParam $ / $<- ####
+#
+# The param families are list-backed: state lives in @param and is reached with
+# `$`, with .DollarNames driving autocomplete. networkParam was the one family
+# that declared typed slots instead, so `$` returned nothing.
+
+test_that("networkParam params are reachable with $", {
+    p <- kNNNetworkParam(k = 30)
+    expect_identical(p$k, 30L)
+    expect_identical(p$engine, "dbscan")
+    expect_identical(p$output, "auto")
+    expect_null(p$not_a_param)
+})
+
+test_that("networkParam params are settable with $<-", {
+    p <- kNNNetworkParam(k = 30)
+    p$k <- 10L
+    expect_identical(p$k, 10L)
+    # extras land alongside, the way the other param families behave
+    p$custom <- "x"
+    expect_identical(p$custom, "x")
+})
+
+test_that(".DollarNames lists every param for autocomplete", {
+    # maximum_distance defaults to NULL and so is not in @param, but it is a
+    # param the class takes and completes on anyway
+    expect_setequal(
+        .DollarNames(kNNNetworkParam()),
+        c("k", "filter", "maximum_distance", "minimum_k", "weight_fun",
+          "include_weight", "include_distance", "output", "engine", "ef",
+          "n_threads_build")
+    )
+    expect_false("maximum_distance" %in% names(kNNNetworkParam()@param))
+
+    # params set beyond the signature are unioned in
+    p <- kNNNetworkParam()
+    p$custom <- 1
+    expect_true(all(c("k", "custom") %in% .DollarNames(p)))
+})
+
+test_that(".DollarNames whitelists have not drifted from the constructors", {
+    # The whitelists in methods-extract.R are maintained by hand. Built with
+    # every param set to a non-NULL value, @param holds exactly the params the
+    # constructor sets -- so the two should agree exactly. Catches both a param
+    # added to a constructor and never whitelisted, and a stale entry left
+    # behind after one is removed.
+    params <- list(
+        kNNNetworkParam(maximum_distance = 20),
+        sNNNetworkParam(),
+        delaunayNetworkParam()
+    )
+    for (p in params) {
+        expect_setequal(.DollarNames(p), names(p@param))
+    }
+    expect_true(all(
+        c("method", "options", "Y", "j", "S") %in%
+            .DollarNames(delaunayNetworkParam())
+    ))
+    expect_true(all(
+        c("top_shared", "minimum_shared") %in% .DollarNames(sNNNetworkParam())
+    ))
+})
+
+test_that("a NULL param reads back as NULL", {
+    # Assigning NULL drops the entry, as in the other param families. The read
+    # is the same either way -- an absent name and a stored NULL both give
+    # NULL -- so `maximum_distance = NULL` ("no cutoff") round-trips.
+    p <- kNNNetworkParam(k = 30)
+    expect_null(p$maximum_distance)
+
+    p$maximum_distance <- 20
+    expect_identical(p$maximum_distance, 20)
+    p$maximum_distance <- NULL
+    expect_null(p$maximum_distance)
+})
+
+test_that("constructors validate what the slot types used to catch", {
+    expect_error(kNNNetworkParam(k = "banana"), "count")
+    expect_error(kNNNetworkParam(k = 30, filter = "yes"), "flag")
+    expect_error(sNNNetworkParam(top_shared = -1), ">= 0")
+    expect_error(delaunayNetworkParam(maximum_distance = "nonsense"),
+                 "maximum_distance")
+    # "auto" and NULL remain valid for delaunay
+    expect_s4_class(delaunayNetworkParam(maximum_distance = "auto"),
+                    "delaunayNetworkParam")
+    expect_s4_class(delaunayNetworkParam(maximum_distance = NULL),
+                    "delaunayNetworkParam")
+})
+
+test_that("networks build identically through the list-backed params", {
+    set.seed(1)
+    m <- cbind(runif(200, 0, 100), runif(200, 0, 100))
+    rownames(m) <- sprintf("c%03d", seq_len(200))
+
+    knn <- createNetwork(m, kNNNetworkParam(k = 6))
+    expect_true(all(c("from", "to", "weight", "distance") %in% names(knn)))
+    expect_equal(nrow(knn), 1200L)
+
+    snn <- createNetwork(m, sNNNetworkParam(k = 6))
+    expect_true("shared" %in% names(snn))
+
+    del <- createNetwork(m, delaunayNetworkParam())
+    expect_gt(nrow(del), 0L)
+})
