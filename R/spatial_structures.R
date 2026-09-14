@@ -116,41 +116,6 @@ compatible_spatial_network <- function(spatial_network,
 
 
 
-#' @title Convert spatialNetworkObj to igraph
-#' @name spat_net_to_igraph
-#' @description Convert a `spatialNetworkObj` to a non-directed igraph
-#' representation.
-#' @param attr columns to include as edge attributes.
-#' @param spatialNetworkObj spatialNetworkObj
-#' @returns igraph
-#' @examples
-#' sn <- GiottoData::loadSubObjectMini("spatialNetworkObj")
-#' # only name attribute
-#' g <- spat_net_to_igraph(sn)
-#'
-#' # view other column info besides to and from cols
-#' head(sn[], 1)
-#'
-#' # include distance and weight col info
-#' g <- spat_net_to_igraph(sn, attr = c("distance", "weight"))
-#' @export
-spat_net_to_igraph <- function(spatialNetworkObj, attr = NULL) {
-    net_list <- as.list(spatialNetworkObj[])
-    cell_ids <- spatIDs(spatialNetworkObj)
-
-    igraph::make_empty_graph(directed = FALSE) %>%
-        igraph::add_vertices(
-            nv = length(cell_ids),
-            attr = list(name = cell_ids)
-        ) %>%
-        igraph::add_edges(
-            edges = rbind(
-                net_list$from,
-                net_list$to
-            ),
-            attr = net_list[attr]
-        )
-}
 
 
 

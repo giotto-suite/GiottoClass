@@ -84,6 +84,13 @@
   narrowed by a spatial predicate rather than a relation matrix. Eager method
   on `(giottoSpatial, giottoSpatial)` wraps `relate() + subset`; the on-disk
   lazy form lives in GiottoDisk via methods on `parquetGeomBase`.
+- `as.igraph()` works on `spatialNetworkObj` and `nnNetObj`, registered on
+  {igraph}'s generic. `@network` holds the graph directly, so this is an
+  accessor rather than a construction and returns the slot unchanged. When the
+  slot is backed, the contents are handed to `as.igraph()` again and dispatch
+  finds the backend's own method -- {GiottoDisk} registers one for
+  `parquetEdgeStore`. This is how a backed network should be read from here,
+  rather than by naming a package GiottoClass only Suggests.
 
 
 ## performance
@@ -165,6 +172,12 @@
 - `createNearestNetwork()`, `createSpatialDelaunayNetwork()`, and
   `createSpatialKNNnetwork()` are now thin wrappers over `createNetwork()`.
   Behavior is preserved.
+- `spatIDs()` gained an `igraph` method, and the `spatialNetworkObj` /
+  `nnNetObj` methods now forward to whatever `@network` holds rather than
+  testing its class. A backed network is reached by its own class registering
+  a `spatIDs()` method. Results are unchanged.
+- `as.data.table()` methods added for `spatialNetworkObj` and `nnNetObj`,
+  returning the edge table. Same re-dispatch shape as `as.igraph()`.
 
 ## breaking changes
 
@@ -179,6 +192,14 @@
 - `getSpatialNetwork()` `output` choices changed:
   `"networkDT_before_filter"` → `"unfiltered"`; new option `"igraph"`
   returns the underlying graph directly.
+- `spat_net_to_igraph()` removed. It was exported here but never called here:
+  its only callers were `Giotto::spatialSplitCluster()` and
+  `Giotto::identifyTMAcores()`, and its contract -- undirect with
+  `mode = "each"`, strip edge attributes -- served their clustering helpers
+  rather than any general coercion. It now lives in {Giotto} as an internal.
+  Use `as.igraph()` for the graph a network subobject holds; it returns the
+  slot unchanged, matching `getSpatialNetwork(output = "igraph")`. Undirect
+  with `igraph::as_undirected()` if that is wanted.
 - Removed exported helpers `convert_to_full_spatial_network()` and
   `convert_to_reduced_spatial_network()`. The edge table is now an
   igraph; use `igraph::as_data_frame(net, what = "edges")` if a
@@ -195,6 +216,37 @@
   but it duplicates that verb's `mean_expr` and should not be used in new code.
 
 ## bug fixes
+- `createGiottoPolygon(make_valid = TRUE)` now has an effect on `data.frame`
+  input. The `data.frame` method declared `make_valid` but never forwarded it,
+  and `.evaluate_spatial_info()` ignored it on the table branch, so the
+  argument was accepted and dropped. Only file and `SpatVector` input were
+  ever made valid.
+- Making polygons valid no longer shifts the attribute table. `makeValid()`
+  drops geometries that GEOS repairs into lines, but leaves their attribute
+  rows in place, so every `poly_ID` after the first dropped polygon named the
+  wrong geometry. Affected `combineGeom()`, z-stack aggregation, `spatQuery()`
+  and `createGiottoPolygon(make_valid = TRUE)`, which previously errored
+  instead. Degenerate polygons are now dropped with their attributes and
+  reported by `poly_ID`.
+- Polygons built from a `data.frame` now warn, naming the `poly_ID`s, when a
+  ring has too few vertices to close.
+- `instructions()` and `instructions<-()` no longer emit a deprecation
+  warning on every access. They were implemented on top of the deprecated
+  `showGiottoInstructions()` / `readGiottoInstructions()` /
+  `changeGiottoInstructions()` / `replaceGiottoInstructions()`, so each read
+  or write raised the warning belonging to a function the caller never used.
+  The implementation now lives in internals; the four deprecated functions
+  remain exported and keep warning, but only for code that calls them
+  directly.
+- `spatIDs()` on an in-memory `spatialNetworkObj` returned `character(0)` for
+  every network. It read `@network` as the `from`/`to` table the slot held
+  before 0.6.0; `$` on an igraph is `NULL`, so a 855-edge network reported zero
+  nodes. The disk-backed branch was unaffected.
+- `spat_net_to_igraph()` failed with *please supply names for attributes*, from
+  the same cause, and took its only two callers with it:
+  `Giotto::spatialSplitCluster()` and `Giotto::identifyTMAcores()` were
+  unusable on any in-memory spatial network. The function has since moved to
+  {Giotto} (see breaking changes); both callers work again.
 - `tif_metadata(node =)` returns a one-row `data.frame` when exactly one node matches, rather than transposing it into a single column.
 
 - `create_average_DT()` now selects each group's cells by `cell_ID` rather than

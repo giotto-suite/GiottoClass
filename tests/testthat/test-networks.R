@@ -250,4 +250,173 @@ test_that("spatIDs(spatialNetworkObj) delegates to parquetEdgeStore when @networ
 })
 
 
+# --- the in-memory igraph path -------------------------------------------
+#
+# `spatIDs()` read `@network` as the from/to data.table it held before 0.6.0,
+# so it returned character(0) for every ordinary network. The disk-backed
+# branch was covered and stayed correct; the canonical in-memory path had no
+# test at all, which is how that went unnoticed for a release cycle.
+
+.sn_fixture <- function(method = "Delaunay", n = 100L, seed = 7L, ...) {
+    rlang::local_options(lifecycle_verbosity = "quiet",
+                         .local_envir = parent.frame())
+    set.seed(seed)
+    locs <- data.table::data.table(
+        cell_ID = sprintf("c%03d", seq_len(n)),
+        sdimx = runif(n, 0, 500), sdimy = runif(n, 0, 500)
+    )
+    m <- matrix(rpois(6L * n, 5), nrow = 6L,
+                dimnames = list(paste0("g", 1:6), locs$cell_ID))
+    gg <- createGiottoObject(expression = m, spatial_locs = locs)
+    gg <- createSpatialNetwork(gg, method = method, name = "n1", ...)
+    getSpatialNetwork(gg, name = "n1")
+}
+
+test_that("spatIDs(spatialNetworkObj) returns the nodes of an in-memory network", {
+    sn <- .sn_fixture()
+    net <- sn[]
+    expect_s3_class(net, "igraph")
+    expect_gt(igraph::ecount(net), 0L)
+
+    ids <- spatIDs(sn)
+    expect_type(ids, "character")
+    expect_equal(length(ids), igraph::vcount(net))
+    expect_setequal(ids, names(igraph::V(net)))
+    # every endpoint of every edge is among them
+    ends <- igraph::as_data_frame(net, what = "edges")
+    expect_true(all(c(ends$from, ends$to) %in% ids))
+})
+
+
+
+# as.igraph ####
+
+test_that("as.igraph returns the graph the @network slot holds", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    g2 <- createSpatialNetwork(g, method = "Delaunay", verbose = FALSE)
+    sn <- getSpatialNetwork(g2, name = "Delaunay_network",
+                            output = "spatialNetworkObj")
+    nn <- getNearestNetwork(g, output = "nnNetObj")
+
+    # an accessor, not a construction -- identity, not merely equality
+    expect_identical(igraph::as.igraph(sn), slot(sn, "network"))
+    expect_identical(igraph::as.igraph(nn), slot(nn, "network"))
+})
+
+test_that("as.igraph re-dispatches when @network is backed", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    # stands in for a GiottoDisk store: any class registering its own
+    # as.igraph method. GiottoClass must not need to name the backend.
+    setClass("fakeBackedNet", representation(g = "ANY"))
+    on.exit(removeClass("fakeBackedNet"), add = TRUE)
+    registerS3method("as.igraph", "fakeBackedNet", function(x, ...) x@g,
+        envir = asNamespace("igraph"))
+
+    ring <- igraph::make_ring(7)
+    g2 <- createSpatialNetwork(g, method = "Delaunay", verbose = FALSE)
+    sn <- getSpatialNetwork(g2, name = "Delaunay_network",
+                            output = "spatialNetworkObj")
+    slot(sn, "network") <- new("fakeBackedNet", g = ring)
+
+    expect_identical(igraph::as.igraph(sn), ring)
+})
+
+
+# carrier dispatch ####
+#
+# The container methods forward to whatever `@network` holds rather than
+# testing for it, so a carrier is reached by registering a method on it. These
+# cover the contract GiottoDisk's parquetEdgeStore relies on, without needing
+# GiottoDisk installed -- the store-backed tests above skip whenever it is not.
+
+# Stands in for a store: any class that is not an igraph and brings its own
+# spatIDs method. Declared at file level because setMethod() resolves the
+# class name against the generic's namespace, and a class created inside a
+# test frame is not visible there.
+setClass("fakeIdNet", representation(ids = "character"))
+setMethod("spatIDs", "fakeIdNet", function(x, ...) x@ids)
+
+test_that("spatIDs() reads an igraph carrier directly", {
+    ring <- igraph::make_ring(4)
+    igraph::V(ring)$name <- letters[1:4]
+
+    expect_setequal(spatIDs(ring), letters[1:4])
+    # isolated vertices are nodes of the graph and are reported
+    expect_length(spatIDs(igraph::add_vertices(ring, 1, name = "e")), 5L)
+})
+
+test_that("spatIDs() on the containers forwards to the carrier", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    sn <- .sn_fixture()
+    nn <- getNearestNetwork(g, output = "nnNetObj")
+
+    expect_identical(spatIDs(sn), spatIDs(slot(sn, "network")))
+    expect_identical(spatIDs(nn), spatIDs(slot(nn, "network")))
+})
+
+test_that("spatIDs() re-dispatches when @network is backed", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    sn <- .sn_fixture()
+    slot(sn, "network") <- new("fakeIdNet", ids = c("x", "y", "z"))
+    expect_identical(spatIDs(sn), c("x", "y", "z"))
+
+    nn <- getNearestNetwork(g, output = "nnNetObj")
+    slot(nn, "network") <- new("fakeIdNet", ids = c("x", "y"))
+    expect_identical(spatIDs(nn), c("x", "y"))
+})
+
+
+# as.data.table ####
+
+test_that("as.data.table returns the edge table of an in-memory network", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    sn <- .sn_fixture()
+    nn <- getNearestNetwork(g, output = "nnNetObj")
+
+    for (obj in list(sn, nn)) {
+        dt <- data.table::as.data.table(obj)
+        expect_s3_class(dt, "data.table")
+        expect_true(all(c("from", "to") %in% names(dt)))
+        expect_equal(nrow(dt), igraph::ecount(slot(obj, "network")))
+    }
+})
+
+test_that("as.data.table reads @unfiltered, which holds a bare carrier", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    # createSpatialNetwork() leaves @unfiltered NULL; the slot is filled by
+    # createSpatNetObj(), the legacy migration and the Seurat conversion. It
+    # holds the graph directly rather than a subobject, so it cannot go
+    # through as.data.table() -- hence the carrier-level reader.
+    full <- igraph::make_ring(5)
+    igraph::V(full)$name <- letters[1:5]
+    trimmed <- igraph::delete_edges(full, igraph::E(full)[1])
+
+    sn <- createSpatNetObj(network = trimmed, unfiltered = full,
+                           name = "unf.test")
+    unf <- slot(sn, "unfiltered")
+    expect_s3_class(unf, "igraph")
+
+    dt <- GiottoClass:::.network_as_dt(unf)
+    expect_s3_class(dt, "data.table")
+    expect_true(all(c("from", "to") %in% names(dt)))
+    # the unfiltered graph is a superset of the filtered one
+    expect_equal(nrow(dt), igraph::ecount(full))
+    expect_gt(nrow(dt), nrow(data.table::as.data.table(sn)))
+})
+
+test_that("as.data.table re-dispatches when @network is backed", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    setClass("fakeDtNet", representation(dt = "ANY"))
+    on.exit(removeClass("fakeDtNet"), add = TRUE)
+    edges <- data.table::data.table(from = c("a", "b"), to = c("b", "c"))
+    registerS3method("as.data.table", "fakeDtNet", function(x, ...) x@dt,
+        envir = asNamespace("data.table"))
+
+    sn <- .sn_fixture()
+    slot(sn, "network") <- new("fakeDtNet", dt = edges)
+
+    expect_identical(data.table::as.data.table(sn), edges)
+})
+
+
 options("lifecycle_verbosity" = lifecycle_opt)
