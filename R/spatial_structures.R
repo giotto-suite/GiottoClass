@@ -203,71 +203,35 @@ createSpatialDelaunayNetwork <- function(gobject,
     ...) {
     # Thin wrapper over createNetwork() + spatialNetworkObj construction.
     method <- match.arg(method, c("deldir", "delaunayn_geometry", "RTriangle"))
-    output <- match.arg(output, c("spatialNetworkObj", "data.table"))
-    spat_unit <- set_default_spat_unit(gobject, spat_unit = spat_unit)
 
-    # alias "delaunayn_geometry" -> "geometry" for the new Param API
+    # `method` is kept in the wrapper's spelling for @method and the param
+    # record; the Param API calls the same backend "geometry".
     param_method <- if (method == "delaunayn_geometry") "geometry" else method
 
-    # Pull spatLocsObj to capture provenance, then dispatch via the
-    # matrix method (lets us honour the legacy `dimensions` arg).
-    sl <- getSpatialLocations(gobject,
-        spat_unit = spat_unit, name = spat_loc_name,
-        output = "spatLocsObj"
-    )
-    provenance <- prov(sl)
-    sl_dt <- sl[]
-    coord_cols <- intersect(c("sdimx", "sdimy", "sdimz"), names(sl_dt))
-    if (!identical(dimensions, "all")) coord_cols <- coord_cols[dimensions]
-    if (length(coord_cols) == 3L && method != "delaunayn_geometry") {
-        stop(method, " method only applies to 2D data, ",
-            "use delaunayn_geometry, see details \n", call. = FALSE)
-    }
-    coords <- as.matrix(sl_dt[, coord_cols, with = FALSE])
-    node_ids <- sl_dt$cell_ID
-
-    param <- delaunayNetworkParam(
-        method = param_method,
-        maximum_distance = maximum_distance,
-        minimum_k = minimum_k,
-        output = "igraph",
-        options = options, Y = Y, j = j, S = S
-    )
-    g_net <- createNetwork(coords, param,
-        node_ids = node_ids, verbose = verbose, ...
-    )
-
-    if (output == "data.table" && !return_gobject) {
-        return(data.table::as.data.table(
-            igraph::as_data_frame(g_net, what = "edges")
-        ))
-    }
-
-    sn_obj <- create_spat_net_obj(
-        name = name,
+    .create_spatial_network_from_param(
+        gobject = gobject,
+        param = delaunayNetworkParam(
+            method = param_method,
+            maximum_distance = maximum_distance,
+            minimum_k = minimum_k,
+            output = "igraph",
+            options = options, Y = Y, j = j, S = S
+        ),
         method = method,
         parameters = list(
             maximum_distance = maximum_distance,
             minimum_k = minimum_k,
             dimensions = dimensions
         ),
-        network = g_net,
         spat_unit = spat_unit,
-        provenance = provenance
+        spat_loc_name = spat_loc_name,
+        dimensions = dimensions,
+        name = name,
+        verbose = verbose,
+        return_gobject = return_gobject,
+        output = output,
+        ...
     )
-
-    if (!return_gobject) return(sn_obj)
-
-    spn_names <- list_spatial_networks_names(gobject, spat_unit = spat_unit)
-    if (name %in% spn_names) {
-        vmsg(.v = verbose, name, " has already been used, will be overwritten")
-    }
-    gobject <- setSpatialNetwork(gobject,
-        x = sn_obj, spat_unit = spat_unit, name = name,
-        verbose = verbose
-    )
-    gobject <- update_giotto_params(gobject, description = "_spatial_network", toplevel = 1L)
-    gobject
 }
 
 
@@ -336,39 +300,16 @@ createSpatialKNNnetwork <- function(gobject,
     ...) {
     # Thin wrapper over createNetwork() + spatialNetworkObj construction.
     method <- match.arg(method, c("dbscan"))
-    output <- match.arg(output, c("spatialNetworkObj", "data.table"))
-    spat_unit <- set_default_spat_unit(gobject, spat_unit = spat_unit)
 
-    sl <- getSpatialLocations(gobject,
-        spat_unit = spat_unit, name = spat_loc_name,
-        output = "spatLocsObj"
-    )
-    provenance <- prov(sl)
-    sl_dt <- sl[]
-    coord_cols <- intersect(c("sdimx", "sdimy", "sdimz"), names(sl_dt))
-    if (!identical(dimensions, "all")) coord_cols <- coord_cols[dimensions]
-    coords <- as.matrix(sl_dt[, coord_cols, with = FALSE])
-    node_ids <- sl_dt$cell_ID
-
-    param <- kNNNetworkParam(
-        k = k,
-        filter = TRUE,
-        maximum_distance = maximum_distance,
-        minimum_k = minimum_k,
-        output = "igraph"
-    )
-    g_net <- createNetwork(coords, param,
-        node_ids = node_ids, verbose = verbose, ...
-    )
-
-    if (output == "data.table" && !return_gobject) {
-        return(data.table::as.data.table(
-            igraph::as_data_frame(g_net, what = "edges")
-        ))
-    }
-
-    sn_obj <- create_spat_net_obj(
-        name = name,
+    .create_spatial_network_from_param(
+        gobject = gobject,
+        param = kNNNetworkParam(
+            k = k,
+            filter = TRUE,
+            maximum_distance = maximum_distance,
+            minimum_k = minimum_k,
+            output = "igraph"
+        ),
         method = method,
         parameters = list(
             k = k,
@@ -376,23 +317,15 @@ createSpatialKNNnetwork <- function(gobject,
             minimum_k = minimum_k,
             dimensions = dimensions
         ),
-        network = g_net,
         spat_unit = spat_unit,
-        provenance = provenance
+        spat_loc_name = spat_loc_name,
+        dimensions = dimensions,
+        name = name,
+        verbose = verbose,
+        return_gobject = return_gobject,
+        output = output,
+        ...
     )
-
-    if (!return_gobject) return(sn_obj)
-
-    spn_names <- list_spatial_networks_names(gobject, spat_unit = spat_unit)
-    if (name %in% spn_names) {
-        vmsg(.v = verbose, name, " has already been used, will be overwritten")
-    }
-    gobject <- setSpatialNetwork(gobject,
-        x = sn_obj, spat_unit = spat_unit, name = name,
-        verbose = verbose
-    )
-    gobject <- update_giotto_params(gobject, description = "_spatial_network", toplevel = 1L)
-    gobject
 }
 
 
@@ -635,10 +568,8 @@ createSpatialNetwork <- function(gobject,
 
     if (!return_gobject) return(sn_obj)
 
-    spn_names <- list_spatial_networks_names(gobject, spat_unit = spat_unit)
-    if (name %in% spn_names) {
-        vmsg(.v = verbose, name, " has already been used, will be overwritten")
-    }
+    # setSpatialNetwork() reports an overwrite itself, so there is no name
+    # check here. The older wrappers above still carry one and say it twice.
     gobject <- setSpatialNetwork(gobject,
         x = sn_obj, spat_unit = spat_unit, name = name, verbose = verbose
     )

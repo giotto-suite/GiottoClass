@@ -468,6 +468,16 @@ setMethod("createNetwork", signature("matrix", "delaunayNetworkParam"),
                 No network can be generated"
             ))
         }
+        # 2D-only backends. This lives here rather than in
+        # createSpatialDelaunayNetwork() so that a direct createNetwork() call
+        # is checked too -- it previously reached deldir with 3D coordinates
+        # and failed somewhere inside it.
+        if (ncol(x) == 3L && param$method != "geometry") {
+            stop(wrap_txt(errWidth = TRUE,
+                "[createNetwork]", param$method, "only applies to 2D data.",
+                "Use method = \"geometry\" for 3D"
+            ), call. = FALSE)
+        }
         helper <- switch(param$method,
             deldir    = .net_dt_del_deldir,
             RTriangle = .net_dt_del_rtriangle,
