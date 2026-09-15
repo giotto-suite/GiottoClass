@@ -1891,12 +1891,8 @@ setMethod("getNearestNetwork", signature("gAny"), function(gobject,
     }
 
     if (output == "nnNetObj") return(nnNet)
-    if (output == "igraph") return(slot(nnNet, "network"))
-    if (output == "data.table") {
-        return(data.table::setDT(
-            igraph::as_data_frame(x = slot(nnNet, "network"), what = "edges")
-        ))
-    }
+    if (output == "igraph") return(igraph::as.igraph(nnNet))
+    if (output == "data.table") return(data.table::as.data.table(nnNet))
 })
 
 
@@ -2164,21 +2160,17 @@ setMethod("getSpatialNetwork", signature("giotto"), function(gobject,
     if (!inherits(out, "list")) out <- list(out)
     names(out) <- NULL
 
-    # spatialNetworkObj@network is an igraph (canonical as of 0.6.0);
     # igraph is copy-on-modify so `copy_obj` is a no-op here.
-    as_dt <- function(g) {
-        if (inherits(g, "igraph")) {
-            data.table::as.data.table(
-                igraph::as_data_frame(g, what = "edges")
-            )
-        } else g
-    }
+    #
+    # The coercion methods read `@network` whatever it holds, so a backed
+    # network resolves by dispatch. `@unfiltered` holds a carrier rather than a
+    # subobject, hence the carrier-level reader.
     out <- lapply(out, function(x) {
         switch(output,
             "spatialNetworkObj" = x,
-            "igraph" = x[],
-            "networkDT" = as_dt(x[]),
-            "unfiltered" = as_dt(x@unfiltered),
+            "igraph" = igraph::as.igraph(x),
+            "networkDT" = data.table::as.data.table(x),
+            "unfiltered" = .network_as_dt(x@unfiltered),
             "outputObj" = x@outputObj
         )
     })

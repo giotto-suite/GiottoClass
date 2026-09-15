@@ -3,72 +3,6 @@
 
 
 
-#' @title Calculate spatial network distance and weight
-#' @name .calculate_distance_and_weight
-#' @param networkDT spatial network as data.table
-#' @param sdimx spatial dimension x
-#' @param sdimy spatial dimension y
-#' @param sdimz spatial dimension z
-#' @param d2_or_d3 number of dimensions
-#' @description Calculate distance and weight metrics of a data.table spatial
-#' network
-#' @keywords internal
-#' @returns data.table
-.calculate_distance_and_weight <- function(networkDT = NULL,
-    sdimx = "sdimx",
-    sdimy = "sdimy",
-    sdimz = "sdimz",
-    d2_or_d3 = c(2, 3)) {
-    # data.table variables
-    distance <- weight <- from <- NULL
-
-    if (is.null(networkDT)) {
-        stop("parameter networkDT can not be NULL \n")
-    }
-
-    # d2_or_d3 = match.arg(d2_or_d3, choices = c(2,3))
-
-    if (d2_or_d3 == 3) {
-        ## make it dynamic for all possible coordinates combinations ##
-        xbegin_name <- paste0(sdimx, "_begin")
-        ybegin_name <- paste0(sdimy, "_begin")
-        zbegin_name <- paste0(sdimz, "_begin")
-        xend_name <- paste0(sdimx, "_end")
-        yend_name <- paste0(sdimy, "_end")
-        zend_name <- paste0(sdimz, "_end")
-        mycols <- c(
-            xbegin_name, ybegin_name, zbegin_name,
-            xend_name, yend_name, zend_name
-        )
-    } else if (d2_or_d3 == 2) {
-        xbegin_name <- paste0(sdimx, "_begin")
-        ybegin_name <- paste0(sdimy, "_begin")
-        xend_name <- paste0(sdimx, "_end")
-        yend_name <- paste0(sdimy, "_end")
-        mycols <- c(
-            xbegin_name, ybegin_name,
-            xend_name, yend_name
-        )
-    }
-
-    ## calculate distance and weight + filter ##
-    networkDT[, `:=`(distance, stats::dist(
-        x = matrix(.SD, nrow = 2, byrow = TRUE)
-    )),
-    by = seq_len(nrow(networkDT)), .SDcols = mycols
-    ]
-
-    networkDT[, `:=`(distance, as.numeric(distance))]
-    networkDT[, `:=`(weight, 1 / distance)]
-    data.table::setorder(networkDT, from, distance)
-
-    networkDT <- networkDT[, c(
-        "to", "from", "weight",
-        "distance", mycols
-    ), with = FALSE]
-
-    return(networkDT)
-}
 
 
 
@@ -224,6 +158,29 @@ compatible_spatial_network <- function(spatial_network,
 #' @details Creates a spatial Delaunay network as explained
 #' in \code{\link[geometry]{delaunayn}} (default), \code{\link[deldir]{deldir}},
 #' or \code{\link[RTriangle]{triangulate}}.
+#' @section Choosing a Delaunay backend:
+#' All three backends compute the same exact triangulation -- on 50,000 uniform
+#' points each returns the identical 149,978 edges -- so the choice is purely
+#' one of implementation speed, and `deldir` is by a wide margin the slowest:
+#'
+#' | points | `deldir` | `delaunayn_geometry` |
+#' |---|---|---|
+#' | 20,000 | 3.7 s | 0.14 s |
+#' | 50,000 | 21.1 s | 0.20 s |
+#' | 200,000 | ~363 s | 0.94 s |
+#'
+#' `deldir` remains the default for backward compatibility, but
+#' **`delaunay_method = "delaunayn_geometry"` is strongly preferred above a few
+#' thousand points**. It requires the \pkg{geometry} package, and it is also the
+#' only backend that handles 3D.
+#'
+#' Two caveats. Qhull can struggle with exactly cocircular input -- a
+#' grid-aligned platform such as Visium -- in which case pass
+#' `options = "Qbb Qc Qz"`; a 10,000-point exact grid worked with the default
+#' `"Pp"` in testing, but the failure mode is degenerate input rather than
+#' size. And `deldir` peaks around 2.9 GB of memory at 200,000 points against
+#' `geometry`'s 0.24 GB, so on a large section it is the memory, not just the
+#' wait, that bites.
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
@@ -246,71 +203,35 @@ createSpatialDelaunayNetwork <- function(gobject,
     ...) {
     # Thin wrapper over createNetwork() + spatialNetworkObj construction.
     method <- match.arg(method, c("deldir", "delaunayn_geometry", "RTriangle"))
-    output <- match.arg(output, c("spatialNetworkObj", "data.table"))
-    spat_unit <- set_default_spat_unit(gobject, spat_unit = spat_unit)
 
-    # alias "delaunayn_geometry" -> "geometry" for the new Param API
+    # `method` is kept in the wrapper's spelling for @method and the param
+    # record; the Param API calls the same backend "geometry".
     param_method <- if (method == "delaunayn_geometry") "geometry" else method
 
-    # Pull spatLocsObj to capture provenance, then dispatch via the
-    # matrix method (lets us honour the legacy `dimensions` arg).
-    sl <- getSpatialLocations(gobject,
-        spat_unit = spat_unit, name = spat_loc_name,
-        output = "spatLocsObj"
-    )
-    provenance <- prov(sl)
-    sl_dt <- sl[]
-    coord_cols <- intersect(c("sdimx", "sdimy", "sdimz"), names(sl_dt))
-    if (!identical(dimensions, "all")) coord_cols <- coord_cols[dimensions]
-    if (length(coord_cols) == 3L && method != "delaunayn_geometry") {
-        stop(method, " method only applies to 2D data, ",
-            "use delaunayn_geometry, see details \n", call. = FALSE)
-    }
-    coords <- as.matrix(sl_dt[, coord_cols, with = FALSE])
-    node_ids <- sl_dt$cell_ID
-
-    param <- delaunayNetworkParam(
-        method = param_method,
-        maximum_distance = maximum_distance,
-        minimum_k = minimum_k,
-        output = "igraph",
-        options = options, Y = Y, j = j, S = S
-    )
-    g_net <- createNetwork(coords, param,
-        node_ids = node_ids, verbose = verbose, ...
-    )
-
-    if (output == "data.table" && !return_gobject) {
-        return(data.table::as.data.table(
-            igraph::as_data_frame(g_net, what = "edges")
-        ))
-    }
-
-    sn_obj <- create_spat_net_obj(
-        name = name,
+    .create_spatial_network_from_param(
+        gobject = gobject,
+        param = delaunayNetworkParam(
+            method = param_method,
+            maximum_distance = maximum_distance,
+            minimum_k = minimum_k,
+            output = "igraph",
+            options = options, Y = Y, j = j, S = S
+        ),
         method = method,
         parameters = list(
             maximum_distance = maximum_distance,
             minimum_k = minimum_k,
             dimensions = dimensions
         ),
-        network = g_net,
         spat_unit = spat_unit,
-        provenance = provenance
+        spat_loc_name = spat_loc_name,
+        dimensions = dimensions,
+        name = name,
+        verbose = verbose,
+        return_gobject = return_gobject,
+        output = output,
+        ...
     )
-
-    if (!return_gobject) return(sn_obj)
-
-    spn_names <- list_spatial_networks_names(gobject, spat_unit = spat_unit)
-    if (name %in% spn_names) {
-        vmsg(.v = verbose, name, " has already been used, will be overwritten")
-    }
-    gobject <- setSpatialNetwork(gobject,
-        x = sn_obj, spat_unit = spat_unit, name = name,
-        verbose = verbose
-    )
-    gobject <- update_giotto_params(gobject, description = "_spatial_network", toplevel = 1L)
-    gobject
 }
 
 
@@ -350,8 +271,12 @@ createSpatialDelaunayNetwork <- function(gobject,
 #' spatial dimensions to use, e.g. c("sdimx', "sdimy")
 #' or a numerical vector, e.g. 2:3
 #'
-#' \strong{maximum_distance: } to create a network based on maximum distance
-#' only, you also need to set k to a very high value, e.g. k = 100
+#' \strong{maximum_distance: } this is a post-filter on the k neighbours the
+#' search already found, not a constraint on the search itself. To build a
+#' network on distance alone, prefer [radiusNetworkParam()], which searches
+#' only within the radius; the older advice of setting `k` very high (e.g.
+#' `k = 100`) and filtering still works, but it finds a hundred neighbours per
+#' cell in order to discard most of them.
 #'
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
@@ -375,39 +300,16 @@ createSpatialKNNnetwork <- function(gobject,
     ...) {
     # Thin wrapper over createNetwork() + spatialNetworkObj construction.
     method <- match.arg(method, c("dbscan"))
-    output <- match.arg(output, c("spatialNetworkObj", "data.table"))
-    spat_unit <- set_default_spat_unit(gobject, spat_unit = spat_unit)
 
-    sl <- getSpatialLocations(gobject,
-        spat_unit = spat_unit, name = spat_loc_name,
-        output = "spatLocsObj"
-    )
-    provenance <- prov(sl)
-    sl_dt <- sl[]
-    coord_cols <- intersect(c("sdimx", "sdimy", "sdimz"), names(sl_dt))
-    if (!identical(dimensions, "all")) coord_cols <- coord_cols[dimensions]
-    coords <- as.matrix(sl_dt[, coord_cols, with = FALSE])
-    node_ids <- sl_dt$cell_ID
-
-    param <- kNNNetworkParam(
-        k = k,
-        filter = TRUE,
-        maximum_distance = maximum_distance,
-        minimum_k = minimum_k,
-        output = "igraph"
-    )
-    g_net <- createNetwork(coords, param,
-        node_ids = node_ids, verbose = verbose, ...
-    )
-
-    if (output == "data.table" && !return_gobject) {
-        return(data.table::as.data.table(
-            igraph::as_data_frame(g_net, what = "edges")
-        ))
-    }
-
-    sn_obj <- create_spat_net_obj(
-        name = name,
+    .create_spatial_network_from_param(
+        gobject = gobject,
+        param = kNNNetworkParam(
+            k = k,
+            filter = TRUE,
+            maximum_distance = maximum_distance,
+            minimum_k = minimum_k,
+            output = "igraph"
+        ),
         method = method,
         parameters = list(
             k = k,
@@ -415,23 +317,15 @@ createSpatialKNNnetwork <- function(gobject,
             minimum_k = minimum_k,
             dimensions = dimensions
         ),
-        network = g_net,
         spat_unit = spat_unit,
-        provenance = provenance
+        spat_loc_name = spat_loc_name,
+        dimensions = dimensions,
+        name = name,
+        verbose = verbose,
+        return_gobject = return_gobject,
+        output = output,
+        ...
     )
-
-    if (!return_gobject) return(sn_obj)
-
-    spn_names <- list_spatial_networks_names(gobject, spat_unit = spat_unit)
-    if (name %in% spn_names) {
-        vmsg(.v = verbose, name, " has already been used, will be overwritten")
-    }
-    gobject <- setSpatialNetwork(gobject,
-        x = sn_obj, spat_unit = spat_unit, name = name,
-        verbose = verbose
-    )
-    gobject <- update_giotto_params(gobject, description = "_spatial_network", toplevel = 1L)
-    gobject
 }
 
 
@@ -458,9 +352,16 @@ createSpatialKNNnetwork <- function(gobject,
 #' @param feat_type feature type
 #' @param spat_loc_name name of spatial locations to use
 #' @param dimensions which spatial dimensions to use (default = all)
-#' @param method which method to use to create a spatial
-#' network. (default = Delaunay)
-#' @param delaunay_method method to use to generate Delaunay network
+#' @param method which method to use to create a spatial network. One of
+#' `"Delaunay"` (default), `"kNN"`, or `"radius"`. `"radius"` connects every
+#' pair of cells closer together than `radius`, so unlike kNN it gives dense
+#' regions more neighbours than sparse ones.
+#' @param delaunay_method method to use to generate Delaunay network. All
+#' three give the identical triangulation; `"delaunayn_geometry"` is far faster
+#' above a few thousand points (0.94 s vs ~363 s at 200,000) and is the only
+#' one that handles 3D. `"deldir"` remains the default for backward
+#' compatibility. See the *Choosing a Delaunay backend* section of
+#' [createSpatialDelaunayNetwork()].
 #' @param maximum_distance_delaunay distance cutoff for nearest neighbors to
 #' consider for Delaunay network. If "auto", "upper whisker" value of the
 #' distance vector between neighbors is used; see the [grDevices::boxplot.stats]
@@ -479,6 +380,9 @@ createSpatialKNNnetwork <- function(gobject,
 #' @param minimum_k minimum nearest neighbours if maximum_distance != NULL
 #' @param maximum_distance_knn distance cutoff for nearest neighbors to consider
 #' for kNN network
+#' @param radius (radius) distance cutoff, in the units of the spatial
+#' locations. Every pair of cells within this distance of each other is
+#' connected. Required when `method = "radius"`.
 #' @param verbose be verbose
 #' @param return_gobject logical. return giotto object (default = TRUE)
 #' @param output character. Object type to return spatial network as when
@@ -508,7 +412,7 @@ createSpatialNetwork <- function(gobject,
     feat_type = NULL,
     spat_loc_name = NULL,
     dimensions = "all",
-    method = c("Delaunay", "kNN"),
+    method = c("Delaunay", "kNN", "radius"),
     delaunay_method = c("deldir", "delaunayn_geometry", "RTriangle"),
     maximum_distance_delaunay = "auto",
     options = "Pp",
@@ -519,12 +423,13 @@ createSpatialNetwork <- function(gobject,
     knn_method = "dbscan",
     k = 4,
     maximum_distance_knn = NULL,
+    radius = NULL,
     verbose = FALSE,
     return_gobject = TRUE,
     output = c("spatialNetworkObj", "data.table"),
     ...) {
     # get paramters
-    method <- match.arg(method, c("Delaunay", "kNN"))
+    method <- match.arg(method, c("Delaunay", "kNN", "radius"))
 
 
     if (method == "kNN") {
@@ -577,9 +482,100 @@ createSpatialNetwork <- function(gobject,
             output = output,
             ...
         )
+    } else if (method == "radius") {
+        if (is.null(radius)) {
+            stop(wrap_txt(
+                'method = "radius" needs a `radius` (a distance in the units',
+                "of the spatial locations)."
+            ), call. = FALSE)
+        }
+        if (is.null(name)) name <- "radius_network"
+
+        out <- .create_spatial_network_from_param(
+            gobject = gobject,
+            param = radiusNetworkParam(
+                eps = radius, minimum_k = minimum_k, output = "igraph"
+            ),
+            method = "radius",
+            parameters = list(
+                eps = radius, minimum_k = minimum_k, dimensions = dimensions
+            ),
+            spat_unit = spat_unit,
+            spat_loc_name = spat_loc_name,
+            dimensions = dimensions,
+            name = name,
+            verbose = verbose,
+            return_gobject = return_gobject,
+            output = output,
+            ...
+        )
     }
 
     return(out)
+}
+
+
+# Build a spatial network on cell centroids from an already-constructed
+# networkParam, and do the gobject plumbing around it.
+#
+# createSpatialKNNnetwork() and createSpatialDelaunayNetwork() each carry their
+# own copy of this plumbing; they are not migrated onto it here because they
+# are the tested paths and this is a bug-fix commit. New spatial network
+# methods should route through this instead of adding a fourth copy.
+.create_spatial_network_from_param <- function(gobject,
+    param,
+    method,
+    parameters,
+    spat_unit = NULL,
+    spat_loc_name = NULL,
+    dimensions = "all",
+    name,
+    verbose = FALSE,
+    return_gobject = TRUE,
+    output = c("spatialNetworkObj", "data.table"),
+    ...) {
+    output <- match.arg(output, c("spatialNetworkObj", "data.table"))
+    spat_unit <- set_default_spat_unit(gobject, spat_unit = spat_unit)
+
+    sl <- getSpatialLocations(gobject,
+        spat_unit = spat_unit, name = spat_loc_name,
+        output = "spatLocsObj"
+    )
+    provenance <- prov(sl)
+    sl_dt <- sl[]
+    coord_cols <- intersect(c("sdimx", "sdimy", "sdimz"), names(sl_dt))
+    if (!identical(dimensions, "all")) coord_cols <- coord_cols[dimensions]
+    coords <- as.matrix(sl_dt[, coord_cols, with = FALSE])
+
+    g_net <- createNetwork(coords, param,
+        node_ids = sl_dt$cell_ID, verbose = verbose, ...
+    )
+
+    if (output == "data.table" && !return_gobject) {
+        return(data.table::as.data.table(
+            igraph::as_data_frame(g_net, what = "edges")
+        ))
+    }
+
+    sn_obj <- create_spat_net_obj(
+        name = name,
+        method = method,
+        parameters = parameters,
+        network = g_net,
+        spat_unit = spat_unit,
+        provenance = provenance
+    )
+
+    if (!return_gobject) return(sn_obj)
+
+    # setSpatialNetwork() reports an overwrite itself, so there is no name
+    # check here. The older wrappers above still carry one and say it twice.
+    gobject <- setSpatialNetwork(gobject,
+        x = sn_obj, spat_unit = spat_unit, name = name, verbose = verbose
+    )
+    update_giotto_params(gobject,
+        description = "_spatial_network", toplevel = 1L
+    )
 }
 
 

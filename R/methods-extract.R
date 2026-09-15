@@ -468,6 +468,15 @@ setMethod("$", signature("networkParam"), function(x, name) {
 }
 
 #' @export
+.DollarNames.radiusNetworkParam <- function(x, pattern) {
+    unique(c(
+        c("eps", "minimum_k", "weight_fun", "include_weight",
+            "include_distance", "output"),
+        names(x@param)
+    ))
+}
+
+#' @export
 .DollarNames.sNNNetworkParam <- function(x, pattern) {
     unique(c(
         c("k", "top_shared", "minimum_shared", "weight_fun", "include_weight",
