@@ -42,25 +42,3 @@ Constructor and class for Delaunay triangulation network parameters.
 Delaunay edges are an undirected geometric relation, so the resulting
 graph is \strong{undirected} — one edge per pair.
 }
-\section{Slots}{
-
-\describe{
-\item{\code{method}}{character. backend: \code{"deldir"}, \code{"RTriangle"}, or
-\code{"geometry"}.}
-
-\item{\code{maximum_distance}}{numeric, \code{"auto"}, or NULL.}
-
-\item{\code{minimum_k}}{integer. minimum neighbours per node when filtering.}
-
-\item{\code{weight_fun}}{function. weight = \code{weight_fun(distance)}.}
-
-\item{\code{include_weight,include_distance}}{logical. include columns.}
-
-\item{\code{output}}{character. See \code{\link[=createNetwork]{createNetwork()}}.}
-
-\item{\code{options}}{character. \emph{geometry only.} passed to \code{geometry::delaunayn}.}
-
-\item{\code{Y,j}}{logical; S numeric. \emph{RTriangle only.} passed to
-\code{RTriangle::triangulate}.}
-}}
-

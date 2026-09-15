@@ -13,6 +13,7 @@
 \alias{spatIDs,exprObj-method}
 \alias{spatIDs,spatLocsObj-method}
 \alias{spatIDs,cellMetaObj-method}
+\alias{spatIDs,igraph-method}
 \alias{spatIDs,spatialNetworkObj-method}
 \alias{spatIDs,dimObj-method}
 \alias{spatIDs,giottoPolygon-method}
@@ -39,6 +40,8 @@
 \S4method{spatIDs}{spatLocsObj}(x, ...)
 
 \S4method{spatIDs}{cellMetaObj}(x, ...)
+
+\S4method{spatIDs}{igraph}(x, ...)
 
 \S4method{spatIDs}{spatialNetworkObj}(x, ...)
 

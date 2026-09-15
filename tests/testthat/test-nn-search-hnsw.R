@@ -98,15 +98,15 @@ test_that("engine = 'hnsw' runs through the network constructors", {
 })
 
 test_that("dbscan remains the default engine", {
-    expect_identical(kNNNetworkParam()@engine, "dbscan")
-    expect_identical(sNNNetworkParam()@engine, "dbscan")
+    expect_identical(kNNNetworkParam()$engine, "dbscan")
+    expect_identical(sNNNetworkParam()$engine, "dbscan")
     expect_identical(eval(formals(createNearestNetwork)$engine)[1], "dbscan")
 })
 
 test_that("ef and n_threads_build are carried on the params and ignored by dbscan", {
     p <- kNNNetworkParam(k = 10, ef = 300, n_threads_build = 2L)
-    expect_identical(p@ef, 300)
-    expect_identical(p@n_threads_build, 2L)
+    expect_identical(p$ef, 300)
+    expect_identical(p$n_threads_build, 2L)
     # inert under dbscan rather than an error, so engines can be swapped freely
     expect_no_error(
         createNetwork(m, kNNNetworkParam(k = 10, engine = "dbscan",

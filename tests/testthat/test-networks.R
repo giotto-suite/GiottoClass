@@ -322,4 +322,337 @@ test_that("as.igraph re-dispatches when @network is backed", {
 })
 
 
+# carrier dispatch ####
+#
+# The container methods forward to whatever `@network` holds rather than
+# testing for it, so a carrier is reached by registering a method on it. These
+# cover the contract GiottoDisk's parquetEdgeStore relies on, without needing
+# GiottoDisk installed -- the store-backed tests above skip whenever it is not.
+
+# Stands in for a store: any class that is not an igraph and brings its own
+# spatIDs method. Declared at file level because setMethod() resolves the
+# class name against the generic's namespace, and a class created inside a
+# test frame is not visible there.
+setClass("fakeIdNet", representation(ids = "character"))
+setMethod("spatIDs", "fakeIdNet", function(x, ...) x@ids)
+
+test_that("spatIDs() reads an igraph carrier directly", {
+    ring <- igraph::make_ring(4)
+    igraph::V(ring)$name <- letters[1:4]
+
+    expect_setequal(spatIDs(ring), letters[1:4])
+    # isolated vertices are nodes of the graph and are reported
+    expect_length(spatIDs(igraph::add_vertices(ring, 1, name = "e")), 5L)
+})
+
+test_that("spatIDs() on the containers forwards to the carrier", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    sn <- .sn_fixture()
+    nn <- getNearestNetwork(g, output = "nnNetObj")
+
+    expect_identical(spatIDs(sn), spatIDs(slot(sn, "network")))
+    expect_identical(spatIDs(nn), spatIDs(slot(nn, "network")))
+})
+
+test_that("spatIDs() re-dispatches when @network is backed", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    sn <- .sn_fixture()
+    slot(sn, "network") <- new("fakeIdNet", ids = c("x", "y", "z"))
+    expect_identical(spatIDs(sn), c("x", "y", "z"))
+
+    nn <- getNearestNetwork(g, output = "nnNetObj")
+    slot(nn, "network") <- new("fakeIdNet", ids = c("x", "y"))
+    expect_identical(spatIDs(nn), c("x", "y"))
+})
+
+
+# as.data.table ####
+
+test_that("as.data.table returns the edge table of an in-memory network", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    sn <- .sn_fixture()
+    nn <- getNearestNetwork(g, output = "nnNetObj")
+
+    for (obj in list(sn, nn)) {
+        dt <- data.table::as.data.table(obj)
+        expect_s3_class(dt, "data.table")
+        expect_true(all(c("from", "to") %in% names(dt)))
+        expect_equal(nrow(dt), igraph::ecount(slot(obj, "network")))
+    }
+})
+
+test_that("as.data.table reads @unfiltered, which holds a bare carrier", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    # createSpatialNetwork() leaves @unfiltered NULL; the slot is filled by
+    # createSpatNetObj(), the legacy migration and the Seurat conversion. It
+    # holds the graph directly rather than a subobject, so it cannot go
+    # through as.data.table() -- hence the carrier-level reader.
+    full <- igraph::make_ring(5)
+    igraph::V(full)$name <- letters[1:5]
+    trimmed <- igraph::delete_edges(full, igraph::E(full)[1])
+
+    sn <- createSpatNetObj(network = trimmed, unfiltered = full,
+                           name = "unf.test")
+    unf <- slot(sn, "unfiltered")
+    expect_s3_class(unf, "igraph")
+
+    dt <- GiottoClass:::.network_as_dt(unf)
+    expect_s3_class(dt, "data.table")
+    expect_true(all(c("from", "to") %in% names(dt)))
+    # the unfiltered graph is a superset of the filtered one
+    expect_equal(nrow(dt), igraph::ecount(full))
+    expect_gt(nrow(dt), nrow(data.table::as.data.table(sn)))
+})
+
+test_that("as.data.table re-dispatches when @network is backed", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    setClass("fakeDtNet", representation(dt = "ANY"))
+    on.exit(removeClass("fakeDtNet"), add = TRUE)
+    edges <- data.table::data.table(from = c("a", "b"), to = c("b", "c"))
+    registerS3method("as.data.table", "fakeDtNet", function(x, ...) x@dt,
+        envir = asNamespace("data.table"))
+
+    sn <- .sn_fixture()
+    slot(sn, "network") <- new("fakeDtNet", dt = edges)
+
+    expect_identical(data.table::as.data.table(sn), edges)
+})
+
+
 options("lifecycle_verbosity" = lifecycle_opt)
+
+# networkParam $ / $<- ####
+#
+# The param families are list-backed: state lives in @param and is reached with
+# `$`, with .DollarNames driving autocomplete. networkParam was the one family
+# that declared typed slots instead, so `$` returned nothing.
+
+test_that("networkParam params are reachable with $", {
+    p <- kNNNetworkParam(k = 30)
+    expect_identical(p$k, 30L)
+    expect_identical(p$engine, "dbscan")
+    expect_identical(p$output, "auto")
+    expect_null(p$not_a_param)
+})
+
+test_that("networkParam params are settable with $<-", {
+    p <- kNNNetworkParam(k = 30)
+    p$k <- 10L
+    expect_identical(p$k, 10L)
+    # extras land alongside, the way the other param families behave
+    p$custom <- "x"
+    expect_identical(p$custom, "x")
+})
+
+test_that(".DollarNames lists every param for autocomplete", {
+    # maximum_distance defaults to NULL and so is not in @param, but it is a
+    # param the class takes and completes on anyway
+    expect_setequal(
+        .DollarNames(kNNNetworkParam()),
+        c("k", "filter", "maximum_distance", "minimum_k", "weight_fun",
+          "include_weight", "include_distance", "output", "engine", "ef",
+          "n_threads_build")
+    )
+    expect_false("maximum_distance" %in% names(kNNNetworkParam()@param))
+
+    # params set beyond the signature are unioned in
+    p <- kNNNetworkParam()
+    p$custom <- 1
+    expect_true(all(c("k", "custom") %in% .DollarNames(p)))
+})
+
+test_that(".DollarNames whitelists have not drifted from the constructors", {
+    # The whitelists in methods-extract.R are maintained by hand. Built with
+    # every param set to a non-NULL value, @param holds exactly the params the
+    # constructor sets -- so the two should agree exactly. Catches both a param
+    # added to a constructor and never whitelisted, and a stale entry left
+    # behind after one is removed.
+    params <- list(
+        kNNNetworkParam(maximum_distance = 20),
+        sNNNetworkParam(),
+        radiusNetworkParam(eps = 20),
+        delaunayNetworkParam()
+    )
+    for (p in params) {
+        expect_setequal(.DollarNames(p), names(p@param))
+    }
+    expect_true(all(
+        c("method", "options", "Y", "j", "S") %in%
+            .DollarNames(delaunayNetworkParam())
+    ))
+    expect_true(all(
+        c("top_shared", "minimum_shared") %in% .DollarNames(sNNNetworkParam())
+    ))
+})
+
+test_that("a NULL param reads back as NULL", {
+    # Assigning NULL drops the entry, as in the other param families. The read
+    # is the same either way -- an absent name and a stored NULL both give
+    # NULL -- so `maximum_distance = NULL` ("no cutoff") round-trips.
+    p <- kNNNetworkParam(k = 30)
+    expect_null(p$maximum_distance)
+
+    p$maximum_distance <- 20
+    expect_identical(p$maximum_distance, 20)
+    p$maximum_distance <- NULL
+    expect_null(p$maximum_distance)
+})
+
+test_that("constructors validate what the slot types used to catch", {
+    expect_error(kNNNetworkParam(k = "banana"), "count")
+    expect_error(kNNNetworkParam(k = 30, filter = "yes"), "flag")
+    expect_error(sNNNetworkParam(top_shared = -1), ">= 0")
+    expect_error(delaunayNetworkParam(maximum_distance = "nonsense"),
+                 "maximum_distance")
+    # "auto" and NULL remain valid for delaunay
+    expect_s4_class(delaunayNetworkParam(maximum_distance = "auto"),
+                    "delaunayNetworkParam")
+    expect_s4_class(delaunayNetworkParam(maximum_distance = NULL),
+                    "delaunayNetworkParam")
+})
+
+test_that("networks build identically through the list-backed params", {
+    set.seed(1)
+    m <- cbind(runif(200, 0, 100), runif(200, 0, 100))
+    rownames(m) <- sprintf("c%03d", seq_len(200))
+
+    knn <- createNetwork(m, kNNNetworkParam(k = 6))
+    expect_true(all(c("from", "to", "weight", "distance") %in% names(knn)))
+    expect_equal(nrow(knn), 1200L)
+
+    snn <- createNetwork(m, sNNNetworkParam(k = 6))
+    expect_true("shared" %in% names(snn))
+
+    del <- createNetwork(m, delaunayNetworkParam())
+    expect_gt(nrow(del), 0L)
+})
+
+
+# radius param + disk-backed accessors #### 
+
+test_that("radiusNetworkParam validates and dispatches", {
+    p <- radiusNetworkParam(eps = 25)
+    expect_s4_class(p, "radiusNetworkParam")
+    expect_identical(p$eps, 25)
+    expect_identical(p$minimum_k, 0L)
+
+    expect_error(radiusNetworkParam(eps = -1))
+    expect_error(radiusNetworkParam(eps = Inf))
+    expect_error(radiusNetworkParam(eps = c(1, 2)))
+
+    expect_s4_class(networkParam("radius", eps = 10), "radiusNetworkParam")
+})
+
+# --- disk-backed networks through the accessor -----------------------------
+#
+# On a backed project @network holds a GiottoDisk parquetEdgeStore, not an
+# igraph. getSpatialNetwork() has to serve both, because everything downstream
+# reads the edge table through it -- annotateSpatialNetwork(), and
+# cellProximityEnrichment() on top of that. Before this, output = "networkDT"
+# handed the store straight to as.data.table() and failed with "cannot coerce
+# class parquetEdgeStore", so pairwise proximity analysis simply did not run on
+# a backed object.
+
+test_that("getSpatialNetwork serves a disk-backed network in every output", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(giotto.check_valid = FALSE, giotto.verbose = FALSE)
+
+    set.seed(3)
+    n <- 150L
+    locs <- data.table::data.table(
+        cell_ID = sprintf("c%03d", seq_len(n)),
+        sdimx = runif(n, 0, 100), sdimy = runif(n, 0, 100)
+    )
+    m <- matrix(1, nrow = 2L, ncol = n,
+                dimnames = list(c("g1", "g2"), locs$cell_ID))
+    dir <- file.path(tempdir(), paste0("proj_", basename(tempfile())))
+    on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+    g <- createGiottoObject(expression = m, spatial_locs = locs, backend = dir)
+    g <- createSpatialNetwork(g, method = "Delaunay", name = "Delaunay_network")
+
+    sn <- getSpatialNetwork(g, name = "Delaunay_network",
+                            output = "spatialNetworkObj")[]
+    expect_true(inherits(sn, "dataStore"))
+
+    dt <- getSpatialNetwork(g, name = "Delaunay_network", output = "networkDT")
+    expect_s3_class(dt, "data.table")
+    # the networkDT contract is from/to, not the store's from_id/to_id
+    expect_true(all(c("from", "to") %in% names(dt)))
+    expect_false(any(c("from_id", "to_id") %in% names(dt)))
+    expect_type(dt$from, "character")
+    expect_gt(nrow(dt), 0L)
+
+    ig <- getSpatialNetwork(g, name = "Delaunay_network", output = "igraph")
+    expect_s3_class(ig, "igraph")
+    expect_equal(igraph::ecount(ig), nrow(dt))
+})
+
+test_that("annotateSpatialNetwork works on a disk-backed network", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(giotto.check_valid = FALSE, giotto.verbose = FALSE)
+
+    set.seed(4)
+    n <- 150L
+    locs <- data.table::data.table(
+        cell_ID = sprintf("c%03d", seq_len(n)),
+        sdimx = runif(n, 0, 100), sdimy = runif(n, 0, 100)
+    )
+    m <- matrix(1, nrow = 2L, ncol = n,
+                dimnames = list(c("g1", "g2"), locs$cell_ID))
+    dir <- file.path(tempdir(), paste0("proj_", basename(tempfile())))
+    on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+    g <- createGiottoObject(expression = m, spatial_locs = locs, backend = dir)
+    g <- addCellMetadata(g, new_metadata = data.frame(
+        cell_ID = locs$cell_ID, ct = sample(c("A", "B", "C"), n, TRUE)),
+        by_column = TRUE, column_cell_ID = "cell_ID")
+    g <- createSpatialNetwork(g, method = "Delaunay", name = "Delaunay_network")
+
+    ann <- annotateSpatialNetwork(g, spatial_network_name = "Delaunay_network",
+                                  cluster_column = "ct")
+    expect_s3_class(ann, "data.table")
+    expect_true(all(c("from", "to", "from_cell_type", "to_cell_type",
+                      "unified_int") %in% names(ann)))
+    expect_gt(nrow(ann), 0L)
+})
+
+test_that("getNearestNetwork serves a disk-backed NN network", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(giotto.check_valid = FALSE, giotto.verbose = FALSE)
+
+    # getSpatialNetwork() learned to read a store; getNearestNetwork() was
+    # left behind, so both of its non-object outputs handed a
+    # parquetEdgeStore to igraph and failed with "Must provide a graph
+    # object". Both accessors now share .network_as_dt()/.network_as_igraph().
+    set.seed(5)
+    n <- 150L
+    locs <- data.table::data.table(
+        cell_ID = sprintf("c%03d", seq_len(n)),
+        sdimx = runif(n, 0, 100), sdimy = runif(n, 0, 100)
+    )
+    m <- matrix(rpois(6 * n, 5), nrow = 6L,
+                dimnames = list(paste0("g", 1:6), locs$cell_ID))
+    dir <- file.path(tempdir(), paste0("proj_", basename(tempfile())))
+    on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+    g <- createGiottoObject(expression = m, spatial_locs = locs, backend = dir)
+    emb <- matrix(rnorm(n * 5), nrow = n, dimnames = list(locs$cell_ID, NULL))
+    g <- setDimReduction(g, create_dim_obj(
+        coordinates = emb, name = "pca", reduction_method = "pca",
+        spat_unit = "cell", feat_type = "rna"
+    ))
+    g <- createNearestNetwork(g,
+        dim_reduction_to_use = "pca", k = 5, name = "sNN.pca"
+    )
+
+    nn <- getNearestNetwork(g, name = "sNN.pca", output = "nnNetObj")
+    expect_true(inherits(nn[], "dataStore"))
+
+    dt <- getNearestNetwork(g, name = "sNN.pca", output = "data.table")
+    expect_s3_class(dt, "data.table")
+    expect_true(all(c("from", "to") %in% names(dt)))
+    expect_false(any(c("from_id", "to_id") %in% names(dt)))
+    expect_gt(nrow(dt), 0L)
+
+    ig <- getNearestNetwork(g, name = "sNN.pca", output = "igraph")
+    expect_s3_class(ig, "igraph")
+    expect_equal(igraph::ecount(ig), nrow(dt))
+})

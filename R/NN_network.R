@@ -20,31 +20,48 @@ setClass("NNNetworkParam", contains = c("networkParam", "VIRTUAL"))
 #' asymmetric (`a`'s k-nearest neighbours are not necessarily those for
 #' which `a` is among the k-nearest), so the resulting graph is
 #' **directed** when promoted to igraph.
-#' @slot k integer. number of nearest neighbours per node.
-#' @slot filter logical. apply `minimum_k`/`maximum_distance` post-filter.
-#' @slot maximum_distance numeric or NULL. drop edges longer than this.
-#' @slot minimum_k integer. minimum neighbours per node when filtering.
-#' @slot weight_fun function. weight = `weight_fun(distance)`.
-#' @slot include_weight,include_distance logical. include columns.
-#' @slot output character. one of `"auto"`, `"data.table"`, `"igraph"`,
-#'   `"parquet"`. See [createNetwork()].
 #' @exportClass kNNNetworkParam
-setClass("kNNNetworkParam",
-    contains = "NNNetworkParam",
-    slots = list(
-        k = "integer",
-        filter = "logical",
-        maximum_distance = "ANY",
-        minimum_k = "integer",
-        weight_fun = "function",
-        include_weight = "logical",
-        include_distance = "logical",
-        output = "character",
-        engine = "character",
-        ef = "numeric",
-        n_threads_build = "ANY"
-    )
-)
+setClass("kNNNetworkParam", contains = "NNNetworkParam")
+
+
+#' @name radiusNetworkParam-class
+#' @title Fixed-radius network parameters
+#' @description
+#' Every pair of nodes within `eps` of each other is joined. Unlike kNN, node
+#' degree is not fixed -- it follows local density, which is usually what is
+#' meant by "cells that touch" in a tissue with varying cell density.
+#'
+#' Previously the only way to get this was `kNN` with a large `k` and a
+#' `maximum_distance` filter, which searches for neighbours you then throw
+#' away. This searches for the ones you asked for.
+#'
+#' The graph is symmetric by construction, so it is **undirected**.
+#' @section Choosing this over a filtered kNN:
+#' A kNN network with `maximum_distance` reproduces this graph exactly, but
+#' only once `k` reaches the largest number of neighbours any node has within
+#' `eps`. Below that it silently returns a truncated version, and nothing in
+#' the output says which you got.
+#'
+#' That threshold is the reason to prefer this, and it is not a speed argument.
+#' `dbscan::kNN` prunes as it searches while `frNN` enumerates the whole ball,
+#' so a correctly sized kNN is usually the faster of the two. Measured at
+#' 50,000 points, the crossover sits at `k` of roughly 150-200 and moves little
+#' with density or point count -- below it kNN wins by up to ~5x, above it
+#' `frNN` wins and the gap grows quickly.
+#'
+#' So a filtered kNN is faster when the neighbourhood is small enough that a
+#' modest `k` covers it. The catch is that the `k` you need is the max degree
+#' within `eps`, which you do not know without computing it -- which is what
+#' `frNN` does. Reach for this when the radius is the thing you mean and you
+#' would rather not guess.
+#' @section Performance:
+#' Backed by `dbscan::frNN`, which is exact. At 200,000 points with mean degree
+#' 6 the search takes ~2 s. `spatstat.geom::closepairs()` is roughly 28x faster
+#' and returns flat index vectors rather than the per-point lists `frNN` has to
+#' be flattened out of, but \pkg{spatstat.geom} is not a Giotto dependency and
+#' is 2D-only, so it is mentioned rather than used.
+#' @exportClass radiusNetworkParam
+setClass("radiusNetworkParam", contains = "NNNetworkParam")
 
 #' @rdname sNNNetworkParam-class
 #' @title sNNNetworkParam — Shared-Nearest-Neighbour Network Param
@@ -52,29 +69,8 @@ setClass("kNNNetworkParam",
 #' Constructor and class for shared-Nearest-Neighbour network parameters.
 #' sNN edges are symmetric by definition (`|N(a) ∩ N(b)| = |N(b) ∩ N(a)|`),
 #' so the resulting graph is **undirected** — one edge per pair.
-#' @slot k integer. number of nearest neighbours used to compute sharing.
-#' @slot top_shared integer. keep at least this many edges per node.
-#' @slot minimum_shared integer. keep edges with at least this many shared
-#'   neighbours.
-#' @slot weight_fun function. weight = `weight_fun(distance)`.
-#' @slot include_weight,include_distance logical. include columns.
-#' @slot output character. See [createNetwork()].
 #' @exportClass sNNNetworkParam
-setClass("sNNNetworkParam",
-    contains = "NNNetworkParam",
-    slots = list(
-        k = "integer",
-        top_shared = "integer",
-        minimum_shared = "integer",
-        weight_fun = "function",
-        include_weight = "logical",
-        include_distance = "logical",
-        output = "character",
-        engine = "character",
-        ef = "numeric",
-        n_threads_build = "ANY"
-    )
-)
+setClass("sNNNetworkParam", contains = "NNNetworkParam")
 
 #' @rdname delaunayNetworkParam-class
 #' @title delaunayNetworkParam — Delaunay Network Param
@@ -82,35 +78,8 @@ setClass("sNNNetworkParam",
 #' Constructor and class for Delaunay triangulation network parameters.
 #' Delaunay edges are an undirected geometric relation, so the resulting
 #' graph is **undirected** — one edge per pair.
-#' @slot method character. backend: `"deldir"`, `"RTriangle"`, or
-#'   `"geometry"`.
-#' @slot maximum_distance numeric, `"auto"`, or NULL.
-#' @slot minimum_k integer. minimum neighbours per node when filtering.
-#' @slot weight_fun function. weight = `weight_fun(distance)`.
-#' @slot include_weight,include_distance logical. include columns.
-#' @slot output character. See [createNetwork()].
-#' @slot options character. *geometry only.* passed to `geometry::delaunayn`.
-#' @slot Y,j logical; S numeric. *RTriangle only.* passed to
-#'   `RTriangle::triangulate`.
 #' @exportClass delaunayNetworkParam
-setClass("delaunayNetworkParam",
-    contains = "networkParam",
-    slots = list(
-        method = "character",
-        maximum_distance = "ANY",
-        minimum_k = "integer",
-        weight_fun = "function",
-        include_weight = "logical",
-        include_distance = "logical",
-        output = "character",
-        # geometry-only
-        options = "character",
-        # RTriangle-only
-        Y = "logical",
-        j = "logical",
-        S = "numeric"
-    )
-)
+setClass("delaunayNetworkParam", contains = "networkParam")
 
 
 # networkParam constructors ####
@@ -150,18 +119,28 @@ kNNNetworkParam <- function(k = 30L, filter = FALSE,
         engine = c("dbscan", "hnsw"), ef = 200, n_threads_build = 1L) {
     output <- match.arg(output)
     engine <- match.arg(engine)
-    new("kNNNetworkParam",
-        k = as.integer(k), filter = filter,
-        maximum_distance = maximum_distance,
-        minimum_k = as.integer(minimum_k),
-        weight_fun = weight_fun,
-        include_weight = include_weight,
-        include_distance = include_distance,
-        output = output,
-        engine = engine,
-        ef = as.numeric(ef),
-        n_threads_build = n_threads_build
-    )
+    checkmate::assert_count(k, positive = TRUE)
+    checkmate::assert_count(minimum_k)
+    checkmate::assert_flag(filter)
+    checkmate::assert_number(maximum_distance, null.ok = TRUE)
+    checkmate::assert_function(weight_fun)
+    checkmate::assert_flag(include_weight)
+    checkmate::assert_flag(include_distance)
+    checkmate::assert_number(ef, lower = 1)
+
+    p <- new("kNNNetworkParam", param = list())
+    p$k <- as.integer(k)
+    p$filter <- filter
+    p$maximum_distance <- maximum_distance
+    p$minimum_k <- as.integer(minimum_k)
+    p$weight_fun <- weight_fun
+    p$include_weight <- include_weight
+    p$include_distance <- include_distance
+    p$output <- output
+    p$engine <- engine
+    p$ef <- as.numeric(ef)
+    p$n_threads_build <- n_threads_build
+    p
 }
 
 #' @rdname sNNNetworkParam-class
@@ -197,18 +176,26 @@ sNNNetworkParam <- function(k = 30L, top_shared = 3L, minimum_shared = 5L,
         engine = c("dbscan", "hnsw"), ef = 200, n_threads_build = 1L) {
     output <- match.arg(output)
     engine <- match.arg(engine)
-    new("sNNNetworkParam",
-        k = as.integer(k),
-        top_shared = as.integer(top_shared),
-        minimum_shared = as.integer(minimum_shared),
-        weight_fun = weight_fun,
-        include_weight = include_weight,
-        include_distance = include_distance,
-        output = output,
-        engine = engine,
-        ef = as.numeric(ef),
-        n_threads_build = n_threads_build
-    )
+    checkmate::assert_count(k, positive = TRUE)
+    checkmate::assert_count(top_shared)
+    checkmate::assert_count(minimum_shared)
+    checkmate::assert_function(weight_fun)
+    checkmate::assert_flag(include_weight)
+    checkmate::assert_flag(include_distance)
+    checkmate::assert_number(ef, lower = 1)
+
+    p <- new("sNNNetworkParam", param = list())
+    p$k <- as.integer(k)
+    p$top_shared <- as.integer(top_shared)
+    p$minimum_shared <- as.integer(minimum_shared)
+    p$weight_fun <- weight_fun
+    p$include_weight <- include_weight
+    p$include_distance <- include_distance
+    p$output <- output
+    p$engine <- engine
+    p$ef <- as.numeric(ef)
+    p$n_threads_build <- n_threads_build
+    p
 }
 
 #' @rdname delaunayNetworkParam-class
@@ -230,17 +217,71 @@ delaunayNetworkParam <- function(
         options = "Pp", Y = TRUE, j = TRUE, S = 0) {
     method <- match.arg(method)
     output <- match.arg(output)
-    new("delaunayNetworkParam",
-        method = method,
-        maximum_distance = maximum_distance,
-        minimum_k = as.integer(minimum_k),
-        weight_fun = weight_fun,
-        include_weight = include_weight,
-        include_distance = include_distance,
-        output = output,
-        options = options, Y = Y, j = j, S = S
-    )
+    checkmate::assert_count(minimum_k)
+    checkmate::assert_function(weight_fun)
+    checkmate::assert_flag(include_weight)
+    checkmate::assert_flag(include_distance)
+    # maximum_distance takes "auto" as well as a number, so it is checked by
+    # hand rather than with assert_number()
+    if (!is.null(maximum_distance) &&
+            !identical(maximum_distance, "auto") &&
+            !checkmate::test_number(maximum_distance)) {
+        stop("[delaunayNetworkParam] `maximum_distance` must be a number, ",
+             '"auto", or NULL', call. = FALSE)
+    }
+
+    p <- new("delaunayNetworkParam", param = list())
+    p$method <- method
+    p$maximum_distance <- maximum_distance
+    p$minimum_k <- as.integer(minimum_k)
+    p$weight_fun <- weight_fun
+    p$include_weight <- include_weight
+    p$include_distance <- include_distance
+    p$output <- output
+    p$options <- options
+    p$Y <- Y
+    p$j <- j
+    p$S <- S
+    p
 }
+
+#' @rdname radiusNetworkParam-class
+#' @param eps numeric. Radius within which nodes are joined. There is no
+#'   default -- the right value is set by the data's units and cell spacing.
+#'   A reasonable starting point is a high quantile of the edge lengths of a
+#'   Delaunay network on the same points.
+#' @param minimum_k integer. Retain this many nearest neighbours per node even
+#'   if they fall outside `eps`. Guards against isolated nodes in sparse
+#'   regions, which otherwise drop out of the network entirely. Default `0`.
+#' @param weight_fun function mapping distance to weight
+#' @param include_weight,include_distance logical
+#' @param output one of `"auto"`, `"data.table"`, `"igraph"`, `"parquet"`
+#' @returns a `radiusNetworkParam` object
+#' @examples
+#' p <- radiusNetworkParam(eps = 25)
+#' @export
+radiusNetworkParam <- function(eps,
+        minimum_k = 0L,
+        weight_fun = function(d) 1 / (1 + d),
+        include_weight = TRUE, include_distance = TRUE,
+        output = c("auto", "data.table", "igraph", "parquet")) {
+    output <- match.arg(output)
+    checkmate::assert_number(eps, lower = 0, finite = TRUE)
+    checkmate::assert_count(minimum_k)
+    checkmate::assert_function(weight_fun)
+    checkmate::assert_flag(include_weight)
+    checkmate::assert_flag(include_distance)
+
+    p <- new("radiusNetworkParam", param = list())
+    p$eps <- as.numeric(eps)
+    p$minimum_k <- as.integer(minimum_k)
+    p$weight_fun <- weight_fun
+    p$include_weight <- include_weight
+    p$include_distance <- include_distance
+    p$output <- output
+    p
+}
+
 
 #' @title networkParam — Dispatcher constructor
 #' @name networkParam
@@ -248,18 +289,19 @@ delaunayNetworkParam <- function(
 #' Returns the appropriate concrete `*NetworkParam` based on `type`.
 #' Equivalent to calling [kNNNetworkParam()], [sNNNetworkParam()], or
 #' [delaunayNetworkParam()] directly.
-#' @param type one of `"kNN"`, `"sNN"`, `"delaunay"`
+#' @param type one of `"kNN"`, `"sNN"`, `"delaunay"`, `"radius"`
 #' @param ... arguments forwarded to the type-specific constructor
 #' @returns a [networkParam-class]-inheriting object
 #' @examples
 #' p <- networkParam("kNN", k = 30)
 #' @export
-networkParam <- function(type = c("kNN", "sNN", "delaunay"), ...) {
+networkParam <- function(type = c("kNN", "sNN", "delaunay", "radius"), ...) {
     type <- match.arg(type)
     switch(type,
         kNN      = kNNNetworkParam(...),
         sNN      = sNNNetworkParam(...),
-        delaunay = delaunayNetworkParam(...)
+        delaunay = delaunayNetworkParam(...),
+        radius   = radiusNetworkParam(...)
     )
 }
 
@@ -270,7 +312,7 @@ networkParam <- function(type = c("kNN", "sNN", "delaunay"), ...) {
 # and emit per the param's `output` slot. Centralizes node_id substitution,
 # column trim, directionality handling, and output dispatch.
 .finalize_network <- function(network_dt, x, node_ids, type, directed, param,
-        backend = NULL) {
+        backend = NULL, verbose = NULL) {
     # NSE vars
     from <- to <- NULL
 
@@ -287,13 +329,29 @@ networkParam <- function(type = c("kNN", "sNN", "delaunay"), ...) {
     # cols to keep
     keep_cols <- c("from", "to")
     all_index <- network_dt[, unique(unlist(.SD)), .SDcols = keep_cols]
-    if (isTRUE(param@include_weight)) keep_cols <- c(keep_cols, "weight")
-    if (isTRUE(param@include_distance)) keep_cols <- c(keep_cols, "distance")
+
+    # A node with no surviving edge is not a vertex of the graph built below,
+    # so it disappears from every downstream result -- proximity enrichment,
+    # motifs, neighbourhood composition -- with nothing to say it went. That is
+    # easy to cause by accident: the Delaunay default is
+    # maximum_distance = "auto", which trims long edges and on a clustered
+    # section can strand a few hundred cells. Say so rather than letting the
+    # cell count quietly disagree with the input.
+    n_dropped <- nrow(x) - length(all_index)
+    if (n_dropped > 0L) {
+        vmsg(.v = verbose, sprintf(
+            "%d of %d node(s) have no edges and are omitted from the network",
+            n_dropped, nrow(x)
+        ))
+    }
+
+    if (isTRUE(param$include_weight)) keep_cols <- c(keep_cols, "weight")
+    if (isTRUE(param$include_distance)) keep_cols <- c(keep_cols, "distance")
     if (type == "sNN") keep_cols <- c(keep_cols, "shared")
     network_dt <- network_dt[, keep_cols, with = FALSE]
 
     # resolve output
-    output <- param@output
+    output <- param$output
     if (output == "auto") {
         output <- if (is.null(backend)) "data.table" else "parquet"
     }
@@ -330,19 +388,44 @@ setMethod("createNetwork", signature("matrix", "kNNNetworkParam"),
             ))
         }
         dt <- .net_dt_knn(
-            x = x, k = param@k, filter = param@filter,
-            maximum_distance = param@maximum_distance,
-            minimum_k = param@minimum_k,
-            weight_fun = param@weight_fun,
-            include_weight = param@include_weight,
-            include_distance = param@include_distance,
-            engine = param@engine,
-            ef = param@ef,
-            n_threads_build = param@n_threads_build,
+            x = x, k = param$k, filter = param$filter,
+            maximum_distance = param$maximum_distance,
+            minimum_k = param$minimum_k,
+            weight_fun = param$weight_fun,
+            include_weight = param$include_weight,
+            include_distance = param$include_distance,
+            engine = param$engine,
+            ef = param$ef,
+            n_threads_build = param$n_threads_build,
             verbose = verbose, ...
         )
         .finalize_network(dt, x = x, node_ids = node_ids,
-            type = "kNN", directed = TRUE, param = param, backend = backend)
+            type = "kNN", directed = TRUE, param = param, backend = backend,
+            verbose = verbose)
+    }
+)
+
+
+#' @rdname createNetwork
+setMethod("createNetwork", signature("matrix", "radiusNetworkParam"),
+    function(x, param, node_ids = NULL, verbose = NULL, backend = NULL, ...) {
+        if (length(x) == 0L) {
+            stop(wrap_txt(errWidth = TRUE,
+                "[createNetwork] empty matrix provided.
+                No network can be generated"
+            ))
+        }
+        dt <- .net_dt_radius(
+            x = x, eps = param$eps,
+            minimum_k = param$minimum_k,
+            weight_fun = param$weight_fun,
+            include_weight = param$include_weight,
+            include_distance = param$include_distance,
+            verbose = verbose, ...
+        )
+        .finalize_network(dt, x = x, node_ids = node_ids,
+            type = "radius", directed = FALSE, param = param,
+            backend = backend, verbose = verbose)
     }
 )
 
@@ -356,22 +439,23 @@ setMethod("createNetwork", signature("matrix", "sNNNetworkParam"),
             ))
         }
         dt <- .net_dt_snn(
-            x = x, k = param@k,
-            top_shared = param@top_shared,
-            minimum_shared = param@minimum_shared,
-            weight_fun = param@weight_fun,
-            include_weight = param@include_weight,
-            include_distance = param@include_distance,
-            engine = param@engine,
-            ef = param@ef,
-            n_threads_build = param@n_threads_build,
+            x = x, k = param$k,
+            top_shared = param$top_shared,
+            minimum_shared = param$minimum_shared,
+            weight_fun = param$weight_fun,
+            include_weight = param$include_weight,
+            include_distance = param$include_distance,
+            engine = param$engine,
+            ef = param$ef,
+            n_threads_build = param$n_threads_build,
             verbose = verbose, ...
         )
         # sNN: symmetric relation, collapse to undirected unique pairs.
         # `rank` is per-source and ill-defined after symmetrization — dropped.
         dt <- .undirected_unique(dt)
         .finalize_network(dt, x = x, node_ids = node_ids,
-            type = "sNN", directed = FALSE, param = param, backend = backend)
+            type = "sNN", directed = FALSE, param = param, backend = backend,
+            verbose = verbose)
     }
 )
 
@@ -384,7 +468,17 @@ setMethod("createNetwork", signature("matrix", "delaunayNetworkParam"),
                 No network can be generated"
             ))
         }
-        helper <- switch(param@method,
+        # 2D-only backends. This lives here rather than in
+        # createSpatialDelaunayNetwork() so that a direct createNetwork() call
+        # is checked too -- it previously reached deldir with 3D coordinates
+        # and failed somewhere inside it.
+        if (ncol(x) > 2L && param$method != "geometry") {
+            stop(wrap_txt(errWidth = TRUE,
+                "[createNetwork]", param$method, "only applies to 2D data.",
+                "Use method = \"geometry\" for 3D"
+            ), call. = FALSE)
+        }
+        helper <- switch(param$method,
             deldir    = .net_dt_del_deldir,
             RTriangle = .net_dt_del_rtriangle,
             geometry  = .net_dt_del_geometry
@@ -393,22 +487,22 @@ setMethod("createNetwork", signature("matrix", "delaunayNetworkParam"),
         # don't forward irrelevant Param slots.
         helper_args <- list(
             x = x,
-            include_weight = param@include_weight,
-            maximum_distance = param@maximum_distance,
-            minimum_k = param@minimum_k,
-            weight_fun = param@weight_fun
+            include_weight = param$include_weight,
+            maximum_distance = param$maximum_distance,
+            minimum_k = param$minimum_k,
+            weight_fun = param$weight_fun
         )
-        if (param@method == "geometry") {
-            helper_args$options <- param@options
-        } else if (param@method == "RTriangle") {
-            helper_args$Y <- param@Y
-            helper_args$j <- param@j
-            helper_args$S <- param@S
+        if (param$method == "geometry") {
+            helper_args$options <- param$options
+        } else if (param$method == "RTriangle") {
+            helper_args$Y <- param$Y
+            helper_args$j <- param$j
+            helper_args$S <- param$S
         }
         dt <- do.call(helper, c(helper_args, list(...)))$delaunay_network_DT
         .finalize_network(dt, x = x, node_ids = node_ids,
             type = "delaunay", directed = FALSE, param = param,
-            backend = backend)
+            backend = backend, verbose = verbose)
     }
 )
 
@@ -569,6 +663,21 @@ setMethod("createNetwork", signature("giotto", "NNNetworkParam"),
 )
 
 #' @rdname createNetwork
+#' @details
+#' `radiusNetworkParam` defaults to `space = "spatial"` rather than
+#' `"expression"`. A radius is a distance with units, and for a radius graph
+#' those units are almost always the tissue's -- "cells within 25 um". Reaching
+#' it through the general NN method would have silently measured `eps` in PCA
+#' units instead. Pass `space = "expression"` to get the PCA-space behaviour
+#' back.
+setMethod("createNetwork", signature("giotto", "radiusNetworkParam"),
+    function(x, param, space = c("spatial", "expression"), ...) {
+        space <- match.arg(space)
+        callNextMethod(x = x, param = param, space = space, ...)
+    }
+)
+
+#' @rdname createNetwork
 setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
     function(x, param,
             spat_unit = NULL, spat_loc_name = "raw", ...) {
@@ -639,18 +748,18 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
 
     # optional info
     if (include_distance || include_weight) {
-        if (!is.null(maximum_distance)) {
-            # maximum_distance flag treated as a flag to use this function for
-            # spatial network purposes.
-            #
-            # Use the input matrix coords instead of those exported from dbscan
-            # needed for filtering
-            nn_network_dt[, "distance" := edge_distances(x, .SD),
-                .SDcols = c("from", "to")
-            ]
-        } else {
-            nn_network_dt[, "distance" := as.vector(nn_network$dist)]
-        }
+        # Use the distances the search itself returned, on both branches.
+        #
+        # This previously recomputed them from the coordinate matrix whenever
+        # maximum_distance was set -- an 11x penalty triggered precisely by
+        # asking for a cutoff, since the recompute went one stats::dist() call
+        # per edge. dbscan::kNN already returns exact euclidean distances;
+        # measured max deviation from a recompute is 4e-16.
+        #
+        # Beyond the speed, this is the self-consistent choice: whatever metric
+        # the engine searched under is the metric the cutoff now filters on. The
+        # old branch could mix metrics if a non-euclidean engine were wired in.
+        nn_network_dt[, "distance" := as.vector(nn_network$dist)]
     }
     if (include_weight) {
         nn_network_dt[, "weight" := weight_fun(distance)]
@@ -669,6 +778,77 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
 }
 
 # x input is a matrix
+# Fixed-radius neighbour network.
+#
+# dbscan::frNN searches only within eps, so unlike the kNN-with-a-big-k
+# workaround this does not find neighbours in order to discard them. It returns
+# per-node lists, which are flattened here; the result is symmetric by
+# construction (if a is within eps of b then b is within eps of a), so it is
+# canonicalized to one row per undirected pair.
+#
+# spatstat.geom::closepairs() is ~28x faster than frNN and returns flat index
+# vectors directly, but spatstat.geom is not a Giotto dependency and is 2D
+# only. dbscan is already a hard Imports, so frNN is what ships.
+.net_dt_radius <- function(
+        x, eps, minimum_k = 0L,
+        include_weight = TRUE, include_distance = TRUE,
+        weight_fun = function(d) 1 / (1 + d),
+        verbose = NULL, ...) {
+    # NSE vars
+    from <- to <- distance <- NULL
+
+    fr <- dbscan::frNN(x = x, eps = eps, sort = TRUE, ...)
+
+    lens <- lengths(fr$id)
+    dt <- data.table::data.table(
+        from = rep.int(seq_along(fr$id), lens),
+        to = unlist(fr$id, use.names = FALSE),
+        distance = unlist(fr$dist, use.names = FALSE)
+    )
+
+    # minimum_k rescues nodes whose eps-ball is empty or sparse. frNN cannot
+    # supply those neighbours -- they are outside eps by definition -- so they
+    # come from a separate kNN search, run only when asked for and only wide
+    # enough to cover the floor.
+    if (minimum_k > 0L) {
+        short <- which(lens < minimum_k)
+        if (length(short) > 0L) {
+            kk <- min(as.integer(minimum_k), nrow(x) - 1L)
+            # Query points are rows of x, and dbscan does not know that, so it
+            # returns each one's nearest neighbour as itself at distance 0.
+            # Ask for one extra and drop the self-match, or the rescue is
+            # silently removed again by the from != to filter below.
+            nn <- dbscan::kNN(x = x, k = kk + 1L,
+                query = x[short, , drop = FALSE], sort = TRUE)
+            add <- data.table::data.table(
+                from = rep.int(short, kk + 1L),
+                to = as.vector(nn$id),
+                distance = as.vector(nn$dist)
+            )
+            add <- add[from != to]
+            # keep the kk nearest genuine neighbours per rescued node
+            add <- add[, utils::head(.SD, kk), by = "from"]
+            dt <- rbind(dt, add)
+        }
+    }
+
+    dt <- dt[from != to]
+    if (nrow(dt) > 0L) {
+        # symmetric by construction -> keep one row per undirected pair
+        dt <- .undirected_unique(dt)
+        data.table::setorder(dt, from, to)
+    }
+
+    if (include_weight) {
+        dt[, "weight" := weight_fun(distance)]
+    }
+    if (!include_distance) {
+        dt[, "distance" := NULL]
+    }
+    dt[]
+}
+
+
 .net_dt_snn <- function(
         x, k = 30L, include_weight = TRUE, include_distance = TRUE,
         top_shared = 3L, minimum_shared = 5L,
@@ -858,7 +1038,7 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
 
     if (ncol(x) > 2L) {
         .gstop("\'deldir\' delaunay method only applies to 2D data.
-            use method \'geometry\' or \'RTriangle\' instead")
+            use method \'geometry\' instead")
     }
 
     deldir_obj <- deldir::deldir(x = x, ...)
@@ -915,75 +1095,45 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
 #' edge_distances(m, edges)
 #' @export
 edge_distances <- function(x, y, x_node_ids = NULL) {
-    .calc_edge_dist(.edge_coords_array(x, y))
+    checkmate::assert_matrix(x)
+    checkmate::assert_data_table(y)
+    y <- .edge_int_index(y, x_node_ids)
+
+    # One vectorized pass over the endpoint rows. This replaced a general
+    # stats::dist() path that supported any method but made one dist() call per
+    # edge -- measured 556x slower. Euclidean is the only metric this has ever
+    # been asked for; a non-euclidean caller would reintroduce the general
+    # form rather than find it waiting.
+    #
+    # Index into the original coordinates rather than reusing any coordinates
+    # a triangulation backend hands back: deldir's delsgs$x1/y1/x2/y2 are
+    # precision-reduced by its Fortran core and give distances differing by up
+    # to ~1e-6, which would shift maximum_distance filtering at the margin.
+    sqrt(rowSums(
+        (x[y$from, , drop = FALSE] - x[y$to, , drop = FALSE])^2
+    ))
 }
 
 
-
-# Nodes row order is assumed to be the same as the network indices
-#' @title Numerical array of edge start and end
-#' @name .edge_coords_array
-#' @description
-#' Generate a \eqn{2} x \eqn{j} x \eqn{k} numerical array of edge start and end
-#' coordinates. Rows correspond  to start and end. Cols are for each variable
-#' ie x, y, (z) or whatever other variable is used to measure sample location
-#' in graph space. The third dim is for each sample. This layout makes it easy
-#' to iterate across matrix slices of this array with `[stats::dist()]`.
-#' @param x matrix of nodes info with coords
-#' @param y network data.table with `from` and `to` cols
-#' @param x_node_ids if y is indexed by character in from and to cols, then the
-#' node IDs that apply to the coords in x must be supplied as a character vector
-#' @returns numeric
+# Resolve a network table's from/to to integer row indices of the coord matrix,
+# so the character-index handling has one implementation.
 #' @keywords internal
-.edge_coords_array <- function(x, y, x_node_ids = NULL) {
+#' @noRd
+.edge_int_index <- function(y, x_node_ids = NULL) {
     # NSE vars
     from <- to <- NULL
 
-    checkmate::assert_matrix(x)
-    checkmate::assert_data_table(y)
-
-    # if indexed by character
     if (y[, is.character(from) && is.character(to)]) {
-        # try to match against the cell_ID col in nodes info
         if (is.null(x_node_ids)) {
             .gstop("y is indexed by node ID.
             Node IDs for x must be provided as a vector to 'x_node_ids'")
         }
-        # convert to int indexing (should match x by row)
         y <- data.table::copy(y)
         y[, from := match(from, x_node_ids)]
         y[, to := match(to, x_node_ids)]
     }
-
-    edge_coords_array <- array(
-        dim = c(nrow(y), ncol(x), 2),
-        dimnames = list(
-            c(),
-            paste0("dim_", seq(ncol(x))),
-            c("start", "end")
-        )
-    )
-
-    edge_coords_array[, , 1] <- x[y$from, ]
-    edge_coords_array[, , 2] <- x[y$to, ]
-    edge_coords_array <- aperm(edge_coords_array, perm = c(3, 2, 1))
-    class(edge_coords_array) <- c("edge_coords_array", class(edge_coords_array))
-
-    return(edge_coords_array)
+    y
 }
-
-# x should be an edge_coords_array
-.calc_edge_dist <- function(x, method = "euclidean", ...) {
-    checkmate::assert_class(x, "edge_coords_array")
-
-    vapply(
-        seq(dim(x)[3L]),
-        function(pair_i) stats::dist(x[, , pair_i], method = method, ...),
-        FUN.VALUE = numeric(1L)
-    )
-}
-
-
 
 
 

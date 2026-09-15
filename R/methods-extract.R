@@ -445,6 +445,68 @@ setMethod(
     }
 )
 
+#' @rdname subset_dollar
+#' @section \code{`$`} methods:
+#'   Select param from `networkParam` inheriting objects
+#' @export
+setMethod("$", signature("networkParam"), function(x, name) {
+    x@param[[name]]
+})
+#' @export
+.DollarNames.networkParam <- function(x, pattern) {
+    names(x@param)
+}
+
+#' @export
+.DollarNames.kNNNetworkParam <- function(x, pattern) {
+    unique(c(
+        c("k", "filter", "maximum_distance", "minimum_k", "weight_fun",
+            "include_weight", "include_distance", "output", "engine", "ef",
+            "n_threads_build"),
+        names(x@param)
+    ))
+}
+
+#' @export
+.DollarNames.radiusNetworkParam <- function(x, pattern) {
+    unique(c(
+        c("eps", "minimum_k", "weight_fun", "include_weight",
+            "include_distance", "output"),
+        names(x@param)
+    ))
+}
+
+#' @export
+.DollarNames.sNNNetworkParam <- function(x, pattern) {
+    unique(c(
+        c("k", "top_shared", "minimum_shared", "weight_fun", "include_weight",
+            "include_distance", "output", "engine", "ef", "n_threads_build"),
+        names(x@param)
+    ))
+}
+
+#' @export
+.DollarNames.delaunayNetworkParam <- function(x, pattern) {
+    unique(c(
+        c("method", "maximum_distance", "minimum_k", "weight_fun",
+            "include_weight", "include_distance", "output", "options",
+            "Y", "j", "S"),
+        names(x@param)
+    ))
+}
+
+#' @rdname replace_dollar
+#' @section \code{`$<-`} methods:
+#'   Set values by param name into `networkParam` inheriting objects
+#' @export
+setMethod(
+    "$<-", signature("networkParam"),
+    function(x, name, value) {
+        x@param[[name]] <- value
+        return(initialize(x))
+    }
+)
+
 # [ S4 access generic ####
 
 

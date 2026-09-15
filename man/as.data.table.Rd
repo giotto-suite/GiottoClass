@@ -8,6 +8,8 @@
 \alias{as.data.table.giottoPoints}
 \alias{as.data.frame.overlapPointDT}
 \alias{as.data.frame.overlapIntensityDT}
+\alias{as.data.table.spatialNetworkObj}
+\alias{as.data.table.nnNetObj}
 \title{Coerce to data.table}
 \usage{
 \method{as.data.table}{giottoBinPoints}(x, geom, ...)
@@ -28,6 +30,10 @@
 \method{as.data.frame}{overlapPointDT}(x, ...)
 
 \method{as.data.frame}{overlapIntensityDT}(x, ...)
+
+\method{as.data.table}{spatialNetworkObj}(x, ...)
+
+\method{as.data.table}{nnNetObj}(x, ...)
 }
 \arguments{
 \item{x}{The object to coerce}

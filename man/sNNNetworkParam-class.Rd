@@ -58,20 +58,3 @@ Constructor and class for shared-Nearest-Neighbour network parameters.
 sNN edges are symmetric by definition (\verb{|N(a) ∩ N(b)| = |N(b) ∩ N(a)|}),
 so the resulting graph is \strong{undirected} — one edge per pair.
 }
-\section{Slots}{
-
-\describe{
-\item{\code{k}}{integer. number of nearest neighbours used to compute sharing.}
-
-\item{\code{top_shared}}{integer. keep at least this many edges per node.}
-
-\item{\code{minimum_shared}}{integer. keep edges with at least this many shared
-neighbours.}
-
-\item{\code{weight_fun}}{function. weight = \code{weight_fun(distance)}.}
-
-\item{\code{include_weight,include_distance}}{logical. include columns.}
-
-\item{\code{output}}{character. See \code{\link[=createNetwork]{createNetwork()}}.}
-}}
-

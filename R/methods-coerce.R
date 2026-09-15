@@ -835,23 +835,57 @@ NULL
 #' @rdname as.igraph
 #' @exportS3Method igraph::as.igraph
 as.igraph.spatialNetworkObj <- function(x, ...) {
-    .network_as_igraph(x, ...)
+    .network_as_igraph(x@network, ...)
 }
 
 #' @rdname as.igraph
 #' @exportS3Method igraph::as.igraph
 as.igraph.nnNetObj <- function(x, ...) {
-    .network_as_igraph(x, ...)
+    .network_as_igraph(x@network, ...)
 }
 
-# Shared by both network subobjects: return @network when it is already a
-# graph, otherwise re-dispatch on the contents. Keeping the backend branch as
-# a dispatch rather than a `GiottoDisk::storeRead()` call means GiottoClass
-# does not have to name a package it only Suggests.
-.network_as_igraph <- function(x, ...) {
-    net <- x@network
+
+# carrier readers ####
+
+# These take the *contents* of `@network`, not the subobject holding it, so
+# that `@unfiltered` -- a bare carrier -- reads through the same path.
+#
+# igraph is handled here because neither generic offers the coercion:
+# `igraph::as.igraph()` has no method for `igraph` itself, and
+# `data.table::as.data.table()` falls through to its default and fails to
+# coerce one. Naming igraph is naming this package's own invariant (adr/0004),
+# not a backend. Everything else re-dispatches, which is how a backed store is
+# reached without GiottoClass having to name a package it only Suggests.
+
+.network_as_igraph <- function(net, ...) {
     if (inherits(net, "igraph")) {
         return(net)
     }
     igraph::as.igraph(net, ...)
+}
+
+.network_as_dt <- function(net, ...) {
+    if (inherits(net, "igraph")) {
+        return(data.table::as.data.table(
+            igraph::as_data_frame(net, what = "edges")
+        ))
+    }
+    data.table::as.data.table(net, ...)
+}
+
+
+# as.data.table (network subobjects) ####
+
+#' @rdname as.data.table
+#' @method as.data.table spatialNetworkObj
+#' @export
+as.data.table.spatialNetworkObj <- function(x, ...) {
+    .network_as_dt(x@network, ...)
+}
+
+#' @rdname as.data.table
+#' @method as.data.table nnNetObj
+#' @export
+as.data.table.nnNetObj <- function(x, ...) {
+    .network_as_dt(x@network, ...)
 }

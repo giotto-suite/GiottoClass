@@ -63,22 +63,3 @@ asymmetric (\code{a}'s k-nearest neighbours are not necessarily those for
 which \code{a} is among the k-nearest), so the resulting graph is
 \strong{directed} when promoted to igraph.
 }
-\section{Slots}{
-
-\describe{
-\item{\code{k}}{integer. number of nearest neighbours per node.}
-
-\item{\code{filter}}{logical. apply \code{minimum_k}/\code{maximum_distance} post-filter.}
-
-\item{\code{maximum_distance}}{numeric or NULL. drop edges longer than this.}
-
-\item{\code{minimum_k}}{integer. minimum neighbours per node when filtering.}
-
-\item{\code{weight_fun}}{function. weight = \code{weight_fun(distance)}.}
-
-\item{\code{include_weight,include_distance}}{logical. include columns.}
-
-\item{\code{output}}{character. one of \code{"auto"}, \code{"data.table"}, \code{"igraph"},
-\code{"parquet"}. See \code{\link[=createNetwork]{createNetwork()}}.}
-}}
-
