@@ -151,8 +151,8 @@ test_that("minimum_k rescues nodes that eps leaves isolated", {
 test_that("radiusNetworkParam validates and dispatches", {
     p <- radiusNetworkParam(eps = 25)
     expect_s4_class(p, "radiusNetworkParam")
-    expect_identical(p@eps, 25)
-    expect_identical(p@minimum_k, 0L)
+    expect_identical(p$eps, 25)
+    expect_identical(p$minimum_k, 0L)
 
     expect_error(radiusNetworkParam(eps = -1))
     expect_error(radiusNetworkParam(eps = Inf))

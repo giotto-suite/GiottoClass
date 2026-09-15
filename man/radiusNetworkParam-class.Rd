@@ -45,21 +45,26 @@ away. This searches for the ones you asked for.
 
 The graph is symmetric by construction, so it is \strong{undirected}.
 }
-\section{Slots}{
+\section{Choosing this over a filtered kNN}{
 
-\describe{
-\item{\code{eps}}{numeric. radius; nodes closer than this are joined.}
+A kNN network with \code{maximum_distance} reproduces this graph exactly, but
+only once \code{k} reaches the largest number of neighbours any node has within
+\code{eps}. Below that it silently returns a truncated version, and nothing in
+the output says which you got.
 
-\item{\code{minimum_k}}{integer. keep this many nearest neighbours per node even
-when they lie beyond \code{eps}, so no node is left isolated. \code{0} disables.}
+That threshold is the reason to prefer this, and it is not a speed argument.
+\code{dbscan::kNN} prunes as it searches while \code{frNN} enumerates the whole ball,
+so a correctly sized kNN is usually the faster of the two. Measured at
+50,000 points, the crossover sits at \code{k} of roughly 150-200 and moves little
+with density or point count -- below it kNN wins by up to ~5x, above it
+\code{frNN} wins and the gap grows quickly.
 
-\item{\code{weight_fun}}{function. weight = \code{weight_fun(distance)}.}
-
-\item{\code{include_weight,include_distance}}{logical. include columns.}
-
-\item{\code{output}}{character. one of \code{"auto"}, \code{"data.table"}, \code{"igraph"},
-\code{"parquet"}. See \code{\link[=createNetwork]{createNetwork()}}.}
-}}
+So a filtered kNN is faster when the neighbourhood is small enough that a
+modest \code{k} covers it. The catch is that the \code{k} you need is the max degree
+within \code{eps}, which you do not know without computing it -- which is what
+\code{frNN} does. Reach for this when the radius is the thing you mean and you
+would rather not guess.
+}
 
 \section{Performance}{
 

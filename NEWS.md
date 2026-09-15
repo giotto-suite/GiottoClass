@@ -8,8 +8,9 @@
   `minimum_k` keeps a floor of nearest neighbours for nodes whose radius is
   empty, which otherwise drop out of the network entirely. Previously the only
   route to a distance-based network was kNN with a large `k` plus a
-  `maximum_distance` filter -- finding a hundred neighbours per cell in order
-  to discard most of them; that advice is now redirected.
+  `maximum_distance` filter, which reproduces the same graph but only once `k`
+  reaches the largest neighbour count within the radius -- below that it
+  truncates silently, and the `k` needed is not knowable without computing it.
 - `createSpatialNetwork(method = "radius", radius = )` reaches
   `radiusNetworkParam()` from the spatial wrapper, which previously offered
   only `"Delaunay"` and `"kNN"`.
@@ -178,6 +179,25 @@
   a `spatIDs()` method. Results are unchanged.
 - `as.data.table()` methods added for `spatialNetworkObj` and `nnNetObj`,
   returning the edge table. Same re-dispatch shape as `as.igraph()`.
+
+- `networkParam` objects are now list-backed like the other four param
+  families, so their parameters are reached with `$` and offer autocomplete via
+  `.DollarNames()`. `kNNNetworkParam(k = 30)$k` works; previously `$` returned
+  `NULL` for every name, because these were the one family declaring typed
+  slots instead of using `@param`. The `@param` slot was consequently dead on
+  every network param and is now the storage.
+  - **Breaking:** `param@k` and friends no longer work -- use `param$k`. No
+    slot other than `@param` remains on `kNNNetworkParam`, `sNNNetworkParam`
+    or `delaunayNetworkParam`.
+  - What the slot types used to catch is now caught by `checkmate` in the
+    constructors, and closer to the call site: `kNNNetworkParam(k = "banana")`
+    reports a failed assertion on `k` rather than an invalid-object error. The
+    types were never structural -- `dbscan` and the edge filter truncate
+    doubles internally, so an un-coerced `k` produced identical networks.
+  - `.DollarNames()` unions the params a class takes with those actually set.
+    Assigning `NULL` drops an entry as it does in the other families, so the
+    set alone would hide any param left at a `NULL` default -- kNN's
+    `maximum_distance` is one, and it completes regardless.
 
 ## breaking changes
 
