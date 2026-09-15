@@ -21,6 +21,7 @@ createSpatialDelaunayNetwork(
   verbose = TRUE,
   return_gobject = TRUE,
   output = c("spatialNetworkObj", "data.table"),
+  space = NULL,
   ...
 )
 }
@@ -68,6 +69,17 @@ final triangulation from the output.}
 
 \item{output}{character. Object type to return spatial network as when
 \code{return_gobject = FALSE}. (default: 'spatialNetworkObj')}
+
+\item{space}{(\code{giottoMulti} only) \code{character(1)}. Name of a coordinate
+frame recorded on the object, or \code{NULL} (default) for each sample's own
+native frame. The frame decides the job: every sample it covers gets a
+network built in that frame's coordinates, written into its own
+\verb{@spatial_network} slot — so this mutates the wrapped children.
+
+This is \strong{not} a sample selector. An artifact generator takes none,
+because once the rows are in a slot nothing downstream can tell which
+the selector admitted (see \code{adr/0006}). To build over a subset of
+samples, record a space over them, or subset with \code{mg[...]} first.}
 
 \item{\dots}{Other additional parameters}
 }

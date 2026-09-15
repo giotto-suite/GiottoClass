@@ -200,6 +200,7 @@ createSpatialDelaunayNetwork <- function(gobject,
     verbose = TRUE,
     return_gobject = TRUE,
     output = c("spatialNetworkObj", "data.table"),
+    space = NULL,
     ...) {
     # Thin wrapper over createNetwork() + spatialNetworkObj construction.
     method <- match.arg(method, c("deldir", "delaunayn_geometry", "RTriangle"))
@@ -230,6 +231,7 @@ createSpatialDelaunayNetwork <- function(gobject,
         verbose = verbose,
         return_gobject = return_gobject,
         output = output,
+        space = space,
         ...
     )
 }
@@ -297,6 +299,7 @@ createSpatialKNNnetwork <- function(gobject,
     verbose = FALSE,
     return_gobject = TRUE,
     output = c("spatialNetworkObj", "data.table"),
+    space = NULL,
     ...) {
     # Thin wrapper over createNetwork() + spatialNetworkObj construction.
     method <- match.arg(method, c("dbscan"))
@@ -330,6 +333,7 @@ createSpatialKNNnetwork <- function(gobject,
         verbose = verbose,
         return_gobject = return_gobject,
         output = output,
+        space = space,
         ...
     )
 }
@@ -461,12 +465,25 @@ createSpatialNetwork <- function(gobject,
     # get paramters
     method <- match.arg(method, c("Delaunay", "kNN", "radius"))
 
+    # Default name: `<method>_network`, prefixed by the frame when one was
+    # given. The frame has to reach the name because it changes the
+    # artifact -- `rescale`, `shear` and a general `affine` change
+    # distances, so `maximum_distance` and `radius` mean different things in
+    # each, and shear changes Delaunay topology outright -- and two frames
+    # must not collide on one name. Prefixing rather than replacing keeps
+    # framed and native names the same kind of thing, so the method is still
+    # readable off either. An explicit `name =` is taken as given.
+    #
+    # (`spin` / `flip` / `spatShift` are isometries and leave the network
+    # identical; the default does not try to detect that, because whether a
+    # frame happens to be rigid is not something a name should depend on.)
+    if (is.null(name)) {
+        name <- paste0(method, "_", "network")
+        if (!is.null(space)) name <- paste0(space, "_", name)
+    }
+
 
     if (method == "kNN") {
-        if (is.null(name)) {
-            name <- paste0(method, "_", "network")
-        }
-
         knn_method <- match.arg(knn_method, c("dbscan"))
 
         out <- createSpatialKNNnetwork(
@@ -483,6 +500,7 @@ createSpatialNetwork <- function(gobject,
             verbose = verbose,
             return_gobject = return_gobject,
             output = output,
+            space = space,
             ...
         )
     } else if (method == "Delaunay") {
@@ -490,9 +508,6 @@ createSpatialNetwork <- function(gobject,
             delaunay_method,
             c("deldir", "delaunayn_geometry", "RTriangle")
         )
-        if (is.null(name)) {
-            name <- paste0(method, "_", "network")
-        }
         out <- createSpatialDelaunayNetwork(
             gobject = gobject,
             spat_unit = spat_unit,
@@ -510,6 +525,7 @@ createSpatialNetwork <- function(gobject,
             verbose = verbose,
             return_gobject = return_gobject,
             output = output,
+            space = space,
             ...
         )
     } else if (method == "radius") {
@@ -519,8 +535,6 @@ createSpatialNetwork <- function(gobject,
                 "of the spatial locations)."
             ), call. = FALSE)
         }
-        if (is.null(name)) name <- "radius_network"
-
         out <- .create_spatial_network_from_param(
             gobject = gobject,
             param = radiusNetworkParam(
@@ -537,6 +551,7 @@ createSpatialNetwork <- function(gobject,
             verbose = verbose,
             return_gobject = return_gobject,
             output = output,
+            space = space,
             ...
         )
     }
@@ -727,6 +742,7 @@ createSpatialNetwork <- function(gobject,
     verbose = FALSE,
     return_gobject = TRUE,
     output = c("spatialNetworkObj", "data.table"),
+    space = NULL,
     ...) {
     output <- match.arg(output, c("spatialNetworkObj", "data.table"))
     spat_unit <- set_default_spat_unit(gobject, spat_unit = spat_unit)
@@ -735,6 +751,20 @@ createSpatialNetwork <- function(gobject,
         spat_unit = spat_unit, name = spat_loc_name,
         output = "spatLocsObj"
     )
+
+    # Build in the requested coordinate frame. The locations are transformed
+    # here rather than fetched through the getter's own `space =`, because
+    # on a giottoMulti the frames live on the parent and the getter forwards
+    # to children -- see `.gm_fused_spatlocs()` for the same reason.
+    #
+    # The frame is recorded in `parameters`, not in `@provenance`: that slot
+    # answers "which spat_units were aggregated to make this", a different
+    # question, and two of its consumers assume an atomic value.
+    if (!is.null(space)) {
+        sp <- .resolve_space(gobject, space)
+        sl <- .apply_space_to_subobj(sl, gobject, sp, coordinator = NULL)
+    }
+    parameters <- c(parameters, list(space = space %null% NA_character_))
 
     # An edge table is only ever the answer when there is no gobject to write
     # into; with `return_gobject = TRUE` the object is built and set either way.

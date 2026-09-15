@@ -809,6 +809,16 @@ list_feature_info_names <- function(gobject) {
 list_spatial_networks <- function(gobject,
     spat_unit = NULL,
     return_uniques = FALSE) {
+    # The multi's own slot has giotto's shape, so this walk would run --
+    # and report only the multi-level networks, silently omitting every
+    # per-child one. A partial answer that looks complete is worse than
+    # refusing; listing both needs a `level =` this does not have yet.
+    if (inherits(gobject, "giottoMulti")) {
+        stop("[list_spatial_networks] not yet supported on a giottoMulti: ",
+            "its networks live in two places (the multi's own slot and each ",
+            "child's), and this would report only the first.",
+            call. = FALSE)
+    }
     availableSpatNetworks <- data.table()
     uniques <- list()
     for (spatial_unit in names(gobject@spatial_network)) {
@@ -864,6 +874,14 @@ list_spatial_networks <- function(gobject,
 #' @export
 list_spatial_networks_names <- function(gobject,
     spat_unit = NULL) {
+    # See list_spatial_networks(): the multi's slot is keyed by frame
+    # first, so `[[spat_unit]]` would index frames and return spat_unit
+    # names as if they were network names.
+    if (inherits(gobject, "giottoMulti")) {
+        stop("[list_spatial_networks_names] not yet supported on a ",
+            "giottoMulti; its @spatial_network is keyed by coordinate ",
+            "frame first.", call. = FALSE)
+    }
     if (is.null(spat_unit)) stop("spat_unit must be given\n")
 
     spat_network_names <- names(gobject@spatial_network[[spat_unit]])

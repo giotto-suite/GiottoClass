@@ -201,6 +201,148 @@ test_that("fused spatlocs narrow to named samples, and say so when they cannot",
 })
 
 
+# a frame names, and changes, the artifact ####
+
+# `space =` is a sanctioned exception to "do not build artifacts from
+# temporary settings": a frame genuinely changes the network, so the
+# artifact has to say which frame it came from. It does so twice -- by
+# taking the frame's name, and by recording it in @parameters.
+test_that("a frame prefixes the default name; native naming is unchanged", {
+    g <- .netfix_giotto()
+    g <- rescale(g, fx = 2, fy = 2, space = "scaled2x")
+    nms <- function(x) list_spatial_networks_names(x, spat_unit = "cell")
+
+    # The method stays readable off either name; only the prefix differs.
+    for (m in c("kNN", "Delaunay")) {
+        expect_true(paste0(m, "_network") %in%
+            nms(createSpatialNetwork(g, method = m)),
+            info = m)
+        expect_true(paste0("scaled2x_", m, "_network") %in%
+            nms(createSpatialNetwork(g, method = m, space = "scaled2x")),
+            info = m)
+    }
+    expect_true("scaled2x_radius_network" %in%
+        nms(createSpatialNetwork(g, method = "radius", radius = 300,
+            space = "scaled2x")))
+
+    # an explicit name is taken exactly as given, frame or no frame
+    expect_true("mine" %in% nms(createSpatialNetwork(g, method = "kNN",
+        k = 5, space = "scaled2x", name = "mine")))
+})
+
+test_that("the frame is recorded in @parameters, not @provenance", {
+    g <- .netfix_giotto()
+    g <- rescale(g, fx = 2, fy = 2, space = "scaled2x")
+    sn <- getSpatialNetwork(
+        createSpatialNetwork(g, method = "kNN", k = 5, space = "scaled2x"),
+        name = "scaled2x_kNN_network", output = "spatialNetworkObj")
+
+    expect_identical(sn@parameters$space, "scaled2x")
+    # @provenance answers "which spat_units were aggregated to make this",
+    # a different question -- and two of its consumers assume an atomic
+    # value, so a list there would break show() and garble the manifest.
+    expect_false(is.list(sn@provenance))
+
+    native <- getSpatialNetwork(
+        createSpatialNetwork(g, method = "kNN", k = 5),
+        name = "kNN_network", output = "spatialNetworkObj")
+    expect_true(is.na(native@parameters$space))
+})
+
+test_that("a non-isometric frame actually changes the network", {
+    # The whole reason the frame has to be recorded. Under a 2x rescale
+    # distances double, so a fixed cutoff keeps fewer edges. `spin` /
+    # `flip` / `spatShift` are isometries and would leave this identical --
+    # which is why the name does not try to detect rigidity.
+    g <- .netfix_giotto()
+    g <- rescale(g, fx = 2, fy = 2, space = "scaled2x")
+    ecount <- function(x, nm) {
+        igraph::ecount(getSpatialNetwork(x, name = nm,
+            output = "spatialNetworkObj")@network)
+    }
+    native <- createSpatialNetwork(g, method = "kNN", k = 8,
+        maximum_distance_knn = 300)
+    framed <- createSpatialNetwork(g, method = "kNN", k = 8,
+        maximum_distance_knn = 300, space = "scaled2x")
+    expect_gt(ecount(native, "kNN_network"),
+        ecount(framed, "scaled2x_kNN_network"))
+})
+
+
+# the joint @spatial_network slot ####
+
+# Build a cross-sample network the way step 9's writer will, and place it in
+# the joint slot by hand. Exercising the maintenance before the writer exists
+# is the point: these helpers are wired into `[`, `names<-` and the
+# invalidation paths, and a slot that nothing writes to yet is exactly the
+# kind that gets missed at one of them.
+# A cross-sample network, named for the frame it was built in and written
+# to the multi's own slot -- `setSpatialNetwork()` with no `object =` means
+# "this is a multi-level artifact", which is where it has to go: no child's
+# slot can hold an edge whose endpoints are in different samples.
+.netfix_joint <- function(mg, frame = "atlas") {
+    sl <- .gm_fused_spatlocs(mg, space = NULL, coordinator = NULL)
+    sn <- .spatial_network_from_locs(sl,
+        param = kNNNetworkParam(k = 5, filter = TRUE, output = "igraph"),
+        method = "kNN", parameters = list(k = 5),
+        name = paste0(frame, "_kNN_network"), spat_unit = "cell")
+    setSpatialNetwork(mg, sn, spat_unit = "cell",
+        name = paste0(frame, "_kNN_network"))
+}
+
+# Both hops go through public surface: the getter finds the multi-level
+# network by name, and spatIDs() forwards to whatever carries the graph
+# (PR #400), so this reads the same on a backed network whose `@network` is
+# a store. Nothing here knows the slot's nesting -- if it did, re-keying the
+# slot would break every test instead of one accessor.
+.joint_ids <- function(mg, frame = "atlas") {
+    spatIDs(getSpatialNetwork(mg, name = paste0(frame, "_kNN_network")))
+}
+
+test_that("giottoMulti declares @spatial_network, empty by default", {
+    expect_true("spatial_network" %in% slotNames("giottoMulti"))
+    expect_null(new("giottoMulti")@spatial_network)
+})
+
+test_that("a joint network spans samples with global IDs", {
+    mg <- .netfix_joint(.netfix_multi())
+    ids <- .joint_ids(mg)
+    expect_true(all(grepl("^(a|b)::", ids)))
+    expect_setequal(unique(sub("::.*$", "", ids)), c("a", "b"))
+})
+
+test_that("`[` prunes the joint network to surviving samples", {
+    mg <- .netfix_joint(.netfix_multi())
+    sub <- mg["a"]
+    ids <- .joint_ids(sub)
+    expect_true(all(grepl("^a::", ids)))
+    expect_false(any(grepl("^b::", ids)))
+})
+
+test_that("`names<-` rewrites joint network vertex prefixes", {
+    mg <- .netfix_joint(.netfix_multi())
+    before <- .joint_ids(mg)
+    names(mg) <- c("x", "y")
+    after <- .joint_ids(mg)
+    expect_setequal(unique(sub("::.*$", "", after)), c("x", "y"))
+    # a rename moves every vertex, it does not drop any
+    expect_identical(length(after), length(before))
+})
+
+test_that("adding a sample warns that the joint network no longer covers it", {
+    mg <- .netfix_joint(.netfix_multi())
+    expect_warning(mg[["c"]] <- .netfix_giotto(), "spatial_network")
+})
+
+test_that("list_spatial_networks refuses a giottoMulti", {
+    # Its walk assumes giotto's `spat_unit -> name`; on the multi's
+    # `frame -> spat_unit -> name` it would report frame names in the
+    # spat_unit column rather than failing.
+    mg <- .netfix_joint(.netfix_multi())
+    expect_error(list_spatial_networks(mg), "not yet supported")
+})
+
+
 # the per-sample path is unchanged ####
 
 test_that("createSpatialNetwork(mg) builds in every child", {

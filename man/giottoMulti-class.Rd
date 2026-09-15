@@ -60,6 +60,17 @@ from stage 2; \code{NULL} means unfiltered.}
 
 \item{\code{nn_network}}{shared joint NN graphs}
 
+\item{\code{spatial_network}}{\strong{cross-sample} spatial networks, nested
+\code{spat_unit -> name} — the same shape as \code{giotto@spatial_network}.
+Both endpoints of every edge are \code{sample::id} globals, so an edge may
+span samples, which is why these cannot live on a child whose slot
+knows only its own cell IDs. Per-sample networks are \emph{not} here; they
+stay on the children.
+
+A network built in a coordinate frame takes that frame's name by
+default, so two frames do not collide, and carries the frame in its
+\verb{@parameters$space}. See \code{adr/0006}.}
+
 \item{\code{spatial_enrichment}}{shared spatial enrichment results}
 
 \item{\code{multiomics}}{shared multi-omics info}

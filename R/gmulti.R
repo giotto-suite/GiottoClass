@@ -78,6 +78,16 @@
 #' @slot feat_ID shared feature ID lists (global IDs), same contract.
 #' @slot dimension_reduction shared joint dim-reductions (PCA, UMAP, harmony)
 #' @slot nn_network shared joint NN graphs
+#' @slot spatial_network **cross-sample** spatial networks, nested
+#'   `spat_unit -> name` — the same shape as `giotto@spatial_network`.
+#'   Both endpoints of every edge are `sample::id` globals, so an edge may
+#'   span samples, which is why these cannot live on a child whose slot
+#'   knows only its own cell IDs. Per-sample networks are *not* here; they
+#'   stay on the children.
+#'
+#'   A network built in a coordinate frame takes that frame's name by
+#'   default, so two frames do not collide, and carries the frame in its
+#'   `@parameters$space`. See `adr/0006`.
 #' @slot spatial_enrichment shared spatial enrichment results
 #' @slot multiomics shared multi-omics info
 #'
@@ -116,6 +126,7 @@ giottoMulti <- setClass(
         spatial_enrichment  = "nullOrList",
         dimension_reduction = "nullOrList",
         nn_network          = "nullOrList",
+        spatial_network     = "nullOrList",
         multiomics          = "ANY",
 
         # infrastructure
@@ -144,6 +155,7 @@ giottoMulti <- setClass(
         spatial_enrichment  = NULL,
         dimension_reduction = NULL,
         nn_network          = NULL,
+        spatial_network     = NULL,
         multiomics          = NULL,
 
         instructions        = NULL,
@@ -376,6 +388,7 @@ setMethod("[", signature(x = "giottoMulti", i = "ANY"),
             out@dimension_reduction <- .gm_prune_dim_reduction(out@dimension_reduction, keep_globals)
             out@nn_network          <- .gm_prune_nn_network(out@nn_network, keep_globals)
             out@spatial_enrichment  <- .gm_prune_spatial_enrichment(out@spatial_enrichment, keep_globals)
+            out@spatial_network     <- .gm_prune_spatial_network(out@spatial_network, keep_globals)
         }
 
         # @mapping entries key every sample — prune dropped samples so the
@@ -427,6 +440,7 @@ setReplaceMethod("names", signature(x = "giottoMulti", value = "character"),
         x@dimension_reduction <- .gm_rewrite_dim_reduction(x@dimension_reduction, old_to_new)
         x@nn_network          <- .gm_rewrite_nn_network(x@nn_network, old_to_new)
         x@spatial_enrichment  <- .gm_rewrite_spatial_enrichment(x@spatial_enrichment, old_to_new)
+        x@spatial_network     <- .gm_rewrite_spatial_network(x@spatial_network, old_to_new)
         x@cell_ID             <- .gm_rewrite_narrowing(x@cell_ID, old_to_new)
 
         # @mapping entries are keyed by sample name — rename the keys too,
@@ -931,11 +945,13 @@ setMethod(
         spat_unit = lvl1(x@expression) || lvl1(x@cell_metadata) ||
             lvl1(x@feat_metadata) || lvl1(x@spatial_enrichment) ||
             lvl1(x@nn_network) ||
+            lvl1(x@spatial_network) ||
             # dimension_reduction: approach -> spat_unit -> ...
             lvl2(x@dimension_reduction),
         feat_type = lvl2(x@expression) || lvl2(x@cell_metadata) ||
             lvl2(x@feat_metadata) || lvl2(x@spatial_enrichment) ||
             lvl2(x@nn_network) ||
+            # spatial_network has no feat_type level, matching giotto's
             lvl3(x@dimension_reduction),
         values = lvl3(x@expression),
         stop("[.gm_universe_materialized] unknown axis: ", axis,
@@ -1071,7 +1087,8 @@ setMethod(
 #' @noRd
 .gm_populated_joint_slots <- function(x) {
     candidates <- c("expression", "cell_metadata", "feat_metadata",
-        "dimension_reduction", "nn_network", "spatial_enrichment")
+        "dimension_reduction", "nn_network", "spatial_enrichment",
+        "spatial_network")
     has <- vapply(candidates, function(s) {
         v <- slot(x, s)
         !is.null(v) && length(v) > 0L
@@ -1303,6 +1320,51 @@ setMethod(
 }
 
 #' @noRd
+# The joint @spatial_network is `spat_unit -> name`, matching
+# `giotto@spatial_network`, and holds the same kind of graph in the same
+# slot name as an nnNetObj -- so these mirror `.gm_rewrite_nn_network` /
+# `.gm_prune_nn_network` with two loops fewer.
+#' @noRd
+.gm_rewrite_spatial_network <- function(sn_slot, old_to_new) {
+    if (is.null(sn_slot) || length(sn_slot) == 0L) return(sn_slot)
+    for (su in names(sn_slot)) {
+        for (nm in names(sn_slot[[su]])) {
+            sn <- sn_slot[[su]][[nm]]
+            g <- sn@network
+            if (inherits(g, "igraph")) {
+                vn <- names(igraph::V(g))
+                if (!is.null(vn)) {
+                    sn@network <- igraph::set_vertex_attr(g, "name",
+                        value = .rewrite_sample_id(vn, old_to_new))
+                }
+            }
+            sn_slot[[su]][[nm]] <- sn
+        }
+    }
+    sn_slot
+}
+
+#' @noRd
+.gm_prune_spatial_network <- function(sn_slot, keep_globals) {
+    if (is.null(sn_slot) || length(sn_slot) == 0L) return(sn_slot)
+    for (su in names(sn_slot)) {
+        for (nm in names(sn_slot[[su]])) {
+            sn <- sn_slot[[su]][[nm]]
+            g <- sn@network
+            if (inherits(g, "igraph")) {
+                vn <- names(igraph::V(g))
+                if (!is.null(vn)) {
+                    keep_v <- which(vn %in% keep_globals)
+                    sn@network <- igraph::induced_subgraph(
+                        g, igraph::V(g)[keep_v])
+                }
+            }
+            sn_slot[[su]][[nm]] <- sn
+        }
+    }
+    sn_slot
+}
+
 .gm_prune_nn_network <- function(nn_slot, keep_globals) {
     if (is.null(nn_slot) || length(nn_slot) == 0L) return(nn_slot)
     for (su in names(nn_slot)) {
@@ -1612,8 +1674,12 @@ setMethod(
         x@coordinates <- coords[keep, , drop = FALSE]
         return(x)
     }
-    if (inherits(x, "nnNetObj")) {
+    # Both hold their graph in @network keyed by global IDs, so one branch
+    # serves them. A backed @network is a dataStore, not an igraph; pass it
+    # through rather than erroring inside igraph.
+    if (inherits(x, "nnNetObj") || inherits(x, "spatialNetworkObj")) {
         g <- x@network
+        if (!inherits(g, "igraph")) return(x)
         vnames <- names(igraph::V(g))
         keep <- starts_any(vnames)
         x@network <- igraph::induced_subgraph(g, igraph::V(g)[keep])
@@ -2266,6 +2332,7 @@ setMethod("gmultiMapping<-", "giottoMulti",
         x@dimension_reduction <- NULL
         x@nn_network <- NULL
         x@spatial_enrichment <- NULL
+        x@spatial_network <- NULL
         return(x)
     }
     new <- x@mapping
@@ -2305,6 +2372,9 @@ setMethod("gmultiMapping<-", "giottoMulti",
         })
     }
     x@expression <- ex
+
+    # spatial_network: su -> name. No feat_type level, matching giotto's.
+    x@spatial_network <- drop_keys(x@spatial_network, su_changed)
 
     # dimension_reduction: approach -> su -> ft -> method -> name
     if (!is.null(x@dimension_reduction)) {
@@ -2964,9 +3034,21 @@ setMethod("setSpatialLocations", signature("giottoMulti"),
 setMethod("getSpatialNetwork", signature("giottoMulti"),
     function(gobject, spat_unit = NULL, name = NULL, ...,
         object = NULL, samples = NULL) {
-        objs <- .gm_resolve_per_child_arg(gobject, object, samples)
         su <- spat_unit %||%
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
+
+        # A cross-sample network lives in the multi's own slot and is named
+        # for the frame it was built in, so a plain name lookup finds it --
+        # no second parameter saying "look in the joint slot". Checked
+        # first, and only when a name was asked for: without one there is
+        # no question to answer here, and the per-child fan-out is what
+        # `getSpatialNetwork(mg)` has always meant.
+        if (!is.null(name) && is.null(object) && is.null(samples)) {
+            joint <- gobject@spatial_network[[su]][[name]]
+            if (!is.null(joint)) return(joint)
+        }
+
+        objs <- .gm_resolve_per_child_arg(gobject, object, samples)
         out <- lapply(objs, function(nm) {
             getSpatialNetwork(gobject@objects[[nm]],
                 spat_unit = spat_unit, name = name, ...)
@@ -2976,11 +3058,33 @@ setMethod("getSpatialNetwork", signature("giottoMulti"),
     }
 )
 
+
 #' @rdname setSpatialNetwork
 #' @param object (giottoMulti) name of the single child to write into
 #' @export
 setMethod("setSpatialNetwork", signature("giottoMulti"),
     function(gobject, x, spat_unit = NULL, name = NULL, ..., object = NULL) {
+        # `object =` names the child to write into (a single write target,
+        # not a selector -- adr/0006). Without it, the network is a
+        # multi-level artifact and goes in the multi's own slot: that is
+        # where a cross-sample network has to live, since no child's slot
+        # can hold an edge whose endpoints are in different samples.
+        if (is.null(object)) {
+            su <- spat_unit %null% spatUnit(x) %null%
+                .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
+            nm <- name %null% objName(x)
+            if (is.null(su) || is.na(su) || is.null(nm) || is.na(nm)) {
+                stop("[gmulti setSpatialNetwork] a multi-level network ",
+                    "needs a spat_unit and a name; `x` carries neither and ",
+                    "none were given. To write into one child instead, pass ",
+                    "`object = `.", call. = FALSE)
+            }
+            sn <- gobject@spatial_network %null% list()
+            if (is.null(sn[[su]])) sn[[su]] <- list()
+            sn[[su]][[nm]] <- x
+            gobject@spatial_network <- sn
+            return(gobject)
+        }
         nm <- .gm_set_target(gobject, object)
         gobject@objects[[nm]] <- setSpatialNetwork(
             gobject@objects[[nm]], x = x,

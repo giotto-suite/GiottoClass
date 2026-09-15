@@ -1770,6 +1770,18 @@ createMetafeats <- function(gobject,
     }
 
     if (inherits(x, "spatialNetworkObj")) {
+        net <- x@network
+        # Narrow the graph directly when it is one. Going through the edge
+        # table instead round-trips igraph -> DT -> igraph and loses every
+        # vertex that has no surviving edge, so a narrowed network would
+        # silently report fewer nodes than cells that survived. Same shape
+        # as the nnNetObj branch above; the DT path stays for a @network
+        # that is not an igraph (a dataStore on a backed object).
+        if (!is.null(cells) && inherits(net, "igraph")) {
+            keep <- names(igraph::V(net)) %in% cells
+            x@network <- igraph::induced_subgraph(net, igraph::V(net)[keep])
+            return(x)
+        }
         if (!is.null(cells)) {
             from <- to <- NULL # NSE
             x[] <- x[][from %in% cells & to %in% cells]
