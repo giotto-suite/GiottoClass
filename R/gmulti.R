@@ -2535,6 +2535,11 @@ setMethod("gmultiGroups", signature(x = "giottoMulti"),
 # `NULL` means "no selection" and is returned untouched -- callers read it as
 # "all samples", and turning it into `names(x@objects)` here would erase the
 # difference between asking for everything and not asking.
+#
+# Reaching for this from a function that WRITES into a slot is the tempting
+# edit that adr/0006 forbids: an artifact generator takes no sample selector,
+# because nothing downstream can recover which rows a selector admitted. Its
+# job size comes from the space. Readers are what this helper is for.
 #' @noRd
 .gm_resolve_samples <- function(x, samples, site = "giottoMulti",
     what = "sample") {

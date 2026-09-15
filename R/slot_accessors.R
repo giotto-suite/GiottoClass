@@ -2256,6 +2256,10 @@ setMethod("getSpatialNetwork", signature("giotto"), function(gobject,
 #'
 #' setSpatialNetwork(gobject = g, x = spatnet)
 #' @export
+# The `object =` that the giottoMulti method accepts is a single-valued WRITE
+# TARGET -- which child owns the object being handed over -- resolved by
+# `.gm_set_target()`. It is not a sample selector, so adr/0006 does not apply
+# to it. Do not "tighten" it away; do not widen it into one either.
 setGeneric("setSpatialNetwork",
     function(gobject, x, spat_unit = NULL, name = NULL, ...)
         standardGeneric("setSpatialNetwork"))

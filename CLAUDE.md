@@ -110,6 +110,10 @@ Do not use non-UTF-8 characters; use Unicode escapes instead (e.g. `\u00F6`).
 - **Imports:** Add all `@importFrom` declarations to `R/package_imports.R`, not scattered across files.
 - **Error handling:** Use `GiottoUtils` helpers (`gstop()`, `gwarn()`, `gmessage()`) rather than bare `stop()`/`warning()`.
 - **Validation:** Use `checkmate` for input validation at function boundaries.
+- **Artifact generators:** a function that persists something into a slot and
+  returns the container takes no `view =` and no sample selector (`samples =`,
+  or any formal meaning "which children"). Its job size comes from `space =`.
+  Readers keep all three knobs. See `adr/0006`.
 - **Data tables:** The package uses `data.table` throughout; prefer `data.table` idioms over base R for tabular operations.
 
 ---
