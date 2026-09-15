@@ -587,6 +587,53 @@ createSpatialNetwork <- function(gobject,
 }
 
 
+# Build a spatial network from spatial locations and an already-constructed
+# networkParam. The gobject-free half of the job: it takes a `spatLocsObj`
+# and hands back an object, so one builder serves both a single giotto's own
+# locations and a giottoMulti's fused cross-sample locations, where the IDs
+# are `sample::id` globals and there is no single gobject to read from.
+# Everything that knows about slots stays in the caller.
+#
+# `spat_unit` is accepted rather than read off `sl` because the caller has
+# already resolved the default and the two must not disagree.
+#' @noRd
+.spatial_network_from_locs <- function(sl,
+    param,
+    method,
+    parameters,
+    name,
+    dimensions = "all",
+    spat_unit = NULL,
+    verbose = FALSE,
+    output = c("spatialNetworkObj", "data.table"),
+    ...) {
+    output <- match.arg(output, c("spatialNetworkObj", "data.table"))
+    sl_dt <- sl[]
+    coord_cols <- intersect(c("sdimx", "sdimy", "sdimz"), names(sl_dt))
+    if (!identical(dimensions, "all")) coord_cols <- coord_cols[dimensions]
+    coords <- as.matrix(sl_dt[, coord_cols, with = FALSE])
+
+    g_net <- createNetwork(coords, param,
+        node_ids = sl_dt$cell_ID, verbose = verbose, ...
+    )
+
+    if (identical(output, "data.table")) {
+        return(data.table::as.data.table(
+            igraph::as_data_frame(g_net, what = "edges")
+        ))
+    }
+
+    create_spat_net_obj(
+        name = name,
+        method = method,
+        parameters = parameters,
+        network = g_net,
+        spat_unit = spat_unit %null% spatUnit(sl),
+        provenance = prov(sl)
+    )
+}
+
+
 # Build a spatial network on cell centroids from an already-constructed
 # networkParam, and do the gobject plumbing around it.
 #
@@ -613,30 +660,21 @@ createSpatialNetwork <- function(gobject,
         spat_unit = spat_unit, name = spat_loc_name,
         output = "spatLocsObj"
     )
-    provenance <- prov(sl)
-    sl_dt <- sl[]
-    coord_cols <- intersect(c("sdimx", "sdimy", "sdimz"), names(sl_dt))
-    if (!identical(dimensions, "all")) coord_cols <- coord_cols[dimensions]
-    coords <- as.matrix(sl_dt[, coord_cols, with = FALSE])
 
-    g_net <- createNetwork(coords, param,
-        node_ids = sl_dt$cell_ID, verbose = verbose, ...
-    )
-
-    if (output == "data.table" && !return_gobject) {
-        return(data.table::as.data.table(
-            igraph::as_data_frame(g_net, what = "edges")
-        ))
+    # An edge table is only ever the answer when there is no gobject to write
+    # into; with `return_gobject = TRUE` the object is built and set either way.
+    want <- if (identical(output, "data.table") && !return_gobject) {
+        "data.table"
+    } else {
+        "spatialNetworkObj"
     }
-
-    sn_obj <- create_spat_net_obj(
-        name = name,
-        method = method,
-        parameters = parameters,
-        network = g_net,
-        spat_unit = spat_unit,
-        provenance = provenance
+    built <- .spatial_network_from_locs(sl, param,
+        method = method, parameters = parameters, name = name,
+        dimensions = dimensions, spat_unit = spat_unit,
+        verbose = verbose, output = want, ...
     )
+    if (identical(want, "data.table")) return(built)
+    sn_obj <- built
 
     if (!return_gobject) return(sn_obj)
 
