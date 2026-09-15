@@ -74,9 +74,14 @@ the decision: narrowing a return value is reversible, narrowing a slot is not.
   deliberate: a silently renamed argument would be worse than a loud one, and
   the failure is a name that is a sample rather than a frame, so the error can
   say exactly that.
-- **`":all:"` is retired here, with no deprecation shim.** No shim is possible
-  that is not itself confusing, since it would have to survive beside a `space`
-  that now means something else. `space = NULL` already spells "all samples".
+- **`":all:"` goes with the selector rather than being retired separately.**
+  It is a *value* in the selector's vocabulary — "every member of the set this
+  parameter selects from" — so it can only ever be passed to a selector.
+  Remove the parameter and there is nothing left that could accept the token;
+  there is no shim to write, because any shim would itself be a selector. The
+  token keeps its meaning on the nesting axes (`spat_unit`, `feat_type`,
+  `images`), which select keys rather than samples and are a different
+  question.
 - **Per-child forwarding must not re-list formals.** The hand-listed forward is
   what dropped `radius`; it is replaced by rewriting the caller's own
   `match.call()`. Any future per-child dispatch owes the same treatment — an

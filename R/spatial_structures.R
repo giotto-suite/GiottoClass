@@ -393,11 +393,16 @@ createSpatialKNNnetwork <- function(gobject,
 #' @param return_gobject logical. return giotto object (default = TRUE)
 #' @param output character. Object type to return spatial network as when
 #' `return_gobject = FALSE`. (default: 'spatialNetworkObj')
-#' @param space (`giottoMulti` only) character vector of sample names to
-#' run on, or `NULL`/`":all:"` (default) to run on every child. Each
-#' selected child receives its own spatial network written into its
-#' `@spatial_network` slot — this mutates the wrapped children
-#' (deliberate; child-immutability is relaxed for network creation).
+#' @param space (`giottoMulti` only) `character(1)`. Name of a coordinate
+#' frame recorded on the object, or `NULL` (default) for each sample's own
+#' native frame. The frame decides the job: every sample it covers gets a
+#' network built in that frame's coordinates, written into its own
+#' `@spatial_network` slot — so this mutates the wrapped children.
+#'
+#' This is **not** a sample selector. An artifact generator takes none,
+#' because once the rows are in a slot nothing downstream can tell which
+#' the selector admitted (see `adr/0006`). To build over a subset of
+#' samples, record a space over them, or subset with `mg[...]` first.
 #' @param \dots Additional parameters for the selected function
 #' @returns giotto object with updated spatial network slot
 #' @details Creates a spatial network connecting single-cells based on their
@@ -440,64 +445,17 @@ createSpatialNetwork <- function(gobject,
     output = c("spatialNetworkObj", "data.table"),
     space = NULL,
     ...) {
-    # giottoMulti dispatch — spatial networks live on the per-child
-    # spatial_network slot (no joint slot exists). Iterate over the
-    # requested children and run createSpatialNetwork on each child as a
-    # single giotto. The result is written back into `gobject@objects`,
-    # which mutates the wrapped child. This deliberately breaks the
-    # child-immutability invariant for now — to be revisited.
-    #
-    # `space` follows the plotting-dispatch convention:
-    #   NULL or ":all:" → all children
-    #   character vector → subset of child names
+    # giottoMulti dispatch. `space` is a COORDINATE FRAME name, not a set of
+    # samples: an artifact generator takes no sample selector, and its job
+    # size is read from the frame. See adr/0006.
     if (inherits(gobject, "giottoMulti")) {
-        child_names <- names(gobject@objects)
-        if (length(child_names) == 0L) {
-            stop("[createSpatialNetwork] giottoMulti has no child gobjects",
-                call. = FALSE)
-        }
-        if (is.null(space)) space <- ":all:"
-        if (identical(space, ":all:")) space <- child_names
-        checkmate::assert_character(space,
-            min.len = 1L, any.missing = FALSE)
-        bad <- setdiff(space, child_names)
-        if (length(bad) > 0L) {
-            stop(sprintf(paste(
-                "[createSpatialNetwork] '%s' is not a sample name in this",
-                "giottoMulti. Available samples: %s",
-                sep = " "
-            ), bad[[1L]], paste(child_names, collapse = ", ")),
-            call. = FALSE)
-        }
-        if (!isTRUE(return_gobject)) {
-            stop("[createSpatialNetwork] giottoMulti dispatch requires ",
-                "`return_gobject = TRUE` (per-child writes need the ",
-                "container).", call. = FALSE)
-        }
-        for (nm in space) {
-            gobject@objects[[nm]] <- createSpatialNetwork(
-                gobject = gobject@objects[[nm]],
-                name = name,
-                spat_unit = spat_unit,
-                feat_type = feat_type,
-                spat_loc_name = spat_loc_name,
-                dimensions = dimensions,
-                method = method,
-                delaunay_method = delaunay_method,
-                maximum_distance_delaunay = maximum_distance_delaunay,
-                options = options,
-                Y = Y, j = j, S = S,
-                minimum_k = minimum_k,
-                knn_method = knn_method,
-                k = k,
-                maximum_distance_knn = maximum_distance_knn,
-                verbose = verbose,
-                return_gobject = TRUE,
-                output = output,
-                ...
-            )
-        }
-        return(gobject)
+        # Both captured as statements, not as argument expressions:
+        # `parent.frame()` reads the call stack where it is evaluated, and a
+        # promise forced inside the callee would read the wrong one.
+        .cl <- match.call()
+        .env <- parent.frame()
+        return(.csn_multi(gobject, space, return_gobject,
+            .csn_forward(.cl, .env)))
     }
 
     # get paramters
@@ -584,6 +542,123 @@ createSpatialNetwork <- function(gobject,
     }
 
     return(out)
+}
+
+
+# createSpatialNetwork() on a giottoMulti ####
+
+# Capture the caller's own call so it can be replayed against one child.
+#
+# `match.call()` keeps exactly the arguments the user supplied, in the form
+# they supplied them, and nothing else -- formals they omitted keep the child
+# call's own defaults. Three entries are the container's business and are
+# rewritten or dropped.
+#
+# This replaces a hand-listed forward of 19 formals. That list had to be
+# edited every time a formal was added, and when `radius` arrived upstream it
+# was not: the container bound `radius` and dropped it, so
+# `createSpatialNetwork(mg, method = "radius", radius = 50)` reached each
+# child with `radius = NULL` and failed naming the argument the user gave.
+# The merge that introduced it was textually clean, so nothing flagged it.
+# Do not reintroduce an explicit list here. See adr/0006.
+#
+# Rewriting entries of an already-matched call does not change how R
+# re-matches it, so an argument that landed in `...` still lands in `...`.
+# `do.call(f, c(list(gobject = child), as.list(cl)[-1L]))` would NOT be
+# equivalent -- it re-matches positionally and would bind a stray unnamed
+# dots argument to `name`.
+#' @noRd
+.csn_forward <- function(cl, envir) {
+    cl[["gobject"]] <- quote(.child)
+    # Dropping a name a call does not carry is an error, not a no-op.
+    if ("space" %in% names(cl)) cl[["space"]] <- NULL
+    cl[["return_gobject"]] <- TRUE
+    list(call = cl, envir = envir)
+}
+
+# Replay a captured call against one child. `.child` resolves from the data
+# mask; every other argument still evaluates in the user's frame, so a symbol
+# written at the call site means there what it meant there.
+#' @noRd
+.csn_on_child <- function(forward, child) {
+    eval(forward$call, list(.child = child), enclos = forward$envir)
+}
+
+# Read the job size off the space (adr/0006).
+#
+# TODO(combinedSpace): once `giottoSpace` splits into `combinedSpace` /
+# `perSampleSpace`, a combined frame becomes ONE job over its member samples
+# with `sample::id` node IDs, written to the multi's joint slot. Until then
+# every named frame is per-sample, which is what `":default:"` already meant.
+#
+# TODO(:default:): that split also deletes the `":default:"` sentinel from
+# the sample-key namespace, which frees the token. It then becomes the name
+# of an always-present zero-step `perSampleSpace`, and the `is.null(space)`
+# branch below goes away -- there is no native-frame special case, just a
+# frame that is always there. Deliberately NOT done before the split: until
+# the sentinel leaves the sample-key namespace, the token would mean a frame
+# here and a sample key three files over, which is the two-axis confusion
+# adr/0006 exists to stop.
+#' @noRd
+.csn_space_plan <- function(gobject, space) {
+    samples <- names(gobject@objects)
+    if (length(samples) == 0L) {
+        stop("[createSpatialNetwork] giottoMulti has no child gobjects",
+            call. = FALSE)
+    }
+    if (is.null(space)) {
+        return(list(kind = "per_sample", samples = samples, space = NULL))
+    }
+    checkmate::assert_string(space, .var.name = "space")
+    frames <- giottoSpaces(gobject)
+    if (!space %in% frames) .csn_not_a_frame(gobject, space, frames)
+    list(kind = "per_sample", samples = samples,
+        space = giottoSpace(gobject, space))
+}
+
+# `space` used to select samples. Anyone who wrote that call gets told what
+# changed rather than a bare "no frame named"; anyone with a typo gets the
+# frame list.
+#' @noRd
+.csn_not_a_frame <- function(gobject, space, frames) {
+    msg <- sprintf(
+        "[createSpatialNetwork] '%s' is not a coordinate frame. %s", space,
+        if (length(frames) == 0L) "This object has no spaces."
+        else paste("Available:", paste(frames, collapse = ", ")))
+    # ":all:" is a value in a SELECTOR's vocabulary -- "every member of the
+    # set this parameter selects from" -- so it can only be passed to one.
+    # There is no selector here to accept it, and that is the whole reason
+    # it is gone rather than a separate deprecation.
+    if (identical(space, ":all:")) {
+        stop(msg, "\n'", space, "' is a selector value, and `space =` is ",
+            "not a selector -- an artifact generator takes none (adr/0006). ",
+            "Omit `space` to build in every sample's native frame.",
+            call. = FALSE)
+    }
+    what <- if (space %in% names(gobject@objects)) "a sample" else
+        if (space %in% gmultiGroups(gobject)) "a group" else NULL
+    if (!is.null(what)) {
+        msg <- paste0(msg, "\n'", space, "' names ", what,
+            ", and `space =` is not a sample selector -- an artifact ",
+            "generator takes none, because nothing downstream could tell ",
+            "which rows it admitted (adr/0006). Record a space over those ",
+            "samples, or subset with `mg[...]` and build on the result.")
+    }
+    stop(msg, call. = FALSE)
+}
+
+#' @noRd
+.csn_multi <- function(gobject, space, return_gobject, forward) {
+    plan <- .csn_space_plan(gobject, space)
+    if (!isTRUE(return_gobject)) {
+        stop("[createSpatialNetwork] a per-sample job builds one network ",
+            "per child, so it needs the container to write them into: ",
+            "`return_gobject = TRUE`.", call. = FALSE)
+    }
+    for (nm in plan$samples) {
+        gobject@objects[[nm]] <- .csn_on_child(forward, gobject@objects[[nm]])
+    }
+    gobject
 }
 
 

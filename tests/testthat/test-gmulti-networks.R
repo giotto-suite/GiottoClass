@@ -111,10 +111,12 @@ test_that("createSpatialNetwork takes no sample selector", {
     expect_error(createSpatialNetwork(mg, space = "pair"),
         "not a coordinate frame")
 
-    # ":all:" meant "all children" here and "all keys of a nesting axis"
-    # everywhere else in the package. Retired outright; `space = NULL` is
-    # the spelling for all samples.
-    expect_error(createSpatialNetwork(mg, space = ":all:"))
+    # ":all:" is a value in a selector's vocabulary, so it goes with the
+    # selector rather than being retired separately -- there is nothing left
+    # here that could accept it. The token keeps its meaning on the nesting
+    # axes (spat_unit / feat_type / images), which is a different question.
+    expect_error(createSpatialNetwork(mg, space = ":all:"),
+        "is a selector value")
 })
 
 test_that("readers keep the sample selector the writers lose", {
