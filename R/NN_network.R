@@ -472,7 +472,7 @@ setMethod("createNetwork", signature("matrix", "delaunayNetworkParam"),
         # createSpatialDelaunayNetwork() so that a direct createNetwork() call
         # is checked too -- it previously reached deldir with 3D coordinates
         # and failed somewhere inside it.
-        if (ncol(x) == 3L && param$method != "geometry") {
+        if (ncol(x) > 2L && param$method != "geometry") {
             stop(wrap_txt(errWidth = TRUE,
                 "[createNetwork]", param$method, "only applies to 2D data.",
                 "Use method = \"geometry\" for 3D"
@@ -1038,7 +1038,7 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
 
     if (ncol(x) > 2L) {
         .gstop("\'deldir\' delaunay method only applies to 2D data.
-            use method \'geometry\' or \'RTriangle\' instead")
+            use method \'geometry\' instead")
     }
 
     deldir_obj <- deldir::deldir(x = x, ...)
