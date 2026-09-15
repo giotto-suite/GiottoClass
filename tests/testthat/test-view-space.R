@@ -267,9 +267,9 @@ test_that("a broadcast step reaches a sample named only afterwards", {
         c("spin", "spatShift", "spin"))
     expect_identical(vapply(s[[1L, "a"]], function(x) x$op, character(1L)),
         c("spin", "spin"))
-    # and both are members: scoping says who MOVES, not who is in the
-    # layout -- a sample left at the origin is still in it
-    expect_identical(spaceSamples(s), c("a", "b"))
+    # membership is a declaration, not an inference from who a broadcast
+    # happened to touch: only "b" was ever named, so only "b" is declared
+    expect_identical(spaceSamples(s), "b")
 })
 
 test_that("scope is stated per call, not inherited from build order", {
@@ -828,10 +828,15 @@ test_that("recording onto an unused name declares a combined space", {
         "combinedSpace")
     expect_s4_class(giottoSpace(spin(mg, 5, space = "q", samples = "a"), "q"),
         "combinedSpace")
-    # and membership starts as every child, so a sample that never moves
-    # is still in the layout
-    expect_identical(spaceSamples(giottoSpace(spin(mg, 5, space = "q",
-        samples = "a"), "q")), c("a", "b"))
+    # membership starts empty and grows by key. Seeding it from the
+    # object's children would make it a restatement of names(@objects),
+    # and then neither the slot nor its growth would say anything.
+    expect_identical(spaceSamples(giottoSpace(
+        spatShift(mg, dx = 5, space = "p"), "p")), character())
+    grown <- spin(mg, 5, space = "q", samples = "a")
+    expect_identical(spaceSamples(giottoSpace(grown, "q")), "a")
+    grown <- spatShift(grown, dx = 1, space = "q", samples = "b")
+    expect_identical(spaceSamples(giottoSpace(grown, "q")), c("a", "b"))
 })
 
 test_that("a perSampleSpace is declaration-only, then per-sample editable", {

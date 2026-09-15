@@ -111,14 +111,12 @@ setGeneric("giottoSpaces",
     existing <- if (space %in% giottoSpaces(gobject)) {
         giottoSpace(gobject, space)
     } else {
-        # Membership starts as every child. Scoping a step says who MOVES,
-        # not who is in the layout -- a sample left at the origin is still
-        # in it, and seeding from the first scoped call instead would make
-        # the layout silently exclude everyone who needed no transform.
-        # A narrower layout is declared with `combinedSpace(<names>)`.
-        .new_combined_space(space, samples = if (
-            inherits(gobject, "giottoMulti")) names(gobject@objects)
-            else character())
+        # Membership starts EMPTY and grows as steps name samples. Seeding
+        # it from the object's children would make the slot a restatement
+        # of `names(@objects)` rather than a declaration, and then neither
+        # it nor its growth would carry information. A member that needs no
+        # transform of its own is declared with `combinedSpace(<names>)`.
+        .new_combined_space(space)
     }
     new_space <- .space_record(existing, op, args, samples = samples)
     giottoSpace(gobject, space) <- new_space
