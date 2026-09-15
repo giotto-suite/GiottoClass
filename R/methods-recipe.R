@@ -221,10 +221,10 @@ NULL
         length(i) == 1L && !is.na(i) && i == 1L
     }
     if (!ok) {
-        stop("[space] no frame named ",
+        stop("[space] no space named ",
             paste(sprintf("'%s'", i), collapse = ", "),
             ". This handle holds ",
-            if (is.na(nm)) "an unnamed frame"
+            if (is.na(nm)) "an unnamed space"
             else sprintf("'%s'", nm), ".", call. = FALSE)
     }
     invisible(nm)
@@ -238,8 +238,8 @@ NULL
     n2 <- e2@name
     if (is.na(n1)) return(n2)
     if (is.na(n2) || identical(n1, n2)) return(n1)
-    stop("[space] cannot compose frames '", n1, "' and '", n2,
-        "': a handle holds one frame, and `+` merges two views of the ",
+    stop("[space] cannot compose spaces '", n1, "' and '", n2,
+        "': a handle holds one space, and `+` merges two views of the ",
         "same one.", call. = FALSE)
 }
 
@@ -342,7 +342,7 @@ setMethod("+", signature(e1 = "perSampleSpace", e2 = "perSampleSpace"),
 setMethod("+", signature(e1 = "giottoSpace", e2 = "giottoSpace"),
     function(e1, e2) {
         stop("[space] cannot compose a ", class(e1)[[1L]], " with a ",
-            class(e2)[[1L]], ": one declares which samples share the frame ",
+            class(e2)[[1L]], ": one declares which samples share the space ",
             "and the other applies to every sample independently, so the ",
             "merge has no membership. Slot them under separate names.",
             call. = FALSE)
@@ -353,7 +353,7 @@ setMethod("+", signature(e1 = "giottoSpace", e2 = "giottoSpace"),
 #' @export
 setMethod("show", signature(object = "combinedSpace"), function(object) {
     cat("An object of class combinedSpace\n")
-    cat(sprintf("frame '%s' | %d sample(s) share it\n", object@name,
+    cat(sprintf("space '%s' | %d sample(s) share it\n", object@name,
         length(object@samples)))
     for (samp in names(object@samples)) {
         cat(sprintf("  %s : %s\n", samp,
@@ -366,7 +366,7 @@ setMethod("show", signature(object = "combinedSpace"), function(object) {
 #' @export
 setMethod("show", signature(object = "perSampleSpace"), function(object) {
     cat("An object of class perSampleSpace\n")
-    cat(sprintf("frame '%s' | applies to each sample independently\n",
+    cat(sprintf("space '%s' | applies to each sample independently\n",
         object@name))
     cat(sprintf("  %s\n", .space_ops_str(object@steps)))
     invisible(NULL)

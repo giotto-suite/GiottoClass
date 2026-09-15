@@ -320,7 +320,7 @@ setClass("perSampleSpace",
     # has no single name to take; slotting it would put a frame under a
     # name that is not its own.
     if (length(space) > 1L) {
-        stop("[space] `", .var.name, "` holds ", length(space), " frames (",
+        stop("[space] `", .var.name, "` holds ", length(space), " spaces (",
             paste(names(space), collapse = ", "),
             "); slot one at a time, e.g. `", .var.name, "[\"",
             names(space)[[1L]] %null% "<name>", "\"]`.", call. = FALSE)
@@ -330,7 +330,7 @@ setClass("perSampleSpace",
     }
     body <- space[[1L]]
     if (!is.list(body)) {
-        stop("[space] `", .var.name, "` frame body must be a list (got '",
+        stop("[space] `", .var.name, "` space body must be a list (got '",
             class(body)[[1L]], "')", call. = FALSE)
     }
     if (.space_body_is_steps(body)) {

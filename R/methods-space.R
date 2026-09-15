@@ -75,7 +75,7 @@ setGeneric("giottoSpaces",
             return(space)
         }
         if (length(space@samples) == 0L) {
-            stop("[space] frame '", space@name, "' is a combined frame ",
+            stop("[space] space '", space@name, "' is a combined space ",
                 "with no samples yet, so there is nothing to append to. ",
                 "Name the samples that share it with `samples = `.",
                 call. = FALSE)
@@ -87,7 +87,7 @@ setGeneric("giottoSpaces",
 
     if (per_sample) {
         if (length(space@steps) > 0L) {
-            stop("[space] frame '", space@name, "' applies to every ",
+            stop("[space] space '", space@name, "' applies to every ",
                 "sample independently (it was recorded without ",
                 "`samples = `, starting with ", space@steps[[1L]]$op,
                 "()), so it cannot now be scoped to ",
@@ -169,10 +169,10 @@ setGeneric("giottoSpaces",
 .assert_space_not_default <- function(space, op) {
     if (!identical(space, .space_default_name)) return(invisible(TRUE))
     stop(sprintf(paste0(
-        "[%s] '%s' is the native frame -- the one the data is already in -- ",
+        "[%s] '%s' is the native space -- the one the data is already in -- ",
         "so it holds no transforms and cannot be recorded onto. Record ",
         "under a name of your own; omitting `space = ` then reads the ",
-        "native frame back."), op, .space_default_name), call. = FALSE)
+        "native space back."), op, .space_default_name), call. = FALSE)
 }
 
 # Shared guard, so the five methods below stay one line each.

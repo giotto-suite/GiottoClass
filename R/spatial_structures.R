@@ -636,7 +636,7 @@ createSpatialNetwork <- function(gobject,
 #' @noRd
 .csn_not_a_frame <- function(gobject, space, frames) {
     msg <- sprintf(
-        "[createSpatialNetwork] '%s' is not a coordinate frame. %s", space,
+        "[createSpatialNetwork] '%s' is not a space. %s", space,
         if (length(frames) == 0L) "This object has no spaces."
         else paste("Available:", paste(frames, collapse = ", ")))
     # ":all:" is a value in a SELECTOR's vocabulary -- "every member of the
@@ -646,7 +646,7 @@ createSpatialNetwork <- function(gobject,
     if (identical(space, ":all:")) {
         stop(msg, "\n'", space, "' is a selector value, and `space =` is ",
             "not a selector -- an artifact generator takes none (adr/0006). ",
-            "Omit `space` to build in every sample's native frame.",
+            "Omit `space` to build in every sample's native space.",
             call. = FALSE)
     }
     what <- if (space %in% names(gobject@objects)) "a sample" else

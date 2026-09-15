@@ -107,9 +107,9 @@ test_that("createSpatialNetwork takes no sample selector", {
     # `space` is a coordinate frame now. A sample name, or a group name, is
     # not one -- and the error has to say which mistake was made, or the
     # next reader reinstates the selector.
-    expect_error(createSpatialNetwork(mg, space = "a"), "not a coordinate frame")
+    expect_error(createSpatialNetwork(mg, space = "a"), "is not a space")
     expect_error(createSpatialNetwork(mg, space = "pair"),
-        "not a coordinate frame")
+        "is not a space")
 
     # ":all:" is a value in a selector's vocabulary, so it goes with the
     # selector rather than being retired separately -- there is nothing left
@@ -230,7 +230,7 @@ test_that("a frame prefixes the default name; native naming is unchanged", {
         k = 5, space = "scaled2x", name = "mine")))
 })
 
-test_that("naming the native frame is the same as omitting it", {
+test_that("naming the native space is the same as omitting it", {
     # `":default:"` is where the data already is, so it must produce the
     # same artifact under the same name -- a prefix there would give the
     # two spellings of one request two different networks.

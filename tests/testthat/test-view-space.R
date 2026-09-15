@@ -832,18 +832,18 @@ test_that("`+` refuses a merge that would have no membership", {
     # and two frames that are not the same frame
     mg <- spin(mg, 10, space = "other", samples = "b")
     expect_error(giottoSpace(mg, "atlas") + giottoSpace(mg, "other"),
-        "cannot compose frames")
+        "cannot compose spaces")
 })
 
-test_that("':default:' is the native frame: always there, never recorded", {
+test_that("':default:' is the native space: always there, never recorded", {
     g <- giotto()
     d <- giottoSpace(g, ":default:")
     expect_s4_class(d, "perSampleSpace")
     expect_identical(d[[1L, NA_character_]], list())
     # it is not a recorded frame, so it does not appear in the listing
     expect_length(giottoSpaces(g), 0L)
-    expect_error(spin(g, 30, space = ":default:"), "native frame")
-    expect_error(`giottoSpace<-`(g, ":default:", value = d), "native frame")
+    expect_error(spin(g, 30, space = ":default:"), "native space")
+    expect_error(`giottoSpace<-`(g, ":default:", value = d), "native space")
 })
 
 test_that("`[` auto-vivifies rather than returning NULL", {
@@ -1438,7 +1438,7 @@ test_that("giottoSpace `[` / `[[` address frames and samples", {
 
     # [[frame]] is that frame and every sample in it, nothing else
     expect_named(sp[["atlas"]], c("a", "b"))
-    expect_error(sp[["nope"]], "no frame named")
+    expect_error(sp[["nope"]], "no space named")
 
     # [[frame, sample]] is the ordered step list
     expect_identical(sp[["atlas", "a"]][[1L]]$op, "spin")
