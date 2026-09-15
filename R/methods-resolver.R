@@ -386,8 +386,65 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 #' @keywords internal
 #' @noRd
 .get_projected_spatlocs <- function(gobject, space, coordinator) {
+    sl <- .gm_fused_spatlocs(gobject, space, coordinator)
+    if (is.null(sl)) return(NULL)
+    as.points(sl)
+}
+
+# The fold itself: every child's locations, space-scoped and promoted to the
+# joint `sample::id` vocabulary, folded into ONE `spatLocsObj`.
+#
+# Split out of `.get_projected_spatlocs()` because the fused object is worth
+# more than the points it was being converted into. A cross-sample spatial
+# network needs exactly this -- one coordinate table spanning samples in a
+# shared frame, with globally unique IDs -- and the crop carrier is just one
+# consumer that happens to want it as points.
+#
+# `samples =` narrows to a frame's members. That is a sample selector on a
+# READER, which adr/0006 permits: the caller gets a value it can widen by
+# asking differently, and nothing is persisted. Multi-only, matching the
+# getters -- a plain `giotto` has no such formal at all.
+#
+# It runs through `.gm_resolve_samples()` here and again inside the getter.
+# That is two calls to ONE authority, not two implementations: the second is
+# an idempotent re-check of literal child names. The first exists only
+# because it has to happen outside the tryCatch (see below), and paying it
+# is cheaper than the alternative -- a local membership test, which is
+# exactly the shape of the five copied `samples =` checks stage 7 removed.
+#
+# The space is NOT handed to the getter, and cannot be: a gmulti's frames
+# are slotted on the PARENT, while the getter forwards `...` to each child,
+# so `getSpatialLocations(mg, space = "atlas")` resolves "atlas" against a
+# child that has no such frame and errors. Each child's chain is applied
+# here instead, which makes this the second path -- after `materialize()` --
+# that scopes a frame across a multi correctly.
+#
+# Order is the content: the space applies per child (each sample has its own
+# chain, which cannot be expressed once they are one table), then IDs are
+# promoted to `sample::id` (children share local IDs, so `rbind2()`'s
+# `.check_id_dups()` fires if the fold goes first), then one fold.
+#' @keywords internal
+#' @noRd
+.gm_fused_spatlocs <- function(gobject, space, coordinator,
+    spat_unit = NULL, name = NULL, samples = NULL) {
     cell_ID <- NULL  # NSE
-    sl <- tryCatch(getSpatialLocations(gobject, output = "spatLocsObj"),
+    is_multi <- inherits(gobject, "giottoMulti")
+    if (!is.null(samples) && !is_multi) {
+        stop("[gmulti fused spatlocs] `samples =` is only meaningful on a ",
+            "giottoMulti", call. = FALSE)
+    }
+    # Resolve BEFORE the fetch. The tryCatch below absorbs "this object has
+    # no spatial locations", which is a legitimate answer -- but it would
+    # equally absorb a typo or a stale group member, turning a loud error
+    # into a silently smaller fold. Only the fetch may fail quietly.
+    if (is_multi && !is.null(samples)) {
+        samples <- .gm_resolve_samples(gobject, samples,
+            "gmulti fused spatlocs")
+    }
+    args <- list(gobject, spat_unit = spat_unit, name = name,
+        output = "spatLocsObj")
+    if (is_multi) args$samples <- samples
+    sl <- tryCatch(do.call(getSpatialLocations, args),
         error = function(e) NULL)
     if (is.null(sl)) return(NULL)
 
@@ -408,7 +465,7 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     } else if (!is.null(space)) {
         sl <- .apply_space_to_subobj(sl, gobject, space, coordinator)
     }
-    as.points(sl)
+    sl
 }
 
 # JIT helper for getters: apply view/space projection to a single subobject

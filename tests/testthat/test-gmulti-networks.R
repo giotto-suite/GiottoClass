@@ -153,6 +153,54 @@ test_that("artifact generators carry neither a view nor a sample selector", {
 })
 
 
+# fused cross-sample locations ####
+
+# .gm_fused_spatlocs() is what a combined-frame network will be built on:
+# one coordinate table spanning samples, IDs already in the joint
+# `sample::id` vocabulary. The crop carrier is the other consumer, and it
+# converts the same object to points.
+test_that("fused spatlocs span samples in one object with global IDs", {
+    mg <- .netfix_multi()
+    sl <- .gm_fused_spatlocs(mg, space = NULL, coordinator = NULL)
+
+    expect_s4_class(sl, "spatLocsObj")
+    ids <- sl[]$cell_ID
+    expect_true(all(grepl("^(a|b)::", ids)))
+    # both samples present, and nothing lost in the fold
+    expect_setequal(unique(sub("::.*$", "", ids)), c("a", "b"))
+    expect_identical(
+        length(ids),
+        nrow(mg@objects$a@spatial_locs$cell$raw[]) +
+            nrow(mg@objects$b@spatial_locs$cell$raw[])
+    )
+    expect_false(anyDuplicated(ids) > 0L)
+})
+
+test_that("fused spatlocs narrow to named samples, and say so when they cannot", {
+    mg <- .netfix_multi()
+    one <- .gm_fused_spatlocs(mg, space = NULL, coordinator = NULL,
+        samples = "a")
+    expect_true(all(grepl("^a::", one[]$cell_ID)))
+
+    # A group is a sample name here -- this is a reader, so adr/0006 permits
+    # the selector.
+    gmultiGroup(mg, "pair") <- c("a", "b")
+    both <- .gm_fused_spatlocs(mg, space = NULL, coordinator = NULL,
+        samples = "pair")
+    expect_identical(
+        sort(both[]$cell_ID),
+        sort(.gm_fused_spatlocs(mg, NULL, NULL)[]$cell_ID)
+    )
+
+    # Silently folding fewer children than asked for is the failure mode
+    # this cannot afford.
+    expect_error(
+        .gm_fused_spatlocs(mg, NULL, NULL, samples = "nope"),
+        "unknown sample"
+    )
+})
+
+
 # the per-sample path is unchanged ####
 
 test_that("createSpatialNetwork(mg) builds in every child", {
