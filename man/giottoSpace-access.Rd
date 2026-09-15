@@ -60,8 +60,13 @@ A handle holds exactly one space, so \code{i} names or indexes that space and
 is checked rather than used to select — \code{sp["atlas", "a"]} and
 \code{sp[[1L, "a"]]} both read as "in this space, for sample a".
 \itemize{
-\item \code{sp[i, j]} — the space with only the steps that apply to sample \code{j},
-each now unscoped, since they have already been resolved for \code{j}
+\item \code{sp[i, j]} — the space RESOLVED for sample \code{j}: only the steps that
+apply to it, each now unscoped, since the scope has done its work.
+That is what lets the result be read with \code{sp[[1L, NA_character_]]}
+by a consumer that no longer knows which sample it holds. It also
+means \code{sp[, "a"] + sp[, "b"]} is not the inverse of splitting — the
+steps come back unscoped, so each applies to every member. Merge the
+unnarrowed recipes to recombine.
 \item \code{sp[[i]]} — every recorded step, in order, scopes intact
 \item \code{sp[[i, j]]} — the ordered step \code{list} that applies to sample \code{j}
 \item \code{length(sp)} / \code{names(sp)} — always \code{1}, and the space name

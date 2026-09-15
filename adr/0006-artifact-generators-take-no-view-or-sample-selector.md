@@ -64,12 +64,15 @@ sample selector. Its job size is read from the space.
 
 - A **`combinedSpace`** is pulled in one piece: one artifact, cell IDs in
   `sample::id` global form, written to the `giottoMulti`'s joint slot. Its
-  `@samples` is the membership: empty at first, growing as steps name
-  samples, and declarable up front with `combinedSpace(<names>)` for a
-  member that needs no transform of its own. It is deliberately NOT seeded
-  from the object's children — a membership that always equalled
-  `names(@objects)` would restate the object rather than declare anything,
-  and growing it key by key would then carry no information either.
+  membership is every sample its steps name — derived, not stored, so
+  there is no slot that can fall out of step with the recipe. It is
+  deliberately NOT seeded from the object's children: a membership that
+  always equalled `names(@objects)` would restate the object rather than
+  declare anything, and growing it key by key would then carry no
+  information either. A member that needs no transform of its own — the
+  sample at the layout's origin, which is in the layout precisely by not
+  moving — is declared with a `member` step, which is why membership
+  derived purely from transforms was not enough.
 - A **`perSampleSpace`** — which is what `space = NULL` means — iterates: N
   artifacts, child-local IDs, one written per child.
 

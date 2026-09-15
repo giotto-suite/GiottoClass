@@ -50,8 +50,11 @@ setGeneric("giottoSpaces",
 # Sample "b" replays all three, in order, even though it was unknown to the
 # space when the first was recorded.
 #
-# On a `combinedSpace`, naming samples also widens the membership: they are
-# in the layout by virtue of being placed in it.
+# On a `combinedSpace`, naming samples also widens the membership -- they
+# are in the layout by virtue of being placed in it -- and does so without
+# a second slot, because membership IS what the steps name. A member that
+# needs no transform of its own gets a membership step instead; see
+# `.space_step_member()`.
 #
 # Q8 note on `+`: the pre-Q8 version appended to every keyed sample
 # unconditionally, so the scope of a transform depended on how much of the
@@ -59,11 +62,8 @@ setGeneric("giottoSpaces",
 # unrecoverable from the recorded steps. Scope is stated per call now, and
 # `+` merges two already-scoped handles rather than seeding scope.
 .space_record <- function(space, op, args, samples = NULL) {
-    step <- .space_step_transform(op, args, samples = samples)
-    space@steps <- c(space@steps, list(step))
-    if (inherits(space, "combinedSpace") && !is.null(samples)) {
-        space@samples <- unique(c(space@samples, step$samples))
-    }
+    space@steps <- c(space@steps,
+        list(.space_step_transform(op, args, samples = samples)))
     space
 }
 
@@ -112,9 +112,9 @@ setGeneric("giottoSpaces",
         giottoSpace(gobject, space)
     } else {
         # Membership starts EMPTY and grows as steps name samples. Seeding
-        # it from the object's children would make the slot a restatement
-        # of `names(@objects)` rather than a declaration, and then neither
-        # it nor its growth would carry information. A member that needs no
+        # it from the object's children would restate `names(@objects)`
+        # rather than declare anything, and growing it key by key would
+        # then carry no information either. A member that needs no
         # transform of its own is declared with `combinedSpace(<names>)`.
         .new_combined_space(space)
     }

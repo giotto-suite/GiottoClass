@@ -153,8 +153,13 @@ setMethod("show", signature(object = "giottoView"), function(object) {
 #' is checked rather than used to select — `sp["atlas", "a"]` and
 #' `sp[[1L, "a"]]` both read as "in this space, for sample a".
 #'
-#' * `sp[i, j]` — the space with only the steps that apply to sample `j`,
-#'   each now unscoped, since they have already been resolved for `j`
+#' * `sp[i, j]` — the space RESOLVED for sample `j`: only the steps that
+#'   apply to it, each now unscoped, since the scope has done its work.
+#'   That is what lets the result be read with `sp[[1L, NA_character_]]`
+#'   by a consumer that no longer knows which sample it holds. It also
+#'   means `sp[, "a"] + sp[, "b"]` is not the inverse of splitting — the
+#'   steps come back unscoped, so each applies to every member. Merge the
+#'   unnarrowed recipes to recombine.
 #' * `sp[[i]]` — every recorded step, in order, scopes intact
 #' * `sp[[i, j]]` — the ordered step `list` that applies to sample `j`
 #' * `length(sp)` / `names(sp)` — always `1`, and the space name
@@ -239,6 +244,7 @@ setMethod("[", signature(x = "giottoSpace"), function(x, i, j, ...) {
     if (!missing(i)) .space_check_frame(x, i)
     if (missing(j)) return(x)
     checkmate::assert_character(j, len = 1L, .var.name = "j")
+    members <- .space_step_samples(x@steps)
     # The steps that survive have been resolved FOR `j`, so their scopes
     # have done their work and are dropped. That is what makes the result
     # readable with `[[1L, NA_character_]]` by a consumer that no longer
@@ -250,8 +256,12 @@ setMethod("[", signature(x = "giottoSpace"), function(x, i, j, ...) {
         s["samples"] <- list(NULL)
         s
     })
-    if (inherits(x, "combinedSpace")) {
-        x@samples <- intersect(x@samples, j)
+    # Membership narrows with the steps: a member step is kept only if `j`
+    # is in it, rewritten to name just `j`. Without this the scoped handle
+    # would report no members at all, since the transforms that survive
+    # have had their scopes spent.
+    if (inherits(x, "combinedSpace") && !is.na(j) && j %in% members) {
+        x@steps <- c(list(.space_step_member(j)), x@steps)
     }
     x
 })
@@ -276,8 +286,8 @@ setMethod("names", signature(x = "giottoSpace"), function(x) x@name)
 #' @rdname giottoSpace-access
 #' @export
 setMethod("as.list", signature(x = "combinedSpace"),
-    function(x, ...) stats::setNames(list(list(kind = "combined",
-        samples = x@samples, steps = x@steps)), x@name))
+    function(x, ...) stats::setNames(
+        list(list(kind = "combined", steps = x@steps)), x@name))
 
 #' @rdname giottoSpace-access
 #' @export
@@ -290,7 +300,6 @@ setMethod("as.list", signature(x = "perSampleSpace"),
 setMethod("+", signature(e1 = "combinedSpace", e2 = "combinedSpace"),
     function(e1, e2) {
         e1@name <- .space_merged_name(e1, e2)
-        e1@samples <- unique(c(e1@samples, e2@samples))
         e1@steps <- c(e1@steps, e2@steps)
         e1
     }
@@ -325,10 +334,11 @@ setMethod("+", signature(e1 = "giottoSpace", e2 = "giottoSpace"),
 #' @export
 setMethod("show", signature(object = "combinedSpace"), function(object) {
     cat("An object of class combinedSpace\n")
+    members <- spaceSamples(object)
     cat(sprintf("space '%s' | %d sample(s) share one coordinate system\n",
-        object@name, length(object@samples)))
-    if (length(object@samples) > 0L) {
-        cat("  members :", paste(object@samples, collapse = ", "), "\n")
+        object@name, length(members)))
+    if (length(members) > 0L) {
+        cat("  members :", paste(members, collapse = ", "), "\n")
     }
     cat("  steps   :", .space_ops_str(object@steps), "\n")
     invisible(NULL)
@@ -374,7 +384,7 @@ setGeneric("spaceSamples", function(x, ...) standardGeneric("spaceSamples"))
 #' @rdname spaceSamples
 #' @export
 setMethod("spaceSamples", signature(x = "combinedSpace"),
-    function(x, ...) x@samples)
+    function(x, ...) .space_step_samples(x@steps))
 
 #' @rdname spaceSamples
 #' @export

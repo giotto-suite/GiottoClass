@@ -877,12 +877,31 @@ test_that("membership can be declared for a member that never moves", {
     expect_identical(giottoSpace(mg, "atlas")[["atlas", "a"]], list())
 })
 
-test_that("a step may not scope to a non-member", {
-    # a step naming nobody applies to nobody: recorded, and doing nothing
+test_that("a step cannot scope to a non-member, by construction", {
+    # membership is DERIVED from the steps, so naming a sample in one makes
+    # it a member. There is no second slot to fall out of step with the
+    # recipe, which is why this needs no validity check.
     sp <- combinedSpace("a", name = "x")
-    sp@steps <- list(.space_step_transform("spin", list(angle = 1),
-        samples = "zzz"))
-    expect_error(validObject(sp), "not a member")
+    sp <- spin(sp, 1, samples = "zzz")
+    expect_true(validObject(sp))
+    expect_identical(spaceSamples(sp), c("a", "zzz"))
+})
+
+test_that("a membership step declares without transforming", {
+    sp <- combinedSpace(c("a", "b"), name = "atlas")
+    expect_identical(spaceSamples(sp), c("a", "b"))
+    # it is not applied: `[[` hands back things the resolver will do.call()
+    expect_identical(sp[["atlas", "a"]], list())
+    expect_identical(sp[["atlas", "b"]], list())
+    expect_identical(vapply(sp[["atlas"]], function(s) s$type,
+        character(1L)), "member")
+
+    # and it survives narrowing, so a scoped handle still knows its member
+    sp <- spatShift(sp, dx = 9000, samples = "b")
+    expect_identical(spaceSamples(sp[, "b"]), "b")
+    expect_identical(spaceSamples(sp[, "a"]), "a")
+    expect_length(sp[, "a"][[1L, NA_character_]], 0L)
+    expect_length(sp[, "b"][[1L, NA_character_]], 1L)
 })
 
 test_that("`+` refuses a merge that would have no job size", {
@@ -1518,10 +1537,28 @@ test_that("`+` concatenates view steps and merges space frames", {
     v2 <- .demo_view()[2L]
     expect_identical(names(v1 + v2), c("filter", "crop"))
 
+    # merging two whole recipes keeps every scope, so each sample still
+    # replays only what was recorded for it
+    merged <- .demo_space() + .demo_space()
+    expect_identical(spaceSamples(merged), c("a", "b"))
+    expect_length(merged[["atlas"]], 4L)
+    expect_length(merged[["atlas", "a"]], 2L)
+    expect_length(merged[["atlas", "b"]], 2L)
+})
+
+test_that("`[, j]` yields a RESOLVED handle, not a recombinable one", {
+    # `[, j]` spends the scopes to answer for `j`, which is what lets the
+    # result be read back with `[[1L, NA_character_]]` by a consumer that
+    # no longer knows which sample it holds. The cost is that merging two
+    # resolved handles is not the inverse of splitting one: the steps come
+    # back unscoped, so each applies to every member of the merge.
     sp <- .demo_space()
     merged <- sp["atlas", "a"] + sp["atlas", "b"]
     expect_identical(spaceSamples(merged), c("a", "b"))
-    expect_length(merged[["atlas"]], 2L)
+    expect_length(merged[["atlas", "a"]], 2L)   # not 1 -- scopes are spent
+    # recombine by merging the unnarrowed recipes instead
+    expect_length((sp + sp)[["atlas", "a"]], 2L)
+
     # merging the same scope twice concatenates rather than overwrites
     twice <- sp["atlas", "a"] + sp["atlas", "a"]
     expect_length(twice[["atlas", "a"]], 2L)
@@ -1577,7 +1614,7 @@ test_that("as.list() is the export seam and round-trips losslessly", {
     sp <- .demo_space()
     lsp <- as.list(sp)
     expect_named(lsp, "atlas")
-    expect_named(lsp$atlas, c("kind", "samples", "steps"))
+    expect_named(lsp$atlas, c("kind", "steps"))
     mg <- .fixture_gmulti()
     giottoSpace(mg, "atlas") <- lsp
     expect_identical(giottoSpace(mg, "atlas"), sp)

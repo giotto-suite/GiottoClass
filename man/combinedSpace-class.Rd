@@ -9,21 +9,17 @@ a \code{combinedSpace} object
 }
 \description{
 A frame that several samples are laid out in together — the cross-sample
-case. \verb{@samples} is the membership declaration, and it is the whole
-difference from a \link[=perSampleSpace-class]{perSampleSpace}: it says these samples occupy
-ONE coordinate system, so a job built here is one job spanning them
-rather than one per sample (\code{adr/0006}).
+case. Its membership is the whole difference from a
+\link[=perSampleSpace-class]{perSampleSpace}: it says these samples occupy ONE coordinate
+system, so a job built here is one job spanning them rather than one per
+sample (\code{adr/0006}).
 
-Membership grows as steps name samples, and can be declared up front
-with \code{\link[=combinedSpace]{combinedSpace()}} for members that need no transform of their own —
-a sample sitting at the layout's origin is still a member.
+Membership is DERIVED from the steps — every sample any step names, in
+recorded order, readable with \code{\link[=spaceSamples]{spaceSamples()}}. It is not a slot, so
+there is nothing that can disagree with the recipe. A member that needs
+no transform of its own is declared with a membership step, which
+\code{\link[=combinedSpace]{combinedSpace()}} seeds and \verb{samples =} on any transform verb adds to.
 }
-\section{Slots}{
-
-\describe{
-\item{\code{samples}}{\code{character} of member sample names.}
-}}
-
 \seealso{
 \link[=giottoSpace-class]{giottoSpace}, \code{\link[=combinedSpace]{combinedSpace()}}
 }

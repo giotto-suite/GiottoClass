@@ -54,7 +54,7 @@
 # virtual and the kind of frame is the class:
 #
 #   perSampleSpace  @steps    list(<step>, ...)
-#   combinedSpace   @samples  list("<sample>" = list(<step>, ...))
+#   combinedSpace   -- membership derived from @steps
 #
 # The split is the answer to "which samples participate, and do they
 # interact". A `combinedSpace` names its members, so it declares a job over
@@ -187,6 +187,24 @@
     invisible(TRUE)
 }
 
+#' Construct a membership step.
+#'
+#' A step that does nothing but put samples in the space. It exists
+#' because membership derived from transforms cannot represent a member
+#' with NO transform -- the sample sitting at a layout's origin, which is
+#' in the layout precisely by not moving.
+#'
+#' Having it means membership is a pure function of the step list rather
+#' than a second thing stored beside it. There is no slot left to disagree
+#' with the steps, so the "step scopes to a non-member" check this file
+#' used to carry is now unreachable by construction rather than policed.
+#' @noRd
+.space_step_member <- function(samples) {
+    checkmate::assert_character(samples, min.len = 1L, any.missing = FALSE,
+        .var.name = "samples")
+    .validate_space_step(list(type = "member", samples = unique(samples)))
+}
+
 #' Validate one space step, whatever produced it.
 #' @noRd
 .validate_space_step <- function(step) {
@@ -194,9 +212,14 @@
         stop("[space step] a step must be a list with a `type` element",
             call. = FALSE)
     }
-    if (!identical(step$type, "transform")) {
+    if (!step$type %in% c("transform", "member")) {
         stop("[space step] unknown type '", step$type,
-            "'. Known: transform", call. = FALSE)
+            "'. Known: transform, member", call. = FALSE)
+    }
+    if (identical(step$type, "member")) {
+        checkmate::assert_character(step$samples, min.len = 1L,
+            any.missing = FALSE, .var.name = "step$samples")
+        return(step)
     }
     checkmate::assert_string(step$op, .var.name = "step$op")
     if (!step$op %in% .space_ops) {
@@ -211,22 +234,30 @@
     step
 }
 
-#' Which recorded steps apply to sample `j`?
+#' Which recorded steps APPLY to sample `j`?
 #'
 #' THE resolution rule, for both kinds. A step with no scope broadcasts; a
 #' scoped step applies only to the samples it names. `NA_character_` means
 #' "no sample identity" -- a plain `giotto`, which holds one sample -- and
 #' takes the broadcast steps, since there is no name for a scoped step to
 #' have matched.
+#'
+#' Membership steps are dropped: they declare, they do not transform, and
+#' the caller of this is about to `do.call()` what it gets back.
 #' @noRd
 .space_steps_for <- function(steps, j = NA_character_) {
     keep <- vapply(steps, function(s) {
-        is.null(s$samples) || (!is.na(j) && j %in% s$samples)
+        identical(s$type, "transform") &&
+            (is.null(s$samples) || (!is.na(j) && j %in% s$samples))
     }, logical(1L))
     steps[keep]
 }
 
 #' Every sample name any step mentions, in recorded order.
+#'
+#' This IS the membership of a `combinedSpace` -- derived, not stored, so
+#' naming a sample in a transform and declaring it outright are the same
+#' act recorded two ways.
 #' @noRd
 .space_step_samples <- function(steps) {
     unique(unlist(lapply(steps, function(s) s$samples))) %null% character()
@@ -285,24 +316,21 @@ setClass("giottoSpace",
 #' @name combinedSpace-class
 #' @description
 #' A frame that several samples are laid out in together — the cross-sample
-#' case. `@samples` is the membership declaration, and it is the whole
-#' difference from a [perSampleSpace-class]: it says these samples occupy
-#' ONE coordinate system, so a job built here is one job spanning them
-#' rather than one per sample (`adr/0006`).
+#' case. Its membership is the whole difference from a
+#' [perSampleSpace-class]: it says these samples occupy ONE coordinate
+#' system, so a job built here is one job spanning them rather than one per
+#' sample (`adr/0006`).
 #'
-#' Membership grows as steps name samples, and can be declared up front
-#' with [combinedSpace()] for members that need no transform of their own —
-#' a sample sitting at the layout's origin is still a member.
+#' Membership is DERIVED from the steps — every sample any step names, in
+#' recorded order, readable with [spaceSamples()]. It is not a slot, so
+#' there is nothing that can disagree with the recipe. A member that needs
+#' no transform of its own is declared with a membership step, which
+#' [combinedSpace()] seeds and `samples =` on any transform verb adds to.
 #'
-#' @slot samples `character` of member sample names.
 #' @returns a `combinedSpace` object
 #' @seealso [giottoSpace-class], [combinedSpace()]
 #' @exportClass combinedSpace
-setClass("combinedSpace",
-    contains = "giottoSpace",
-    representation(samples = "character"),
-    prototype = prototype(samples = character())
-)
+setClass("combinedSpace", contains = "giottoSpace")
 
 #' @title Class for a frame applied to each sample independently
 #' @name perSampleSpace-class
@@ -354,7 +382,9 @@ setClass("perSampleSpace", contains = "giottoSpace")
 #' @export
 combinedSpace <- function(samples = character(), name = NA_character_) {
     checkmate::assert_character(samples, any.missing = FALSE)
-    new("combinedSpace", name = name, samples = unique(samples))
+    steps <- if (length(samples) == 0L) list() else
+        list(.space_step_member(samples))
+    new("combinedSpace", name = name, steps = steps)
 }
 
 #' @rdname space-constructors
@@ -373,10 +403,8 @@ perSampleSpace <- function(name = NA_character_) {
 }
 
 #' @noRd
-.new_combined_space <- function(name = NA_character_, steps = list(),
-    samples = character()) {
-    new("combinedSpace", name = name, steps = steps,
-        samples = unique(c(samples, .space_step_samples(steps))))
+.new_combined_space <- function(name = NA_character_, steps = list()) {
+    new("combinedSpace", name = name, steps = steps)
 }
 
 #' Coerce whatever a caller supplied into a `giottoSpace`.
@@ -411,8 +439,7 @@ perSampleSpace <- function(name = NA_character_) {
     }
     steps <- body$steps %null% list()
     switch(body$kind,
-        combined = .new_combined_space(nm, steps,
-            body$samples %null% character()),
+        combined = .new_combined_space(nm, steps),
         perSample = .new_per_sample_space(nm, steps),
         stop("[space] unknown kind '", body$kind,
             "'. Known: combined, perSample", call. = FALSE))
@@ -430,23 +457,8 @@ perSampleSpace <- function(name = NA_character_) {
     checkmate::assert_list(space@steps,
         .var.name = paste0(.var.name, "@steps"))
     lapply(space@steps, .validate_space_step)
-    if (inherits(space, "combinedSpace")) {
-        checkmate::assert_character(space@samples, any.missing = FALSE,
-            unique = TRUE, .var.name = paste0(.var.name, "@samples"))
-        # A step naming a non-member would apply to nobody, which reads as
-        # recorded and does nothing -- the failure `.gm_resolve_samples()`
-        # exists to prevent one level up.
-        orphan <- setdiff(.space_step_samples(space@steps), space@samples)
-        if (length(orphan) > 0L) {
-            stop("[space] step(s) scope to ",
-                paste(sprintf("'%s'", orphan), collapse = ", "),
-                ", which ", if (length(orphan) == 1L) "is" else "are",
-                " not ", if (length(orphan) == 1L) "a member" else "members",
-                " of space '", space@name, "'. Members: ",
-                if (length(space@samples) == 0L) "<none>"
-                else paste(space@samples, collapse = ", "), call. = FALSE)
-        }
-    }
+    # No membership check: a combinedSpace derives its members from these
+    # same steps, so a step cannot scope to a non-member.
     space
 }
 
