@@ -102,6 +102,25 @@
 - `as.data.table()` methods added for `spatialNetworkObj` and `nnNetObj`,
   returning the edge table. Same re-dispatch shape as `as.igraph()`.
 
+- `networkParam` objects are now list-backed like the other four param
+  families, so their parameters are reached with `$` and offer autocomplete via
+  `.DollarNames()`. `kNNNetworkParam(k = 30)$k` works; previously `$` returned
+  `NULL` for every name, because these were the one family declaring typed
+  slots instead of using `@param`. The `@param` slot was consequently dead on
+  every network param and is now the storage.
+  - **Breaking:** `param@k` and friends no longer work -- use `param$k`. No
+    slot other than `@param` remains on `kNNNetworkParam`, `sNNNetworkParam`
+    or `delaunayNetworkParam`.
+  - What the slot types used to catch is now caught by `checkmate` in the
+    constructors, and closer to the call site: `kNNNetworkParam(k = "banana")`
+    reports a failed assertion on `k` rather than an invalid-object error. The
+    types were never structural -- `dbscan` and the edge filter truncate
+    doubles internally, so an un-coerced `k` produced identical networks.
+  - `.DollarNames()` unions the params a class takes with those actually set.
+    Assigning `NULL` drops an entry as it does in the other families, so the
+    set alone would hide any param left at a `NULL` default -- kNN's
+    `maximum_distance` is one, and it completes regardless.
+
 ## breaking changes
 
 - Network subobject storage migrated from `data.table` to `igraph`:
