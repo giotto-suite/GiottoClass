@@ -66,6 +66,28 @@ says so by recording a space over them, or by subsetting the container with
 Readers keep all three of `view =` / `space =` / `samples =`. The asymmetry is
 the decision: narrowing a return value is reversible, narrowing a slot is not.
 
+**A frame is a recorded setting, so an artifact built in one must say which.**
+This is the sanctioned exception to the reasoning above, and it is sanctioned
+because a frame is *persisted state on the object* rather than a per-call
+argument — but the exception is only safe if the artifact carries the frame
+out with it. `rescale`, `shear` and a general `affine` change distances, so
+`maximum_distance` and `radius` mean different things per frame and `shear`
+changes Delaunay topology outright; `spin`, `flip` and `spatShift` are
+isometries and change nothing. Which of those a frame is cannot be read off
+the result.
+
+So a frame-built artifact records it twice, for two different jobs:
+
+- **the default name gains the frame as a prefix** (`scaled2x_kNN_network`
+  against `kNN_network`), which *keys* it — two frames cannot overwrite each
+  other, and the method stays readable off either name. An explicit `name =`
+  is taken exactly as given.
+- **`@parameters$space`** carries it machine-readably. Not `@provenance`:
+  that slot answers "which spat_units were aggregated to produce this", a
+  different axis, and two of its consumers assume an atomic value — `cat()`
+  in `.show_prov()` errors on a list, and the manifest's `as.character()`
+  drops the names and reports the frame as a spat_unit.
+
 ## Consequences
 
 - **`createSpatialNetwork(gobject, space = "sample_a")` is a breaking change.**
@@ -94,6 +116,16 @@ the decision: narrowing a return value is reversible, narrowing a slot is not.
   ergonomic cost for the one-off case, accepted because the alternative is an
   artifact whose provenance is unrecoverable. `mg[c("a", "b")]` remains the
   cheap escape and has none of the ambiguity.
+- **Every future artifact generator that accepts `space =` owes both records.**
+  A generator that takes a frame and neither names for it nor stores it
+  produces an artifact that cannot be told apart from one built natively. The
+  name prefix is the part that is easy to forget, because omitting it looks
+  harmless right up to the second frame.
+- **`space =` was previously accepted and silently discarded on a single
+  `giotto`.** `createSpatialNetwork(g, space = "scaled2x")` returned a
+  native-frame network. That is fixed here, and it is the failure this rule
+  is shaped to prevent: the formal existed, looked meaningful, and was not
+  wired.
 - Revisit if a generator appears whose natural job size is genuinely neither
   per-sample nor per-frame — a cross-frame artifact, say. The rule would then
   need a third case rather than an exemption.
