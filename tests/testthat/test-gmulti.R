@@ -1021,11 +1021,13 @@ test_that("a space step expands its group at record time", {
     mg <- .mk_grouped()
     mg <- spatShift(mg, dx = 5, space = "atlas", samples = "pair")
     sp <- giottoSpace(mg, "atlas")
-    # Keys are the expanded children, not the group name: a space keys its
-    # step chains by sample, so a symbolic key would leave a child with two
-    # chains and no order between them.
-    expect_identical(sort(names(sp[["atlas"]])), c("a", "b"))
-    expect_false("pair" %in% names(sp[["atlas"]]))
+    # The step scopes to the expanded children, not to the group name: a
+    # symbolic scope would re-resolve at every read, so a later edit to the
+    # group would silently change which children a recorded transform
+    # already applies to.
+    expect_identical(sort(sp[["atlas"]][[1L]]$samples), c("a", "b"))
+    expect_false("pair" %in% sp[["atlas"]][[1L]]$samples)
+    expect_length(sp[["atlas", "a"]], 1L)
 })
 
 # combined defaults (stage 7, fed 12) ####

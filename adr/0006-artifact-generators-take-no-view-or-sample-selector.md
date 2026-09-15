@@ -42,11 +42,20 @@ which rows were admitted, which were excluded, or on what basis. A
 `@spatial_network` built over two of five samples is indistinguishable from one
 built over five where three happened to have no edges.
 
-At the same time, `giottoSpace` acquired a genuine notion of membership: a
-`combinedSpace` names the samples that share one coordinate frame, and a
-`perSampleSpace` is an alias for N independent single-occupant frames. That is
-the missing declaration — the object that can say *which samples participate,
-and whether they interact* — and it is already persisted next to the artifact.
+At the same time, `giottoSpace` acquired a genuine notion of job size. The
+kind of space says whether its samples **interact**: a `combinedSpace` lays
+them out in one coordinate system, so a job over it is one job and
+cross-sample distances mean something; a `perSampleSpace` gives each sample
+its own copy of the frame, so a job over it is N independent jobs. That is the
+missing declaration — the object that can say *whether the samples participate
+together* — and it is already persisted next to the artifact.
+
+This is **not** the same axis as whether steps are scoped. Both kinds may
+scope a step to named samples: two sections each rotated upright by a
+different angle are per-sample, because nothing about that puts them in a
+shared coordinate system. Scoping says which samples *move*; the kind says
+whether they *interact*. Reading the first as the second is the mistake this
+records — it is what made `samples =` look like it could decide the kind.
 
 ## Decision
 
@@ -54,9 +63,18 @@ A function that persists an artifact into a slot takes no `view =` and no
 sample selector. Its job size is read from the space.
 
 - A **`combinedSpace`** is pulled in one piece: one artifact, cell IDs in
-  `sample::id` global form, written to the `giottoMulti`'s joint slot.
+  `sample::id` global form, written to the `giottoMulti`'s joint slot. Its
+  `@samples` is the membership, defaulting to every child — a sample sitting
+  at the layout's origin is in the layout, so seeding membership from the
+  first scoped call would silently exclude everyone who needed no transform.
 - A **`perSampleSpace`** — which is what `space = NULL` means — iterates: N
   artifacts, child-local IDs, one written per child.
+
+Recording onto an unused name declares a `combinedSpace`, on the grounds that
+laying samples out together is overwhelmingly why a space gets named.
+`perSampleSpace()` is declaration-only for the same reason: the rarer intent
+is the one that should have to say so, and `samples =` cannot be the signal
+because both kinds accept it.
 
 "Sample selector" means any formal whose documented meaning is *which children
 to compute over*, whatever it is spelled. A caller who wants a subset of samples
@@ -156,8 +174,11 @@ So a frame-built artifact records it twice, for two different jobs:
   `.csn_child_args()` / `.csn_eval_on_child()`
 - `R/gmulti.R` — `.gm_resolve_samples()` (the helper someone reaches for when
   adding a selector), `.gm_set_target()` (why `object =` is exempt)
-- `R/classes-space.R` — `combinedSpace` / `perSampleSpace`, the membership split
-  this rule depends on
+- `R/classes-space.R` — `combinedSpace` / `perSampleSpace`, the interaction
+  split this rule depends on, and `.space_steps_for()`, the one resolution
+  rule. Scope lives on the step rather than on a per-sample list, so one
+  ordered list replays correctly for a sample first named after a broadcast
+  step was already recorded
 - `vignettes/articles/IMPLEMENTATION_gmulti_federation.md` §14 — the joint
   `@spatial_network` sketch this partially implements
 - ADR 0004 — `@network` polymorphism, the other constraint on network writers

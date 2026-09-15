@@ -121,8 +121,20 @@
 #' rotation origin defaulted here so the recorded step is a complete
 #' description of the operation rather than one that depends on the
 #' receiving object's extent at resolve time.
+#'
+#' `samples` is the step's own scope: a character vector of sample names,
+#' or `NULL` to broadcast. Scope is a property OF THE STEP rather than of
+#' the list it sits in, which is what lets one ordered list replay
+#' correctly for every sample. Keying by sample instead -- one step list
+#' per name -- cannot express
+#'
+#'   spin(everyone) -> shift(a only) -> spin(everyone)
+#'
+#' for a sample first mentioned at step 2: a broadcast appended to "every
+#' key so far" never reaches a key that appears later, so the same recipe
+#' would replay differently depending on the order samples were named.
 #' @noRd
-.space_step_transform <- function(op, args = list()) {
+.space_step_transform <- function(op, args = list(), samples = NULL) {
     checkmate::assert_string(op, .var.name = "op")
     if (!op %in% .space_ops) {
         stop("[space step] unknown transform '", op, "'. Known: ",
@@ -134,7 +146,13 @@
         if (is.null(args[["y0"]])) args$y0 <- 0
     }
     .assert_space_args_serializable(op, args)
-    .validate_space_step(list(type = "transform", op = op, args = args))
+    if (!is.null(samples)) {
+        checkmate::assert_character(samples, min.len = 1L,
+            any.missing = FALSE, .var.name = "samples")
+        samples <- unique(samples)
+    }
+    .validate_space_step(list(type = "transform", op = op, args = args,
+        samples = samples))
 }
 
 #' Whitelist transform arguments to types that survive serialization.
@@ -186,7 +204,32 @@
             paste(.space_ops, collapse = ", "), call. = FALSE)
     }
     checkmate::assert_list(step$args, .var.name = "step$args")
+    if (!is.null(step$samples)) {
+        checkmate::assert_character(step$samples, min.len = 1L,
+            any.missing = FALSE, .var.name = "step$samples")
+    }
     step
+}
+
+#' Which recorded steps apply to sample `j`?
+#'
+#' THE resolution rule, for both kinds. A step with no scope broadcasts; a
+#' scoped step applies only to the samples it names. `NA_character_` means
+#' "no sample identity" -- a plain `giotto`, which holds one sample -- and
+#' takes the broadcast steps, since there is no name for a scoped step to
+#' have matched.
+#' @noRd
+.space_steps_for <- function(steps, j = NA_character_) {
+    keep <- vapply(steps, function(s) {
+        is.null(s$samples) || (!is.na(j) && j %in% s$samples)
+    }, logical(1L))
+    steps[keep]
+}
+
+#' Every sample name any step mentions, in recorded order.
+#' @noRd
+.space_step_samples <- function(steps) {
+    unique(unlist(lapply(steps, function(s) s$samples))) %null% character()
 }
 
 
@@ -195,25 +238,34 @@
 #' @title Class for coordinate-frame recipes
 #' @name giottoSpace-class
 #' @description
-#' A `giottoSpace` is a handle over one named coordinate frame: a deferred
-#' set of spatial transforms that consumer functions opt into with
-#' `space = "<name>"`. It is virtual, and the subclass says which samples
-#' participate and whether they interact:
+#' A `giottoSpace` is a handle over one named coordinate frame: an ordered
+#' list of deferred spatial transforms that consumer functions opt into
+#' with `space = "<name>"`. Every step carries its own `samples` scope, so
+#' one list replays correctly for each sample.
 #'
-#' * [combinedSpace-class] — named samples sharing one frame. It declares
-#'   its membership, so it can size a cross-sample job.
-#' * [perSampleSpace-class] — one frame applied to each sample
-#'   independently. It has no sample keys at all, which is what makes it
-#'   structurally unable to express membership.
+#' It is virtual. The subclass says whether the samples INTERACT, which is
+#' the only thing a job needs from a space (`adr/0006`):
+#'
+#' * [combinedSpace-class] — the samples are laid out relative to one
+#'   another in one coordinate system, so cross-sample distances mean
+#'   something and a job over it is ONE job. It declares its membership.
+#' * [perSampleSpace-class] — each sample sits in its own copy of the
+#'   frame and they never touch, so a job over it is N independent jobs.
+#'   Steps may still be scoped per sample: two sections independently
+#'   rotated upright are per-sample, not combined.
 #'
 #' Access it with `[` (class-preserving, so the result stays editable) and
-#' `[[` (extracts the frame body, or one sample's step list). Append to it
-#' with the transform verbs -- [spin()], [spatShift()], [affine()],
-#' [flip()], [rescale()], [shear()], [zoom()] -- or compose two of the same
-#' kind with `+`. Export the plain nested form with [as.list()].
+#' `[[` (extracts the steps that apply). Append to it with the transform
+#' verbs -- [spin()], [spatShift()], [affine()], [flip()], [rescale()],
+#' [shear()], [zoom()] -- or compose two of the same kind with `+`. Export
+#' the plain form with [as.list()].
 #'
 #' @slot name `character(1)`. The frame's name, or `NA_character_` for a
 #'   handle not yet slotted under one.
+#' @slot steps `list` of steps, in application order. Each step is a tagged
+#'   plain list -- `list(type = "transform", op = , args = , samples = )` --
+#'   carrying no closure and no external pointer, so a recipe survives
+#'   `saveRDS()` and reaches a parallel worker. `samples = NULL` broadcasts.
 #' @returns a `giottoSpace` object
 #' @seealso [giottoSpace()] for the gobject-level accessors;
 #'   [spaceSamples()] for the membership a frame declares;
@@ -225,88 +277,113 @@
 #' as.list(sp)
 #' @exportClass giottoSpace
 setClass("giottoSpace",
-    representation("VIRTUAL", name = "character"),
-    prototype = prototype(name = NA_character_)
+    representation("VIRTUAL", name = "character", steps = "list"),
+    prototype = prototype(name = NA_character_, steps = list())
 )
 
 #' @title Class for a frame shared by named samples
 #' @name combinedSpace-class
 #' @description
 #' A frame that several samples are laid out in together — the cross-sample
-#' case. `@samples` names its members, so a job built in this frame has a
-#' declared size (see `adr/0006`).
+#' case. `@samples` is the membership declaration, and it is the whole
+#' difference from a [perSampleSpace-class]: it says these samples occupy
+#' ONE coordinate system, so a job built here is one job spanning them
+#' rather than one per sample (`adr/0006`).
 #'
-#' @slot samples `list` sample name -> `list` of steps. Each step is a
-#'   tagged plain list -- `list(type = "transform", op = , args = )` --
-#'   carrying no closure and no external pointer, so a recipe survives
-#'   `saveRDS()` and reaches a parallel worker.
+#' Membership grows as steps name samples, and can be declared up front
+#' with [combinedSpace()] for members that need no transform of their own —
+#' a sample sitting at the layout's origin is still a member.
+#'
+#' @slot samples `character` of member sample names.
 #' @returns a `combinedSpace` object
-#' @seealso [giottoSpace-class]
+#' @seealso [giottoSpace-class], [combinedSpace()]
 #' @exportClass combinedSpace
 setClass("combinedSpace",
     contains = "giottoSpace",
-    representation(samples = "list"),
-    prototype = prototype(samples = list())
+    representation(samples = "character"),
+    prototype = prototype(samples = character())
 )
 
 #' @title Class for a frame applied to each sample independently
 #' @name perSampleSpace-class
 #' @description
-#' A frame with no sample identity: the same steps applied to every sample
-#' in its own copy of the frame, which never interact. This is what a
-#' single [giotto-class] object always records, and what the always-present
-#' `":default:"` native frame is.
+#' A frame whose samples never interact: each sits in its own copy of it,
+#' so a job over this frame is N independent jobs. Steps may still be
+#' scoped -- two sections each rotated upright by a different angle are
+#' per-sample, because nothing about that puts them in a shared coordinate
+#' system.
 #'
-#' `@steps` is a flat ordered list with no keys. That is deliberate rather
-#' than incidental — it is what makes this class unable to declare
-#' membership, so [spaceSamples()] answers `NA_character_` and nothing
+#' It declares no membership, and that is deliberate: there is none to
+#' declare, since the frame covers whatever samples the object holds. That
+#' is why [spaceSamples()] answers `NA_character_` here and nothing
 #' downstream can mistake it for a sized job.
 #'
-#' @slot steps `list` of steps, in application order. Each step is a tagged
-#'   plain list -- `list(type = "transform", op = , args = )`.
-#' @returns a `perSampleSpace` object
-#' @seealso [giottoSpace-class]
-#' @exportClass perSampleSpace
-setClass("perSampleSpace",
-    contains = "giottoSpace",
-    representation(steps = "list"),
-    prototype = prototype(steps = list())
-)
-
-#' Construct a frame of each kind.
+#' It is also the only kind that cannot be created by `space = "<name>"` on
+#' a transform verb — recording onto an unused name declares a combined
+#' frame, on the assumption that laying samples out together is the common
+#' reason to name one. Build this with [perSampleSpace()] and slot it in.
 #'
-#' The single place a space's shape is written down. A fresh frame is
-#' per-sample: it has recorded nothing, so it has named no members, and
-#' `.space_record()` promotes it to a `combinedSpace` on the first
-#' `samples =`.
+#' @returns a `perSampleSpace` object
+#' @seealso [giottoSpace-class], [perSampleSpace()]
+#' @exportClass perSampleSpace
+setClass("perSampleSpace", contains = "giottoSpace")
+
+#' @title Build a coordinate frame directly
+#' @name space-constructors
+#' @description
+#' Build an empty frame of a given kind, to slot in with
+#' `giottoSpace(g, "name") <- `. Transforms are recorded onto it afterwards
+#' with the usual verbs.
+#'
+#' `perSampleSpace()` exists because recording onto an unused name creates
+#' a [combinedSpace-class] — laying samples out together being the common
+#' reason to name a frame. A frame whose samples stay independent has to
+#' say so, and this is where it says it.
+#'
+#' `combinedSpace()` seeds membership up front, which matters for a member
+#' that needs no transform of its own: a sample at the layout's origin is
+#' still in the layout, and nothing would otherwise record it.
+#'
+#' @param samples `character`. Member sample names.
+#' @param name `character(1)`. Optional; `giottoSpace<-` sets it on slotting.
+#' @returns a `combinedSpace` or `perSampleSpace`
+#' @examples
+#' mg <- giotto()
+#' giottoSpace(mg, "upright") <- perSampleSpace()
+#' giottoSpace(mg, "upright")
+#' @export
+combinedSpace <- function(samples = character(), name = NA_character_) {
+    checkmate::assert_character(samples, any.missing = FALSE)
+    new("combinedSpace", name = name, samples = unique(samples))
+}
+
+#' @rdname space-constructors
+#' @export
+perSampleSpace <- function(name = NA_character_) {
+    new("perSampleSpace", name = name)
+}
+
+#' Construct a frame of each kind, internally.
+#'
+#' Recording onto an unused name always produces a `combinedSpace`; see
+#' [perSampleSpace-class] for why the other kind is declaration-only.
 #' @noRd
 .new_per_sample_space <- function(name = NA_character_, steps = list()) {
     new("perSampleSpace", name = name, steps = steps)
 }
 
 #' @noRd
-.new_combined_space <- function(name = NA_character_, samples = list()) {
-    new("combinedSpace", name = name, samples = samples)
-}
-
-#' Is a frame body a flat step list rather than a sample -> steps map?
-#'
-#' The two export forms are told apart by shape, not by a tag: a step is
-#' always a list carrying `$type`, and a sample entry never is (it is
-#' itself a list of steps). An empty body has neither, and reads as
-#' per-sample -- the undecided state, which is also what a fresh frame is.
-#' @noRd
-.space_body_is_steps <- function(body) {
-    if (length(body) == 0L) return(TRUE)
-    all(vapply(body, function(s) is.list(s) && !is.null(s$type),
-        logical(1L)))
+.new_combined_space <- function(name = NA_character_, steps = list(),
+    samples = character()) {
+    new("combinedSpace", name = name, steps = steps,
+        samples = unique(c(samples, .space_step_samples(steps))))
 }
 
 #' Coerce whatever a caller supplied into a `giottoSpace`.
 #'
-#' Accepts the `as.list()` export form -- `list("<frame>" = <body>)`, where
-#' the body is either a flat step list or a sample -> steps map -- so the
-#' round-trip is lossless and the kind is recovered from the shape.
+#' Accepts the `as.list()` export form, which names its kind rather than
+#' leaving it to be inferred from shape -- the two kinds hold the same
+#' slots now, so there is no shape to infer from.
 #' @noRd
 .as_giotto_space <- function(space, name = NULL, .var.name = "space") {
     if (inherits(space, "giottoSpace")) return(space)
@@ -315,46 +392,30 @@ setClass("perSampleSpace",
             "(got '", class(space)[[1L]], "')", call. = FALSE)
     }
     nm <- name %null% NA_character_
-    if (length(space) == 0L) return(.new_per_sample_space(nm))
+    if (length(space) == 0L) return(.new_combined_space(nm))
     # A handle holds exactly one frame, so an export form carrying several
-    # has no single name to take; slotting it would put a frame under a
-    # name that is not its own.
+    # has no single name to take.
     if (length(space) > 1L) {
         stop("[space] `", .var.name, "` holds ", length(space), " spaces (",
             paste(names(space), collapse = ", "),
-            "); slot one at a time, e.g. `", .var.name, "[\"",
-            names(space)[[1L]] %null% "<name>", "\"]`.", call. = FALSE)
+            "); slot one at a time.", call. = FALSE)
     }
     if (!is.null(names(space)) && nzchar(names(space)[[1L]])) {
         nm <- names(space)[[1L]]
     }
     body <- space[[1L]]
-    if (!is.list(body)) {
-        stop("[space] `", .var.name, "` space body must be a list (got '",
-            class(body)[[1L]], "')", call. = FALSE)
+    if (!is.list(body) || is.null(body$kind)) {
+        stop("[space] `", .var.name, "` frame body must be a list with a ",
+            "`kind` element ('combined' or 'perSample'), as `as.list()` ",
+            "writes it.", call. = FALSE)
     }
-    if (.space_body_is_steps(body)) {
-        return(.new_per_sample_space(nm, body))
-    }
-    .new_combined_space(nm, body)
-}
-
-#' Validate one frame's sample -> steps mapping.
-#' @noRd
-.validate_space_samples <- function(samples, .var.name = "samples") {
-    checkmate::assert_list(samples, .var.name = .var.name)
-    if (length(samples) == 0L) return(samples)
-    nms <- names(samples)
-    if (is.null(nms) || any(is.na(nms)) || any(!nzchar(nms))) {
-        stop("[space] `", .var.name, "` must be a named list ",
-            "(sample name -> step list)", call. = FALSE)
-    }
-    for (steps in samples) {
-        checkmate::assert_list(steps,
-            .var.name = paste0(.var.name, "[[i]]"))
-        lapply(steps, .validate_space_step)
-    }
-    samples
+    steps <- body$steps %null% list()
+    switch(body$kind,
+        combined = .new_combined_space(nm, steps,
+            body$samples %null% character()),
+        perSample = .new_per_sample_space(nm, steps),
+        stop("[space] unknown kind '", body$kind,
+            "'. Known: combined, perSample", call. = FALSE))
 }
 
 #' Validate a whole space, whatever produced it.
@@ -366,13 +427,25 @@ setClass("perSampleSpace",
     space <- .as_giotto_space(space, .var.name = .var.name)
     checkmate::assert_character(space@name, len = 1L,
         .var.name = paste0(.var.name, "@name"))
+    checkmate::assert_list(space@steps,
+        .var.name = paste0(.var.name, "@steps"))
+    lapply(space@steps, .validate_space_step)
     if (inherits(space, "combinedSpace")) {
-        .validate_space_samples(space@samples,
-            .var.name = paste0(.var.name, "@samples"))
-    } else {
-        checkmate::assert_list(space@steps,
-            .var.name = paste0(.var.name, "@steps"))
-        lapply(space@steps, .validate_space_step)
+        checkmate::assert_character(space@samples, any.missing = FALSE,
+            unique = TRUE, .var.name = paste0(.var.name, "@samples"))
+        # A step naming a non-member would apply to nobody, which reads as
+        # recorded and does nothing -- the failure `.gm_resolve_samples()`
+        # exists to prevent one level up.
+        orphan <- setdiff(.space_step_samples(space@steps), space@samples)
+        if (length(orphan) > 0L) {
+            stop("[space] step(s) scope to ",
+                paste(sprintf("'%s'", orphan), collapse = ", "),
+                ", which ", if (length(orphan) == 1L) "is" else "are",
+                " not ", if (length(orphan) == 1L) "a member" else "members",
+                " of space '", space@name, "'. Members: ",
+                if (length(space@samples) == 0L) "<none>"
+                else paste(space@samples, collapse = ", "), call. = FALSE)
+        }
     }
     space
 }

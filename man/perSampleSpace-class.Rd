@@ -8,23 +8,22 @@
 a \code{perSampleSpace} object
 }
 \description{
-A frame with no sample identity: the same steps applied to every sample
-in its own copy of the frame, which never interact. This is what a
-single \link[=giotto-class]{giotto} object always records, and what the always-present
-\code{":default:"} native frame is.
+A frame whose samples never interact: each sits in its own copy of it,
+so a job over this frame is N independent jobs. Steps may still be
+scoped -- two sections each rotated upright by a different angle are
+per-sample, because nothing about that puts them in a shared coordinate
+system.
 
-\verb{@steps} is a flat ordered list with no keys. That is deliberate rather
-than incidental — it is what makes this class unable to declare
-membership, so \code{\link[=spaceSamples]{spaceSamples()}} answers \code{NA_character_} and nothing
+It declares no membership, and that is deliberate: there is none to
+declare, since the frame covers whatever samples the object holds. That
+is why \code{\link[=spaceSamples]{spaceSamples()}} answers \code{NA_character_} here and nothing
 downstream can mistake it for a sized job.
+
+It is also the only kind that cannot be created by \code{space = "<name>"} on
+a transform verb — recording onto an unused name declares a combined
+frame, on the assumption that laying samples out together is the common
+reason to name one. Build this with \code{\link[=perSampleSpace]{perSampleSpace()}} and slot it in.
 }
-\section{Slots}{
-
-\describe{
-\item{\code{steps}}{\code{list} of steps, in application order. Each step is a tagged
-plain list -- \code{list(type = "transform", op = , args = )}.}
-}}
-
 \seealso{
-\link[=giottoSpace-class]{giottoSpace}
+\link[=giottoSpace-class]{giottoSpace}, \code{\link[=perSampleSpace]{perSampleSpace()}}
 }

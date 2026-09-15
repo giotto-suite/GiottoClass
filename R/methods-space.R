@@ -35,30 +35,23 @@ setGeneric("giottoSpaces",
 
 # Internal helpers ####
 
-# Append a transform step to a frame, scoped to `samples`.
+# Append a transform step to a space, carrying its own `samples` scope.
 #
-# THIS IS WHERE A FRAME'S KIND IS DECIDED. Passing `samples =` says the
-# named samples share one coordinate frame, which is a `combinedSpace`;
-# omitting it says the frame applies to each sample in its own copy, which
-# is a `perSampleSpace`. A fresh frame is per-sample with no steps -- it
-# has declared nothing yet -- and the first `samples =` promotes it.
+# Scope lives ON THE STEP, not on the list it joins. One ordered list then
+# replays correctly for every sample, including a sample first named after
+# a broadcast step was already recorded -- which a sample-keyed layout
+# cannot do, because "append to every key so far" never reaches a key that
+# appears later.
 #
-# Promotion runs one way only. Once a frame has recorded a step without
-# `samples`, that step applies to every sample there is, and there is no
-# member list it could be rewritten into: naming members afterwards would
-# have to either drop the samples it already covers or invent keys for
-# them. So it is refused, with the recorded step named in the message.
+#   mg <- spin(mg, 30, space = "atlas")                      # everyone
+#   mg <- spatShift(mg, dx = 8000, space = "atlas", samples = "b")
+#   mg <- spin(mg, 10, space = "atlas")                      # everyone
 #
-# On a `combinedSpace`, `samples = NULL` means "every member already in
-# this frame". That covers the "move the whole layout" case and -- because
-# `sp[s, k]` returns a handle keyed on exactly `k` -- appending to one
-# member without naming it twice.
+# Sample "b" replays all three, in order, even though it was unknown to the
+# space when the first was recorded.
 #
-# Naming members that are not yet keyed CREATES those keys, which is how a
-# cross-sample layout is built one call at a time:
-#
-#   mg <- affine(mg, M_a, space = "atlas", samples = "sample_a")
-#   mg <- spatShift(mg, dx = 8000, space = "atlas", samples = "sample_b")
+# On a `combinedSpace`, naming samples also widens the membership: they are
+# in the layout by virtue of being placed in it.
 #
 # Q8 note on `+`: the pre-Q8 version appended to every keyed sample
 # unconditionally, so the scope of a transform depended on how much of the
@@ -66,39 +59,10 @@ setGeneric("giottoSpaces",
 # unrecoverable from the recorded steps. Scope is stated per call now, and
 # `+` merges two already-scoped handles rather than seeding scope.
 .space_record <- function(space, op, args, samples = NULL) {
-    step <- .space_step_transform(op, args)
-    per_sample <- inherits(space, "perSampleSpace")
-
-    if (is.null(samples)) {
-        if (per_sample) {
-            space@steps <- c(space@steps, list(step))
-            return(space)
-        }
-        if (length(space@samples) == 0L) {
-            stop("[space] space '", space@name, "' is a combined space ",
-                "with no samples yet, so there is nothing to append to. ",
-                "Name the samples that share it with `samples = `.",
-                call. = FALSE)
-        }
-        space@samples <- lapply(space@samples,
-            function(steps) c(steps, list(step)))
-        return(space)
-    }
-
-    if (per_sample) {
-        if (length(space@steps) > 0L) {
-            stop("[space] space '", space@name, "' applies to every ",
-                "sample independently (it was recorded without ",
-                "`samples = `, starting with ", space@steps[[1L]]$op,
-                "()), so it cannot now be scoped to ",
-                paste(sprintf("'%s'", unique(samples)), collapse = ", "),
-                ". Record the scoped transforms onto a different name.",
-                call. = FALSE)
-        }
-        space <- .new_combined_space(space@name)
-    }
-    for (samp in unique(samples)) {
-        space@samples[[samp]] <- c(space@samples[[samp]], list(step))
+    step <- .space_step_transform(op, args, samples = samples)
+    space@steps <- c(space@steps, list(step))
+    if (inherits(space, "combinedSpace") && !is.null(samples)) {
+        space@samples <- unique(c(space@samples, step$samples))
     }
     space
 }
@@ -137,12 +101,24 @@ setGeneric("giottoSpaces",
         samples <- .gm_resolve_samples(gobject, samples, op)
     }
     .assert_space_not_default(space, op)
+    # Recording onto an unused name DECLARES a combined space. Naming a
+    # frame is overwhelmingly done to lay samples out together, so that is
+    # the kind you get for free; a frame whose samples stay independent has
+    # to say so, with `giottoSpace(g, nm) <- perSampleSpace()`. Both kinds
+    # accept `samples =` afterwards -- scoping a step says nothing about
+    # whether the samples share a coordinate system, so it cannot be the
+    # signal that decides the kind.
     existing <- if (space %in% giottoSpaces(gobject)) {
         giottoSpace(gobject, space)
     } else {
-        # a fresh frame has declared no membership; `.space_record()`
-        # promotes it to a `combinedSpace` if this call names samples
-        .new_per_sample_space(space)
+        # Membership starts as every child. Scoping a step says who MOVES,
+        # not who is in the layout -- a sample left at the origin is still
+        # in it, and seeding from the first scoped call instead would make
+        # the layout silently exclude everyone who needed no transform.
+        # A narrower layout is declared with `combinedSpace(<names>)`.
+        .new_combined_space(space, samples = if (
+            inherits(gobject, "giottoMulti")) names(gobject@objects)
+            else character())
     }
     new_space <- .space_record(existing, op, args, samples = samples)
     giottoSpace(gobject, space) <- new_space
@@ -152,10 +128,11 @@ setGeneric("giottoSpaces",
 
 # Record methods on the transform generics — giottoMulti ####
 #
-# `samples =` exists ONLY here. A `giotto` holds one sample, so the only key
-# it could name is the `:default:` sentinel — scoping is meaningful only
-# once there are children to scope to. The `giotto` methods keep their
-# plain `space = "<name>"` arm (see methods-spin.R and friends).
+# `samples =` exists ONLY here. A `giotto` holds one sample, so there is no
+# name a step could scope to — scoping is meaningful only once there are
+# children to scope to, and an unscoped step already reaches the one sample
+# there is. The `giotto` methods keep their plain `space = "<name>"` arm
+# (see methods-spin.R and friends).
 #
 # These are record-only. An eager per-child transform is a separate
 # feature: it would have to walk every child's subobjects, and the

@@ -39,4 +39,5 @@ per sample.
 \examples{
 g <- spatShift(giotto(), dx = 10, space = "shifted")
 spaceSamples(giottoSpace(g, "shifted"))
+spaceSamples(perSampleSpace())
 }

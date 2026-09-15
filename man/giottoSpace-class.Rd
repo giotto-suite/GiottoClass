@@ -8,29 +8,39 @@
 a \code{giottoSpace} object
 }
 \description{
-A \code{giottoSpace} is a handle over one named coordinate frame: a deferred
-set of spatial transforms that consumer functions opt into with
-\code{space = "<name>"}. It is virtual, and the subclass says which samples
-participate and whether they interact:
+A \code{giottoSpace} is a handle over one named coordinate frame: an ordered
+list of deferred spatial transforms that consumer functions opt into
+with \code{space = "<name>"}. Every step carries its own \code{samples} scope, so
+one list replays correctly for each sample.
+
+It is virtual. The subclass says whether the samples INTERACT, which is
+the only thing a job needs from a space (\code{adr/0006}):
 \itemize{
-\item \link[=combinedSpace-class]{combinedSpace} — named samples sharing one frame. It declares
-its membership, so it can size a cross-sample job.
-\item \link[=perSampleSpace-class]{perSampleSpace} — one frame applied to each sample
-independently. It has no sample keys at all, which is what makes it
-structurally unable to express membership.
+\item \link[=combinedSpace-class]{combinedSpace} — the samples are laid out relative to one
+another in one coordinate system, so cross-sample distances mean
+something and a job over it is ONE job. It declares its membership.
+\item \link[=perSampleSpace-class]{perSampleSpace} — each sample sits in its own copy of the
+frame and they never touch, so a job over it is N independent jobs.
+Steps may still be scoped per sample: two sections independently
+rotated upright are per-sample, not combined.
 }
 
 Access it with \code{[} (class-preserving, so the result stays editable) and
-\code{[[} (extracts the frame body, or one sample's step list). Append to it
-with the transform verbs -- \code{\link[=spin]{spin()}}, \code{\link[=spatShift]{spatShift()}}, \code{\link[=affine]{affine()}},
-\code{\link[=flip]{flip()}}, \code{\link[=rescale]{rescale()}}, \code{\link[=shear]{shear()}}, \code{\link[=zoom]{zoom()}} -- or compose two of the same
-kind with \code{+}. Export the plain nested form with \code{\link[=as.list]{as.list()}}.
+\code{[[} (extracts the steps that apply). Append to it with the transform
+verbs -- \code{\link[=spin]{spin()}}, \code{\link[=spatShift]{spatShift()}}, \code{\link[=affine]{affine()}}, \code{\link[=flip]{flip()}}, \code{\link[=rescale]{rescale()}},
+\code{\link[=shear]{shear()}}, \code{\link[=zoom]{zoom()}} -- or compose two of the same kind with \code{+}. Export
+the plain form with \code{\link[=as.list]{as.list()}}.
 }
 \section{Slots}{
 
 \describe{
 \item{\code{name}}{\code{character(1)}. The frame's name, or \code{NA_character_} for a
 handle not yet slotted under one.}
+
+\item{\code{steps}}{\code{list} of steps, in application order. Each step is a tagged
+plain list -- \code{list(type = "transform", op = , args = , samples = )} --
+carrying no closure and no external pointer, so a recipe survives
+\code{saveRDS()} and reaches a parallel worker. \code{samples = NULL} broadcasts.}
 }}
 
 \examples{
