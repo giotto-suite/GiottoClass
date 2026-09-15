@@ -180,8 +180,12 @@ test_that("recording onto an unused name creates the space", {
     s <- giottoSpace(g, "s")
     expect_s4_class(s, "giottoSpace")
     expect_identical(names(s), "s")
-    # a plain giotto has one sample, so the sentinel key is the only key
-    expect_named(s[["s"]], ":default:")
+    # a plain giotto has one sample, so a frame recorded on it names no
+    # members at all -- it is per-sample, and the body is a flat step list
+    expect_s4_class(s, "perSampleSpace")
+    expect_identical(spaceSamples(s), NA_character_)
+    expect_length(s[["s"]], 1L)
+    expect_identical(s[["s"]][[1L]]$op, "spatShift")
 })
 
 test_that("transform generics record onto a named space", {
@@ -190,7 +194,7 @@ test_that("transform generics record onto a named space", {
     g <- spin(g, 30, space = "s")
     g <- affine(g, M, space = "s")
     g <- spatShift(g, dx = 10, space = "s")
-    steps <- giottoSpace(g, "s")[[1L]][[1L]]
+    steps <- giottoSpace(g, "s")[[1L]]
     expect_length(steps, 3L)
     expect_identical(vapply(steps, function(x) x$op, character(1L)),
         c("spin", "affine", "spatShift"))
@@ -198,14 +202,14 @@ test_that("transform generics record onto a named space", {
 
 test_that("spin/affine record (0,0) anchor by default", {
     g <- spin(giotto(), 45, space = "s")
-    args <- giottoSpace(g, "s")[[1L]][[1L]][[1L]]$args
+    args <- giottoSpace(g, "s")[[1L]][[1L]]$args
     expect_equal(args$x0, 0)
     expect_equal(args$y0, 0)
 })
 
 test_that("user-supplied anchor overrides default", {
     g <- spin(giotto(), 45, x0 = 100, y0 = 200, space = "s")
-    args <- giottoSpace(g, "s")[[1L]][[1L]][[1L]]$args
+    args <- giottoSpace(g, "s")[[1L]][[1L]]$args
     expect_equal(args$x0, 100)
     expect_equal(args$y0, 200)
 })
@@ -755,26 +759,106 @@ test_that("`[` scopes a space to a named child", {
     expect_equal(s[["atlas", "b"]][[1L]]$args$angle, 45)
 })
 
-test_that("`[` falls back to the :default: key for an unkeyed sample", {
+test_that("a perSampleSpace answers for every sample, named or not", {
     s <- giottoSpace(spin(giotto(), 15, space = "s"), "s")
+    expect_s4_class(s, "perSampleSpace")
     expect_equal(s[["s", "any_sample_name"]][[1L]]$args$angle, 15)
     # and NA -- no sample identity at all -- resolves the same way
     expect_equal(s[["s", NA_character_]][[1L]]$args$angle, 15)
+})
+
+test_that("`perSampleSpace[, j]` is the identity", {
+    # load-bearing: it is what lets a caller scope with `space[, samp]`
+    # without first asking which kind it holds. {GiottoDisk}'s resolver
+    # does exactly that, then reads back with `[[1L, NA_character_]]`.
+    s <- giottoSpace(spin(giotto(), 15, space = "s"), "s")
+    expect_identical(s[, "a"], s)
+    expect_identical(s[, NA_character_], s)
+    expect_identical(s["s", "anything"], s)
+    expect_identical(s[, "a"][[1L, NA_character_]], s@steps)
+})
+
+test_that("`combinedSpace[[i, NA]]` takes the sole member", {
+    # the other half of the same {GiottoDisk} seam: after `space[, nm]`
+    # narrows to one member, `[[1L, NA_character_]]` reads its steps back
+    # without naming it again
+    mg <- .fixture_gmulti()
+    mg <- spin(mg, 30, space = "atlas", samples = "a")
+    mg <- spin(mg, 45, space = "atlas", samples = "b")
+    s <- giottoSpace(mg, "atlas")
+    expect_equal(s[, "b"][[1L, NA_character_]][[1L]]$args$angle, 45)
+    # ... and a member with no steps of its own reads as none, not as the
+    # other member's
+    expect_identical(s[, "c"][[1L, NA_character_]], list())
+})
+
+test_that("the frame's kind is decided by the first recorded transform", {
+    mg <- .fixture_gmulti()
+    expect_s4_class(giottoSpace(spatShift(mg, dx = 5, space = "p"), "p"),
+        "perSampleSpace")
+    expect_s4_class(giottoSpace(spin(mg, 5, space = "q", samples = "a"), "q"),
+        "combinedSpace")
+})
+
+test_that("a per-sample frame refuses to be scoped afterwards", {
+    # one-way promotion: a step recorded without `samples` already applies
+    # to every sample, and there is no member list it could become without
+    # either dropping those samples or inventing keys for them
+    mg <- .fixture_gmulti()
+    mg <- spatShift(mg, dx = 5, space = "p")
+    expect_error(spin(mg, 10, space = "p", samples = "a"),
+        "applies to every sample")
+    # but an untouched name promotes on its first scoped record
+    mg <- spin(mg, 10, space = "fresh", samples = "a")
+    expect_identical(spaceSamples(giottoSpace(mg, "fresh")), "a")
+})
+
+test_that("spaceSamples() reports membership, and NA when there is none", {
+    mg <- .fixture_gmulti()
+    mg <- spin(mg, 30, space = "atlas", samples = c("a", "b"))
+    expect_identical(spaceSamples(giottoSpace(mg, "atlas")), c("a", "b"))
+    # NA, not character(0): an empty vector reads as "nobody participates",
+    # which is a real and different answer
+    mg <- spatShift(mg, dx = 1, space = "each")
+    expect_identical(spaceSamples(giottoSpace(mg, "each")), NA_character_)
+})
+
+test_that("`+` refuses a merge that would have no membership", {
+    mg <- .fixture_gmulti()
+    mg <- spin(mg, 30, space = "atlas", samples = "a")
+    mg <- spatShift(mg, dx = 1, space = "each")
+    expect_error(giottoSpace(mg, "atlas") + giottoSpace(mg, "each"),
+        "cannot compose a")
+    # and two frames that are not the same frame
+    mg <- spin(mg, 10, space = "other", samples = "b")
+    expect_error(giottoSpace(mg, "atlas") + giottoSpace(mg, "other"),
+        "cannot compose frames")
+})
+
+test_that("':default:' is the native frame: always there, never recorded", {
+    g <- giotto()
+    d <- giottoSpace(g, ":default:")
+    expect_s4_class(d, "perSampleSpace")
+    expect_identical(d[[1L, NA_character_]], list())
+    # it is not a recorded frame, so it does not appear in the listing
+    expect_length(giottoSpaces(g), 0L)
+    expect_error(spin(g, 30, space = ":default:"), "native frame")
+    expect_error(`giottoSpace<-`(g, ":default:", value = d), "native frame")
 })
 
 test_that("`[` auto-vivifies rather than returning NULL", {
     mg <- .fixture_gmulti()
     mg <- spin(mg, 15, space = "atlas", samples = "a")
     s <- giottoSpace(mg, "atlas")
-    # "b" is unkeyed and there is no sentinel: an empty step list, so a
-    # caller can append to it without a branch
+    # "missing" is not a member: an empty step list, so a caller can
+    # append to it without a branch
     expect_identical(s[["atlas", "missing"]], list())
     scoped <- s["atlas", "missing"]
     expect_named(scoped[["atlas"]], "missing")
     expect_length(spin(scoped, 30)[["atlas", "missing"]], 1L)
 })
 
-test_that("`[` with two keys and no sentinel does not guess", {
+test_that("`[` with two members and no name does not guess", {
     mg <- .fixture_gmulti()
     mg <- spin(mg, 30, space = "atlas", samples = "a")
     mg <- spin(mg, 45, space = "atlas", samples = "b")
@@ -1371,9 +1455,11 @@ test_that("`giottoSpace(g)` with no name gives the whole collection", {
     g <- spin(giotto(), 30, space = "one")
     g <- spatShift(g, dx = 5, space = "two")
     all_sp <- giottoSpace(g)
-    expect_s4_class(all_sp, "giottoSpace")
+    # a handle holds one frame, so a collection is a list of handles
+    expect_type(all_sp, "list")
     expect_setequal(names(all_sp), c("one", "two"))
-    expect_identical(names(all_sp["one"]), "one")
+    expect_s4_class(all_sp[["one"]], "giottoSpace")
+    expect_identical(names(all_sp[["one"]]), "one")
 })
 
 test_that("`+` concatenates view steps and merges space frames", {
@@ -1421,8 +1507,8 @@ test_that("builder verbs on a recipe record what the gobject route records", {
         selectSamples(new("giottoView"), "a", "b")@steps)
 
     g3 <- spin(giotto(), 30, space = "s")
-    direct_sp <- spin(new("giottoSpace", spaces = list(s = list())), 30)
-    expect_identical(giottoSpace(g3, "s")@spaces, direct_sp@spaces)
+    direct_sp <- spin(new("perSampleSpace", name = "s"), 30)
+    expect_identical(giottoSpace(g3, "s"), direct_sp)
 })
 
 test_that("as.list() is the export seam and round-trips losslessly", {
@@ -1442,7 +1528,14 @@ test_that("as.list() is the export seam and round-trips losslessly", {
     expect_named(lsp$atlas, c("a", "b"))
     mg <- .fixture_gmulti()
     giottoSpace(mg, "atlas") <- lsp
-    expect_identical(giottoSpace(mg, "atlas")@spaces, sp@spaces)
+    expect_identical(giottoSpace(mg, "atlas"), sp)
+
+    # the kind survives the round-trip, recovered from the body's shape:
+    # a flat step list is per-sample, a sample -> steps map is combined
+    ps <- giottoSpace(spin(giotto(), 30, space = "flat"), "flat")
+    giottoSpace(mg, "flat") <- as.list(ps)
+    expect_s4_class(giottoSpace(mg, "flat"), "perSampleSpace")
+    expect_identical(giottoSpace(mg, "flat"), ps)
 })
 
 test_that("the recipe classes carry no closure and no external pointer", {
@@ -1458,7 +1551,7 @@ test_that("the recipe classes carry no closure and no external pointer", {
         TRUE
     }
     expect_true(.no_live_refs(.demo_view()@steps))
-    expect_true(.no_live_refs(.demo_space()@spaces))
+    expect_true(.no_live_refs(.demo_space()@samples))
 })
 
 test_that("validObject rejects a hand-poked recipe", {
@@ -1467,13 +1560,15 @@ test_that("validObject rejects a hand-poked recipe", {
     expect_error(validObject(v), "does not parse")
 
     sp <- .demo_space()
-    sp@spaces$atlas$a[[1L]]$op <- "teleport"
+    sp@samples$a[[1L]]$op <- "teleport"
     expect_error(validObject(sp), "unknown transform")
 })
 
 test_that("show() prints without error for both recipes", {
     expect_output(show(.demo_view()), "giottoView")
-    expect_output(show(.demo_space()), "giottoSpace")
+    expect_output(show(.demo_space()), "combinedSpace")
+    expect_output(show(giottoSpace(spin(giotto(), 30, space = "s"), "s")),
+        "perSampleSpace")
 })
 
 

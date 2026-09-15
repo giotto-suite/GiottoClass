@@ -8,22 +8,29 @@
 a \code{giottoSpace} object
 }
 \description{
-A \code{giottoSpace} is a handle over one or more named coordinate frames. A
-frame is a deferred set of spatial transforms, keyed by sample, that
-consumer functions opt into with \code{space = "<name>"}.
+A \code{giottoSpace} is a handle over one named coordinate frame: a deferred
+set of spatial transforms that consumer functions opt into with
+\code{space = "<name>"}. It is virtual, and the subclass says which samples
+participate and whether they interact:
+\itemize{
+\item \link[=combinedSpace-class]{combinedSpace} — named samples sharing one frame. It declares
+its membership, so it can size a cross-sample job.
+\item \link[=perSampleSpace-class]{perSampleSpace} — one frame applied to each sample
+independently. It has no sample keys at all, which is what makes it
+structurally unable to express membership.
+}
 
 Access it with \code{[} (class-preserving, so the result stays editable) and
-\code{[[} (extracts a frame, or one sample's step list). Append to it with
-the transform verbs -- \code{\link[=spin]{spin()}}, \code{\link[=spatShift]{spatShift()}}, \code{\link[=affine]{affine()}}, \code{\link[=flip]{flip()}},
-\code{\link[=rescale]{rescale()}}, \code{\link[=shear]{shear()}}, \code{\link[=zoom]{zoom()}} -- or compose two with \code{+}. Export the
-plain nested form with \code{\link[=as.list]{as.list()}}.
+\code{[[} (extracts the frame body, or one sample's step list). Append to it
+with the transform verbs -- \code{\link[=spin]{spin()}}, \code{\link[=spatShift]{spatShift()}}, \code{\link[=affine]{affine()}},
+\code{\link[=flip]{flip()}}, \code{\link[=rescale]{rescale()}}, \code{\link[=shear]{shear()}}, \code{\link[=zoom]{zoom()}} -- or compose two of the same
+kind with \code{+}. Export the plain nested form with \code{\link[=as.list]{as.list()}}.
 }
 \section{Slots}{
 
 \describe{
-\item{\code{spaces}}{\code{list} nested frame name -> sample name -> \code{list} of steps.
-Each step is a tagged plain list -- \code{list(type = "transform", op = , args = )} -- carrying no closure and no external pointer, so a recipe
-survives \code{saveRDS()} and reaches a parallel worker.}
+\item{\code{name}}{\code{character(1)}. The frame's name, or \code{NA_character_} for a
+handle not yet slotted under one.}
 }}
 
 \examples{
@@ -34,5 +41,6 @@ as.list(sp)
 }
 \seealso{
 \code{\link[=giottoSpace]{giottoSpace()}} for the gobject-level accessors;
+\code{\link[=spaceSamples]{spaceSamples()}} for the membership a frame declares;
 \link[=giottoView-class]{giottoView} for the subset/narrowing recipe
 }

@@ -35,16 +35,26 @@ setGeneric("giottoSpaces",
 
 # Internal helpers ####
 
-# Append a transform step to every frame a handle holds, scoped to
-# `samples`.
+# Append a transform step to a frame, scoped to `samples`.
 #
-# `samples = NULL` means "every sample already keyed in this frame", which
-# for a fresh frame is the `:default:` sentinel alone. That covers the
-# single-`giotto` case, the "move the whole layout" case, and -- because
+# THIS IS WHERE A FRAME'S KIND IS DECIDED. Passing `samples =` says the
+# named samples share one coordinate frame, which is a `combinedSpace`;
+# omitting it says the frame applies to each sample in its own copy, which
+# is a `perSampleSpace`. A fresh frame is per-sample with no steps -- it
+# has declared nothing yet -- and the first `samples =` promotes it.
+#
+# Promotion runs one way only. Once a frame has recorded a step without
+# `samples`, that step applies to every sample there is, and there is no
+# member list it could be rewritten into: naming members afterwards would
+# have to either drop the samples it already covers or invent keys for
+# them. So it is refused, with the recorded step named in the message.
+#
+# On a `combinedSpace`, `samples = NULL` means "every member already in
+# this frame". That covers the "move the whole layout" case and -- because
 # `sp[s, k]` returns a handle keyed on exactly `k` -- appending to one
-# sample without naming it twice.
+# member without naming it twice.
 #
-# Naming samples that are not yet keyed CREATES those keys, which is how a
+# Naming members that are not yet keyed CREATES those keys, which is how a
 # cross-sample layout is built one call at a time:
 #
 #   mg <- affine(mg, M_a, space = "atlas", samples = "sample_a")
@@ -57,19 +67,39 @@ setGeneric("giottoSpaces",
 # `+` merges two already-scoped handles rather than seeding scope.
 .space_record <- function(space, op, args, samples = NULL) {
     step <- .space_step_transform(op, args)
-    space@spaces <- lapply(space@spaces, function(keyed) {
-        if (is.null(samples)) {
-            if (length(keyed) == 0L) {
-                return(stats::setNames(list(list(step)),
-                    .space_default_sample))
-            }
-            return(lapply(keyed, function(steps) c(steps, list(step))))
+    per_sample <- inherits(space, "perSampleSpace")
+
+    if (is.null(samples)) {
+        if (per_sample) {
+            space@steps <- c(space@steps, list(step))
+            return(space)
         }
-        for (samp in unique(samples)) {
-            keyed[[samp]] <- c(keyed[[samp]], list(step))
+        if (length(space@samples) == 0L) {
+            stop("[space] frame '", space@name, "' is a combined frame ",
+                "with no samples yet, so there is nothing to append to. ",
+                "Name the samples that share it with `samples = `.",
+                call. = FALSE)
         }
-        keyed
-    })
+        space@samples <- lapply(space@samples,
+            function(steps) c(steps, list(step)))
+        return(space)
+    }
+
+    if (per_sample) {
+        if (length(space@steps) > 0L) {
+            stop("[space] frame '", space@name, "' applies to every ",
+                "sample independently (it was recorded without ",
+                "`samples = `, starting with ", space@steps[[1L]]$op,
+                "()), so it cannot now be scoped to ",
+                paste(sprintf("'%s'", unique(samples)), collapse = ", "),
+                ". Record the scoped transforms onto a different name.",
+                call. = FALSE)
+        }
+        space <- .new_combined_space(space@name)
+    }
+    for (samp in unique(samples)) {
+        space@samples[[samp]] <- c(space@samples[[samp]], list(step))
+    }
     space
 }
 
@@ -106,10 +136,13 @@ setGeneric("giottoSpaces",
     if (!is.null(samples) && inherits(gobject, "giottoMulti")) {
         samples <- .gm_resolve_samples(gobject, samples, op)
     }
+    .assert_space_not_default(space, op)
     existing <- if (space %in% giottoSpaces(gobject)) {
         giottoSpace(gobject, space)
     } else {
-        .new_space(stats::setNames(list(list()), space))
+        # a fresh frame has declared no membership; `.space_record()`
+        # promotes it to a `combinedSpace` if this call names samples
+        .new_per_sample_space(space)
     }
     new_space <- .space_record(existing, op, args, samples = samples)
     giottoSpace(gobject, space) <- new_space
@@ -128,6 +161,19 @@ setGeneric("giottoSpaces",
 # feature: it would have to walk every child's subobjects, and the
 # cross-sample layout that motivates gmulti transforms in the first place
 # is precisely what a recorded space expresses instead.
+
+# `:default:` names the frame the data is already in -- present on every
+# object without being recorded on any. A transform recorded onto it would
+# make the native frame not native, and every consumer that takes the
+# sentinel as "no frame" would silently pick the steps up.
+.assert_space_not_default <- function(space, op) {
+    if (!identical(space, .space_default_name)) return(invisible(TRUE))
+    stop(sprintf(paste0(
+        "[%s] '%s' is the native frame -- the one the data is already in -- ",
+        "so it holds no transforms and cannot be recorded onto. Record ",
+        "under a name of your own; omitting `space = ` then reads the ",
+        "native frame back."), op, .space_default_name), call. = FALSE)
+}
 
 # Shared guard, so the five methods below stay one line each.
 .assert_space_required <- function(space, op) {
@@ -306,8 +352,13 @@ setMethod("zoom", signature(x = "giottoSpace"),
 #' accepts the plain nested `as.list()` form, so an exported recipe reads
 #' back in.
 #'
-#' `giottoSpace(g)` with no `name` returns every slotted frame in one
-#' handle; `giottoSpace(g, "name")` returns just that one.
+#' A handle holds exactly one frame, so `giottoSpace(g)` with no `name`
+#' returns a named `list` of them; `giottoSpace(g, "name")` returns the one.
+#'
+#' `":default:"` names the native frame — the one the data is already in.
+#' It resolves on every object without being recorded on any, so a consumer
+#' can ask for a frame unconditionally, and it carries no steps. Recording
+#' onto it is refused.
 #'
 #' @param gobject a `giotto` object
 #' @param name `character(1)`. The slot key.
@@ -327,12 +378,17 @@ setMethod("giottoSpace", signature(gobject = "gAny", name = "character"),
     function(gobject, name, ...) {
         checkmate::assert_character(name, len = 1L)
         s <- gobject@spaces[[name]]
-        if (is.null(s)) {
-            stop("no space named '", name, "'. ",
-                "Available: ", paste(giottoSpaces(gobject), collapse = ", "),
-                call. = FALSE)
+        if (!is.null(s)) return(s)
+        # The native frame is resolvable on every object without being
+        # recorded on any: it is where the data already is. Consumers can
+        # then take a frame unconditionally instead of carrying a
+        # "no space" branch beside the frame branch.
+        if (identical(name, .space_default_name)) {
+            return(.new_per_sample_space(.space_default_name))
         }
-        s
+        stop("no space named '", name, "'. ",
+            "Available: ", paste(giottoSpaces(gobject), collapse = ", "),
+            call. = FALSE)
     }
 )
 
@@ -340,10 +396,11 @@ setMethod("giottoSpace", signature(gobject = "gAny", name = "character"),
 #' @export
 setMethod("giottoSpace", signature(gobject = "gAny", name = "missing"),
     function(gobject, name, ...) {
-        nm <- giottoSpaces(gobject)
-        if (length(nm) == 0L) return(NULL)
-        # the whole collection in one handle -- `sp[name]` narrows it
-        Reduce(`+`, gobject@spaces)
+        sp <- gobject@spaces
+        if (length(sp) == 0L) return(NULL)
+        # A handle holds one frame, so a collection is a list of handles
+        # rather than one wider handle.
+        sp
     }
 )
 
@@ -353,20 +410,13 @@ setMethod("giottoSpace<-",
     signature(gobject = "gAny", name = "character", value = "ANY"),
     function(gobject, name, ..., value) {
         checkmate::assert_character(name, len = 1L)
+        .assert_space_not_default(name, "giottoSpace<-")
         # coerces the `as.list()` export form and re-checks a hand-edited
         # recipe, so the boundary where a recipe enters an object is also
         # where it is validated
         value <- .validate_space(value, .var.name = "value")
-        # A slotted entry holds exactly the frame it is keyed under; `[`
-        # and `+` can produce a handle over several, and silently keeping
-        # the extras would put a frame under a name that is not its own.
-        if (length(value) > 1L) {
-            stop("[space] `value` holds ", length(value), " frames (",
-                paste(names(value), collapse = ", "),
-                "); slot one at a time, e.g. `value[\"", name, "\"]`.",
-                call. = FALSE)
-        }
-        if (length(value) == 1L) names(value@spaces) <- name
+        # A slotted entry holds exactly the frame it is keyed under.
+        value@name <- name
         if (is.null(gobject@spaces)) gobject@spaces <- list()
         gobject@spaces[[name]] <- value
         gobject

@@ -230,6 +230,27 @@ test_that("a frame prefixes the default name; native naming is unchanged", {
         k = 5, space = "scaled2x", name = "mine")))
 })
 
+test_that("naming the native frame is the same as omitting it", {
+    # `":default:"` is where the data already is, so it must produce the
+    # same artifact under the same name -- a prefix there would give the
+    # two spellings of one request two different networks.
+    g <- .netfix_giotto()
+    nms <- function(x) list_spatial_networks_names(x, spat_unit = "cell")
+
+    named <- createSpatialNetwork(g, method = "kNN", k = 5,
+        space = ":default:")
+    expect_true("kNN_network" %in% nms(named))
+    expect_false(any(grepl(":default:", nms(named), fixed = TRUE)))
+
+    sn <- getSpatialNetwork(named, name = "kNN_network",
+        output = "spatialNetworkObj")
+    expect_true(is.na(sn@parameters$space))
+
+    bare <- getSpatialNetwork(createSpatialNetwork(g, method = "kNN", k = 5),
+        name = "kNN_network", output = "spatialNetworkObj")
+    expect_equal(nrow(.network_as_dt(sn)), nrow(.network_as_dt(bare)))
+})
+
 test_that("the frame is recorded in @parameters, not @provenance", {
     g <- .netfix_giotto()
     g <- rescale(g, fx = 2, fy = 2, space = "scaled2x")

@@ -477,9 +477,13 @@ createSpatialNetwork <- function(gobject,
     # (`spin` / `flip` / `spatShift` are isometries and leave the network
     # identical; the default does not try to detect that, because whether a
     # frame happens to be rigid is not something a name should depend on.)
+    #
+    # The native frame is exempt: naming it explicitly must produce the same
+    # artifact as omitting `space`, or the two ways of saying "where the
+    # data already is" would write to different names.
     if (is.null(name)) {
         name <- paste0(method, "_", "network")
-        if (!is.null(space)) name <- paste0(space, "_", name)
+        if (!.is_native_space(space)) name <- paste0(space, "_", name)
     }
 
 
@@ -601,19 +605,16 @@ createSpatialNetwork <- function(gobject,
 
 # Read the job size off the space (adr/0006).
 #
-# TODO(combinedSpace): once `giottoSpace` splits into `combinedSpace` /
-# `perSampleSpace`, a combined frame becomes ONE job over its member samples
-# with `sample::id` node IDs, written to the multi's joint slot. Until then
-# every named frame is per-sample, which is what `":default:"` already meant.
+# There is no native-frame special case here: omitting `space` resolves the
+# always-present `":default:"` frame, a zero-step `perSampleSpace`, so the
+# job is planned the same way whether or not the caller named a frame.
 #
-# TODO(:default:): that split also deletes the `":default:"` sentinel from
-# the sample-key namespace, which frees the token. It then becomes the name
-# of an always-present zero-step `perSampleSpace`, and the `is.null(space)`
-# branch below goes away -- there is no native-frame special case, just a
-# frame that is always there. Deliberately NOT done before the split: until
-# the sentinel leaves the sample-key namespace, the token would mean a frame
-# here and a sample key three files over, which is the two-axis confusion
-# adr/0006 exists to stop.
+# TODO(combinedSpace): a `combinedSpace` should become ONE job over
+# `spaceSamples(sp)` with `sample::id` node IDs, written to the multi's
+# joint slot. Until that lands every frame is planned per-sample, which is
+# right for a `perSampleSpace` and wrong for a `combinedSpace` -- it builds
+# N independent networks in a shared frame instead of one spanning it, so
+# the cross-sample edges the frame exists for are the ones it misses.
 #' @noRd
 .csn_space_plan <- function(gobject, space) {
     samples <- names(gobject@objects)
@@ -621,11 +622,9 @@ createSpatialNetwork <- function(gobject,
         stop("[createSpatialNetwork] giottoMulti has no child gobjects",
             call. = FALSE)
     }
-    if (is.null(space)) {
-        return(list(kind = "per_sample", samples = samples, space = NULL))
-    }
+    if (is.null(space)) space <- .space_default_name
     checkmate::assert_string(space, .var.name = "space")
-    frames <- giottoSpaces(gobject)
+    frames <- c(.space_default_name, giottoSpaces(gobject))
     if (!space %in% frames) .csn_not_a_frame(gobject, space, frames)
     list(kind = "per_sample", samples = samples,
         space = giottoSpace(gobject, space))
@@ -760,11 +759,15 @@ createSpatialNetwork <- function(gobject,
     # The frame is recorded in `parameters`, not in `@provenance`: that slot
     # answers "which spat_units were aggregated to make this", a different
     # question, and two of its consumers assume an atomic value.
-    if (!is.null(space)) {
+    if (!.is_native_space(space)) {
         sp <- .resolve_space(gobject, space)
         sl <- .apply_space_to_subobj(sl, gobject, sp, coordinator = NULL)
     }
-    parameters <- c(parameters, list(space = space %null% NA_character_))
+    # The native frame records as NA, however the caller spelled it: an
+    # artifact built there is indistinguishable from one built with no
+    # `space` at all, because it is the same artifact.
+    parameters <- c(parameters, list(
+        space = if (.is_native_space(space)) NA_character_ else space))
 
     # An edge table is only ever the answer when there is no gobject to write
     # into; with `return_gobject = TRUE` the object is built and set either way.

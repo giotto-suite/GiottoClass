@@ -2,33 +2,51 @@
 % Please edit documentation in R/methods-recipe.R
 \name{giottoSpace-access}
 \alias{giottoSpace-access}
-\alias{[,giottoSpace,ANY,ANY,ANY-method}
-\alias{[[,giottoSpace,ANY,ANY-method}
+\alias{[,combinedSpace,ANY,ANY,ANY-method}
+\alias{[,perSampleSpace,ANY,ANY,ANY-method}
+\alias{[[,combinedSpace,ANY,ANY-method}
+\alias{[[,perSampleSpace,ANY,ANY-method}
 \alias{length,giottoSpace-method}
 \alias{names,giottoSpace-method}
-\alias{as.list,giottoSpace-method}
+\alias{as.list,combinedSpace-method}
+\alias{as.list,perSampleSpace-method}
+\alias{+,combinedSpace,combinedSpace-method}
+\alias{+,perSampleSpace,perSampleSpace-method}
 \alias{+,giottoSpace,giottoSpace-method}
-\alias{show,giottoSpace-method}
+\alias{show,combinedSpace-method}
+\alias{show,perSampleSpace-method}
 \title{Access a coordinate-frame recipe}
 \usage{
-\S4method{[}{giottoSpace,ANY,ANY,ANY}(x, i, j, ..., drop = TRUE)
+\S4method{[}{combinedSpace,ANY,ANY,ANY}(x, i, j, ..., drop = TRUE)
 
-\S4method{[[}{giottoSpace,ANY,ANY}(x, i, j, ...)
+\S4method{[}{perSampleSpace,ANY,ANY,ANY}(x, i, j, ..., drop = TRUE)
+
+\S4method{[[}{combinedSpace,ANY,ANY}(x, i, j, ...)
+
+\S4method{[[}{perSampleSpace,ANY,ANY}(x, i, j, ...)
 
 \S4method{length}{giottoSpace}(x)
 
 \S4method{names}{giottoSpace}(x)
 
-\S4method{as.list}{giottoSpace}(x, ...)
+\S4method{as.list}{combinedSpace}(x, ...)
+
+\S4method{as.list}{perSampleSpace}(x, ...)
+
+\S4method{+}{combinedSpace,combinedSpace}(e1, e2)
+
+\S4method{+}{perSampleSpace,perSampleSpace}(e1, e2)
 
 \S4method{+}{giottoSpace,giottoSpace}(e1, e2)
 
-\S4method{show}{giottoSpace}(object)
+\S4method{show}{combinedSpace}(object)
+
+\S4method{show}{perSampleSpace}(object)
 }
 \arguments{
 \item{x}{a \code{giottoSpace}}
 
-\item{i}{frame selector — \code{character} or \code{numeric}}
+\item{i}{frame selector — this handle's name, or \code{1}}
 
 \item{j}{\code{character(1)}. Sample name, or \code{NA_character_} for none.}
 
@@ -41,30 +59,38 @@ a \code{giottoSpace} for \code{[} and \code{+}; a \code{list} for \code{[[} and
 \code{as.list()}
 }
 \description{
-\code{[} selects and scopes frames, returning a \link[=giottoSpace-class]{giottoSpace} so the
+\code{[} scopes a frame to a sample, returning a \link[=giottoSpace-class]{giottoSpace} so the
 result is still appendable; \code{[[} extracts the plain form.
+
+A handle holds exactly one frame, so \code{i} names or indexes that frame and
+is checked rather than used to select — \code{sp["atlas", "a"]} and
+\code{sp[[1L, "a"]]} both read as "in this frame, for sample a".
 \itemize{
-\item \code{sp[i]} — a \code{giottoSpace} holding frame(s) \code{i}, samples untouched
-\item \code{sp[i, j]} — a \code{giottoSpace} scoped to sample \code{j}
-\item \code{sp[[i]]} — frame \code{i} as a plain \code{list}, sample name -> steps
-\item \code{sp[[i, j]]} — the ordered step \code{list} for sample \code{j} of frame \code{i}
-\item \code{length(sp)} / \code{names(sp)} — frame count / frame names
-\item \code{as.list(sp)} — the plain nested form
-\item \code{sp1 + sp2} — merge frames, concatenating steps on collision
+\item \code{sp[i, j]} — the frame scoped to sample \code{j}
+\item \code{sp[[i]]} — the frame body: a sample -> steps \code{list} for a
+\link[=combinedSpace-class]{combinedSpace}, a flat step \code{list} for a
+\link[=perSampleSpace-class]{perSampleSpace}
+\item \code{sp[[i, j]]} — the ordered step \code{list} that applies to sample \code{j}
+\item \code{length(sp)} / \code{names(sp)} — always \code{1}, and the frame name
+\item \code{as.list(sp)} — the plain nested form, \verb{list("<frame>" = <body>)}
+\item \code{sp1 + sp2} — merge two handles on the same frame, concatenating steps
 }
 }
 \section{Sample resolution}{
 
 \code{j} is resolved here and nowhere else, so no consumer re-implements the
-rule:
+rule. What it resolves to depends on the kind, and that is the point of
+the split:
 \itemize{
-\item a named sample matches exactly, else falls back to the \verb{:default:}
-sentinel, else auto-vivifies as an empty step list -- so
-\code{spin(sp["atlas", "new_sample"], 30)} works on a sample that does not
+\item a \link[=perSampleSpace-class]{perSampleSpace} ignores \code{j} entirely. It has no sample keys,
+so every sample gets the same steps and \code{sp[, j]} is the identity.
+\item a \link[=combinedSpace-class]{combinedSpace} matches \code{j} against its members exactly, and
+auto-vivifies an empty step list otherwise -- so
+\code{spin(sp["atlas", "new_sample"], 30)} works on a member that does not
 exist yet.
 \item \code{NA_character_} means "no sample identity" (a plain \link[=giotto-class]{giotto},
-which holds one sample): the \verb{:default:} sentinel, else the sole key
-if there is exactly one, else empty. Two keys and no sentinel does not
+which holds one sample). On a \code{combinedSpace} it takes the sole member
+if there is exactly one, else empty; two members and no name does not
 guess.
 }
 }

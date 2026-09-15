@@ -62,8 +62,13 @@ one edited through \link{giottoSpace-access}, and to remove one. It also
 accepts the plain nested \code{as.list()} form, so an exported recipe reads
 back in.
 
-\code{giottoSpace(g)} with no \code{name} returns every slotted frame in one
-handle; \code{giottoSpace(g, "name")} returns just that one.
+A handle holds exactly one frame, so \code{giottoSpace(g)} with no \code{name}
+returns a named \code{list} of them; \code{giottoSpace(g, "name")} returns the one.
+
+\code{":default:"} names the native frame — the one the data is already in.
+It resolves on every object without being recorded on any, so a consumer
+can ask for a frame unconditionally, and it carries no steps. Recording
+onto it is refused.
 }
 \examples{
 g <- giotto()

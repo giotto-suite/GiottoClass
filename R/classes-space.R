@@ -28,7 +28,8 @@
 #
 # Recording twice against the same sample concatenates steps in order.
 # `samples = NULL` records against every sample already keyed in the space,
-# or against the `:default:` sentinel when the space is new.
+# and on a new space makes it a `perSampleSpace` -- a frame that applies to
+# each sample independently, which is what a single `giotto` always wants.
 #
 # Q8 replaced `+` and the sample-keyed constructor `giottoSpace("sample_a")`
 # with `samples =`. The old form inherited scope from construction history:
@@ -49,14 +50,22 @@
 # with the shape and the exactness argument, in
 # vignettes/articles/IMPLEMENTATION_viewspace.md section 5.
 #
-# A `giottoSpace` is a handle over a COLLECTION of frames, nested
+# A handle holds exactly ONE frame, named by `@name`. `giottoSpace` is
+# virtual and the kind of frame is the class:
 #
-#   @spaces  list("<frame>" = list("<sample>" = list(<step>, ...)))
+#   perSampleSpace  @steps    list(<step>, ...)
+#   combinedSpace   @samples  list("<sample>" = list(<step>, ...))
 #
-# so `sp[["atlas"]]` answers with that frame and every sample in it. Most
-# handles hold one frame -- that is what `gobject@spaces[[name]]` stores --
-# but `giottoSpace(g)` with no name gives the whole collection, and `+`
-# merges two.
+# The split is the answer to "which samples participate, and do they
+# interact". A `combinedSpace` names its members, so it declares a job over
+# them; a `perSampleSpace` is structurally unable to name anyone, so it
+# means "each sample, independently, in its own copy of this frame". That
+# is what the old `:default:` sample key was expressing -- a key that stood
+# for "no particular sample" and had to be checked for at every consumer.
+# It is now the absence of the slot, so there is nothing to check.
+#
+# Which kind a frame is gets decided by the first recorded transform: with
+# `samples =` it is combined, without it, per-sample. See `.space_record()`.
 #
 # The steps stay plain lists, for the reasons given at the top of
 # `R/classes-view.R` (decisions Q7 and Q8). `args` is whitelisted to
@@ -64,17 +73,37 @@
 # reaches a parallel worker.
 #
 # Storage on gobject:
-#   `gobject@spaces` — named list of single-frame `giottoSpace` handles.
-#   Sentinel sample name `:default:` is used for single-giotto entries (no
-#   explicit sample); `[` owns that rule, so no consumer re-implements it.
+#   `gobject@spaces` — named list of handles, one per frame name.
+#
+# The `:default:` name now names a FRAME rather than a sample: an
+# always-present zero-step `perSampleSpace` standing for the native frame.
+# It is resolvable on every object without being recorded on any, which
+# lets a consumer take `space` unconditionally instead of branching on
+# `is.null(space)`. Recording onto it is refused -- it means "the frame the
+# data is already in", and a transform on that is a contradiction.
 #
 # See `R/classes-view.R` for the subset/narrowing recipe.
 # See `R/methods-space.R` for the recorder and the accessors.
 # =============================================================================
 
 
-# Sentinel for sample-anonymous (single-giotto) space construction.
-.space_default_sample <- ":default:"
+# Name of the always-present native frame. Not a sample key -- see above.
+.space_default_name <- ":default:"
+
+#' Is this `space =` argument the frame the data is already in?
+#'
+#' `NULL` and `":default:"` are the same request spelled two ways, and an
+#' artifact generator must treat them identically or the two spellings
+#' would write to different names. One predicate so no consumer decides
+#' that separately.
+#' @noRd
+.is_native_space <- function(space) {
+    if (is.null(space)) return(TRUE)
+    if (inherits(space, "giottoSpace")) {
+        return(identical(space@name, .space_default_name))
+    }
+    identical(space, .space_default_name)
+}
 
 # Transform generics a space step may defer to. A space step is executed
 # by `do.call(op, ...)`, so this list is also the guard against an
@@ -166,22 +195,28 @@
 #' @title Class for coordinate-frame recipes
 #' @name giottoSpace-class
 #' @description
-#' A `giottoSpace` is a handle over one or more named coordinate frames. A
-#' frame is a deferred set of spatial transforms, keyed by sample, that
-#' consumer functions opt into with `space = "<name>"`.
+#' A `giottoSpace` is a handle over one named coordinate frame: a deferred
+#' set of spatial transforms that consumer functions opt into with
+#' `space = "<name>"`. It is virtual, and the subclass says which samples
+#' participate and whether they interact:
+#'
+#' * [combinedSpace-class] — named samples sharing one frame. It declares
+#'   its membership, so it can size a cross-sample job.
+#' * [perSampleSpace-class] — one frame applied to each sample
+#'   independently. It has no sample keys at all, which is what makes it
+#'   structurally unable to express membership.
 #'
 #' Access it with `[` (class-preserving, so the result stays editable) and
-#' `[[` (extracts a frame, or one sample's step list). Append to it with
-#' the transform verbs -- [spin()], [spatShift()], [affine()], [flip()],
-#' [rescale()], [shear()], [zoom()] -- or compose two with `+`. Export the
-#' plain nested form with [as.list()].
+#' `[[` (extracts the frame body, or one sample's step list). Append to it
+#' with the transform verbs -- [spin()], [spatShift()], [affine()],
+#' [flip()], [rescale()], [shear()], [zoom()] -- or compose two of the same
+#' kind with `+`. Export the plain nested form with [as.list()].
 #'
-#' @slot spaces `list` nested frame name -> sample name -> `list` of steps.
-#'   Each step is a tagged plain list -- `list(type = "transform", op = ,
-#'   args = )` -- carrying no closure and no external pointer, so a recipe
-#'   survives `saveRDS()` and reaches a parallel worker.
+#' @slot name `character(1)`. The frame's name, or `NA_character_` for a
+#'   handle not yet slotted under one.
 #' @returns a `giottoSpace` object
 #' @seealso [giottoSpace()] for the gobject-level accessors;
+#'   [spaceSamples()] for the membership a frame declares;
 #'   [giottoView-class] for the subset/narrowing recipe
 #' @examples
 #' g <- spatShift(giotto(), dx = 10, space = "shifted")
@@ -190,31 +225,88 @@
 #' as.list(sp)
 #' @exportClass giottoSpace
 setClass("giottoSpace",
-    representation(spaces = "list"),
-    prototype = prototype(spaces = list())
+    representation("VIRTUAL", name = "character"),
+    prototype = prototype(name = NA_character_)
 )
 
-#' Construct a space recipe.
+#' @title Class for a frame shared by named samples
+#' @name combinedSpace-class
+#' @description
+#' A frame that several samples are laid out in together — the cross-sample
+#' case. `@samples` names its members, so a job built in this frame has a
+#' declared size (see `adr/0006`).
 #'
-#' The single place a space's shape is written down.
+#' @slot samples `list` sample name -> `list` of steps. Each step is a
+#'   tagged plain list -- `list(type = "transform", op = , args = )` --
+#'   carrying no closure and no external pointer, so a recipe survives
+#'   `saveRDS()` and reaches a parallel worker.
+#' @returns a `combinedSpace` object
+#' @seealso [giottoSpace-class]
+#' @exportClass combinedSpace
+setClass("combinedSpace",
+    contains = "giottoSpace",
+    representation(samples = "list"),
+    prototype = prototype(samples = list())
+)
+
+#' @title Class for a frame applied to each sample independently
+#' @name perSampleSpace-class
+#' @description
+#' A frame with no sample identity: the same steps applied to every sample
+#' in its own copy of the frame, which never interact. This is what a
+#' single [giotto-class] object always records, and what the always-present
+#' `":default:"` native frame is.
 #'
-#' A frame starts with NO sample keys. The `:default:` sentinel is added by
-#' `.space_record()` only when a transform is recorded without a `samples`
-#' scope -- seeding it here instead would leave an empty sentinel chain
-#' beside the real keys on every per-sample frame, which then reads as an
-#' extra participating sample and makes `[` fall back to it for children
-#' that should have matched nothing.
+#' `@steps` is a flat ordered list with no keys. That is deliberate rather
+#' than incidental — it is what makes this class unable to declare
+#' membership, so [spaceSamples()] answers `NA_character_` and nothing
+#' downstream can mistake it for a sized job.
+#'
+#' @slot steps `list` of steps, in application order. Each step is a tagged
+#'   plain list -- `list(type = "transform", op = , args = )`.
+#' @returns a `perSampleSpace` object
+#' @seealso [giottoSpace-class]
+#' @exportClass perSampleSpace
+setClass("perSampleSpace",
+    contains = "giottoSpace",
+    representation(steps = "list"),
+    prototype = prototype(steps = list())
+)
+
+#' Construct a frame of each kind.
+#'
+#' The single place a space's shape is written down. A fresh frame is
+#' per-sample: it has recorded nothing, so it has named no members, and
+#' `.space_record()` promotes it to a `combinedSpace` on the first
+#' `samples =`.
 #' @noRd
-.new_space <- function(spaces = list()) {
-    new("giottoSpace", spaces = spaces)
+.new_per_sample_space <- function(name = NA_character_, steps = list()) {
+    new("perSampleSpace", name = name, steps = steps)
+}
+
+#' @noRd
+.new_combined_space <- function(name = NA_character_, samples = list()) {
+    new("combinedSpace", name = name, samples = samples)
+}
+
+#' Is a frame body a flat step list rather than a sample -> steps map?
+#'
+#' The two export forms are told apart by shape, not by a tag: a step is
+#' always a list carrying `$type`, and a sample entry never is (it is
+#' itself a list of steps). An empty body has neither, and reads as
+#' per-sample -- the undecided state, which is also what a fresh frame is.
+#' @noRd
+.space_body_is_steps <- function(body) {
+    if (length(body) == 0L) return(TRUE)
+    all(vapply(body, function(s) is.list(s) && !is.null(s$type),
+        logical(1L)))
 }
 
 #' Coerce whatever a caller supplied into a `giottoSpace`.
 #'
-#' Accepts the `as.list()` export form -- a nested frame -> sample -> steps
-#' list -- so the round-trip is lossless. A bare sample -> steps list (one
-#' unnamed frame) is accepted under `name`, which is what `giottoSpace<-`
-#' passes when a single frame is being slotted by key.
+#' Accepts the `as.list()` export form -- `list("<frame>" = <body>)`, where
+#' the body is either a flat step list or a sample -> steps map -- so the
+#' round-trip is lossless and the kind is recovered from the shape.
 #' @noRd
 .as_giotto_space <- function(space, name = NULL, .var.name = "space") {
     if (inherits(space, "giottoSpace")) return(space)
@@ -222,7 +314,29 @@ setClass("giottoSpace",
         stop("[space] `", .var.name, "` must be a giottoSpace or a list ",
             "(got '", class(space)[[1L]], "')", call. = FALSE)
     }
-    .new_space(space)
+    nm <- name %null% NA_character_
+    if (length(space) == 0L) return(.new_per_sample_space(nm))
+    # A handle holds exactly one frame, so an export form carrying several
+    # has no single name to take; slotting it would put a frame under a
+    # name that is not its own.
+    if (length(space) > 1L) {
+        stop("[space] `", .var.name, "` holds ", length(space), " frames (",
+            paste(names(space), collapse = ", "),
+            "); slot one at a time, e.g. `", .var.name, "[\"",
+            names(space)[[1L]] %null% "<name>", "\"]`.", call. = FALSE)
+    }
+    if (!is.null(names(space)) && nzchar(names(space)[[1L]])) {
+        nm <- names(space)[[1L]]
+    }
+    body <- space[[1L]]
+    if (!is.list(body)) {
+        stop("[space] `", .var.name, "` frame body must be a list (got '",
+            class(body)[[1L]], "')", call. = FALSE)
+    }
+    if (.space_body_is_steps(body)) {
+        return(.new_per_sample_space(nm, body))
+    }
+    .new_combined_space(nm, body)
 }
 
 #' Validate one frame's sample -> steps mapping.
@@ -250,22 +364,20 @@ setClass("giottoSpace",
 #' @noRd
 .validate_space <- function(space, .var.name = "space") {
     space <- .as_giotto_space(space, .var.name = .var.name)
-    checkmate::assert_list(space@spaces,
-        .var.name = paste0(.var.name, "@spaces"))
-    if (length(space@spaces) > 0L) {
-        nms <- names(space@spaces)
-        if (is.null(nms) || any(is.na(nms)) || any(!nzchar(nms))) {
-            stop("[space] `", .var.name, "@spaces` must be a named list ",
-                "(frame name -> samples)", call. = FALSE)
-        }
-        for (nm in nms) {
-            .validate_space_samples(space@spaces[[nm]],
-                .var.name = sprintf("%s@spaces[[\"%s\"]]", .var.name, nm))
-        }
+    checkmate::assert_character(space@name, len = 1L,
+        .var.name = paste0(.var.name, "@name"))
+    if (inherits(space, "combinedSpace")) {
+        .validate_space_samples(space@samples,
+            .var.name = paste0(.var.name, "@samples"))
+    } else {
+        checkmate::assert_list(space@steps,
+            .var.name = paste0(.var.name, "@steps"))
+        lapply(space@steps, .validate_space_step)
     }
     space
 }
 
+# One validity method on the virtual class, inherited by both subclasses.
 setValidity("giottoSpace", function(object) {
     err <- tryCatch({
         .validate_space(object, .var.name = "object")
