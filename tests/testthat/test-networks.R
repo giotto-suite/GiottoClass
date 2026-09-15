@@ -526,3 +526,133 @@ test_that("networks build identically through the list-backed params", {
     del <- createNetwork(m, delaunayNetworkParam())
     expect_gt(nrow(del), 0L)
 })
+
+
+# radius param + disk-backed accessors #### 
+
+test_that("radiusNetworkParam validates and dispatches", {
+    p <- radiusNetworkParam(eps = 25)
+    expect_s4_class(p, "radiusNetworkParam")
+    expect_identical(p$eps, 25)
+    expect_identical(p$minimum_k, 0L)
+
+    expect_error(radiusNetworkParam(eps = -1))
+    expect_error(radiusNetworkParam(eps = Inf))
+    expect_error(radiusNetworkParam(eps = c(1, 2)))
+
+    expect_s4_class(networkParam("radius", eps = 10), "radiusNetworkParam")
+})
+
+# --- disk-backed networks through the accessor -----------------------------
+#
+# On a backed project @network holds a GiottoDisk parquetEdgeStore, not an
+# igraph. getSpatialNetwork() has to serve both, because everything downstream
+# reads the edge table through it -- annotateSpatialNetwork(), and
+# cellProximityEnrichment() on top of that. Before this, output = "networkDT"
+# handed the store straight to as.data.table() and failed with "cannot coerce
+# class parquetEdgeStore", so pairwise proximity analysis simply did not run on
+# a backed object.
+
+test_that("getSpatialNetwork serves a disk-backed network in every output", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(giotto.check_valid = FALSE, giotto.verbose = FALSE)
+
+    set.seed(3)
+    n <- 150L
+    locs <- data.table::data.table(
+        cell_ID = sprintf("c%03d", seq_len(n)),
+        sdimx = runif(n, 0, 100), sdimy = runif(n, 0, 100)
+    )
+    m <- matrix(1, nrow = 2L, ncol = n,
+                dimnames = list(c("g1", "g2"), locs$cell_ID))
+    dir <- file.path(tempdir(), paste0("proj_", basename(tempfile())))
+    on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+    g <- createGiottoObject(expression = m, spatial_locs = locs, backend = dir)
+    g <- createSpatialNetwork(g, method = "Delaunay", name = "Delaunay_network")
+
+    sn <- getSpatialNetwork(g, name = "Delaunay_network",
+                            output = "spatialNetworkObj")[]
+    expect_true(inherits(sn, "dataStore"))
+
+    dt <- getSpatialNetwork(g, name = "Delaunay_network", output = "networkDT")
+    expect_s3_class(dt, "data.table")
+    # the networkDT contract is from/to, not the store's from_id/to_id
+    expect_true(all(c("from", "to") %in% names(dt)))
+    expect_false(any(c("from_id", "to_id") %in% names(dt)))
+    expect_type(dt$from, "character")
+    expect_gt(nrow(dt), 0L)
+
+    ig <- getSpatialNetwork(g, name = "Delaunay_network", output = "igraph")
+    expect_s3_class(ig, "igraph")
+    expect_equal(igraph::ecount(ig), nrow(dt))
+})
+
+test_that("annotateSpatialNetwork works on a disk-backed network", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(giotto.check_valid = FALSE, giotto.verbose = FALSE)
+
+    set.seed(4)
+    n <- 150L
+    locs <- data.table::data.table(
+        cell_ID = sprintf("c%03d", seq_len(n)),
+        sdimx = runif(n, 0, 100), sdimy = runif(n, 0, 100)
+    )
+    m <- matrix(1, nrow = 2L, ncol = n,
+                dimnames = list(c("g1", "g2"), locs$cell_ID))
+    dir <- file.path(tempdir(), paste0("proj_", basename(tempfile())))
+    on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+    g <- createGiottoObject(expression = m, spatial_locs = locs, backend = dir)
+    g <- addCellMetadata(g, new_metadata = data.frame(
+        cell_ID = locs$cell_ID, ct = sample(c("A", "B", "C"), n, TRUE)),
+        by_column = TRUE, column_cell_ID = "cell_ID")
+    g <- createSpatialNetwork(g, method = "Delaunay", name = "Delaunay_network")
+
+    ann <- annotateSpatialNetwork(g, spatial_network_name = "Delaunay_network",
+                                  cluster_column = "ct")
+    expect_s3_class(ann, "data.table")
+    expect_true(all(c("from", "to", "from_cell_type", "to_cell_type",
+                      "unified_int") %in% names(ann)))
+    expect_gt(nrow(ann), 0L)
+})
+
+test_that("getNearestNetwork serves a disk-backed NN network", {
+    skip_if_not_installed("GiottoDisk")
+    rlang::local_options(giotto.check_valid = FALSE, giotto.verbose = FALSE)
+
+    # getSpatialNetwork() learned to read a store; getNearestNetwork() was
+    # left behind, so both of its non-object outputs handed a
+    # parquetEdgeStore to igraph and failed with "Must provide a graph
+    # object". Both accessors now share .network_as_dt()/.network_as_igraph().
+    set.seed(5)
+    n <- 150L
+    locs <- data.table::data.table(
+        cell_ID = sprintf("c%03d", seq_len(n)),
+        sdimx = runif(n, 0, 100), sdimy = runif(n, 0, 100)
+    )
+    m <- matrix(rpois(6 * n, 5), nrow = 6L,
+                dimnames = list(paste0("g", 1:6), locs$cell_ID))
+    dir <- file.path(tempdir(), paste0("proj_", basename(tempfile())))
+    on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+    g <- createGiottoObject(expression = m, spatial_locs = locs, backend = dir)
+    emb <- matrix(rnorm(n * 5), nrow = n, dimnames = list(locs$cell_ID, NULL))
+    g <- setDimReduction(g, create_dim_obj(
+        coordinates = emb, name = "pca", reduction_method = "pca",
+        spat_unit = "cell", feat_type = "rna"
+    ))
+    g <- createNearestNetwork(g,
+        dim_reduction_to_use = "pca", k = 5, name = "sNN.pca"
+    )
+
+    nn <- getNearestNetwork(g, name = "sNN.pca", output = "nnNetObj")
+    expect_true(inherits(nn[], "dataStore"))
+
+    dt <- getNearestNetwork(g, name = "sNN.pca", output = "data.table")
+    expect_s3_class(dt, "data.table")
+    expect_true(all(c("from", "to") %in% names(dt)))
+    expect_false(any(c("from_id", "to_id") %in% names(dt)))
+    expect_gt(nrow(dt), 0L)
+
+    ig <- getNearestNetwork(g, name = "sNN.pca", output = "igraph")
+    expect_s3_class(ig, "igraph")
+    expect_equal(igraph::ecount(ig), nrow(dt))
+})

@@ -596,4 +596,126 @@ describe("Network Creation Functions", {
 
     })
 
+
+    describe("radius networks", {
+
+        it("createNetwork builds a radius network end to end", {
+            set.seed(8)
+            x <- matrix(runif(300 * 2, 0, 100), ncol = 2)
+            rownames(x) <- sprintf("c%03d", seq_len(300))
+
+            g <- createNetwork(x, radiusNetworkParam(eps = 14, output = "igraph"))
+            expect_s3_class(g, "igraph")
+            expect_false(igraph::is_directed(g))
+
+            dt <- createNetwork(x, radiusNetworkParam(eps = 14, output = "data.table"))
+            expect_s3_class(dt, "data.table")
+            expect_true(all(c("from", "to", "weight", "distance") %in% names(dt)))
+            expect_equal(igraph::ecount(g), nrow(dt))
+        })
+
+        it("a radius network has density-following degree, unlike kNN", {
+            # the reason to have it: one dense cluster and one sparse, same eps
+            set.seed(12)
+            dense <- cbind(rnorm(200, 0, 1), rnorm(200, 0, 1))
+            sparse <- cbind(rnorm(200, 100, 12), rnorm(200, 100, 12))
+            x <- rbind(dense, sparse)
+
+            dt <- GiottoClass:::.net_dt_radius(x, eps = 2)
+            deg <- table(factor(c(dt$from, dt$to), levels = seq_len(400)))
+            expect_gt(mean(deg[1:200]), mean(deg[201:400]))
+
+            # kNN would give every node the same degree by construction
+            knn <- GiottoClass:::.net_dt_knn(x, k = 6L)
+            kdeg <- table(factor(knn$from, levels = seq_len(400)))
+            expect_true(all(kdeg == 6L))
+        })
+
+        it("radiusNetworkParam on a giotto defaults to spatial coordinates", {
+            rlang::local_options(giotto.check_valid = FALSE, giotto.verbose = FALSE)
+
+            set.seed(3)
+            n <- 200L
+            locs <- data.table::data.table(
+                cell_ID = sprintf("c%03d", seq_len(n)),
+                sdimx = runif(n, 0, 1000), sdimy = runif(n, 0, 1000)
+            )
+            m <- matrix(rpois(6 * n, 5), nrow = 6L,
+                        dimnames = list(paste0("g", 1:6), locs$cell_ID))
+            g <- createGiottoObject(expression = m, spatial_locs = locs)
+            emb <- matrix(rnorm(n * 5, sd = 2), nrow = n,
+                          dimnames = list(locs$cell_ID, NULL))
+            g <- setDimReduction(g, create_dim_obj(
+                coordinates = emb, name = "pca", reduction_method = "pca",
+                spat_unit = "cell", feat_type = "rna"
+            ))
+
+            # a dedicated method exists rather than inheriting the NN one
+            expect_identical(
+                selectMethod("createNetwork", c("giotto", "radiusNetworkParam"))@defined[[2L]],
+                "radiusNetworkParam"
+            )
+
+            spatial <- createNetwork(g,
+                radiusNetworkParam(eps = 60, output = "data.table")
+            )
+            # every edge is within eps of the *spatial* coordinates
+            expect_lte(max(spatial$distance), 60)
+            ref <- as.matrix(stats::dist(as.matrix(locs[, .(sdimx, sdimy)])))
+            expect_equal(nrow(spatial), sum(ref > 0 & ref <= 60) / 2L)
+
+            # the PCA-space behaviour is still reachable, but only on request
+            expr <- createNetwork(g,
+                radiusNetworkParam(eps = 3, output = "data.table"),
+                space = "expression"
+            )
+            ref_pca <- as.matrix(stats::dist(emb))
+            expect_equal(nrow(expr), sum(ref_pca > 0 & ref_pca <= 3) / 2L)
+        })
+
+        it("createSpatialNetwork gives radiusNetworkParam a user path", {
+            rlang::local_options(giotto.check_valid = FALSE, giotto.verbose = FALSE)
+
+            set.seed(3)
+            n <- 200L
+            locs <- data.table::data.table(
+                cell_ID = sprintf("c%03d", seq_len(n)),
+                sdimx = runif(n, 0, 1000), sdimy = runif(n, 0, 1000)
+            )
+            m <- matrix(rpois(6 * n, 5), nrow = 6L,
+                        dimnames = list(paste0("g", 1:6), locs$cell_ID))
+            g <- createGiottoObject(expression = m, spatial_locs = locs)
+
+            g2 <- createSpatialNetwork(g, method = "radius", radius = 60)
+            expect_true("radius_network" %in%
+                list_spatial_networks_names(g2, spat_unit = "cell"))
+
+            sn <- getSpatialNetwork(g2, name = "radius_network")
+            expect_identical(sn@method, "radius")
+            expect_identical(sn@parameters$eps, 60)
+
+            dt <- createSpatialNetwork(g, method = "radius", radius = 60,
+                return_gobject = FALSE, output = "data.table")
+            expect_s3_class(dt, "data.table")
+            expect_equal(nrow(dt), igraph::ecount(sn[]))
+            expect_lte(max(dt$distance), 60)
+
+            # the cutoff is not optional for this method
+            expect_error(createSpatialNetwork(g, method = "radius"), "radius")
+
+            # and the two established methods are untouched
+            expect_identical(
+                nrow(createSpatialNetwork(g, method = "Delaunay",
+                    return_gobject = FALSE, output = "data.table")),
+                558L
+            )
+            expect_identical(
+                nrow(createSpatialNetwork(g, method = "kNN", k = 4,
+                    return_gobject = FALSE, output = "data.table")),
+                800L
+            )
+        })
+
+    })
+
 })
