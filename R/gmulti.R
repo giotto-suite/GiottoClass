@@ -413,8 +413,10 @@ setMethod("[", signature(x = "giottoMulti", i = "ANY"),
             out@nn_network          <- .gm_prune_nn_network(out@nn_network, keep_globals)
             out@spatial_enrichment  <- .gm_prune_spatial_enrichment(out@spatial_enrichment, keep_globals)
             out@spatial_network     <- .gm_prune_spatial_network(out@spatial_network, keep_globals)
-            out@spatial_locs        <- .gm_prune_joint_spatial(out@spatial_locs, keep_globals, depth = 2L)
-            out@spatial_info        <- .gm_prune_joint_spatial(out@spatial_info, keep_globals, depth = 1L)
+            out@spatial_locs        <- .gm_prune_joint_spatial(
+                out@spatial_locs, keep_globals, depth = 2L)
+            out@spatial_info        <- .gm_prune_joint_spatial(
+                out@spatial_info, keep_globals, depth = 1L)
             # @feat_info and @images are not cell-keyed: features are never
             # sample-namespaced, and an image has no ID axis to prune. They
             # survive a child selection whole -- a mosaic covering samples
@@ -472,8 +474,10 @@ setReplaceMethod("names", signature(x = "giottoMulti", value = "character"),
         x@nn_network          <- .gm_rewrite_nn_network(x@nn_network, old_to_new)
         x@spatial_enrichment  <- .gm_rewrite_spatial_enrichment(x@spatial_enrichment, old_to_new)
         x@spatial_network     <- .gm_rewrite_spatial_network(x@spatial_network, old_to_new)
-        x@spatial_locs        <- .gm_rewrite_joint_spatial(x@spatial_locs, old_to_new, depth = 2L)
-        x@spatial_info        <- .gm_rewrite_joint_spatial(x@spatial_info, old_to_new, depth = 1L)
+        x@spatial_locs        <- .gm_rewrite_joint_spatial(
+            x@spatial_locs, old_to_new, depth = 2L)
+        x@spatial_info        <- .gm_rewrite_joint_spatial(
+            x@spatial_info, old_to_new, depth = 1L)
         # @feat_info / @images carry no sample-prefixed IDs — see `[`.
         x@cell_ID             <- .gm_rewrite_narrowing(x@cell_ID, old_to_new)
 

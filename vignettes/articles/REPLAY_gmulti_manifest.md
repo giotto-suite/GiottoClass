@@ -741,6 +741,17 @@ reachable through `getPolygonInfo()` on a narrowed gmulti and through
 `resolveSubobject()`. Fixed at the source, with `NA_character_` preserved as the
 not-computed sentinel.
 
+**Caused on the way, and guarded rather than fixed:** `saveGiotto()` reads
+`gobject@spatial_info` / `@feat_info` / `@images` directly to run its
+`.save_external` terra-export pass. On a multi those accesses used to error on the
+missing slot; now they resolve to the *parent's* content, so the call ran to
+completion and wrote an RDS in which every child's terra pointers were dead. An
+in-memory `giottoMulti` is now refused there, loudly. A sourced one still goes to
+`GiottoDisk::snapshotSave()`. Filed as **GiottoClass #407** — a real save path has
+to run the export pass per child and agree with the loader on a layout, which is
+`snapshotSave`'s problem already solved and worth mirroring rather than
+reinventing.
+
 ### 10.5 The `spat_unit` rule — owed to adr/0006
 
 A space prefixes an artifact's **name** (`scaled2x_kNN_network`) and that is

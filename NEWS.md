@@ -156,6 +156,12 @@
 
 ## bug fixes
 
+- `saveGiotto()` now refuses an in-memory `giottoMulti` instead of writing a
+  file whose children hold invalid terra pointers. Its terra-export pass reads
+  one object's `@spatial_info` / `@feat_info` / `@images`, which on a multi are
+  the multi-level slots, so no child's geometry was ever exported. A multi with
+  a `@source` is unaffected and still goes to `GiottoDisk::snapshotSave()`.
+  See #407.
 - Narrowing a `giottoPolygon` or `giottoPoints` left `@unique_ID_cache`
   holding the pre-narrowing IDs, so `spatIDs()` / `featIDs()` reported IDs
   the geometry no longer contained. Reachable through `getPolygonInfo()` and
