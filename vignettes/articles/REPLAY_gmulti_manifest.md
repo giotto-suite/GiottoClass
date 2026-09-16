@@ -713,6 +713,38 @@ may pull from a space and set the result in one step **while defaulting
 `spat_unit` to the space name**. The round trip itself is fine; the defaulting is
 what is forbidden.
 
+### 10.7 Re-read stages 8-9 before resuming them
+
+**Do this before starting either stage, not while in one.** Both were written
+before the space rework, and §10.1 changed enough that their manifests may no
+longer describe the work. Specific things to check rather than a general re-read:
+
+**Stage 8 (carry-keys).**
+
+- `.narrow_subobject()` is named as a stage-8 site and has since gained an
+  igraph branch (it round-tripped igraph -> DT -> igraph and dropped isolated
+  vertices). Confirm the stage-8 edit still applies to the current function
+- the `R/subset.R` "staged +87 supersedes checkpoint +92 — verify equivalence"
+  check is still owed and still unverified
+- the giottoMulti hard error on positional producers overlaps §10.2's setter
+  policing — decide whether they are one guard or two, before writing a second
+- **D1 still holds**: the Giotto-repo producer guards are in neither merge
+  branch, so this stage may include writing them
+
+**Stage 9 (GiottoVisuals dispatcher, per-panel sizing).**
+
+- its base is **GiottoVisuals**' `feature/gmulti-federation-design` @ `5969cb6`,
+  which predates every §10.1 change. Check it in that repo before cherry-picking:
+  anything touching a space there assumes a single `giottoSpace` class, a
+  `@samples` keyed map, the `:default:` SAMPLE sentinel, and two-index
+  `sp[[frame, sample]]`. All four are gone
+- per-panel sizing reads through the getters, so §10.3's parent-first rule
+  changes what it receives on a multi with populated joint slots
+- if it plots in a frame, §10.6's `space =` gap on gmulti getters hits it directly
+
+**Also re-read** §5 (do not replay) and §6 (doc corrections owed) — both were
+written against the pre-rework surface.
+
 ### 10.6 Still open from this thread
 
 - **`space =` on gmulti getters is broken.** The space lives on the parent, the
