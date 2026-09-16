@@ -132,10 +132,23 @@ So a frame-built artifact records it twice, for two different jobs:
   what dropped `radius`; it is replaced by rewriting the caller's own
   `match.call()`. Any future per-child dispatch owes the same treatment — an
   enumerated list is a signature someone else owns, copied.
-- **The `set*` family's `object =` is not a selector and is out of scope.** It
-  is a single-valued write target ("which child owns the object I am handing
-  you"), resolved by `.gm_set_target()`. Anyone running this rule across the
-  codebase will file the setters as violations otherwise.
+- **The `set*` family lost its `object =` write target, and with it any way
+  to reach a child.** This was originally filed as out of scope — `object =`
+  named a single child to write into rather than selecting a set to compute
+  over, so it was not a selector and the rule above did not reach it. That
+  reasoning was about the wrong question. The defect a selector on a writer
+  has is that the slot cannot say afterwards which samples it covers, and a
+  single-target write has exactly that defect in its sharpest form: it puts
+  one sample's artifact in the same slot namespace as an all-sample one, with
+  nothing distinguishing them. A `giottoMulti` exists for combined analysis,
+  whose outputs are single items pulled from the parent; heterogeneous
+  select-sample outputs must not be storable beside all-sample ones. So the
+  five spatial setters now write at the multi level and nowhere else, and
+  `.gm_set_target()` is gone. Passing `object =` (or `samples =`) is refused
+  by name rather than swallowed by `...`. Editing one sample is still
+  possible, and now says what it is: `mg[["<sample>"]] <- <edited child>`.
+  The one sanctioned per-child write is `createSpatialNetwork()`'s
+  `perSampleSpace` path, which assigns into `@objects` internally.
 - **Restricting a job now requires declaring a space.** That is a real
   ergonomic cost for the one-off case, accepted because the alternative is an
   artifact whose provenance is unrecoverable. `mg[c("a", "b")]` remains the
@@ -179,7 +192,9 @@ So a frame-built artifact records it twice, for two different jobs:
 - `R/spatial_structures.R` — `createSpatialNetwork()`, the `giottoMulti` arm and
   `.csn_child_args()` / `.csn_eval_on_child()`
 - `R/gmulti.R` — `.gm_resolve_samples()` (the helper someone reaches for when
-  adding a selector), `.gm_set_target()` (why `object =` is exempt)
+  adding a selector), `.gm_reject_write_selector()` (what a setter does when
+  someone reaches for one anyway), and the five multi-level spatial slots
+  that give a setter somewhere to write
 - `R/classes-space.R` — `combinedSpace` / `perSampleSpace`, the interaction
   split this rule depends on, and `.space_steps_for()`, the one resolution
   rule. Scope lives on the step rather than on a per-sample list, so one

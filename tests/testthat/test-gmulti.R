@@ -799,14 +799,92 @@ test_that("sample-scoped getSpatialLocations composes with view narrowing", {
     expect_length(spatIDs(mg2@objects$a), 5L)
 })
 
-test_that("setSpatialLocations requires a single object= target", {
+test_that("setSpatialLocations writes at the multi level only", {
     mg <- createGiottoMulti(list(a = .mk_minimal(5, 4), b = .mk_minimal(3, 4)))
     sl <- getSpatialLocations(mg@objects$b)
-    expect_error(setSpatialLocations(mg, x = sl), "must name the child")
-    expect_error(setSpatialLocations(mg, x = sl, object = c("a", "b")),
-        "length 1")
-    mg2 <- setSpatialLocations(mg, x = sl, object = "b", verbose = FALSE)
+
+    # no per-sample write target exists, and reaching for one says so
+    # rather than being swallowed by `...`
+    expect_error(setSpatialLocations(mg, x = sl, object = "b"),
+        "writes at the multi level only")
+    expect_error(setSpatialLocations(mg, x = sl, samples = "b"),
+        "writes at the multi level only")
+
+    mg2 <- setSpatialLocations(mg, x = sl)
     expect_s4_class(mg2, "giottoMulti")
+    # landed on the parent, keyed spat_unit -> name; children untouched
+    expect_identical(names(mg2@spatial_locs), "cell")
+    expect_identical(names(mg2@spatial_locs$cell), objName(sl))
+    expect_identical(mg2@objects, mg@objects)
+})
+
+test_that("a multi-level write needs keys it can derive or be given", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(5, 4), b = .mk_minimal(3, 4)))
+    sl <- getSpatialLocations(mg@objects$b)
+    objName(sl) <- NA_character_
+    expect_error(setSpatialLocations(mg, x = sl), "needs a name")
+    expect_s4_class(setSpatialLocations(mg, x = sl, name = "joint"),
+        "giottoMulti")
+})
+
+test_that("spatial getters resolve parent-first, children as fallback", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(3, 4), b = .mk_minimal(2, 4)))
+
+    # nothing at the parent yet -> fan out, named per-child list
+    expect_identical(names(getSpatialLocations(mg)), c("a", "b"))
+
+    joint <- createSpatLocsObj(
+        data.frame(sdimx = 1:5, sdimy = 1:5, cell_ID = spatIDs(mg)),
+        name = "joint", spat_unit = "cell")
+    mg <- setSpatialLocations(mg, joint)
+
+    # parent content exists -> it wins, and it is one artifact not a list
+    expect_s4_class(getSpatialLocations(mg), "spatLocsObj")
+    expect_identical(getSpatialLocations(mg)[]$cell_ID, spatIDs(mg))
+
+    # `samples =` is an explicit request for per-child content and skips it
+    expect_identical(names(getSpatialLocations(mg, samples = c("a", "b"))),
+        c("a", "b"))
+
+    # a name the parent does not have still falls through to the children
+    expect_type(getSpatialLocations(mg, name = "raw"), "list")
+})
+
+test_that("joint spatial slots honour the active narrowing", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(3, 4), b = .mk_minimal(2, 4)))
+    joint <- createSpatLocsObj(
+        data.frame(sdimx = 1:5, sdimy = 1:5, cell_ID = spatIDs(mg)),
+        name = "joint", spat_unit = "cell")
+    mg <- setSpatialLocations(mg, joint)
+
+    mg2 <- subset(mg, cells = c("a::c1", "b::c2"))
+    expect_identical(sort(getSpatialLocations(mg2)[]$cell_ID),
+        c("a::c1", "b::c2"))
+})
+
+test_that("mg[i] prunes and names<- rewrites the joint spatial slots", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(3, 4), b = .mk_minimal(2, 4)))
+    mg <- setSpatialLocations(mg, createSpatLocsObj(
+        data.frame(sdimx = 1:5, sdimy = 1:5, cell_ID = spatIDs(mg)),
+        name = "joint", spat_unit = "cell"))
+
+    sv <- terra::vect(cbind(1:5, 1:5), type = "points")
+    sv$poly_ID <- spatIDs(mg)
+    mg <- setPolygonInfo(mg, createGiottoPolygon(terra::buffer(sv, 0.2),
+        name = "joint_poly", verbose = FALSE), name = "joint_poly")
+
+    sub <- mg["a"]
+    expect_identical(sub@spatial_locs$cell$joint[]$cell_ID,
+        paste0("a::c", 1:3))
+    # the polygon's ID cache is what spatIDs() reads, so it must narrow too
+    expect_identical(spatIDs(sub@spatial_info$joint_poly),
+        paste0("a::c", 1:3))
+
+    names(mg) <- c("A", "B")
+    expect_identical(mg@spatial_locs$cell$joint[]$cell_ID,
+        c(paste0("A::c", 1:3), paste0("B::c", 1:2)))
+    expect_identical(spatIDs(mg@spatial_info$joint_poly),
+        c(paste0("A::c", 1:3), paste0("B::c", 1:2)))
 })
 
 test_that("getFeatureInfo narrows by the feature axis (A6 gap closed)", {

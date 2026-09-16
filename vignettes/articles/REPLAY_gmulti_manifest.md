@@ -660,46 +660,86 @@ stages 8-9 resume. **These are ordered — each unblocks the next.**
 - `.assert_space_known()` lives with the space machinery and is owned by the getter
 - the `object =` alias is gone from the five per-child getters
 
-### 10.2 Setters stop reaching into children
+### 10.2 Setters stop reaching into children — **Done**
 
-A `giottoMulti` setter must write at the multi level only. Writing into one child
+A `giottoMulti` setter writes at the multi level only. Writing into one child
 bakes a subset of the federation into a slot with nothing recording which samples
 it covers — and a combined analysis is supposed to produce one artifact pulled as
 a single item, not a per-child scatter. Heterogeneous select-sample outputs must
 not be storable beside all-sample ones.
 
-- `setSpatialNetwork(mg, x)` — drop the write target, keep only the joint-slot
-  write; the slot exists
-- `setSpatialLocations` / `setPolygonInfo` / `setFeatureInfo` / `setGiottoImage`
-  on `giottoMulti` — drop the target and refuse, naming the missing multi-level
-  slot. Forward-compatible: when 10.4 lands, each refusal becomes a joint write
-- delete `.gm_set_target()`
+- all five spatial setters dropped `object =` and write to their multi-level slot
+- `.gm_set_target()` deleted
+- `...` would otherwise swallow a stale `object =` and do a multi-level write
+  silently, so `.gm_reject_write_selector()` refuses `object` / `objects` /
+  `sample` / `samples` / `view` by name. It reads `...names()`, so nothing in
+  `...` is forced
+- the escape hatch is real and says what it is: `mg[["<sample>"]] <- <child>`
 - **not affected**: `createSpatialNetwork()`'s per-sample path writes through
   `gobject@objects[[nm]] <- ...` directly. Per-child network writes after creation
   are the sanctioned exception for `perSampleSpace` jobs, and they stay internal
   to network creation rather than becoming a public expectation
 
-### 10.3 Getters resolve parent-first, uniformly
+### 10.3 Getters resolve parent-first, uniformly — **Done**
 
-The rule: a gmulti getter returns multi-level content when it exists, and falls
-back to fanning out over children when it does not. Audited 2026-09-16 — only
-`getSpatialNetwork` does this today, and only because it is the only one whose
-parent slot exists. The other four are child-only *because the slot is missing*,
-not by design. Grids are out of scope.
+A gmulti getter returns multi-level content when the slot holds what was asked
+for, and falls back to fanning out over children when it does not. All five
+spatial getters now do this; before 10.4 only `getSpatialNetwork` could, because
+it was the only one whose parent slot existed.
 
-### 10.4 Multi-level spatial slots — resolves federation §13
+Two things settled while implementing:
 
-§13 lists three unevaluated options; the round trip decides it. Reading polygons
-(via 10.3's fallback), buffering them and writing them back must land the result
-at the **multi** level — so the dedicated slot is the answer, and the producer is
-the user's own pipeline rather than anything inside Giotto.
+- **a `NULL` name takes the first parent entry**, matching what a `NULL` name
+  means everywhere else. The old `getSpatialNetwork` branch required an explicit
+  `name =` before it would consult the parent, on the grounds that the fan-out is
+  what `getSpatialNetwork(mg)` had always meant. That is backwards under the rule:
+  parent content is priority once it exists. `samples =` is the explicit request
+  for per-child content and skips the parent level
+- **the parent path narrows too**. The old joint branch returned the slot value
+  raw, ignoring `@cell_ID` / `@feat_ID`, so a subset multi would have reported
+  unfiltered joint content the moment these slots got used. Joint content is
+  already in globals, which is exactly what the narrowing is keyed on, so
+  `.gm_apply_view()` applies directly — no localization pass. Images are the one
+  exception, having no ID axis to narrow on
 
-Per slot, `@spatial_network` is the template and cost ~9 touch points: `@slot`
-roxygen, `representation`, `prototype`, `[` pruning, `names<-` rewriting, `show` /
-populated-slot detection, key-drop maintenance, the getter's parent-first branch,
-the setter's joint write. The plumbing is mechanical; the per-type ID semantics
-are not — pruning narrows polygons by `poly_ID`, points by `feat_ID`, and images
-by nothing, and the `sample::` prefix rewrite differs per type.
+Grids remain out of scope.
+
+### 10.4 Multi-level spatial slots — **Done**; resolves federation §13
+
+`giottoMulti` gained `@spatial_locs`, `@spatial_info`, `@feat_info` and `@images`
+beside `@spatial_network`, each keyed exactly as its `giotto` counterpart. §13's
+three options resolve to the dedicated slot, decided by the round trip: read
+polygons across children, buffer, write back — the result belongs to no one
+sample, and the producer is the user's pipeline rather than anything inside Giotto.
+
+Touch points, all nine per slot: `@slot` roxygen, `representation`, `prototype`,
+`[` pruning, `names<-` rewriting, `.gm_populated_joint_slots()` (which `show()`
+also prints), `.gm_universe_materialized()`, `.gm_invalidate_joint_for_mapping_change()`,
+and the getter / setter pair.
+
+What differed per type, which was the non-mechanical part:
+
+- **pruning** is delegated to `.narrow_subobject()`, which already owns the
+  per-class axis knowledge; the new `.gm_walk_joint_spatial()` only walks the
+  nesting (depth 2 for `@spatial_locs`, 1 for `@spatial_info`)
+- **rewriting** had no equivalent, so `.gm_rewrite_subobject_ids()` is new —
+  `cell_ID` for a `spatLocsObj`, `poly_ID` plus centroids for a `giottoPolygon`
+- **`@feat_info` and `@images` are neither pruned nor rewritten.** Features are
+  never sample-namespaced and an image has no ID axis. A mosaic covering samples
+  that have since been dropped is stale, not wrong, and there is no correct
+  narrowing of a raster by sample
+- **`@images` is also exempt from mapping invalidation** — it is the one
+  multi-level slot with no axis key, so no mapping change can invalidate it
+- `@spatial_info` keys on polygon name, which *is* the `spat_unit` namespace;
+  `@feat_info` keys on `feat_type`. Both feed `.gm_universe_materialized()` at
+  level 1, not level 2
+
+**Found on the way:** `.narrow_subobject()` narrowed a `giottoPolygon` /
+`giottoPoints` geometry but left `@unique_ID_cache` alone, so `spatIDs()` reported
+IDs the object no longer held. A live bug, not one these slots introduced —
+reachable through `getPolygonInfo()` on a narrowed gmulti and through
+`resolveSubobject()`. Fixed at the source, with `NA_character_` preserved as the
+not-computed sentinel.
 
 ### 10.5 The `spat_unit` rule — owed to adr/0006
 
@@ -767,10 +807,10 @@ written against the pre-rework surface.
   3540 edges under the same name)
 - **whether `[[` should consult membership** on a `combinedSpace` — today
   `sp[["c"]]` answers for a sample that was never declared a member
-- docs: federation §14 -> Partial (child-immutability is NOT restored), the
-  `":default:"` sentinel rule in `view_and_space.Rmd:201` and
-  `IMPLEMENTATION_viewspace.md:77,:267`, NEWS breaking entries, `adr/README`
-  backfill note for `spatIDs<-` / `featIDs<-`
+- docs still owed: the `":default:"` sentinel rule in `view_and_space.Rmd:201`
+  and `IMPLEMENTATION_viewspace.md:77,:267`, and the `adr/README` backfill note
+  for `spatIDs<-` / `featIDs<-`. (Federation §13 -> Done and §14 -> Partial,
+  adr/0006's setter clause, and the NEWS entries landed with 10.2-10.4.)
 - decide `::` — two `sep =` formals no caller passes, beside 11 literals
 
 

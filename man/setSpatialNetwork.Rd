@@ -19,14 +19,7 @@ setSpatialNetwork(gobject, x, spat_unit = NULL, name = NULL, ...)
   ...
 )
 
-\S4method{setSpatialNetwork}{giottoMulti}(
-  gobject,
-  x,
-  spat_unit = NULL,
-  name = NULL,
-  ...,
-  object = NULL
-)
+\S4method{setSpatialNetwork}{giottoMulti}(gobject, x, spat_unit = NULL, name = NULL, ...)
 }
 \arguments{
 \item{gobject}{giotto object}
@@ -46,8 +39,6 @@ removes a specified set of spatial network information from the gobject.}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{object}{(giottoMulti) name of the single child to write into}
 }
 \value{
 giotto object

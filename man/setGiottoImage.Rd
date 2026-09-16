@@ -18,7 +18,7 @@ setGiottoImage(gobject, x, name = NULL, ...)
   image = deprecated()
 )
 
-\S4method{setGiottoImage}{giottoMulti}(gobject, x, name = NULL, ..., object = NULL)
+\S4method{setGiottoImage}{giottoMulti}(gobject, x, name = NULL, ...)
 }
 \arguments{
 \item{gobject}{giotto object}
@@ -36,8 +36,6 @@ returning}
 \item{verbose}{be verbose}
 
 \item{image}{deprecated. Use \code{x}}
-
-\item{object}{(giottoMulti) name of the single child to write into}
 }
 \value{
 giotto object

@@ -1708,6 +1708,17 @@ createMetafeats <- function(gobject,
 #' instead of calling this.
 #' @keywords internal
 #' @noRd
+#' Narrow a terraVectData ID cache alongside the geometry it describes.
+#'
+#' `NA_character_` is the "not computed" sentinel and must survive as-is —
+#' overwriting it with a narrowed set would claim a cache that was never
+#' built.
+#' @noRd
+.narrow_id_cache <- function(cache, keep) {
+    if (length(cache) == 1L && is.na(cache)) return(cache)
+    cache[cache %in% keep]
+}
+
 .narrow_subobject <- function(x, cells = NULL, feats = NULL) {
     if (is.null(cells) && is.null(feats)) return(x)
 
@@ -1799,6 +1810,9 @@ createMetafeats <- function(gobject,
                 keep_c <- terra::values(cv)$poly_ID %in% cells
                 x@spatVectorCentroids <- cv[keep_c, ]
             }
+            # The cache is what spatIDs() reads, so leaving it alone makes
+            # a narrowed polygon report IDs its geometry no longer has.
+            x@unique_ID_cache <- .narrow_id_cache(x@unique_ID_cache, cells)
         }
         return(x)
     }
@@ -1811,6 +1825,7 @@ createMetafeats <- function(gobject,
             sv <- x@spatVector
             keep <- terra::values(sv)$feat_ID %in% feats
             x@spatVector <- sv[keep, ]
+            x@unique_ID_cache <- .narrow_id_cache(x@unique_ID_cache, feats)
         }
         return(x)
     }

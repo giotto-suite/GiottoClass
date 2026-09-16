@@ -18,7 +18,7 @@ setPolygonInfo(gobject, x, name = NULL, ...)
   ...
 )
 
-\S4method{setPolygonInfo}{giottoMulti}(gobject, x, name = NULL, ..., object = NULL)
+\S4method{setPolygonInfo}{giottoMulti}(gobject, x, name = NULL, ...)
 }
 \arguments{
 \item{gobject}{giotto object}
@@ -40,8 +40,6 @@ to additionally set them as a set of spatial locations (default = FALSE)}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{object}{(giottoMulti) name of the single child to write into}
 }
 \value{
 giotto object

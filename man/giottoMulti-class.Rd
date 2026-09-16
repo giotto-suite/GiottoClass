@@ -60,6 +60,18 @@ from stage 2; \code{NULL} means unfiltered.}
 
 \item{\code{nn_network}}{shared joint NN graphs}
 
+\item{\code{spatial_locs}}{\strong{multi-level} spatial locations, nested
+\code{spat_unit -> name}. Cell IDs are \code{sample::id} globals.}
+
+\item{\code{spatial_info}}{\strong{multi-level} polygons, keyed \code{name}. \code{poly_ID}s are
+\code{sample::id} globals.}
+
+\item{\code{feat_info}}{\strong{multi-level} points, keyed \code{feat_type}. Features are
+never sample-namespaced, so these carry plain \code{feat_ID}s.}
+
+\item{\code{images}}{\strong{multi-level} images, keyed \code{name} — one raster covering
+several samples, as a combined space produces.}
+
 \item{\code{spatial_network}}{\strong{cross-sample} spatial networks, nested
 \code{spat_unit -> name} — the same shape as \code{giotto@spatial_network}.
 Both endpoints of every edge are \code{sample::id} globals, so an edge may
@@ -69,7 +81,15 @@ stay on the children.
 
 A network built in a coordinate frame takes that frame's name by
 default, so two frames do not collide, and carries the frame in its
-\verb{@parameters$space}. See \code{adr/0006}.}
+\verb{@parameters$space}. See \code{adr/0006}.
+
+These five spatial slots exist for the same reason: a combined analysis
+produces \strong{one} artifact spanning the federation, and there is no child
+that can hold it. They are also what makes the round trip land somewhere
+— read polygons across children, buffer them, write the result back, and
+the result is multi-level because it no longer belongs to any one sample.
+Setters on a \code{giottoMulti} write here and nowhere else (see the note on
+the spatial setters below).}
 
 \item{\code{spatial_enrichment}}{shared spatial enrichment results}
 

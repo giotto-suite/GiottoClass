@@ -121,11 +121,29 @@
   partial federations are gone. Assembled objects carry the federation
   handles on their identity tags (`spat_unit`, `feat_type`, `name`,
   `provenance`) and, for expression, a participation stamp on `@misc`.
+- `giottoMulti` gains the **multi-level spatial slots** `@spatial_locs`,
+  `@spatial_info`, `@feat_info` and `@images`, alongside `@spatial_network`.
+  Each is keyed exactly as its `giotto` counterpart. They hold content
+  belonging to no single sample — a layout read in a combined frame, a
+  stitched image, polygons buffered across the federation and written back.
+  Cell-keyed slots carry `sample::id` globals and so are pruned by `mg[i]`
+  and rewritten by `names(mg) <-`; `@feat_info` carries plain `feat_ID`s and
+  `@images` has no ID axis, so neither is.
 - Spatial-domain accessors (`get/setSpatialLocations`, `get/setSpatialNetwork`,
   `get/setPolygonInfo`, `get/setFeatureInfo`, `get/setGiottoImage`) gain
-  per-child `giottoMulti` dispatch: getters return named per-child lists
-  (scoped by `samples =` / `object =`) with any active narrowing applied to
-  the outputs; setters require a single named `object =` target.
+  `giottoMulti` dispatch. **Getters resolve parent-first**: multi-level
+  content when the slot holds what was asked for, otherwise a named per-child
+  list, scoped by `samples =`, with any active narrowing applied either way.
+  Passing `samples =` is an explicit request for per-child content and skips
+  the parent level.
+- **Breaking: `giottoMulti` setters write at the multi level only.** The
+  `object =` write target is removed from all five, along with any way to
+  reach a child through a setter — passing `object =` or `samples =` is
+  refused by name rather than ignored. A `giottoMulti` is for combined
+  analysis, whose artifacts are single items pulled from the parent; a
+  per-child write would put a select-sample output in the same slot namespace
+  as an all-sample one with nothing recording which is which. To change one
+  sample, edit that child and put it back: `mg[["<sample>"]] <- <child>`.
 - `giottoMulti` container surface: `as(g, "giottoMulti")`, `mg[i]` child
   selection (joint slots and mapping pruned to survivors), `mg[[name]] <-`
   child add/replace with mapping auto-seeding for the new sample,
@@ -138,6 +156,11 @@
 
 ## bug fixes
 
+- Narrowing a `giottoPolygon` or `giottoPoints` left `@unique_ID_cache`
+  holding the pre-narrowing IDs, so `spatIDs()` / `featIDs()` reported IDs
+  the geometry no longer contained. Reachable through `getPolygonInfo()` and
+  `getFeatureInfo()` on a narrowed `giottoMulti`, and through
+  `resolveSubobject()` under an active view.
 - `relate()` on a `spatLocsObj` `x` errored with
   `x = "data.table", y = "SpatVector"`. The `as.points()` coercion was
   overwritten one line later, and the `y` branch guarded on `x`.

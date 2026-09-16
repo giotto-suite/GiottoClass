@@ -17,7 +17,7 @@ setFeatureInfo(gobject, x, feat_type = NULL, ...)
   ...
 )
 
-\S4method{setFeatureInfo}{giottoMulti}(gobject, x, feat_type = NULL, ..., object = NULL)
+\S4method{setFeatureInfo}{giottoMulti}(gobject, x, feat_type = NULL, ...)
 }
 \arguments{
 \item{gobject}{giotto object}
@@ -33,8 +33,6 @@ will remove the specified giottoPoints object from the giotto object}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{object}{(giottoMulti) name of the single child to write into}
 }
 \value{
 giotto object

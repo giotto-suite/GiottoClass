@@ -78,6 +78,14 @@
 #' @slot feat_ID shared feature ID lists (global IDs), same contract.
 #' @slot dimension_reduction shared joint dim-reductions (PCA, UMAP, harmony)
 #' @slot nn_network shared joint NN graphs
+#' @slot spatial_locs **multi-level** spatial locations, nested
+#'   `spat_unit -> name`. Cell IDs are `sample::id` globals.
+#' @slot spatial_info **multi-level** polygons, keyed `name`. `poly_ID`s are
+#'   `sample::id` globals.
+#' @slot feat_info **multi-level** points, keyed `feat_type`. Features are
+#'   never sample-namespaced, so these carry plain `feat_ID`s.
+#' @slot images **multi-level** images, keyed `name` — one raster covering
+#'   several samples, as a combined space produces.
 #' @slot spatial_network **cross-sample** spatial networks, nested
 #'   `spat_unit -> name` — the same shape as `giotto@spatial_network`.
 #'   Both endpoints of every edge are `sample::id` globals, so an edge may
@@ -88,6 +96,14 @@
 #'   A network built in a coordinate frame takes that frame's name by
 #'   default, so two frames do not collide, and carries the frame in its
 #'   `@parameters$space`. See `adr/0006`.
+#'
+#'   These five spatial slots exist for the same reason: a combined analysis
+#'   produces **one** artifact spanning the federation, and there is no child
+#'   that can hold it. They are also what makes the round trip land somewhere
+#'   — read polygons across children, buffer them, write the result back, and
+#'   the result is multi-level because it no longer belongs to any one sample.
+#'   Setters on a `giottoMulti` write here and nowhere else (see the note on
+#'   the spatial setters below).
 #' @slot spatial_enrichment shared spatial enrichment results
 #' @slot multiomics shared multi-omics info
 #'
@@ -126,6 +142,10 @@ giottoMulti <- setClass(
         spatial_enrichment  = "nullOrList",
         dimension_reduction = "nullOrList",
         nn_network          = "nullOrList",
+        spatial_locs        = "nullOrList",
+        spatial_info        = "nullOrList",
+        feat_info           = "nullOrList",
+        images              = "nullOrList",
         spatial_network     = "nullOrList",
         multiomics          = "ANY",
 
@@ -155,6 +175,10 @@ giottoMulti <- setClass(
         spatial_enrichment  = NULL,
         dimension_reduction = NULL,
         nn_network          = NULL,
+        spatial_locs        = NULL,
+        spatial_info        = NULL,
+        feat_info           = NULL,
+        images              = NULL,
         spatial_network     = NULL,
         multiomics          = NULL,
 
@@ -389,6 +413,13 @@ setMethod("[", signature(x = "giottoMulti", i = "ANY"),
             out@nn_network          <- .gm_prune_nn_network(out@nn_network, keep_globals)
             out@spatial_enrichment  <- .gm_prune_spatial_enrichment(out@spatial_enrichment, keep_globals)
             out@spatial_network     <- .gm_prune_spatial_network(out@spatial_network, keep_globals)
+            out@spatial_locs        <- .gm_prune_joint_spatial(out@spatial_locs, keep_globals, depth = 2L)
+            out@spatial_info        <- .gm_prune_joint_spatial(out@spatial_info, keep_globals, depth = 1L)
+            # @feat_info and @images are not cell-keyed: features are never
+            # sample-namespaced, and an image has no ID axis to prune. They
+            # survive a child selection whole -- a mosaic covering samples
+            # that are no longer present is stale, not wrong, and there is
+            # no correct narrowing of a raster by sample.
         }
 
         # @mapping entries key every sample — prune dropped samples so the
@@ -441,6 +472,9 @@ setReplaceMethod("names", signature(x = "giottoMulti", value = "character"),
         x@nn_network          <- .gm_rewrite_nn_network(x@nn_network, old_to_new)
         x@spatial_enrichment  <- .gm_rewrite_spatial_enrichment(x@spatial_enrichment, old_to_new)
         x@spatial_network     <- .gm_rewrite_spatial_network(x@spatial_network, old_to_new)
+        x@spatial_locs        <- .gm_rewrite_joint_spatial(x@spatial_locs, old_to_new, depth = 2L)
+        x@spatial_info        <- .gm_rewrite_joint_spatial(x@spatial_info, old_to_new, depth = 1L)
+        # @feat_info / @images carry no sample-prefixed IDs — see `[`.
         x@cell_ID             <- .gm_rewrite_narrowing(x@cell_ID, old_to_new)
 
         # @mapping entries are keyed by sample name — rename the keys too,
@@ -945,13 +979,19 @@ setMethod(
         spat_unit = lvl1(x@expression) || lvl1(x@cell_metadata) ||
             lvl1(x@feat_metadata) || lvl1(x@spatial_enrichment) ||
             lvl1(x@nn_network) ||
-            lvl1(x@spatial_network) ||
+            lvl1(x@spatial_network) || lvl1(x@spatial_locs) ||
+            # spatial_info keys on polygon name, which IS the spat_unit
+            # namespace -- same as on a giotto
+            lvl1(x@spatial_info) ||
             # dimension_reduction: approach -> spat_unit -> ...
             lvl2(x@dimension_reduction),
         feat_type = lvl2(x@expression) || lvl2(x@cell_metadata) ||
             lvl2(x@feat_metadata) || lvl2(x@spatial_enrichment) ||
             lvl2(x@nn_network) ||
-            # spatial_network has no feat_type level, matching giotto's
+            # feat_info keys on feat_type at the top level
+            lvl1(x@feat_info) ||
+            # spatial_network / spatial_locs / spatial_info have no
+            # feat_type level, matching giotto's
             lvl3(x@dimension_reduction),
         values = lvl3(x@expression),
         stop("[.gm_universe_materialized] unknown axis: ", axis,
@@ -1078,17 +1118,22 @@ setMethod(
 # ---- helpers for add-time joint-slot nudge -------------------------------
 #
 # Adding a new sample to a gmulti with populated joint slots leaves those
-# slots covering only the original samples. The new sample's cells are
-# absent from joint @expression / @cell_metadata / @dimension_reduction /
-# @nn_network / @spatial_enrichment until the user either re-runs the
-# corresponding compute, drops the slot, or rebuilds via
+# slots covering only the original samples. The new sample is absent from
+# every multi-level artifact -- joint @expression / @cell_metadata /
+# @dimension_reduction / @nn_network / @spatial_enrichment, and equally the
+# multi-level spatial slots, where a stitched image or a joint polygon set
+# simply stops at the samples it was built over -- until the user either
+# re-runs the corresponding compute, drops the slot, or rebuilds via
 # createGiottoMulti(). Surface this loudly so it can't be missed.
+#
+# Also the list `show()` prints as "joint slots".
 
 #' @noRd
 .gm_populated_joint_slots <- function(x) {
     candidates <- c("expression", "cell_metadata", "feat_metadata",
         "dimension_reduction", "nn_network", "spatial_enrichment",
-        "spatial_network")
+        "spatial_network", "spatial_locs", "spatial_info", "feat_info",
+        "images")
     has <- vapply(candidates, function(s) {
         v <- slot(x, s)
         !is.null(v) && length(v) > 0L
@@ -1101,7 +1146,7 @@ setMethod(
     slot_list <- paste(slots, collapse = ", ")
     paste0(
         "[gmulti] added sample '", new_sample, "' but joint shared slot(s) ",
-        "do not cover its cells: ", slot_list, ".\n",
+        "do not cover it: ", slot_list, ".\n",
         "These slots now reflect only the original samples. Options:\n",
         "  - Recompute affected slots (preferred when the analysis ",
         "context matters)\n",
@@ -1363,6 +1408,69 @@ setMethod(
         }
     }
     sn_slot
+}
+
+# @spatial_locs (spat_unit -> name) and @spatial_info (name) hold ordinary
+# subobjects whose IDs are `sample::id` globals. Which axis of which class
+# is cell-keyed is already settled once, in `.narrow_subobject()`, so these
+# only walk the nesting and hand each leaf over. `depth` is how many list
+# levels sit above the subobject.
+#' @noRd
+.gm_walk_joint_spatial <- function(sl_slot, depth, f) {
+    if (is.null(sl_slot) || length(sl_slot) == 0L) return(sl_slot)
+    if (depth <= 0L) return(f(sl_slot))
+    lapply(sl_slot, .gm_walk_joint_spatial, depth = depth - 1L, f = f)
+}
+
+#' @noRd
+.gm_prune_joint_spatial <- function(sl_slot, keep_globals, depth) {
+    .gm_walk_joint_spatial(sl_slot, depth, function(x) {
+        .narrow_subobject(x, cells = keep_globals)
+    })
+}
+
+#' @noRd
+.gm_rewrite_joint_spatial <- function(sl_slot, old_to_new, depth) {
+    .gm_walk_joint_spatial(sl_slot, depth, function(x) {
+        .gm_rewrite_subobject_ids(x, old_to_new)
+    })
+}
+
+# Rename the `sample::` prefix inside one joint subobject. Only the classes
+# the multi-level spatial slots can hold are handled; anything else passes
+# through, on the same reasoning as `.rewrite_sample_id()` leaving an
+# unmapped prefix alone.
+#' @noRd
+.gm_rewrite_subobject_ids <- function(x, old_to_new) {
+    if (inherits(x, "spatLocsObj")) {
+        cell_ID <- NULL # data.table NSE
+        dt <- x[]
+        if (data.table::is.data.table(dt) && "cell_ID" %in% names(dt)) {
+            dt[, cell_ID := .rewrite_sample_id(cell_ID, old_to_new)]
+            x[] <- dt
+        }
+        return(x)
+    }
+
+    if (inherits(x, "giottoPolygon")) {
+        rw <- function(sv) {
+            if (is.null(sv)) return(sv)
+            vals <- terra::values(sv)
+            if (!"poly_ID" %in% names(vals)) return(sv)
+            sv$poly_ID <- .rewrite_sample_id(vals$poly_ID, old_to_new)
+            sv
+        }
+        x@spatVector <- rw(x@spatVector)
+        x@spatVectorCentroids <- rw(x@spatVectorCentroids)
+        # the cache is poly_IDs verbatim, so it goes stale unless renamed too
+        if (!identical(x@unique_ID_cache, NA_character_)) {
+            x@unique_ID_cache <- .rewrite_sample_id(
+                x@unique_ID_cache, old_to_new)
+        }
+        return(x)
+    }
+
+    x
 }
 
 .gm_prune_nn_network <- function(nn_slot, keep_globals) {
@@ -2333,6 +2441,11 @@ setMethod("gmultiMapping<-", "giottoMulti",
         x@nn_network <- NULL
         x@spatial_enrichment <- NULL
         x@spatial_network <- NULL
+        x@spatial_locs <- NULL
+        x@spatial_info <- NULL
+        x@feat_info <- NULL
+        # @images is deliberately kept: it is the one multi-level slot with
+        # no axis key, so no mapping change can invalidate it.
         return(x)
     }
     new <- x@mapping
@@ -2373,8 +2486,13 @@ setMethod("gmultiMapping<-", "giottoMulti",
     }
     x@expression <- ex
 
-    # spatial_network: su -> name. No feat_type level, matching giotto's.
+    # spatial_network / spatial_locs: su -> name. No feat_type level,
+    # matching giotto's. spatial_info keys on polygon name, which is the
+    # spat_unit namespace; feat_info keys on feat_type.
     x@spatial_network <- drop_keys(x@spatial_network, su_changed)
+    x@spatial_locs <- drop_keys(x@spatial_locs, su_changed)
+    x@spatial_info <- drop_keys(x@spatial_info, su_changed)
+    x@feat_info <- drop_keys(x@feat_info, ft_changed)
 
     # dimension_reduction: approach -> su -> ft -> method -> name
     if (!is.null(x@dimension_reduction)) {
@@ -2922,29 +3040,101 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
 
 # SPATIAL-DOMAIN METHODS — per-child dispatch ####
 #
-# Getters: `samples = NULL` (default) routes to all children and returns a
-# named list of per-child results. Pass a character vector of names to scope
-# to specific children. Children are returned as-is — subset() on the multi
+# Getters resolve PARENT-FIRST. Multi-level content is returned when it
+# exists for what was asked; otherwise the call fans out over children and
+# returns a named list of per-child results. `samples =` scopes the fan-out
+# and, being an explicit request for per-child content, skips the parent
+# level entirely. Children are returned as-is — subset() on the multi
 # narrows the joint analysis view, not children's spatial state — except
 # that an active @cell_ID / @feat_ID narrowing is applied to the outputs
-# (output-level filter; the children themselves are never mutated).
+# (output-level filter; the children themselves are never mutated). The
+# same narrowing is applied to parent-level content, which is already in
+# globals and so needs no localization.
 #
-# Setters: `object` must name exactly one child. Setting "broadcast"
-# semantics across children would silently duplicate spatial data and
-# is almost never what the caller means; require an explicit target.
+# Setters write at the MULTI LEVEL ONLY. There is no way to reach a child
+# through one, and that is the point rather than a missing feature: a
+# gmulti is for combined analysis, whose artifacts are single items pulled
+# from the parent, and a setter that could write into one child would let a
+# select-sample output sit in the same slot namespace as an all-sample one
+# with nothing recording which is which. Nothing downstream could then tell
+# them apart. The one sanctioned per-child write — per-sample networks from
+# a `perSampleSpace` job — stays inside network creation, which assigns
+# through `gobject@objects[[nm]] <- ...` directly rather than becoming a
+# public expectation. See adr/0006 and the @slot docs above.
 
 
+# ---- multi-level write helpers ------------------------------------------
+
+#' Assert a resolved joint-slot key, naming what was missing.
 #' @noRd
-.gm_set_target <- function(gobject, object) {
-    if (missing(object) || is.null(object)) {
-        stop("[gmulti setter] `object` must name the child to write into",
-            call. = FALSE)
+.gm_joint_key <- function(k, site, what) {
+    if (is.null(k) || length(k) != 1L || is.na(k) || !nzchar(k)) {
+        stop(sprintf(
+            paste0("[gmulti %s] a multi-level write needs a %s; none was ",
+                "given and `x` carries none."),
+            site, what), call. = FALSE)
     }
-    if (length(object) != 1L) {
-        stop("[gmulti setter] `object` must be length 1 for setters on a ",
-            "giottoMulti", call. = FALSE)
+    as.character(k)
+}
+
+#' Refuse a per-sample selector on a multi-level setter.
+#'
+#' `...` swallows anything, so without this a caller still passing the old
+#' `object =` gets a silent multi-level write instead of the per-child one
+#' they asked for. Removing the parameter is only half the policing; saying
+#' so when someone reaches for it is the other half. Takes `...names()`
+#' rather than `...` so nothing is forced.
+#' @noRd
+.gm_reject_write_selector <- function(site, nms) {
+    bad <- intersect(nms, c("object", "objects", "sample", "samples", "view"))
+    if (length(bad) == 0L) return(invisible(TRUE))
+    stop(sprintf(paste0(
+        "[gmulti %s] `%s` is not accepted: a giottoMulti setter writes at ",
+        "the multi level only, so there is no per-sample write target. To ",
+        "change one sample, edit that child and put it back with ",
+        "mg[[\"<sample>\"]] <- ."),
+        site, bad[[1L]]), call. = FALSE)
+}
+
+#' Read a key off a subobject, tolerating a class that has no such accessor.
+#' @noRd
+.gm_key_of <- function(x, f) {
+    k <- tryCatch(f(x), error = function(e) NULL)
+    if (is.null(k) || length(k) != 1L || is.na(k)) NULL else as.character(k)
+}
+
+#' Assign `value` into a joint slot at 1 or 2 levels of nesting.
+#' @noRd
+.gm_joint_assign <- function(sl, keys, value) {
+    sl <- sl %null% list()
+    if (length(keys) == 1L) {
+        sl[[keys[[1L]]]] <- value
+        return(sl)
     }
-    .gm_resolve_objects(gobject, object)
+    if (is.null(sl[[keys[[1L]]]])) sl[[keys[[1L]]]] <- list()
+    sl[[keys[[1L]]]][[keys[[2L]]]] <- value
+    sl
+}
+
+# ---- multi-level read helpers -------------------------------------------
+
+#' Descend one keyed level of a joint slot. `NULL` for an absent or
+#' unresolved key, so a parent-first check can simply fall through.
+#' @noRd
+.gm_joint_level <- function(sl, key) {
+    if (is.null(sl) || is.null(key) || length(key) != 1L || is.na(key)) {
+        return(NULL)
+    }
+    sl[[key]]
+}
+
+#' Pick a named entry from a joint slot's leaf level. A `NULL` name takes
+#' the first, matching what a `NULL` name means everywhere else.
+#' @noRd
+.gm_joint_pick <- function(lst, name) {
+    if (is.null(lst) || length(lst) == 0L) return(NULL)
+    if (is.null(name)) return(lst[[1L]])
+    .gm_joint_level(lst, name)
 }
 
 # Narrow a list of per-child subobjects by the global @cell_ID[[su]] /
@@ -2987,9 +3177,16 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
 setMethod("getSpatialLocations", signature("giottoMulti"),
     function(gobject, spat_unit = NULL, name = NULL, ...,
         samples = NULL) {
-        objs <- .gm_resolve_objects(gobject, samples)
         su <- spat_unit %||%
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
+
+        if (is.null(samples)) {
+            joint <- .gm_joint_pick(
+                .gm_joint_level(gobject@spatial_locs, su), name)
+            if (!is.null(joint)) return(.gm_apply_view(joint, gobject))
+        }
+
+        objs <- .gm_resolve_objects(gobject, samples)
         out <- lapply(objs, function(nm) {
             getSpatialLocations(gobject@objects[[nm]],
                 spat_unit = spat_unit, name = name, ...)
@@ -3000,14 +3197,18 @@ setMethod("getSpatialLocations", signature("giottoMulti"),
 )
 
 #' @rdname setSpatialLocations
-#' @param object (giottoMulti) name of the single child to write into
 #' @export
 setMethod("setSpatialLocations", signature("giottoMulti"),
-    function(gobject, x, spat_unit = NULL, name = NULL, ..., object = NULL) {
-        nm <- .gm_set_target(gobject, object)
-        gobject@objects[[nm]] <- setSpatialLocations(
-            gobject@objects[[nm]], x = x,
-            spat_unit = spat_unit, name = name, ...)
+    function(gobject, x, spat_unit = NULL, name = NULL, ...) {
+        .gm_reject_write_selector("setSpatialLocations", ...names())
+        su <- .gm_joint_key(
+            spat_unit %null% .gm_key_of(x, spatUnit) %null%
+                .gm_resolve_axis(gobject, "spat_unit", NULL)$handle,
+            "setSpatialLocations", "spat_unit")
+        nm <- .gm_joint_key(name %null% .gm_key_of(x, objName),
+            "setSpatialLocations", "name")
+        gobject@spatial_locs <- .gm_joint_assign(
+            gobject@spatial_locs, c(su, nm), x)
         gobject
     }
 )
@@ -3023,13 +3224,11 @@ setMethod("getSpatialNetwork", signature("giottoMulti"),
 
         # A cross-sample network lives in the multi's own slot and is named
         # for the frame it was built in, so a plain name lookup finds it --
-        # no second parameter saying "look in the joint slot". Checked
-        # first, and only when a name was asked for: without one there is
-        # no question to answer here, and the per-child fan-out is what
-        # `getSpatialNetwork(mg)` has always meant.
-        if (!is.null(name) && is.null(samples)) {
-            joint <- gobject@spatial_network[[su]][[name]]
-            if (!is.null(joint)) return(joint)
+        # no second parameter saying "look in the joint slot".
+        if (is.null(samples)) {
+            joint <- .gm_joint_pick(
+                .gm_joint_level(gobject@spatial_network, su), name)
+            if (!is.null(joint)) return(.gm_apply_view(joint, gobject))
         }
 
         objs <- .gm_resolve_objects(gobject, samples)
@@ -3044,35 +3243,20 @@ setMethod("getSpatialNetwork", signature("giottoMulti"),
 
 
 #' @rdname setSpatialNetwork
-#' @param object (giottoMulti) name of the single child to write into
 #' @export
 setMethod("setSpatialNetwork", signature("giottoMulti"),
-    function(gobject, x, spat_unit = NULL, name = NULL, ..., object = NULL) {
-        # `object =` names the child to write into (a single write target,
-        # not a selector -- adr/0006). Without it, the network is a
-        # multi-level artifact and goes in the multi's own slot: that is
-        # where a cross-sample network has to live, since no child's slot
-        # can hold an edge whose endpoints are in different samples.
-        if (is.null(object)) {
-            su <- spat_unit %null% spatUnit(x) %null%
-                .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
-            nm <- name %null% objName(x)
-            if (is.null(su) || is.na(su) || is.null(nm) || is.na(nm)) {
-                stop("[gmulti setSpatialNetwork] a multi-level network ",
-                    "needs a spat_unit and a name; `x` carries neither and ",
-                    "none were given. To write into one child instead, pass ",
-                    "`object = `.", call. = FALSE)
-            }
-            sn <- gobject@spatial_network %null% list()
-            if (is.null(sn[[su]])) sn[[su]] <- list()
-            sn[[su]][[nm]] <- x
-            gobject@spatial_network <- sn
-            return(gobject)
-        }
-        nm <- .gm_set_target(gobject, object)
-        gobject@objects[[nm]] <- setSpatialNetwork(
-            gobject@objects[[nm]], x = x,
-            spat_unit = spat_unit, name = name, ...)
+    function(gobject, x, spat_unit = NULL, name = NULL, ...) {
+        # A cross-sample network has to live here: no child's slot can hold
+        # an edge whose endpoints are in different samples.
+        .gm_reject_write_selector("setSpatialNetwork", ...names())
+        su <- .gm_joint_key(
+            spat_unit %null% .gm_key_of(x, spatUnit) %null%
+                .gm_resolve_axis(gobject, "spat_unit", NULL)$handle,
+            "setSpatialNetwork", "spat_unit")
+        nm <- .gm_joint_key(name %null% .gm_key_of(x, objName),
+            "setSpatialNetwork", "name")
+        gobject@spatial_network <- .gm_joint_assign(
+            gobject@spatial_network, c(su, nm), x)
         gobject
     }
 )
@@ -3082,13 +3266,20 @@ setMethod("setSpatialNetwork", signature("giottoMulti"),
 #' @export
 setMethod("getPolygonInfo", signature("giottoMulti"),
     function(gobject, name = NULL, ..., samples = NULL) {
-        objs <- .gm_resolve_objects(gobject, samples)
         # `name` is poly_info's analogue of spat_unit for narrowing — falls
         # back to the default handle when absent. (`polygon_name` is the
         # deprecated alias, still honoured on the child method.)
         args <- list(...)
         su <- name %||% args$polygon_name %||% args$spat_unit %||%
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
+
+        if (is.null(samples)) {
+            joint <- .gm_joint_pick(gobject@spatial_info,
+                name %||% args$polygon_name)
+            if (!is.null(joint)) return(.gm_apply_view(joint, gobject))
+        }
+
+        objs <- .gm_resolve_objects(gobject, samples)
         out <- lapply(objs, function(nm) {
             getPolygonInfo(gobject@objects[[nm]], name = name, ...)
         })
@@ -3098,13 +3289,13 @@ setMethod("getPolygonInfo", signature("giottoMulti"),
 )
 
 #' @rdname setPolygonInfo
-#' @param object (giottoMulti) name of the single child to write into
 #' @export
 setMethod("setPolygonInfo", signature("giottoMulti"),
-    function(gobject, x, name = NULL, ..., object = NULL) {
-        nm <- .gm_set_target(gobject, object)
-        gobject@objects[[nm]] <- setPolygonInfo(
-            gobject@objects[[nm]], x = x, name = name, ...)
+    function(gobject, x, name = NULL, ...) {
+        .gm_reject_write_selector("setPolygonInfo", ...names())
+        nm <- .gm_joint_key(name %null% .gm_key_of(x, objName),
+            "setPolygonInfo", "name")
+        gobject@spatial_info <- .gm_joint_assign(gobject@spatial_info, nm, x)
         gobject
     }
 )
@@ -3114,9 +3305,15 @@ setMethod("setPolygonInfo", signature("giottoMulti"),
 #' @export
 setMethod("getFeatureInfo", signature("giottoMulti"),
     function(gobject, feat_type = NULL, ..., samples = NULL) {
-        objs <- .gm_resolve_objects(gobject, samples)
         ft <- feat_type %||%
             .gm_resolve_axis(gobject, "feat_type", NULL)$handle
+
+        if (is.null(samples)) {
+            joint <- .gm_joint_level(gobject@feat_info, ft)
+            if (!is.null(joint)) return(.gm_apply_view(joint, gobject))
+        }
+
+        objs <- .gm_resolve_objects(gobject, samples)
         out <- lapply(objs, function(nm) {
             getFeatureInfo(gobject@objects[[nm]],
                 feat_type = feat_type, ...)
@@ -3129,13 +3326,15 @@ setMethod("getFeatureInfo", signature("giottoMulti"),
 )
 
 #' @rdname setFeatureInfo
-#' @param object (giottoMulti) name of the single child to write into
 #' @export
 setMethod("setFeatureInfo", signature("giottoMulti"),
-    function(gobject, x, feat_type = NULL, ..., object = NULL) {
-        nm <- .gm_set_target(gobject, object)
-        gobject@objects[[nm]] <- setFeatureInfo(
-            gobject@objects[[nm]], x = x, feat_type = feat_type, ...)
+    function(gobject, x, feat_type = NULL, ...) {
+        .gm_reject_write_selector("setFeatureInfo", ...names())
+        ft <- .gm_joint_key(
+            feat_type %null% .gm_key_of(x, featType) %null%
+                .gm_resolve_axis(gobject, "feat_type", NULL)$handle,
+            "setFeatureInfo", "feat_type")
+        gobject@feat_info <- .gm_joint_assign(gobject@feat_info, ft, x)
         gobject
     }
 )
@@ -3145,6 +3344,12 @@ setMethod("setFeatureInfo", signature("giottoMulti"),
 #' @export
 setMethod("getGiottoImage", signature("giottoMulti"),
     function(gobject, name = NULL, ..., samples = NULL) {
+        if (is.null(samples)) {
+            joint <- .gm_joint_pick(gobject@images, name)
+            # no narrowing pass: an image has no ID axis to narrow on
+            if (!is.null(joint)) return(joint)
+        }
+
         objs <- .gm_resolve_objects(gobject, samples)
         out <- lapply(objs, function(nm) {
             getGiottoImage(gobject@objects[[nm]], name = name, ...)
@@ -3155,13 +3360,13 @@ setMethod("getGiottoImage", signature("giottoMulti"),
 )
 
 #' @rdname setGiottoImage
-#' @param object (giottoMulti) name of the single child to write into
 #' @export
 setMethod("setGiottoImage", signature("giottoMulti"),
-    function(gobject, x, name = NULL, ..., object = NULL) {
-        nm <- .gm_set_target(gobject, object)
-        gobject@objects[[nm]] <- setGiottoImage(
-            gobject@objects[[nm]], x = x, name = name, ...)
+    function(gobject, x, name = NULL, ...) {
+        .gm_reject_write_selector("setGiottoImage", ...names())
+        nm <- .gm_joint_key(name %null% .gm_key_of(x, objName),
+            "setGiottoImage", "name")
+        gobject@images <- .gm_joint_assign(gobject@images, nm, x)
         gobject
     }
 )

@@ -19,14 +19,7 @@ setSpatialLocations(gobject, x, spat_unit = NULL, name = NULL, ...)
   ...
 )
 
-\S4method{setSpatialLocations}{giottoMulti}(
-  gobject,
-  x,
-  spat_unit = NULL,
-  name = NULL,
-  ...,
-  object = NULL
-)
+\S4method{setSpatialLocations}{giottoMulti}(gobject, x, spat_unit = NULL, name = NULL, ...)
 }
 \arguments{
 \item{gobject}{giotto object}
@@ -47,8 +40,6 @@ specified set of spatial locations data.}
 
 \item{initialize}{(default = FALSE) whether to initialize the gobject before
 returning}
-
-\item{object}{(giottoMulti) name of the single child to write into}
 }
 \value{
 giotto object
