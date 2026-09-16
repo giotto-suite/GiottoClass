@@ -179,16 +179,16 @@ test_that("recording onto an unused name creates the space", {
     expect_identical(giottoSpaces(g), "s")
     s <- giottoSpace(g, "s")
     expect_s4_class(s, "giottoSpace")
-    expect_identical(names(s), "s")
+    expect_identical(s@name, "s")
     # naming an unused space declares a combined one -- laying samples out
     # together being the common reason to name a space at all
     expect_s4_class(s, "combinedSpace")
-    # a plain giotto has no child names, so nothing is declared a member
-    # and the step is unscoped, which is how it reaches the one sample
-    expect_identical(spaceSamples(s), character())
-    expect_length(s[["s"]], 1L)
-    expect_identical(s[["s"]][[1L]]$op, "spatShift")
-    expect_null(s[["s"]][[1L]]$samples)
+    # a plain giotto has no child names, so the recipe mentions nobody and
+    # the step is unscoped, which is how it reaches the one sample there is
+    expect_identical(names(s), character())
+    expect_length(s, 1L)
+    expect_identical(s[[NA_character_]][[1L]]$op, "spatShift")
+    expect_null(s@steps[[1L]]$samples)
 })
 
 test_that("transform generics record onto a named space", {
@@ -197,7 +197,7 @@ test_that("transform generics record onto a named space", {
     g <- spin(g, 30, space = "s")
     g <- affine(g, M, space = "s")
     g <- spatShift(g, dx = 10, space = "s")
-    steps <- giottoSpace(g, "s")[[1L]]
+    steps <- giottoSpace(g, "s")@steps
     expect_length(steps, 3L)
     expect_identical(vapply(steps, function(x) x$op, character(1L)),
         c("spin", "affine", "spatShift"))
@@ -205,14 +205,14 @@ test_that("transform generics record onto a named space", {
 
 test_that("spin/affine record (0,0) anchor by default", {
     g <- spin(giotto(), 45, space = "s")
-    args <- giottoSpace(g, "s")[[1L]][[1L]]$args
+    args <- giottoSpace(g, "s")[[1L]]$args
     expect_equal(args$x0, 0)
     expect_equal(args$y0, 0)
 })
 
 test_that("user-supplied anchor overrides default", {
     g <- spin(giotto(), 45, x0 = 100, y0 = 200, space = "s")
-    args <- giottoSpace(g, "s")[[1L]][[1L]]$args
+    args <- giottoSpace(g, "s")[[1L]]$args
     expect_equal(args$x0, 100)
     expect_equal(args$y0, 200)
 })
@@ -225,18 +225,18 @@ test_that("samples= keys transforms per child, replacing `+`", {
     mg <- spin(mg, 30, space = "atlas", samples = "a")
     mg <- spatShift(mg, dx = 8000, space = "atlas", samples = "b")
     s <- giottoSpace(mg, "atlas")
-    expect_identical(spaceSamples(s), c("a", "b"))
-    expect_length(s[[1L, "a"]], 1L)
-    expect_length(s[[1L, "b"]], 1L)
-    expect_identical(s[[1L, "a"]][[1L]]$op, "spin")
-    expect_identical(s[[1L, "b"]][[1L]]$op, "spatShift")
+    expect_identical(names(s), c("a", "b"))
+    expect_length(s[["a"]], 1L)
+    expect_length(s[["b"]], 1L)
+    expect_identical(s[["a"]][[1L]]$op, "spin")
+    expect_identical(s[["b"]][[1L]]$op, "spatShift")
 })
 
 test_that("recording twice against one sample concatenates in order", {
     mg <- .fixture_gmulti()
     mg <- spin(mg, 30, space = "atlas", samples = "a")
     mg <- spatShift(mg, dx = 10, space = "atlas", samples = "a")
-    steps <- giottoSpace(mg, "atlas")[[1L, "a"]]
+    steps <- giottoSpace(mg, "atlas")[["a"]]
     expect_length(steps, 2L)
     expect_identical(vapply(steps, function(x) x$op, character(1L)),
         c("spin", "spatShift"))
@@ -247,10 +247,10 @@ test_that("samples= accepts several children at once", {
     mg <- spin(mg, 30, space = "atlas", samples = c("a", "b"))
     s <- giottoSpace(mg, "atlas")
     # one step, scoped to both -- not one step per sample
-    expect_length(s[[1L]], 1L)
-    expect_identical(s[[1L]][[1L]]$samples, c("a", "b"))
-    expect_length(s[[1L, "a"]], 1L)
-    expect_length(s[[1L, "b"]], 1L)
+    expect_length(s, 1L)
+    expect_identical(s[[1L]]$samples, c("a", "b"))
+    expect_length(s[["a"]], 1L)
+    expect_length(s[["b"]], 1L)
 })
 
 test_that("a broadcast step reaches a sample named only afterwards", {
@@ -263,13 +263,13 @@ test_that("a broadcast step reaches a sample named only afterwards", {
     mg <- spatShift(mg, dx = 8000, space = "atlas", samples = "b")
     mg <- spin(mg, 10, space = "atlas")
     s <- giottoSpace(mg, "atlas")
-    expect_identical(vapply(s[[1L, "b"]], function(x) x$op, character(1L)),
+    expect_identical(vapply(s[["b"]], function(x) x$op, character(1L)),
         c("spin", "spatShift", "spin"))
-    expect_identical(vapply(s[[1L, "a"]], function(x) x$op, character(1L)),
+    expect_identical(vapply(s[["a"]], function(x) x$op, character(1L)),
         c("spin", "spin"))
     # membership is a declaration, not an inference from who a broadcast
     # happened to touch: only "b" was ever named, so only "b" is declared
-    expect_identical(spaceSamples(s), "b")
+    expect_identical(names(s), "b")
 })
 
 test_that("scope is stated per call, not inherited from build order", {
@@ -281,8 +281,8 @@ test_that("scope is stated per call, not inherited from build order", {
     mg <- spin(mg, 30, space = "atlas", samples = "a")
     mg <- spatShift(mg, dx = 10, space = "atlas", samples = "b")
     s <- giottoSpace(mg, "atlas")
-    expect_length(s[[1L, "a"]], 1L)
-    expect_identical(s[[1L, "a"]][[1L]]$op, "spin")
+    expect_length(s[["a"]], 1L)
+    expect_identical(s[["a"]][[1L]]$op, "spin")
 })
 
 test_that("a gmulti transform requires a space, and samples= is gmulti-only", {
@@ -335,7 +335,7 @@ test_that("giottoSpace accessor and lookup", {
     expect_identical(giottoSpaces(g), "atlas")
     out <- giottoSpace(g, "atlas")
     expect_s4_class(out, "giottoSpace")
-    expect_identical(names(out), "atlas")
+    expect_identical(out@name, "atlas")
 })
 
 test_that("missing slotted name errors clearly", {
@@ -770,8 +770,8 @@ test_that("giottoSpace accessors work on giottoMulti via gAny", {
     mg <- spin(mg, 45, space = "atlas", samples = "b")
     expect_identical(giottoSpaces(mg), "atlas")
     out <- giottoSpace(mg, "atlas")
-    expect_identical(spaceSamples(out), c("a", "b"))
-    expect_length(out[[1L]], 2L)
+    expect_identical(names(out), c("a", "b"))
+    expect_length(out, 2L)
 })
 
 test_that("`[` scopes a space to a named child", {
@@ -780,25 +780,25 @@ test_that("`[` scopes a space to a named child", {
     mg <- spin(mg, 45, space = "atlas", samples = "b")
     s <- giottoSpace(mg, "atlas")
 
-    sa <- s["atlas", "a"]
+    sa <- s["a"]
     expect_s4_class(sa, "giottoSpace")
-    expect_identical(spaceSamples(sa), "a")
-    expect_length(s[["atlas", "a"]], 1L)
-    expect_equal(s[["atlas", "a"]][[1L]]$op, "spin")
-    expect_equal(s[["atlas", "a"]][[1L]]$args$angle, 30)
-    expect_equal(s[["atlas", "b"]][[1L]]$args$angle, 45)
+    expect_identical(names(sa), "a")
+    expect_length(s[["a"]], 1L)
+    expect_equal(s[["a"]][[1L]]$op, "spin")
+    expect_equal(s[["a"]][[1L]]$args$angle, 30)
+    expect_equal(s[["b"]][[1L]]$args$angle, 45)
 })
 
 test_that("an unscoped step answers for every sample, named or not", {
     s <- giottoSpace(spin(giotto(), 15, space = "s"), "s")
-    expect_equal(s[["s", "any_sample_name"]][[1L]]$args$angle, 15)
+    expect_equal(s[["any_sample_name"]][[1L]]$args$angle, 15)
     # and NA -- no sample identity at all -- resolves the same way
-    expect_equal(s[["s", NA_character_]][[1L]]$args$angle, 15)
+    expect_equal(s[[NA_character_]][[1L]]$args$angle, 15)
 })
 
-test_that("`[, j]` resolves for j and drops the scopes it has spent", {
-    # the {GiottoDisk} resolver seam: it scopes with `space[, samp]` and
-    # then reads back with `[[1L, NA_character_]]`, by which point the
+test_that("`[j]` resolves for j and drops the scopes it has spent", {
+    # the {GiottoDisk} resolver seam: it scopes with `space[samp]` and
+    # then reads back with `[[NA_character_]]`, by which point the
     # handle no longer knows which sample it holds. Dropping the scopes is
     # what makes that second read correct rather than empty.
     mg <- .fixture_gmulti()
@@ -806,17 +806,21 @@ test_that("`[, j]` resolves for j and drops the scopes it has spent", {
     mg <- spatShift(mg, dx = 10, space = "atlas", samples = "b")
     s <- giottoSpace(mg, "atlas")
 
-    expect_identical(vapply(s[, "b"][[1L, NA_character_]],
+    expect_identical(vapply(s["b"][[NA_character_]],
         function(x) x$op, character(1L)), c("spin", "spatShift"))
-    expect_identical(vapply(s[, "a"][[1L, NA_character_]],
+    expect_identical(vapply(s["a"][[NA_character_]],
         function(x) x$op, character(1L)), "spin")
-    expect_identical(spaceSamples(s[, "b"]), "b")
+    expect_identical(names(s["b"]), "b")
 
-    # with nothing scoped, resolving for any sample is the identity
+    # with nothing scoped, every step survives narrowing -- rescoped to
+    # the sample asked for, rather than dropped or stripped
     flat <- giottoSpace(spin(giotto(), 15, space = "s"), "s")
-    expect_identical(flat[, "a"]@steps, flat@steps)
-    expect_identical(flat[, NA_character_]@steps, flat@steps)
-    expect_identical(flat["s", "anything"]@steps, flat@steps)
+    expect_length(flat["a"], length(flat))
+    expect_identical(flat["a"]@steps[[1L]]$op, "spin")
+    expect_identical(flat["a"]@steps[[1L]]$samples, "a")
+    expect_identical(flat["anything"]@steps[[1L]]$samples, "anything")
+    # ... and narrowing to nobody is refused
+    expect_error(flat[NA_character_], "cannot narrow to NA")
 })
 
 test_that("recording onto an unused name declares a combined space", {
@@ -831,12 +835,12 @@ test_that("recording onto an unused name declares a combined space", {
     # membership starts empty and grows by key. Seeding it from the
     # object's children would make it a restatement of names(@objects),
     # and then neither the slot nor its growth would say anything.
-    expect_identical(spaceSamples(giottoSpace(
+    expect_identical(names(giottoSpace(
         spatShift(mg, dx = 5, space = "p"), "p")), character())
     grown <- spin(mg, 5, space = "q", samples = "a")
-    expect_identical(spaceSamples(giottoSpace(grown, "q")), "a")
+    expect_identical(names(giottoSpace(grown, "q")), "a")
     grown <- spatShift(grown, dx = 1, space = "q", samples = "b")
-    expect_identical(spaceSamples(giottoSpace(grown, "q")), c("a", "b"))
+    expect_identical(names(giottoSpace(grown, "q")), c("a", "b"))
 })
 
 test_that("a perSampleSpace is declaration-only, then per-sample editable", {
@@ -852,29 +856,35 @@ test_that("a perSampleSpace is declaration-only, then per-sample editable", {
 
     sp <- giottoSpace(mg, "upright")
     expect_s4_class(sp, "perSampleSpace")
-    expect_equal(sp[["upright", "a"]][[1L]]$args$angle, 30)
-    expect_equal(sp[["upright", "b"]][[1L]]$args$angle, 45)
+    expect_equal(sp[["a"]][[1L]]$args$angle, 30)
+    expect_equal(sp[["b"]][[1L]]$args$angle, 45)
     # the broadcast step reaches both
-    expect_length(sp[["upright", "a"]], 2L)
-    expect_length(sp[["upright", "b"]], 2L)
+    expect_length(sp[["a"]], 2L)
+    expect_length(sp[["b"]], 2L)
 })
 
-test_that("spaceSamples() reports membership, and NA when there is none", {
+test_that("names() reports the samples the recipe mentions", {
     mg <- .fixture_gmulti()
     mg <- spin(mg, 30, space = "atlas", samples = c("a", "b"))
-    expect_identical(spaceSamples(giottoSpace(mg, "atlas")), c("a", "b"))
-    # NA, not character(0): an empty vector reads as "nobody participates",
-    # which is a real and different answer
+    expect_identical(names(giottoSpace(mg, "atlas")), c("a", "b"))
+
+    # a perSampleSpace mentions only what is scoped. That list is not its
+    # COVERAGE -- an unscoped step reaches samples named nowhere -- which
+    # is why a consumer sizing a job reads the object, not the space.
     giottoSpace(mg, "each") <- perSampleSpace()
-    expect_identical(spaceSamples(giottoSpace(mg, "each")), NA_character_)
+    expect_identical(names(giottoSpace(mg, "each")), character())
+    mg <- spin(mg, 10, space = "each", samples = "a")
+    mg <- spatShift(mg, dx = 1, space = "each")
+    expect_identical(names(giottoSpace(mg, "each")), "a")
+    expect_length(giottoSpace(mg, "each")[["b"]], 1L)   # b still covered
 })
 
 test_that("membership can be declared for a member that never moves", {
     mg <- .fixture_gmulti()
     giottoSpace(mg, "atlas") <- combinedSpace(c("a", "b"))
     mg <- spatShift(mg, dx = 9000, space = "atlas", samples = "b")
-    expect_identical(spaceSamples(giottoSpace(mg, "atlas")), c("a", "b"))
-    expect_identical(giottoSpace(mg, "atlas")[["atlas", "a"]], list())
+    expect_identical(names(giottoSpace(mg, "atlas")), c("a", "b"))
+    expect_identical(giottoSpace(mg, "atlas")[["a"]], list())
 })
 
 test_that("a step cannot scope to a non-member, by construction", {
@@ -884,24 +894,24 @@ test_that("a step cannot scope to a non-member, by construction", {
     sp <- combinedSpace("a", name = "x")
     sp <- spin(sp, 1, samples = "zzz")
     expect_true(validObject(sp))
-    expect_identical(spaceSamples(sp), c("a", "zzz"))
+    expect_identical(names(sp), c("a", "zzz"))
 })
 
 test_that("a membership step declares without transforming", {
     sp <- combinedSpace(c("a", "b"), name = "atlas")
-    expect_identical(spaceSamples(sp), c("a", "b"))
+    expect_identical(names(sp), c("a", "b"))
     # it is not applied: `[[` hands back things the resolver will do.call()
-    expect_identical(sp[["atlas", "a"]], list())
-    expect_identical(sp[["atlas", "b"]], list())
-    expect_identical(vapply(sp[["atlas"]], function(s) s$type,
+    expect_identical(sp[["a"]], list())
+    expect_identical(sp[["b"]], list())
+    expect_identical(vapply(sp@steps, function(s) s$type,
         character(1L)), "member")
 
     # and it survives narrowing, so a scoped handle still knows its member
     sp <- spatShift(sp, dx = 9000, samples = "b")
-    expect_identical(spaceSamples(sp[, "b"]), "b")
-    expect_identical(spaceSamples(sp[, "a"]), "a")
-    expect_length(sp[, "a"][[1L, NA_character_]], 0L)
-    expect_length(sp[, "b"][[1L, NA_character_]], 1L)
+    expect_identical(names(sp["b"]), "b")
+    expect_identical(names(sp["a"]), "a")
+    expect_length(sp["a"][[NA_character_]], 0L)
+    expect_length(sp["b"][[NA_character_]], 1L)
 })
 
 test_that("`+` refuses a merge that would have no job size", {
@@ -920,7 +930,7 @@ test_that("':default:' is the native space: always there, never recorded", {
     g <- giotto()
     d <- giottoSpace(g, ":default:")
     expect_s4_class(d, "perSampleSpace")
-    expect_identical(d[[1L, NA_character_]], list())
+    expect_identical(d[[NA_character_]], list())
     # it is not a recorded space, so it does not appear in the listing
     expect_length(giottoSpaces(g), 0L)
     expect_error(spin(g, 30, space = ":default:"), "native space")
@@ -931,9 +941,10 @@ test_that("resolving for a sample with nothing scoped to it is empty", {
     mg <- .fixture_gmulti()
     mg <- spin(mg, 15, space = "atlas", samples = "a")
     s <- giottoSpace(mg, "atlas")
-    expect_identical(s[["atlas", "b"]], list())
-    # ... and NA, which names nobody, takes only the unscoped steps
-    expect_identical(s[["atlas", NA_character_]], list())
+    expect_identical(s[["b"]], list())
+    # ... and NA resolves to the sole mentioned sample, which is the rule
+    # the `sp["a"][[NA_character_]]` seam relies on
+    expect_length(s[[NA_character_]], 1L)
 })
 
 test_that("materialize on giottoMulti narrows children via selectSamples", {
@@ -1044,7 +1055,7 @@ test_that("steps and recipes are plain tagged lists, not S4", {
         c("filter", "crop", "samples"))
 
     s <- giottoSpace(spin(giotto(), 30, space = "s"), "s")
-    step <- s[["s", NA_character_]][[1L]]
+    step <- s[[NA_character_]][[1L]]
     expect_type(step, "list")
     expect_false(isS4(step))
     expect_identical(step$type, "transform")
@@ -1424,10 +1435,10 @@ test_that("samples = NULL broadcasts over the keys already recorded", {
     mg <- spin(mg, 45, space = "atlas", samples = "b")
     mg <- spatShift(mg, dx = 100, space = "atlas")   # no samples = broadcast
     s <- giottoSpace(mg, "atlas")
-    expect_length(s[[1L, "a"]], 2L)
-    expect_length(s[[1L, "b"]], 2L)
-    expect_identical(s[[1L, "a"]][[2L]]$op, "spatShift")
-    expect_identical(s[[1L, "b"]][[2L]]$op, "spatShift")
+    expect_length(s[["a"]], 2L)
+    expect_length(s[["b"]], 2L)
+    expect_identical(s[["a"]][[2L]]$op, "spatShift")
+    expect_identical(s[["b"]][[2L]]$op, "spatShift")
 })
 
 test_that("a mistyped sample name is rejected at record time", {
@@ -1501,24 +1512,32 @@ test_that("giottoView `[[<-` edits and drops steps, and validates", {
     expect_error({ v2[[2L]] <- bad }, "cannot be evaluated")
 })
 
-test_that("giottoSpace `[` / `[[` address frames and samples", {
+test_that("giottoSpace `[` / `[[` index by sample, or by step position", {
     sp <- .demo_space()
-    expect_identical(names(sp), "atlas")
-    expect_length(sp, 1L)
+    expect_identical(names(sp), c("a", "b"))   # samples, not the space name
+    expect_identical(sp@name, "atlas")
+    expect_length(sp, 2L)                      # step count
 
-    # [[space]] is every recorded step, in order, scopes intact
-    expect_length(sp[["atlas"]], 2L)
-    expect_error(sp[["nope"]], "no space named")
+    # character -> sample: the ordered step list that applies to it
+    expect_identical(sp[["a"]][[1L]]$op, "spin")
+    expect_identical(sp[["b"]][[1L]]$op, "spatShift")
+    expect_identical(sp[["nobody"]], list())
 
-    # [[space, sample]] is the ordered step list that applies to it
-    expect_identical(sp[["atlas", "a"]][[1L]]$op, "spin")
-    expect_identical(sp[["atlas", "b"]][[1L]]$op, "spatShift")
+    # numeric -> step position, raw and scopes intact
+    expect_identical(sp[[1L]]$op, "spin")
+    expect_identical(sp[[1L]]$samples, "a")
+    expect_length(sp[2L], 1L)
+    expect_identical(sp[2L]@steps[[1L]]$op, "spatShift")
 
-    # [space, sample] is a scoped handle, so it stays appendable
-    scoped <- sp["atlas", "a"]
+    # `[` narrows and stays appendable
+    scoped <- sp["a"]
     expect_s4_class(scoped, "giottoSpace")
-    expect_identical(spaceSamples(scoped), "a")
-    expect_length(spin(scoped, 45)[["atlas", "a"]], 2L)
+    expect_identical(names(scoped), "a")
+    expect_length(spin(scoped, 45)[["a"]], 2L)
+
+    # a second index is the old frame-then-sample form
+    expect_error(sp[["atlas", "a"]], "indexed on one axis")
+    expect_error(sp["atlas", "a"], "indexed on one axis")
 })
 
 test_that("`giottoSpace(g)` with no name gives the whole collection", {
@@ -1529,7 +1548,7 @@ test_that("`giottoSpace(g)` with no name gives the whole collection", {
     expect_type(all_sp, "list")
     expect_setequal(names(all_sp), c("one", "two"))
     expect_s4_class(all_sp[["one"]], "giottoSpace")
-    expect_identical(names(all_sp[["one"]]), "one")
+    expect_identical(all_sp[["one"]]@name, "one")
 })
 
 test_that("`+` concatenates view steps and merges space frames", {
@@ -1540,28 +1559,32 @@ test_that("`+` concatenates view steps and merges space frames", {
     # merging two whole recipes keeps every scope, so each sample still
     # replays only what was recorded for it
     merged <- .demo_space() + .demo_space()
-    expect_identical(spaceSamples(merged), c("a", "b"))
-    expect_length(merged[["atlas"]], 4L)
-    expect_length(merged[["atlas", "a"]], 2L)
-    expect_length(merged[["atlas", "b"]], 2L)
+    expect_identical(names(merged), c("a", "b"))
+    expect_length(merged, 4L)
+    expect_length(merged[["a"]], 2L)
+    expect_length(merged[["b"]], 2L)
 })
 
-test_that("`[, j]` yields a RESOLVED handle, not a recombinable one", {
-    # `[, j]` spends the scopes to answer for `j`, which is what lets the
-    # result be read back with `[[1L, NA_character_]]` by a consumer that
-    # no longer knows which sample it holds. The cost is that merging two
-    # resolved handles is not the inverse of splitting one: the steps come
-    # back unscoped, so each applies to every member of the merge.
+test_that("narrowing rescopes, so split-then-merge reconstructs", {
+    # `[i]` narrows without erasing: a surviving step is rescoped to `i`
+    # rather than stripped of its scope. Erasing instead -- which is what
+    # this did before -- made every step apply to everyone, so merging two
+    # narrowings handed each sample the other's transforms.
     sp <- .demo_space()
-    merged <- sp["atlas", "a"] + sp["atlas", "b"]
-    expect_identical(spaceSamples(merged), c("a", "b"))
-    expect_length(merged[["atlas", "a"]], 2L)   # not 1 -- scopes are spent
-    # recombine by merging the unnarrowed recipes instead
-    expect_length((sp + sp)[["atlas", "a"]], 2L)
+    merged <- sp["a"] + sp["b"]
+    expect_identical(names(merged), c("a", "b"))
+    expect_length(merged[["a"]], 1L)
+    expect_identical(merged[["a"]][[1L]]$op, "spin")
+    expect_length(merged[["b"]], 1L)
+    expect_identical(merged[["b"]][[1L]]$op, "spatShift")
+
+    # a narrowed handle still reads back through the two-call seam, which
+    # is what the erasure was there to serve
+    expect_identical(sp["b"][[NA_character_]][[1L]]$op, "spatShift")
 
     # merging the same scope twice concatenates rather than overwrites
-    twice <- sp["atlas", "a"] + sp["atlas", "a"]
-    expect_length(twice[["atlas", "a"]], 2L)
+    twice <- sp["a"] + sp["a"]
+    expect_length(twice[["a"]], 2L)
 })
 
 test_that("a crop step records the frame its region was read in", {

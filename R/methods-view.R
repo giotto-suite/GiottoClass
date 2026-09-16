@@ -535,7 +535,7 @@ setMethod("materialize",
         child <- out@objects[[samp]]
         # `[` owns the sample-resolution rule; the child then reads as a
         # single-sample object against the handle it is handed.
-        child_space <- if (is.null(space_obj)) NULL else space_obj[, samp]
+        child_space <- if (is.null(space_obj)) NULL else space_obj[samp]
         .materialize_giotto_resolved(child, view, space = child_space,
             coordinator = coordinator, slots = slots, ...)
     }), selected)

@@ -15,7 +15,7 @@ system, so a job built here is one job spanning them rather than one per
 sample (\code{adr/0006}).
 
 Membership is DERIVED from the steps — every sample any step names, in
-recorded order, readable with \code{\link[=spaceSamples]{spaceSamples()}}. It is not a slot, so
+recorded order, readable with \code{names()}. It is not a slot, so
 there is nothing that can disagree with the recipe. A member that needs
 no transform of its own is declared with a membership step, which
 \code{\link[=combinedSpace]{combinedSpace()}} seeds and \verb{samples =} on any transform verb adds to.

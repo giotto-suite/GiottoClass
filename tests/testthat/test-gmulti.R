@@ -1025,9 +1025,9 @@ test_that("a space step expands its group at record time", {
     # symbolic scope would re-resolve at every read, so a later edit to the
     # group would silently change which children a recorded transform
     # already applies to.
-    expect_identical(sort(sp[["atlas"]][[1L]]$samples), c("a", "b"))
-    expect_false("pair" %in% sp[["atlas"]][[1L]]$samples)
-    expect_length(sp[["atlas", "a"]], 1L)
+    expect_identical(sort(sp[[1L]]$samples), c("a", "b"))
+    expect_false("pair" %in% sp[[1L]]$samples)
+    expect_length(sp[["a"]], 1L)
 })
 
 # combined defaults (stage 7, fed 12) ####

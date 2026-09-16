@@ -610,7 +610,7 @@ createSpatialNetwork <- function(gobject,
 # job is planned the same way whether or not the caller named a frame.
 #
 # TODO(combinedSpace): a `combinedSpace` should become ONE job over
-# `spaceSamples(sp)` with `sample::id` node IDs, written to the multi's
+# `names(sp)` with `sample::id` node IDs, written to the multi's
 # joint slot. Until that lands every frame is planned per-sample, which is
 # right for a `perSampleSpace` and wrong for a `combinedSpace` -- it builds
 # N independent networks in a shared frame instead of one spanning it, so

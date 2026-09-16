@@ -40,9 +40,9 @@
 \arguments{
 \item{x}{a \code{giottoSpace}}
 
-\item{i}{space selector — this handle's name, or \code{1}}
+\item{i}{\code{character(1)} sample name, or \code{numeric} step position}
 
-\item{j}{\code{character(1)}. Sample name, or \code{NA_character_} for none.}
+\item{j}{not used — spaces are indexed on one axis}
 
 \item{...}{additional arguments, currently unused}
 
@@ -53,23 +53,21 @@ a \code{giottoSpace} for \code{[} and \code{+}; a \code{list} for \code{[[} and
 \code{as.list()}
 }
 \description{
-\code{[} scopes a space to a sample, returning a \link[=giottoSpace-class]{giottoSpace} so the
-result is still appendable; \code{[[} extracts the plain step list.
+A handle holds one space, so the index is the SAMPLE — \code{sp["a"]} and
+\code{sp[["a"]]} both read as "this space, for sample a". \code{[} narrows and
+returns a \link[=giottoSpace-class]{giottoSpace}, so the result is still a recipe and
+stays appendable; \code{[[} extracts the plain step list.
 
-A handle holds exactly one space, so \code{i} names or indexes that space and
-is checked rather than used to select — \code{sp["atlas", "a"]} and
-\code{sp[[1L, "a"]]} both read as "in this space, for sample a".
+A numeric index is a step position instead, following \code{l[["a"]]} vs
+\code{l[[1]]}: character selects by name, numeric by position.
 \itemize{
-\item \code{sp[i, j]} — the space RESOLVED for sample \code{j}: only the steps that
-apply to it, each now unscoped, since the scope has done its work.
-That is what lets the result be read with \code{sp[[1L, NA_character_]]}
-by a consumer that no longer knows which sample it holds. It also
-means \code{sp[, "a"] + sp[, "b"]} is not the inverse of splitting — the
-steps come back unscoped, so each applies to every member. Merge the
-unnarrowed recipes to recombine.
-\item \code{sp[[i]]} — every recorded step, in order, scopes intact
-\item \code{sp[[i, j]]} — the ordered step \code{list} that applies to sample \code{j}
-\item \code{length(sp)} / \code{names(sp)} — always \code{1}, and the space name
+\item \code{sp[i]} — character: narrowed to sample \code{i}, every surviving step
+rescoped to it rather than stripped, so \code{sp["a"] + sp["b"]}
+reconstructs the original. Numeric: the space holding steps \code{i}.
+\item \code{sp[[i]]} — character: the ordered step \code{list} that applies to sample
+\code{i}. Numeric: step \code{i}, raw.
+\item \code{names(sp)} — the samples this recipe mentions
+\item \code{length(sp)} — step count
 \item \code{as.list(sp)} — the plain export form
 \item \code{sp1 + sp2} — merge two handles on the same space, concatenating steps
 }
@@ -78,14 +76,31 @@ unnarrowed recipes to recombine.
 
 One rule, both kinds, resolved here and nowhere else: a step with no
 scope applies to every sample; a scoped step applies only to the samples
-it names. \code{NA_character_} means "no sample identity" -- a plain
-\link[=giotto-class]{giotto}, which holds one sample -- and takes the unscoped steps,
-since there is no name a scoped step could have matched.
+it names.
 
-The kinds differ in what the steps MEAN, not in how they resolve. A
-\link[=combinedSpace-class]{combinedSpace} places its members in one coordinate system; a
-\link[=perSampleSpace-class]{perSampleSpace} gives each sample its own copy of the space. Both
-may scope steps per sample.
+\code{NA_character_} means "no sample identity" — a plain \link[=giotto-class]{giotto},
+which is one sample that has no name. If the whole recipe mentions
+exactly one sample, that is who the handle is about and it resolves for
+it, which is how \code{sp["a"][[NA_character_]]} reads its steps back without
+being told the name twice. Two or more and it does not guess; none, and
+the unscoped steps are the whole answer.
+
+\code{sp[NA_character_]} is an error: narrowing needs a name, and "narrow to
+nobody" has no meaning.
+}
+
+\section{Membership}{
+
+\code{names()} says which samples the recipe MENTIONS. Whether that is the
+whole story is the class's job, not the accessor's:
+\itemize{
+\item \link[=combinedSpace-class]{combinedSpace} — closed. These are the members, and an unscoped
+step reaches exactly them.
+\item \link[=perSampleSpace-class]{perSampleSpace} — open. An unscoped step also reaches samples
+that appear nowhere in the recipe, so coverage is whatever the object
+holds. A consumer sizing a job must read it from the object, which is
+why nothing asks a \code{perSampleSpace} how many samples there are.
+}
 }
 
 \examples{
@@ -93,6 +108,6 @@ g <- spatShift(giotto(), dx = 10, space = "shifted")
 sp <- giottoSpace(g, "shifted")
 
 names(sp)
-sp[["shifted"]]
-sp[["shifted", NA_character_]]
+length(sp)
+sp[[NA_character_]]
 }

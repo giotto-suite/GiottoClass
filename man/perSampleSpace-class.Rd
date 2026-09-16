@@ -14,10 +14,11 @@ scoped -- two sections each rotated upright by a different angle are
 per-sample, because nothing about that puts them in a shared coordinate
 system.
 
-It declares no membership, and that is deliberate: there is none to
-declare, since the frame covers whatever samples the object holds. That
-is why \code{\link[=spaceSamples]{spaceSamples()}} answers \code{NA_character_} here and nothing
-downstream can mistake it for a sized job.
+Its membership is OPEN: \code{names()} reports the samples its steps mention,
+but an unscoped step also reaches samples that appear nowhere in the
+recipe. Coverage is therefore whatever the object holds, which is why a
+consumer sizing a job reads it from the object rather than asking the
+space.
 
 It is also the only kind that cannot be created by \code{space = "<name>"} on
 a transform verb — recording onto an unused name declares a combined

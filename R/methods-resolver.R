@@ -210,16 +210,15 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # `do.call(op, c(list(x = subobj), args))`.
 #
 # `sample` names the sample identity of `subobj` -- a gmulti child's name,
-# or `NA_character_` for a plain `giotto`, which holds one sample. `[[`
-# owns the resolution of that name against the frame's keys (including the
-# `:default:` sentinel), so this walks whatever it hands back and no rule
-# is re-implemented here.
+# or `NA_character_` for a plain `giotto`, which is one sample with no
+# name. `[[` owns the resolution of that name against the recipe, so this
+# walks whatever it hands back and no rule is re-implemented here.
 #' @keywords internal
 #' @noRd
 .apply_space_to_subobj <- function(subobj, gobject, space, coordinator,
                                    sample = NA_character_) {
     if (is.null(space)) return(subobj)
-    for (step in space[[1L, sample]]) {
+    for (step in space[[sample]]) {
         subobj <- do.call(step$op, c(list(x = subobj), step$args))
     }
     subobj

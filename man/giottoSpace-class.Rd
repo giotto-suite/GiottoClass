@@ -51,6 +51,6 @@ as.list(sp)
 }
 \seealso{
 \code{\link[=giottoSpace]{giottoSpace()}} for the gobject-level accessors;
-\code{\link[=spaceSamples]{spaceSamples()}} for the membership a frame declares;
+\link{giottoSpace-access} for \code{names()}, which reports membership;
 \link[=giottoView-class]{giottoView} for the subset/narrowing recipe
 }

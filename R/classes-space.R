@@ -253,6 +253,43 @@
     steps[keep]
 }
 
+#' Narrow a recipe to sample `j`, keeping it a recipe.
+#'
+#' Unlike `.space_steps_for()`, which extracts the steps to APPLY, this
+#' rewrites the recipe so it still says who each step is for -- a step
+#' scoped to `c("a", "b")` narrowed to `"a"` becomes scoped to `"a"`, not
+#' unscoped. Erasing the scope instead would make the result a list of
+#' steps that apply to everyone, so merging two narrowings would hand each
+#' sample the other's transforms.
+#'
+#' An unscoped step gains `j`, because in a recipe that is only about `j`
+#' that is what "applies to everyone" means. That is what makes
+#' `sp[, "a"] + sp[, "b"]` reconstruct the original rather than double the
+#' broadcast steps.
+#'
+#' `NA_character_` is "no sample identity", which nothing can be scoped
+#' to: the scoped steps drop and the unscoped ones stay unscoped.
+#'
+#' Member steps narrow by the same rule -- they are steps with a scope and
+#' nothing else, so membership follows the recipe without a special case.
+#' @noRd
+.space_narrow_steps <- function(steps, j) {
+    if (is.na(j)) {
+        keep <- vapply(steps, function(s) is.null(s$samples), logical(1L))
+        return(steps[keep])
+    }
+    out <- lapply(steps, function(s) {
+        if (is.null(s$samples)) {
+            s$samples <- j
+            return(s)
+        }
+        if (!j %in% s$samples) return(NULL)
+        s$samples <- j
+        s
+    })
+    out[!vapply(out, is.null, logical(1L))]
+}
+
 #' Every sample name any step mentions, in recorded order.
 #'
 #' This IS the membership of a `combinedSpace` -- derived, not stored, so
@@ -299,7 +336,7 @@
 #'   `saveRDS()` and reaches a parallel worker. `samples = NULL` broadcasts.
 #' @returns a `giottoSpace` object
 #' @seealso [giottoSpace()] for the gobject-level accessors;
-#'   [spaceSamples()] for the membership a frame declares;
+#'   [giottoSpace-access] for `names()`, which reports membership;
 #'   [giottoView-class] for the subset/narrowing recipe
 #' @examples
 #' g <- spatShift(giotto(), dx = 10, space = "shifted")
@@ -322,7 +359,7 @@ setClass("giottoSpace",
 #' sample (`adr/0006`).
 #'
 #' Membership is DERIVED from the steps — every sample any step names, in
-#' recorded order, readable with [spaceSamples()]. It is not a slot, so
+#' recorded order, readable with `names()`. It is not a slot, so
 #' there is nothing that can disagree with the recipe. A member that needs
 #' no transform of its own is declared with a membership step, which
 #' [combinedSpace()] seeds and `samples =` on any transform verb adds to.
@@ -341,10 +378,11 @@ setClass("combinedSpace", contains = "giottoSpace")
 #' per-sample, because nothing about that puts them in a shared coordinate
 #' system.
 #'
-#' It declares no membership, and that is deliberate: there is none to
-#' declare, since the frame covers whatever samples the object holds. That
-#' is why [spaceSamples()] answers `NA_character_` here and nothing
-#' downstream can mistake it for a sized job.
+#' Its membership is OPEN: `names()` reports the samples its steps mention,
+#' but an unscoped step also reaches samples that appear nowhere in the
+#' recipe. Coverage is therefore whatever the object holds, which is why a
+#' consumer sizing a job reads it from the object rather than asking the
+#' space.
 #'
 #' It is also the only kind that cannot be created by `space = "<name>"` on
 #' a transform verb — recording onto an unused name declares a combined

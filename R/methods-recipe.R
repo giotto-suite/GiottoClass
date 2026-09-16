@@ -146,41 +146,53 @@ setMethod("show", signature(object = "giottoView"), function(object) {
 #' @title Access a coordinate-frame recipe
 #' @name giottoSpace-access
 #' @description
-#' `[` scopes a space to a sample, returning a [giottoSpace-class] so the
-#' result is still appendable; `[[` extracts the plain step list.
+#' A handle holds one space, so the index is the SAMPLE — `sp["a"]` and
+#' `sp[["a"]]` both read as "this space, for sample a". `[` narrows and
+#' returns a [giottoSpace-class], so the result is still a recipe and
+#' stays appendable; `[[` extracts the plain step list.
 #'
-#' A handle holds exactly one space, so `i` names or indexes that space and
-#' is checked rather than used to select — `sp["atlas", "a"]` and
-#' `sp[[1L, "a"]]` both read as "in this space, for sample a".
+#' A numeric index is a step position instead, following `l[["a"]]` vs
+#' `l[[1]]`: character selects by name, numeric by position.
 #'
-#' * `sp[i, j]` — the space RESOLVED for sample `j`: only the steps that
-#'   apply to it, each now unscoped, since the scope has done its work.
-#'   That is what lets the result be read with `sp[[1L, NA_character_]]`
-#'   by a consumer that no longer knows which sample it holds. It also
-#'   means `sp[, "a"] + sp[, "b"]` is not the inverse of splitting — the
-#'   steps come back unscoped, so each applies to every member. Merge the
-#'   unnarrowed recipes to recombine.
-#' * `sp[[i]]` — every recorded step, in order, scopes intact
-#' * `sp[[i, j]]` — the ordered step `list` that applies to sample `j`
-#' * `length(sp)` / `names(sp)` — always `1`, and the space name
+#' * `sp[i]` — character: narrowed to sample `i`, every surviving step
+#'   rescoped to it rather than stripped, so `sp["a"] + sp["b"]`
+#'   reconstructs the original. Numeric: the space holding steps `i`.
+#' * `sp[[i]]` — character: the ordered step `list` that applies to sample
+#'   `i`. Numeric: step `i`, raw.
+#' * `names(sp)` — the samples this recipe mentions
+#' * `length(sp)` — step count
 #' * `as.list(sp)` — the plain export form
 #' * `sp1 + sp2` — merge two handles on the same space, concatenating steps
 #'
 #' @section Sample resolution:
 #' One rule, both kinds, resolved here and nowhere else: a step with no
 #' scope applies to every sample; a scoped step applies only to the samples
-#' it names. `NA_character_` means "no sample identity" -- a plain
-#' [giotto-class], which holds one sample -- and takes the unscoped steps,
-#' since there is no name a scoped step could have matched.
+#' it names.
 #'
-#' The kinds differ in what the steps MEAN, not in how they resolve. A
-#' [combinedSpace-class] places its members in one coordinate system; a
-#' [perSampleSpace-class] gives each sample its own copy of the space. Both
-#' may scope steps per sample.
+#' `NA_character_` means "no sample identity" — a plain [giotto-class],
+#' which is one sample that has no name. If the whole recipe mentions
+#' exactly one sample, that is who the handle is about and it resolves for
+#' it, which is how `sp["a"][[NA_character_]]` reads its steps back without
+#' being told the name twice. Two or more and it does not guess; none, and
+#' the unscoped steps are the whole answer.
+#'
+#' `sp[NA_character_]` is an error: narrowing needs a name, and "narrow to
+#' nobody" has no meaning.
+#'
+#' @section Membership:
+#' `names()` says which samples the recipe MENTIONS. Whether that is the
+#' whole story is the class's job, not the accessor's:
+#'
+#' * [combinedSpace-class] — closed. These are the members, and an unscoped
+#'   step reaches exactly them.
+#' * [perSampleSpace-class] — open. An unscoped step also reaches samples
+#'   that appear nowhere in the recipe, so coverage is whatever the object
+#'   holds. A consumer sizing a job must read it from the object, which is
+#'   why nothing asks a `perSampleSpace` how many samples there are.
 #'
 #' @param x a `giottoSpace`
-#' @param i space selector — this handle's name, or `1`
-#' @param j `character(1)`. Sample name, or `NA_character_` for none.
+#' @param i `character(1)` sample name, or `numeric` step position
+#' @param j not used — spaces are indexed on one axis
 #' @param e1,e2 `giottoSpace` objects to compose
 #' @param ... additional arguments, currently unused
 #' @returns a `giottoSpace` for `[` and `+`; a `list` for `[[` and
@@ -190,30 +202,19 @@ setMethod("show", signature(object = "giottoView"), function(object) {
 #' sp <- giottoSpace(g, "shifted")
 #'
 #' names(sp)
-#' sp[["shifted"]]
-#' sp[["shifted", NA_character_]]
+#' length(sp)
+#' sp[[NA_character_]]
 NULL
 
-# `i` identifies the one space a handle holds. It is checked, not used to
-# select: a wrong name is a caller who thinks this handle holds a space it
-# does not, and silently answering with the space it does hold would return
-# the wrong transforms.
+# Spaces index on one axis. A second index is almost certainly code
+# written against the old frame-then-sample form, so say that rather than
+# letting it pass silently as `...`.
 #' @noRd
-.space_check_frame <- function(x, i) {
-    nm <- x@name
-    ok <- if (is.character(i)) {
-        length(i) == 1L && !is.na(nm) && identical(i, nm)
-    } else {
-        length(i) == 1L && !is.na(i) && i == 1L
-    }
-    if (!ok) {
-        stop("[space] no space named ",
-            paste(sprintf("'%s'", i), collapse = ", "),
-            ". This handle holds ",
-            if (is.na(nm)) "an unnamed space"
-            else sprintf("'%s'", nm), ".", call. = FALSE)
-    }
-    invisible(nm)
+.space_assert_one_index <- function(j) {
+    if (missing(j)) return(invisible(TRUE))
+    stop("[space] a space is indexed on one axis -- the sample, or a ",
+        "numeric step position. Use `sp[\"a\"]` / `sp[[\"a\"]]`, not ",
+        "`sp[<space>, \"a\"]`.", call. = FALSE)
 }
 
 # The space name a merge result carries. An unnamed handle -- one built
@@ -245,47 +246,56 @@ NULL
 #' @rdname giottoSpace-access
 #' @export
 setMethod("[", signature(x = "giottoSpace"), function(x, i, j, ...) {
-    if (!missing(i)) .space_check_frame(x, i)
-    if (missing(j)) return(x)
-    checkmate::assert_character(j, len = 1L, .var.name = "j")
-    members <- .space_step_samples(x@steps)
-    # The steps that survive have been resolved FOR `j`, so their scopes
-    # have done their work and are dropped. That is what makes the result
-    # readable with `[[1L, NA_character_]]` by a consumer that no longer
-    # knows which sample it holds -- the {GiottoDisk} resolver seam.
-    x@steps <- lapply(.space_steps_for(x@steps, j), function(s) {
-        # `[` rather than `$`: `s$samples <- NULL` DROPS the element, so an
-        # already-unscoped step would come back a different shape than it
-        # went in and `[, j]` would stop being the identity on one.
-        s["samples"] <- list(NULL)
-        s
-    })
-    # Membership narrows with the steps: a member step is kept only if `j`
-    # is in it, rewritten to name just `j`. Without this the scoped handle
-    # would report no members at all, since the transforms that survive
-    # have had their scopes spent.
-    if (inherits(x, "combinedSpace") && !is.na(j) && j %in% members) {
-        x@steps <- c(list(.space_step_member(j)), x@steps)
+    .space_assert_one_index(j)
+    if (missing(i)) return(x)
+    if (!is.character(i)) {
+        x@steps <- x@steps[i]
+        return(x)
     }
+    checkmate::assert_character(i, len = 1L, .var.name = "i")
+    if (is.na(i)) {
+        stop("[space] cannot narrow to NA: narrowing needs a sample name, ",
+            "and \"narrow to nobody\" has no meaning. To read the steps of ",
+            "a handle with no sample identity, use `sp[[NA_character_]]`.",
+            call. = FALSE)
+    }
+    # Narrow, do not erase: every surviving step still says it is for `i`.
+    # Membership follows for free, because a member step is a step with a
+    # scope and nothing else.
+    x@steps <- .space_narrow_steps(x@steps, i)
     x
 })
 
 #' @rdname giottoSpace-access
 #' @export
 setMethod("[[", signature(x = "giottoSpace"), function(x, i, j, ...) {
-    .space_check_frame(x, i)
-    if (missing(j)) return(x@steps)
-    checkmate::assert_character(j, len = 1L, .var.name = "j")
-    .space_steps_for(x@steps, j)
+    .space_assert_one_index(j)
+    if (!is.character(i)) return(x@steps[[i]])
+    checkmate::assert_character(i, len = 1L, .var.name = "i")
+    # `NA` is "no sample identity". If exactly one sample is mentioned
+    # across the whole recipe, that is who this handle is about -- the case
+    # after `sp["a"]` -- so the two-call seam reads its steps back without
+    # being told the name twice. Two or more and it does not guess; none
+    # and there is nothing to guess, so the unscoped steps are the answer.
+    if (is.na(i)) {
+        named <- .space_step_samples(x@steps)
+        if (length(named) == 1L) i <- named
+    }
+    .space_steps_for(x@steps, i)
 })
 
 #' @rdname giottoSpace-access
 #' @export
-setMethod("length", signature(x = "giottoSpace"), function(x) 1L)
+setMethod("length", signature(x = "giottoSpace"),
+    function(x) length(x@steps))
 
+# The samples the recipe MENTIONS -- the keys `[[` accepts. Whether that
+# is the whole coverage is the class's question, not this one; see the
+# Membership section above.
 #' @rdname giottoSpace-access
 #' @export
-setMethod("names", signature(x = "giottoSpace"), function(x) x@name)
+setMethod("names", signature(x = "giottoSpace"),
+    function(x) .space_step_samples(x@steps))
 
 #' @rdname giottoSpace-access
 #' @export
@@ -338,7 +348,7 @@ setMethod("+", signature(e1 = "giottoSpace", e2 = "giottoSpace"),
 #' @export
 setMethod("show", signature(object = "combinedSpace"), function(object) {
     cat("An object of class combinedSpace\n")
-    members <- spaceSamples(object)
+    members <- names(object)
     cat(sprintf("space '%s' | %d sample(s) share one coordinate system\n",
         object@name, length(members)))
     if (length(members) > 0L) {
@@ -353,44 +363,11 @@ setMethod("show", signature(object = "combinedSpace"), function(object) {
 setMethod("show", signature(object = "perSampleSpace"), function(object) {
     cat("An object of class perSampleSpace\n")
     cat(sprintf("space '%s' | each sample in its own copy\n", object@name))
+    scoped <- names(object)
+    if (length(scoped) > 0L) {
+        cat("  scoped  :", paste(scoped, collapse = ", "), "\n")
+    }
     cat("  steps   :", .space_ops_str(object@steps), "\n")
     invisible(NULL)
 })
 
-
-#' @title Which samples a coordinate frame spans
-#' @name spaceSamples
-#' @description
-#' The membership a frame declares — the thing an artifact generator reads
-#' to size its job (`adr/0006`).
-#'
-#' * [combinedSpace-class] — the member names, in recording order.
-#' * [perSampleSpace-class] — `NA_character_`, meaning "no sample identity":
-#'   the frame applies to each sample independently, so the job size comes
-#'   from the object rather than from the frame.
-#'
-#' `NA_character_` rather than `character(0)`: an empty vector reads as
-#' "nobody participates", which is a real and different answer (a
-#' `combinedSpace` that has been emptied). A caller that branches on
-#' `length()` alone would run zero jobs for the frame that should run one
-#' per sample.
-#'
-#' @param x a [giottoSpace-class]
-#' @param ... additional arguments, currently unused
-#' @returns `character` of sample names, or `NA_character_`
-#' @examples
-#' g <- spatShift(giotto(), dx = 10, space = "shifted")
-#' spaceSamples(giottoSpace(g, "shifted"))
-#' spaceSamples(perSampleSpace())
-#' @export
-setGeneric("spaceSamples", function(x, ...) standardGeneric("spaceSamples"))
-
-#' @rdname spaceSamples
-#' @export
-setMethod("spaceSamples", signature(x = "combinedSpace"),
-    function(x, ...) .space_step_samples(x@steps))
-
-#' @rdname spaceSamples
-#' @export
-setMethod("spaceSamples", signature(x = "perSampleSpace"),
-    function(x, ...) NA_character_)
