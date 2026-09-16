@@ -624,7 +624,7 @@ createSpatialNetwork <- function(gobject,
     }
     if (is.null(space)) space <- .space_default_name
     checkmate::assert_string(space, .var.name = "space")
-    .assert_space_known(gobject, space)
+    # the getter checks the name; an unknown one raises there
     list(kind = "per_sample", samples = samples,
         space = giottoSpace(gobject, space))
 }

@@ -341,7 +341,25 @@ test_that("giottoSpace accessor and lookup", {
 test_that("missing slotted name errors clearly", {
     g <- giotto()
     expect_error(giottoView(g, "missing"), "no view named")
-    expect_error(giottoSpace(g, "missing"), "no space named")
+    expect_error(giottoSpace(g, "missing"), "not a registered space")
+})
+
+test_that("the getter owns the space-name check, so every caller gets it", {
+    # folded into `giottoSpace()` because every caller that checks goes on
+    # to fetch, so a consumer cannot do one without the other.
+    mg <- .fixture_gmulti()
+    mg <- spin(mg, 30, space = "atlas", samples = "a")
+
+    expect_error(giottoSpace(mg, "nope"), "not a registered space")
+    # the writer that used to carry its own copy of this check now
+    # inherits it from the getter
+    expect_error(createSpatialNetwork(mg, space = "nope"),
+        "not a registered space")
+
+    # the native space still resolves without being recorded, and a real
+    # one still comes back
+    expect_s4_class(giottoSpace(mg, ":default:"), "perSampleSpace")
+    expect_identical(giottoSpace(mg, "atlas")@name, "atlas")
 })
 
 

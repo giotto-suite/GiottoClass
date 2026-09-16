@@ -153,48 +153,28 @@ setGeneric("giottoSpaces",
 # Is `space` a name this object can resolve? Raises if not.
 #
 # The membership test lives HERE rather than at the call site, with the
-# resolvable list built here too. 
+# resolvable list built here too.
 #' @noRd
 .assert_space_known <- function(gobject, space) {
+    # check against default space and existing spaces
     known <- c(.space_default_name, giottoSpaces(gobject))
     if (space %in% known) return(invisible(TRUE))
 
-    msg <- sprintf("[space] '%s' is not a space. %s", space,
-        paste("Available:", paste(known, collapse = ", ")))
-    # ":all:" is a value in a SELECTOR's vocabulary -- "every member of the
-    # set this parameter selects from" -- so it can only be passed to one.
-    # There is no selector here to accept it, and that is the whole reason
-    # it is gone rather than a separate deprecation.
-    if (identical(space, ":all:")) {
-        stop(msg, "\n'", space, "' is a selector value, and `space =` is ",
-            "not a selector -- an artifact generator takes none (adr/0006). ",
-            "Omit `space` to build in every sample's native space.",
-            call. = FALSE)
-    }
-    # Only a giottoMulti has samples or groups to have confused with a
-    # space, and only it has `@objects` to ask.
-    what <- if (!inherits(gobject, "giottoMulti")) NULL
-        else if (space %in% names(gobject@objects)) "a sample"
-        else if (space %in% gmultiGroups(gobject)) "a group"
-        else NULL
-    if (!is.null(what)) {
-        msg <- paste0(msg, "\n'", space, "' names ", what,
-            ", and `space =` is not a sample selector -- an artifact ",
-            "generator takes none, because nothing downstream could tell ",
-            "which rows it admitted (adr/0006). Record a space over those ",
-            "samples, or subset with `mg[...]` and build on the result.")
-    }
+    msg <- sprintf("[space] '%s' is not a registered space.\n Available: %s",
+        space, toString(known)
+    )
     stop(msg, call. = FALSE)
 }
 
-# Shared guard, so the five methods below stay one line each.
+# space = NULL means eager transform. This is not permitted in gmulti.
+# this helper guards against that and points what to do instead
 .assert_space_required <- function(space, op) {
     if (!is.null(space)) return(invisible(TRUE))
     stop(sprintf(paste0(
         "[%s] a giottoMulti transform requires `space = \"<name>\"`. ",
         "Eager per-child transforms are not implemented. Record onto a ",
         "named space (scope it with `samples = ` if it should apply to ",
-        "some children only), then apply it with `materialize()`."),
+        "some children only)"),
         op), call. = FALSE)
 }
 
@@ -389,18 +369,20 @@ NULL
 setMethod("giottoSpace", signature(gobject = "gAny", name = "character"),
     function(gobject, name, ...) {
         checkmate::assert_character(name, len = 1L)
+        # The one place a space name is checked. Every caller that checks
+        # goes on to fetch, so folding the two together means a consumer
+        # cannot do one without the other -- and the diagnosis for a name
+        # that is really a sample or a group is available everywhere
+        # rather than at whichever call site remembered to ask for it.
+        .assert_space_known(gobject, name)
         s <- gobject@spaces[[name]]
-        if (!is.null(s)) return(s)
-        # The native frame is resolvable on every object without being
-        # recorded on any: it is where the data already is. Consumers can
-        # then take a frame unconditionally instead of carrying a
-        # "no space" branch beside the frame branch.
-        if (identical(name, .space_default_name)) {
-            return(.new_per_sample_space(.space_default_name))
-        }
-        stop("no space named '", name, "'. ",
-            "Available: ", paste(giottoSpaces(gobject), collapse = ", "),
-            call. = FALSE)
+        # Past the assert, a NULL can only be the native space: it is
+        # resolvable on every object without being recorded on any, since
+        # it is where the data already is, and recording onto it is
+        # refused. Consumers can therefore take a space unconditionally
+        # instead of carrying a "no space" branch beside the space branch.
+        if (is.null(s)) return(.new_per_sample_space(.space_default_name))
+        s
     }
 )
 

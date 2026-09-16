@@ -2,7 +2,7 @@
 % Please edit documentation in R/spatial_structures.R
 \name{createSpatialNetwork}
 \alias{createSpatialNetwork}
-\title{Create spatial network}
+\title{Create spatial centroid connectivity network}
 \usage{
 createSpatialNetwork(
   gobject,

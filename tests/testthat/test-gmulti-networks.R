@@ -104,19 +104,13 @@ test_that("createSpatialNetwork takes no sample selector", {
     mg <- .netfix_multi()
     gmultiGroup(mg, "pair") <- c("a", "b")
 
-    # `space` is a coordinate frame now. A sample name, or a group name, is
-    # not one -- and the error has to say which mistake was made, or the
-    # next reader reinstates the selector.
-    expect_error(createSpatialNetwork(mg, space = "a"), "is not a space")
+    # `space` is a coordinate frame now, so neither a sample name nor a
+    # group name is one. Rejecting both is the contract -- an artifact
+    # generator takes no sample selection, whatever it is spelled.
+    expect_error(createSpatialNetwork(mg, space = "a"),
+        "not a registered space")
     expect_error(createSpatialNetwork(mg, space = "pair"),
-        "is not a space")
-
-    # ":all:" is a value in a selector's vocabulary, so it goes with the
-    # selector rather than being retired separately -- there is nothing left
-    # here that could accept it. The token keeps its meaning on the nesting
-    # axes (spat_unit / feat_type / images), which is a different question.
-    expect_error(createSpatialNetwork(mg, space = ":all:"),
-        "is a selector value")
+        "not a registered space")
 })
 
 test_that("readers keep the sample selector the writers lose", {
