@@ -348,7 +348,7 @@ createSpatialKNNnetwork <- function(gobject,
 
 ## spatial network ####
 
-#' @title Create spatial network
+#' @title Create spatial centroid connectivity network
 #' @name createSpatialNetwork
 #' @description Create a spatial network based on cell centroids. These networks
 #' are often used when determining cell-cell connectivities and spatial
@@ -624,41 +624,9 @@ createSpatialNetwork <- function(gobject,
     }
     if (is.null(space)) space <- .space_default_name
     checkmate::assert_string(space, .var.name = "space")
-    frames <- c(.space_default_name, giottoSpaces(gobject))
-    if (!space %in% frames) .csn_not_a_frame(gobject, space, frames)
+    .assert_space_known(gobject, space)
     list(kind = "per_sample", samples = samples,
         space = giottoSpace(gobject, space))
-}
-
-# `space` used to select samples. Anyone who wrote that call gets told what
-# changed rather than a bare "no frame named"; anyone with a typo gets the
-# frame list.
-#' @noRd
-.csn_not_a_frame <- function(gobject, space, frames) {
-    msg <- sprintf(
-        "[createSpatialNetwork] '%s' is not a space. %s", space,
-        if (length(frames) == 0L) "This object has no spaces."
-        else paste("Available:", paste(frames, collapse = ", ")))
-    # ":all:" is a value in a SELECTOR's vocabulary -- "every member of the
-    # set this parameter selects from" -- so it can only be passed to one.
-    # There is no selector here to accept it, and that is the whole reason
-    # it is gone rather than a separate deprecation.
-    if (identical(space, ":all:")) {
-        stop(msg, "\n'", space, "' is a selector value, and `space =` is ",
-            "not a selector -- an artifact generator takes none (adr/0006). ",
-            "Omit `space` to build in every sample's native space.",
-            call. = FALSE)
-    }
-    what <- if (space %in% names(gobject@objects)) "a sample" else
-        if (space %in% gmultiGroups(gobject)) "a group" else NULL
-    if (!is.null(what)) {
-        msg <- paste0(msg, "\n'", space, "' names ", what,
-            ", and `space =` is not a sample selector -- an artifact ",
-            "generator takes none, because nothing downstream could tell ",
-            "which rows it admitted (adr/0006). Record a space over those ",
-            "samples, or subset with `mg[...]` and build on the result.")
-    }
-    stop(msg, call. = FALSE)
 }
 
 #' @noRd

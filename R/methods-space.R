@@ -150,6 +150,43 @@ setGeneric("giottoSpaces",
         "native space back."), op, .space_default_name), call. = FALSE)
 }
 
+# Is `space` a name this object can resolve? Raises if not.
+#
+# The membership test lives HERE rather than at the call site, with the
+# resolvable list built here too. 
+#' @noRd
+.assert_space_known <- function(gobject, space) {
+    known <- c(.space_default_name, giottoSpaces(gobject))
+    if (space %in% known) return(invisible(TRUE))
+
+    msg <- sprintf("[space] '%s' is not a space. %s", space,
+        paste("Available:", paste(known, collapse = ", ")))
+    # ":all:" is a value in a SELECTOR's vocabulary -- "every member of the
+    # set this parameter selects from" -- so it can only be passed to one.
+    # There is no selector here to accept it, and that is the whole reason
+    # it is gone rather than a separate deprecation.
+    if (identical(space, ":all:")) {
+        stop(msg, "\n'", space, "' is a selector value, and `space =` is ",
+            "not a selector -- an artifact generator takes none (adr/0006). ",
+            "Omit `space` to build in every sample's native space.",
+            call. = FALSE)
+    }
+    # Only a giottoMulti has samples or groups to have confused with a
+    # space, and only it has `@objects` to ask.
+    what <- if (!inherits(gobject, "giottoMulti")) NULL
+        else if (space %in% names(gobject@objects)) "a sample"
+        else if (space %in% gmultiGroups(gobject)) "a group"
+        else NULL
+    if (!is.null(what)) {
+        msg <- paste0(msg, "\n'", space, "' names ", what,
+            ", and `space =` is not a sample selector -- an artifact ",
+            "generator takes none, because nothing downstream could tell ",
+            "which rows it admitted (adr/0006). Record a space over those ",
+            "samples, or subset with `mg[...]` and build on the result.")
+    }
+    stop(msg, call. = FALSE)
+}
+
 # Shared guard, so the five methods below stay one line each.
 .assert_space_required <- function(space, op) {
     if (!is.null(space)) return(invisible(TRUE))
