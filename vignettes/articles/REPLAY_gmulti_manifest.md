@@ -637,5 +637,112 @@ base is **`b351ed2b`** (§3), and the fresh branch is cut from the post-merge `g
 
 ---
 
+## 10. Queued before stage 8 (added 2026-09-16)
+
+Stage 7 shipped, then reviewing the pending upstream merge opened a thread that
+reworked the space subsystem. That work is landed; what follows is owed before
+stages 8-9 resume. **These are ordered — each unblocks the next.**
+
+### 10.1 Landed already
+
+- `giottoSpace` is virtual; `combinedSpace` / `perSampleSpace` split on whether the
+  samples **interact**, which is the only thing a job needs from a space
+- scope lives on the STEP (`samples =` per step), not on a per-sample list. One
+  ordered list replays correctly for a sample first named after a broadcast step
+  was already recorded — a keyed layout cannot do that
+- membership is derived from the steps, with a `member` step for a sample that
+  needs no transform of its own (the one at a layout's origin)
+- spaces index on ONE axis: `sp["a"]` / `sp[["a"]]`, character = sample, numeric =
+  step. `names()` is the samples the recipe mentions
+- `":default:"` is a real always-present zero-step `perSampleSpace`, not a sample key
+- artifact generators take no sample selector; a frame-built artifact records the
+  frame in its default name and in `@parameters$space` (adr/0006)
+- `.assert_space_known()` lives with the space machinery and is owned by the getter
+- the `object =` alias is gone from the five per-child getters
+
+### 10.2 Setters stop reaching into children
+
+A `giottoMulti` setter must write at the multi level only. Writing into one child
+bakes a subset of the federation into a slot with nothing recording which samples
+it covers — and a combined analysis is supposed to produce one artifact pulled as
+a single item, not a per-child scatter. Heterogeneous select-sample outputs must
+not be storable beside all-sample ones.
+
+- `setSpatialNetwork(mg, x)` — drop the write target, keep only the joint-slot
+  write; the slot exists
+- `setSpatialLocations` / `setPolygonInfo` / `setFeatureInfo` / `setGiottoImage`
+  on `giottoMulti` — drop the target and refuse, naming the missing multi-level
+  slot. Forward-compatible: when 10.4 lands, each refusal becomes a joint write
+- delete `.gm_set_target()`
+- **not affected**: `createSpatialNetwork()`'s per-sample path writes through
+  `gobject@objects[[nm]] <- ...` directly. Per-child network writes after creation
+  are the sanctioned exception for `perSampleSpace` jobs, and they stay internal
+  to network creation rather than becoming a public expectation
+
+### 10.3 Getters resolve parent-first, uniformly
+
+The rule: a gmulti getter returns multi-level content when it exists, and falls
+back to fanning out over children when it does not. Audited 2026-09-16 — only
+`getSpatialNetwork` does this today, and only because it is the only one whose
+parent slot exists. The other four are child-only *because the slot is missing*,
+not by design. Grids are out of scope.
+
+### 10.4 Multi-level spatial slots — resolves federation §13
+
+§13 lists three unevaluated options; the round trip decides it. Reading polygons
+(via 10.3's fallback), buffering them and writing them back must land the result
+at the **multi** level — so the dedicated slot is the answer, and the producer is
+the user's own pipeline rather than anything inside Giotto.
+
+Per slot, `@spatial_network` is the template and cost ~9 touch points: `@slot`
+roxygen, `representation`, `prototype`, `[` pruning, `names<-` rewriting, `show` /
+populated-slot detection, key-drop maintenance, the getter's parent-first branch,
+the setter's joint write. The plumbing is mechanical; the per-type ID semantics
+are not — pruning narrows polygons by `poly_ID`, points by `feat_ID`, and images
+by nothing, and the `sample::` prefix rewrite differs per type.
+
+### 10.5 The `spat_unit` rule — owed to adr/0006
+
+A space prefixes an artifact's **name** (`scaled2x_kNN_network`) and that is
+sanctioned. It must never prefix **`spat_unit`**, which keys expression, metadata
+and every nesting axis — a space-derived unit would silently fork the object.
+
+So: pulling content *from a space* is what departs from the native frame, and
+naming the result is then the user's responsibility. No Giotto pipeline or method
+may pull from a space and set the result in one step **while defaulting
+`spat_unit` to the space name**. The round trip itself is fine; the defaulting is
+what is forbidden.
+
+### 10.6 Still open from this thread
+
+- **`space =` on gmulti getters is broken.** The space lives on the parent, the
+  getter forwards the *name* to children, and a child resolves it against its own
+  empty `@spaces`. `materialize()` and `.gm_fused_spatlocs()` both hand children a
+  resolved, per-child-scoped handle instead; the getters should do the same
+  (`space_obj[nm]`). Fixing it collapses `.gm_fused_spatlocs()`'s hand-rolled
+  workaround. `view =` has the identical gap and is larger — each crop step names
+  its own predicate frame, so the carriers need a resolved frame map, not one handle
+- **the combined build path** — `.csn_space_plan()` still plans every space
+  per-sample, so a `combinedSpace` builds N networks instead of one spanning it,
+  missing exactly the cross-sample edges the class exists for. The blocker was
+  getting `param` to a gobject-free builder; the answer is to dispatch at
+  `.create_spatial_network_from_param()`, where `param` is already built and the
+  gobject is still in hand. That also fixes `createSpatialKNNnetwork(mg, ...)` and
+  `createSpatialDelaunayNetwork(mg, ...)`, which currently die with
+  `incorrect number of dimensions`, and lets the space-prefix naming rule reach all
+  three doors — today the two wrappers apply a frame and do **not** record it in the
+  name, so a framed build silently overwrites the native one (measured: 4986 vs
+  3540 edges under the same name)
+- **whether `[[` should consult membership** on a `combinedSpace` — today
+  `sp[["c"]]` answers for a sample that was never declared a member
+- docs: federation §14 -> Partial (child-immutability is NOT restored), the
+  `":default:"` sentinel rule in `view_and_space.Rmd:201` and
+  `IMPLEMENTATION_viewspace.md:77,:267`, NEWS breaking entries, `adr/README`
+  backfill note for `spatIDs<-` / `featIDs<-`
+- decide `::` — two `sep =` formals no caller passes, beside 11 literals
+
+
+---
+
 *Created 2026-08-19; §9 and the `b351ed2b` base correction added 2026-09-04. Companion to
 [PLAN_gmulti2_port.md](PLAN_gmulti2_port.md) and the IMPLEMENTATION pages.*
