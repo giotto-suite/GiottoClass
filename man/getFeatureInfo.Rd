@@ -18,7 +18,7 @@ getFeatureInfo(gobject, feat_type = NULL, ...)
   space = NULL
 )
 
-\S4method{getFeatureInfo}{giottoMulti}(gobject, feat_type = NULL, ..., object = NULL, samples = NULL)
+\S4method{getFeatureInfo}{giottoMulti}(gobject, feat_type = NULL, ..., samples = NULL)
 }
 \arguments{
 \item{gobject}{giotto object}
@@ -44,8 +44,7 @@ not cell-keyed so subset predicates do not cascade here.}
 space; when supplied, recorded transforms are applied to the points
 geometry}
 
-\item{object, samples}{(giottoMulti) children to read from; \code{samples} is
-the canonical name, \code{object} the legacy alias. \code{NULL} = all children}
+\item{samples}{(giottoMulti) children to read from. \code{NULL} = all children}
 }
 \value{
 giotto points spatVector

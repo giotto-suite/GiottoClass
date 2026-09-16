@@ -780,18 +780,19 @@ test_that("getSpatialLocations honors samples= / object= (and their conflict)", 
     mg <- createGiottoMulti(list(a = .mk_minimal(5, 4), b = .mk_minimal(3, 4)))
     out <- getSpatialLocations(mg, samples = "b")
     expect_identical(names(out), "b")
-    expect_identical(out, getSpatialLocations(mg, object = "b"))
-    expect_error(getSpatialLocations(mg, object = "a", samples = "b"),
-        "conflicting")
+    # `object =` was an alias for `samples =` on the per-child getters and
+    # is gone. The setters keep theirs -- there it is a write target, and
+    # never had a `samples` spelling to be an alias of.
+    expect_error(getSpatialLocations(mg, object = "b"), "unused argument")
 })
 
 test_that("sample-scoped getSpatialLocations composes with view narrowing", {
     mg <- createGiottoMulti(list(a = .mk_minimal(5, 4), b = .mk_minimal(3, 4)))
     mg2 <- subset(mg, cells = c("a::c1", "a::c3", "b::c1"))
 
-    sl_a <- getSpatialLocations(mg2, object = "a")$a
+    sl_a <- getSpatialLocations(mg2, samples = "a")$a
     expect_identical(sort(sl_a[]$cell_ID), c("c1", "c3"))
-    sl_b <- getSpatialLocations(mg2, object = "b")$b
+    sl_b <- getSpatialLocations(mg2, samples = "b")$b
     expect_identical(sort(sl_b[]$cell_ID), "c1")
 
     # children themselves untouched

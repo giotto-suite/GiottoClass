@@ -124,10 +124,12 @@ Address content by sample without constructing scratch objects.
 getCellMetadata(mg, samples = "B191")
 getExpression(mg, samples = "B191", values = "raw")
 getExpression(mg, values = "B191::raw")
-getSpatialLocations(mg, samples = "B191")      # `object =` is the legacy alias
+getSpatialLocations(mg, samples = "B191")
 ```
 
-- `samples =` canonical on every gmulti-aware getter
+- `samples =` is the only selector on a gmulti-aware getter. The
+  SETTERS keep `object =`, which is a single-valued write target rather
+  than a selector (adr/0006) and never had a `samples` spelling
 - `"sample::name"` shortcut where a getter has `name` / `values`; each entry parses independently; a conflicting explicit `samples =` errors
 - `.parse_sample_qualified_name()` splits on the first `::`
 - `.gm_slice_to_samples()` slices joint cmeta / expression / dimreduc / nnnet via the `sample::cell_id` convention

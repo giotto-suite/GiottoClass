@@ -26,7 +26,6 @@ getSpatialLocations(gobject, spat_unit = NULL, name = NULL, ...)
   spat_unit = NULL,
   name = NULL,
   ...,
-  object = NULL,
   samples = NULL
 )
 }
@@ -63,8 +62,7 @@ when supplied, returned spatial locations are narrowed via
 space; when supplied, the recorded transforms are applied to the
 returned coordinates}
 
-\item{object, samples}{(giottoMulti) children to read from; \code{samples} is
-the canonical name, \code{object} the legacy alias. \code{NULL} = all children}
+\item{samples}{(giottoMulti) children to read from. \code{NULL} = all children}
 }
 \value{
 data.table with coordinates or spatLocsObj depending on \code{output}

@@ -21,7 +21,7 @@ getPolygonInfo(gobject, name = NULL, ...)
   polygon_name = deprecated()
 )
 
-\S4method{getPolygonInfo}{giottoMulti}(gobject, name = NULL, ..., object = NULL, samples = NULL)
+\S4method{getPolygonInfo}{giottoMulti}(gobject, name = NULL, ..., samples = NULL)
 }
 \arguments{
 \item{gobject}{giotto object}
@@ -49,8 +49,7 @@ returned polygon geometry}
 
 \item{polygon_name}{deprecated. Use \code{name}}
 
-\item{object, samples}{(giottoMulti) children to read from; \code{samples} is
-the canonical name, \code{object} the legacy alias. \code{NULL} = all children}
+\item{samples}{(giottoMulti) children to read from. \code{NULL} = all children}
 }
 \value{
 spatVector

@@ -2922,7 +2922,7 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
 
 # SPATIAL-DOMAIN METHODS — per-child dispatch ####
 #
-# Getters: `object = NULL` (default) routes to all children and returns a
+# Getters: `samples = NULL` (default) routes to all children and returns a
 # named list of per-child results. Pass a character vector of names to scope
 # to specific children. Children are returned as-is — subset() on the multi
 # narrows the joint analysis view, not children's spatial state — except
@@ -2933,20 +2933,6 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
 # semantics across children would silently duplicate spatial data and
 # is almost never what the caller means; require an explicit target.
 
-# Resolve the per-child target arg accepting either the legacy `object`
-# name or the canonical `samples` (preferred). Conflicting values error.
-#' @noRd
-.gm_resolve_per_child_arg <- function(gobject, object, samples) {
-    if (!is.null(object) && !is.null(samples)) {
-        if (!identical(unname(object), unname(samples))) {
-            stop("[gmulti getter] conflicting `object = ` and `samples = ` ",
-                "arguments; pass one or the other (samples is preferred).",
-                call. = FALSE)
-        }
-    }
-    if (!is.null(samples)) object <- samples
-    .gm_resolve_objects(gobject, object)
-}
 
 #' @noRd
 .gm_set_target <- function(gobject, object) {
@@ -2996,13 +2982,12 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
 }
 
 #' @rdname getSpatialLocations
-#' @param object,samples (giottoMulti) children to read from; `samples` is
-#'   the canonical name, `object` the legacy alias. `NULL` = all children
+#' @param samples (giottoMulti) children to read from. `NULL` = all children
 #' @export
 setMethod("getSpatialLocations", signature("giottoMulti"),
     function(gobject, spat_unit = NULL, name = NULL, ...,
-        object = NULL, samples = NULL) {
-        objs <- .gm_resolve_per_child_arg(gobject, object, samples)
+        samples = NULL) {
+        objs <- .gm_resolve_objects(gobject, samples)
         su <- spat_unit %||%
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
         out <- lapply(objs, function(nm) {
@@ -3028,12 +3013,11 @@ setMethod("setSpatialLocations", signature("giottoMulti"),
 )
 
 #' @rdname getSpatialNetwork
-#' @param object,samples (giottoMulti) children to read from; `samples` is
-#'   the canonical name, `object` the legacy alias. `NULL` = all children
+#' @param samples (giottoMulti) children to read from. `NULL` = all children
 #' @export
 setMethod("getSpatialNetwork", signature("giottoMulti"),
     function(gobject, spat_unit = NULL, name = NULL, ...,
-        object = NULL, samples = NULL) {
+        samples = NULL) {
         su <- spat_unit %||%
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
 
@@ -3043,12 +3027,12 @@ setMethod("getSpatialNetwork", signature("giottoMulti"),
         # first, and only when a name was asked for: without one there is
         # no question to answer here, and the per-child fan-out is what
         # `getSpatialNetwork(mg)` has always meant.
-        if (!is.null(name) && is.null(object) && is.null(samples)) {
+        if (!is.null(name) && is.null(samples)) {
             joint <- gobject@spatial_network[[su]][[name]]
             if (!is.null(joint)) return(joint)
         }
 
-        objs <- .gm_resolve_per_child_arg(gobject, object, samples)
+        objs <- .gm_resolve_objects(gobject, samples)
         out <- lapply(objs, function(nm) {
             getSpatialNetwork(gobject@objects[[nm]],
                 spat_unit = spat_unit, name = name, ...)
@@ -3094,12 +3078,11 @@ setMethod("setSpatialNetwork", signature("giottoMulti"),
 )
 
 #' @rdname getPolygonInfo
-#' @param object,samples (giottoMulti) children to read from; `samples` is
-#'   the canonical name, `object` the legacy alias. `NULL` = all children
+#' @param samples (giottoMulti) children to read from. `NULL` = all children
 #' @export
 setMethod("getPolygonInfo", signature("giottoMulti"),
-    function(gobject, name = NULL, ..., object = NULL, samples = NULL) {
-        objs <- .gm_resolve_per_child_arg(gobject, object, samples)
+    function(gobject, name = NULL, ..., samples = NULL) {
+        objs <- .gm_resolve_objects(gobject, samples)
         # `name` is poly_info's analogue of spat_unit for narrowing — falls
         # back to the default handle when absent. (`polygon_name` is the
         # deprecated alias, still honoured on the child method.)
@@ -3127,12 +3110,11 @@ setMethod("setPolygonInfo", signature("giottoMulti"),
 )
 
 #' @rdname getFeatureInfo
-#' @param object,samples (giottoMulti) children to read from; `samples` is
-#'   the canonical name, `object` the legacy alias. `NULL` = all children
+#' @param samples (giottoMulti) children to read from. `NULL` = all children
 #' @export
 setMethod("getFeatureInfo", signature("giottoMulti"),
-    function(gobject, feat_type = NULL, ..., object = NULL, samples = NULL) {
-        objs <- .gm_resolve_per_child_arg(gobject, object, samples)
+    function(gobject, feat_type = NULL, ..., samples = NULL) {
+        objs <- .gm_resolve_objects(gobject, samples)
         ft <- feat_type %||%
             .gm_resolve_axis(gobject, "feat_type", NULL)$handle
         out <- lapply(objs, function(nm) {
@@ -3159,12 +3141,11 @@ setMethod("setFeatureInfo", signature("giottoMulti"),
 )
 
 #' @rdname getGiottoImage
-#' @param object,samples (giottoMulti) children to read from; `samples` is
-#'   the canonical name, `object` the legacy alias. `NULL` = all children
+#' @param samples (giottoMulti) children to read from. `NULL` = all children
 #' @export
 setMethod("getGiottoImage", signature("giottoMulti"),
-    function(gobject, name = NULL, ..., object = NULL, samples = NULL) {
-        objs <- .gm_resolve_per_child_arg(gobject, object, samples)
+    function(gobject, name = NULL, ..., samples = NULL) {
+        objs <- .gm_resolve_objects(gobject, samples)
         out <- lapply(objs, function(nm) {
             getGiottoImage(gobject@objects[[nm]], name = name, ...)
         })

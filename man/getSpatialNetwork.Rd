@@ -19,14 +19,7 @@ getSpatialNetwork(gobject, spat_unit = NULL, name = NULL, ...)
   simplify = TRUE
 )
 
-\S4method{getSpatialNetwork}{giottoMulti}(
-  gobject,
-  spat_unit = NULL,
-  name = NULL,
-  ...,
-  object = NULL,
-  samples = NULL
-)
+\S4method{getSpatialNetwork}{giottoMulti}(gobject, spat_unit = NULL, name = NULL, ..., samples = NULL)
 }
 \arguments{
 \item{gobject}{giotto object}
@@ -53,8 +46,7 @@ object (default = TRUE)}
 \item{simplify}{logical. Whether or not to take object out of a list when
 there is a length of 1.}
 
-\item{object, samples}{(giottoMulti) children to read from; \code{samples} is
-the canonical name, \code{object} the legacy alias. \code{NULL} = all children}
+\item{samples}{(giottoMulti) children to read from. \code{NULL} = all children}
 }
 \value{
 spatialNetworkObj of data.table

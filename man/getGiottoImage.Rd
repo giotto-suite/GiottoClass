@@ -10,7 +10,7 @@ getGiottoImage(gobject, name = NULL, ...)
 
 \S4method{getGiottoImage}{giotto}(gobject, name = NULL, view = NULL, space = NULL)
 
-\S4method{getGiottoImage}{giottoMulti}(gobject, name = NULL, ..., object = NULL, samples = NULL)
+\S4method{getGiottoImage}{giottoMulti}(gobject, name = NULL, ..., samples = NULL)
 }
 \arguments{
 \item{gobject}{giotto object}
@@ -18,8 +18,7 @@ getGiottoImage(gobject, name = NULL, ...)
 \item{name}{character vector. Names giotto image object(s)
 \code{\link{showGiottoImageNames}} to get}
 
-\item{object, samples}{(giottoMulti) children to read from; \code{samples} is
-the canonical name, \code{object} the legacy alias. \code{NULL} = all children}
+\item{samples}{(giottoMulti) children to read from. \code{NULL} = all children}
 }
 \value{
 a giotto image object
