@@ -1658,6 +1658,9 @@ test_that("show() prints without error for both recipes", {
     expect_output(show(.demo_view()), "giottoView")
     expect_output(show(.demo_space()), "combinedSpace")
     expect_output(show(spin(perSampleSpace("s"), 30)), "perSampleSpace")
+    # a member step has no `op`, so the summary line must not read one
+    expect_output(show(combinedSpace(c("a", "b"), name = "atlas")),
+        "member\\{a,b\\}")
 })
 
 

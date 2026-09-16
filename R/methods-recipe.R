@@ -233,6 +233,10 @@ NULL
 .space_ops_str <- function(steps) {
     if (length(steps) == 0L) return("<no steps>")
     paste(vapply(steps, function(s) {
+        # a member step has no `op` -- it declares rather than transforms
+        if (identical(s$type, "member")) {
+            return(sprintf("member{%s}", paste(s$samples, collapse = ",")))
+        }
         if (is.null(s$samples)) s$op
         else sprintf("%s[%s]", s$op, paste(s$samples, collapse = ","))
     }, character(1L)), collapse = " -> ")
