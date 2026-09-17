@@ -21,7 +21,7 @@ getPolygonInfo(gobject, name = NULL, ...)
   polygon_name = deprecated()
 )
 
-\S4method{getPolygonInfo}{giottoMulti}(gobject, name = NULL, ..., samples = NULL)
+\S4method{getPolygonInfo}{giottoMulti}(gobject, name = NULL, ..., samples = NULL, space = NULL)
 }
 \arguments{
 \item{gobject}{giotto object}
@@ -43,9 +43,8 @@ there is a length of 1.}
 when supplied, returned polygons are narrowed by surviving cell set via
 \code{\link[=resolveSubobject]{resolveSubobject()}}}
 
-\item{space}{optional \code{giottoSpace} or character(1) name of a slotted
-space; when supplied, the recorded transforms are applied to the
-returned polygon geometry}
+\item{space}{(giottoMulti) name of a coordinate frame registered on the
+\strong{multi}}
 
 \item{polygon_name}{deprecated. Use \code{name}}
 

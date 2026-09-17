@@ -18,7 +18,7 @@ getFeatureInfo(gobject, feat_type = NULL, ...)
   space = NULL
 )
 
-\S4method{getFeatureInfo}{giottoMulti}(gobject, feat_type = NULL, ..., samples = NULL)
+\S4method{getFeatureInfo}{giottoMulti}(gobject, feat_type = NULL, ..., samples = NULL, space = NULL)
 }
 \arguments{
 \item{gobject}{giotto object}
@@ -40,9 +40,8 @@ there is a length of 1.}
 applies any crop step to the points via \code{\link[=resolveSubobject]{resolveSubobject()}}. Points are
 not cell-keyed so subset predicates do not cascade here.}
 
-\item{space}{optional \code{giottoSpace} or character(1) name of a slotted
-space; when supplied, recorded transforms are applied to the points
-geometry}
+\item{space}{(giottoMulti) name of a coordinate frame registered on the
+\strong{multi}}
 
 \item{samples}{(giottoMulti) children to read from. \code{NULL} = all children}
 }

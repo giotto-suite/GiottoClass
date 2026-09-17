@@ -628,6 +628,13 @@ createSpatialNetwork <- function(gobject,
             call. = FALSE)
     }
     if (is.null(space)) space <- .space_default_name
+    # Name only, deliberately, even though `.resolve_space()` would accept a
+    # handle. This is an artifact GENERATOR: the frame's name is prefixed
+    # onto the artifact's default name and stored in `@parameters$space`
+    # (adr/0006), so the artifact carries a name that must still resolve on
+    # this object later. A detached handle would write a frame name the
+    # gobject does not own and cannot look up -- provenance pointing at
+    # nothing. Ownership is the reason, not the type check.
     checkmate::assert_string(space, .var.name = "space")
     # the getter checks the name; an unknown one raises there
     list(kind = "per_sample", samples = samples,

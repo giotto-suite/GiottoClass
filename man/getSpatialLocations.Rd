@@ -26,7 +26,8 @@ getSpatialLocations(gobject, spat_unit = NULL, name = NULL, ...)
   spat_unit = NULL,
   name = NULL,
   ...,
-  samples = NULL
+  samples = NULL,
+  space = NULL
 )
 }
 \arguments{
@@ -58,9 +59,8 @@ there is a length of 1.}
 when supplied, returned spatial locations are narrowed via
 \code{\link[=resolveSubobject]{resolveSubobject()}}}
 
-\item{space}{optional \code{giottoSpace} or character(1) name of a slotted
-space; when supplied, the recorded transforms are applied to the
-returned coordinates}
+\item{space}{(giottoMulti) name of a coordinate frame registered on the
+\strong{multi}. Each child is handed the frame narrowed to itself}
 
 \item{samples}{(giottoMulti) children to read from. \code{NULL} = all children}
 }

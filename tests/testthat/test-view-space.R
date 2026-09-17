@@ -1736,3 +1736,30 @@ test_that("crop steps in different frames resolve in their own frames", {
         pDataDT(materialize(g, "mixed", slots = keyed))$cell_ID,
         pDataDT(materialize(g, "native_only", slots = keyed))$cell_ID)
 })
+
+# `space =` on giottoMulti getters ####
+
+test_that("space= on a gmulti getter resolves against the multi, not children", {
+    mg <- .fixture_gmulti()
+    mg <- spatShift(mg, dx = 100, space = "atlas", samples = "b")
+
+    # the space is registered on the parent; children's @spaces are empty.
+    # Forwarding the NAME made each child resolve it against its own slot
+    # and fail with "'atlas' is not a registered space".
+    native <- getSpatialLocations(mg)
+    out <- getSpatialLocations(mg, space = "atlas")
+    expect_identical(out$b[]$sdimx, native$b[]$sdimx + 100)
+    # the step was scoped to `b`, so `a` is untouched
+    expect_identical(out$a[]$sdimx, native$a[]$sdimx)
+})
+
+test_that("a gmulti getter takes only a space the object owns", {
+    mg <- .fixture_gmulti()
+    mg <- spatShift(mg, dx = 100, space = "atlas", samples = "b")
+
+    # A handle is how the parent talks to its children, not how a caller
+    # talks to the parent. Reading through a detached frame would produce
+    # content whose frame name resolves against nothing on this object.
+    expect_error(getSpatialLocations(mg, space = giottoSpace(mg, "atlas")),
+        "must be the name of a space registered on this object")
+})

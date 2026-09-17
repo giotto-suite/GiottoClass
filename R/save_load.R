@@ -55,12 +55,12 @@ saveGiotto <- function(
     }
 
     # An in-memory giottoMulti has no save path here. The externalization
-    # pass below walks ONE object's @spatial_info / @feat_info / @images,
-    # which on a multi are the multi-level slots -- every child's terra
-    # pointers would go into the RDS unexported and come back null. Before
-    # those slots existed this failed loudly on the missing slot; say so
-    # explicitly rather than let it half-succeed. A sourced multi is
-    # handled by the branch above. Fixing this properly is #407.
+    # pass below walks ONE object's @spatial_info / @feat_info / @images to
+    # write terra objects out separately, which a multi does not have and
+    # which its children each need done for them. Without this it fails on
+    # the missing slot, which is true but says nothing; a multi needs a
+    # per-child export pass and a loader that agrees on the layout. A
+    # sourced multi is handled by the branch above. See #407.
     if (inherits(gobject, "giottoMulti")) {
         stop("[saveGiotto] an in-memory giottoMulti cannot be saved here: ",
             "each child owns terra objects that need their own export pass. ",

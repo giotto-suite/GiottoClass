@@ -10,13 +10,16 @@ getGiottoImage(gobject, name = NULL, ...)
 
 \S4method{getGiottoImage}{giotto}(gobject, name = NULL, view = NULL, space = NULL)
 
-\S4method{getGiottoImage}{giottoMulti}(gobject, name = NULL, ..., samples = NULL)
+\S4method{getGiottoImage}{giottoMulti}(gobject, name = NULL, ..., samples = NULL, space = NULL)
 }
 \arguments{
 \item{gobject}{giotto object}
 
 \item{name}{character vector. Names giotto image object(s)
 \code{\link{showGiottoImageNames}} to get}
+
+\item{space}{(giottoMulti) name of a coordinate frame registered on the
+\strong{multi}}
 
 \item{samples}{(giottoMulti) children to read from. \code{NULL} = all children}
 }

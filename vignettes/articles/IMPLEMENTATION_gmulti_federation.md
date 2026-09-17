@@ -318,31 +318,45 @@ from one child's.
 
 ---
 
-## 13. gmulti-level spatial content — Done
+## 13. gmulti-level spatial content — Declined
 
 Polygons drawn in a cross-sample (atlas) frame belong to no child's `@spatial_info`, and
-the multi had no spatial slot to hold them.
+the multi has no spatial slot to hold them.
 
-- `getPolygonInfo(mg)` was purely a per-child fan-out — no storage, no read path
-- design doc §1 lists this as one of the five original problems; §7's proposed fix targeted a slot that didn't exist
+- `getPolygonInfo(mg)` is purely a per-child fan-out — no storage, no read path
+- design doc §1 lists this as one of the five original problems; §7's proposed fix targets a slot that doesn't exist
 - **distinct from `@groups`**, which solves *enumeration* ("this handle means these samples' existing content"). This is *concrete content at the multi level*
 
 Three options were listed: a dedicated gmulti-level spatial slot, a `:default:`-keyed
-pseudo-child, or declining to support it. **Resolved to the dedicated slot**, by the
-round trip: read polygons across children, buffer them, write the result back. The
-result belongs to no one sample, so it has to land at the multi level — and the producer
-is the user's own pipeline, which is why "no producer exists inside Giotto" was not the
-argument against it that it looked like.
+pseudo-child, or declining. **Declined**, for the current substrate schema.
 
-`giottoMulti` gained `@spatial_locs`, `@spatial_info`, `@feat_info` and `@images`
-alongside the existing `@spatial_network`, keyed exactly as on a `giotto`. Cell-keyed
-slots hold `sample::id` globals and so participate in `[` pruning and `names<-`
-rewriting; `@feat_info` carries plain `feat_ID`s (features are never sample-namespaced)
-and `@images` has no ID axis at all, so neither is pruned or rewritten.
+The slots were built (`@spatial_locs`, `@spatial_info`, `@feat_info`, `@images`,
+mirroring `@spatial_network`) and then removed, which is how the reasoning got sharp.
+Two things the attempt showed:
 
-The pseudo-child option would have put multi-level content in the sample namespace,
-where a group or a sample could collide with it. Declining would have left the atlas
-story with content it can produce and nowhere to put it.
+- **the decomposition test.** A multi-level slot earns its place only when the artifact
+  cannot be split into per-sample pieces. A cross-sample edge cannot — its endpoints are
+  in two samples and no per-sample representation exists. A location, a polygon, a point
+  and a raster all can; each belongs to exactly one sample. So `@spatial_network` stays
+  and the other four go.
+- **what per-sample content costs at the multi level.** Today a thing's owning sample is
+  *structural*: it is the child it lives in. Holding the same content at the parent makes
+  ownership a `sample::` prefix on a string — a convention every consumer must remember,
+  rather than a guarantee. The attempt needed a whole second ID-rewrite engine
+  (`.gm_rewrite_subobject_ids()`) for exactly that reason, and `@feat_info` / `@images`
+  ended up exempt from pruning, rewriting and invalidation alike. Per-sample ops would
+  become implicitly required where they are currently structurally enforced.
+
+The atlas-annotation case — a region polygon spanning samples — is the strongest one and
+still fails, on a third defect the other two share: **joint spatial content records no
+frame.** An annotation is only meaningful relative to a layout, `adr/0006`'s frame
+recording is implemented for networks and not for a polygon set handed to a setter, and
+nothing could then tell whether a frame had already been applied.
+
+**Revisit when joint spatial content can record its frame** — which is the same
+prerequisite as the combined build path (`REPLAY_gmulti_manifest.md` §10.6). Until then
+the four setters refuse and name the way through: edit the child, put it back with
+`mg[["<sample>"]] <- g`.
 
 ---
 
@@ -368,7 +382,8 @@ Landed:
 build path in `createSpatialNetwork()` still writes into each child, because a
 `perSampleSpace` job genuinely produces N artifacts and there is no joint object for
 them to be. That write is deliberately internal to network creation rather than reachable
-through a setter — see adr/0006.
+through a setter — see adr/0006. §13 settles that this is correct rather than temporary
+for everything except networks: per-sample content belongs on the children.
 
 Also still open: `.csn_space_plan()` plans every space per-sample, so a `combinedSpace`
 builds N networks instead of the one spanning it, and the cross-sample edges the class

@@ -668,89 +668,89 @@ it covers — and a combined analysis is supposed to produce one artifact pulled
 a single item, not a per-child scatter. Heterogeneous select-sample outputs must
 not be storable beside all-sample ones.
 
-- all five spatial setters dropped `object =` and write to their multi-level slot
-- `.gm_set_target()` deleted
+- all five spatial setters dropped `object =`; `.gm_set_target()` deleted
+- `setSpatialNetwork()` writes to the joint slot. The other four **refuse**: after
+  §10.4 they have nowhere to write, deliberately, and the refusal names the way
+  through rather than just saying no
 - `...` would otherwise swallow a stale `object =` and do a multi-level write
   silently, so `.gm_reject_write_selector()` refuses `object` / `objects` /
-  `sample` / `samples` / `view` by name. It reads `...names()`, so nothing in
-  `...` is forced
+  `sample` / `samples` / `view` by name on the one setter that writes. It reads
+  `...names()`, so nothing in `...` is forced
 - the escape hatch is real and says what it is: `mg[["<sample>"]] <- <child>`
 - **not affected**: `createSpatialNetwork()`'s per-sample path writes through
   `gobject@objects[[nm]] <- ...` directly. Per-child network writes after creation
   are the sanctioned exception for `perSampleSpace` jobs, and they stay internal
   to network creation rather than becoming a public expectation
 
-### 10.3 Getters resolve parent-first, uniformly — **Done**
+### 10.3 Getters resolve parent-first — **Done**
 
-A gmulti getter returns multi-level content when the slot holds what was asked
-for, and falls back to fanning out over children when it does not. All five
-spatial getters now do this; before 10.4 only `getSpatialNetwork` could, because
-it was the only one whose parent slot existed.
+The rule: a gmulti getter returns multi-level content when it exists, and falls back to
+fanning out over children when it does not. `samples =` is an explicit request for
+per-child content and skips the parent level.
 
-Two things settled while implementing:
+After §10.4 was declined, the only spatial slot this applies to is `@spatial_network` —
+which is where it already was. The rule still holds generally, and the non-spatial joint
+slots (`@expression`, `@cell_metadata`, `@dimension_reduction`, `@nn_network`,
+`@spatial_enrichment`) work this way. Grids are out of scope.
 
-- **a `NULL` name takes the first parent entry**, matching what a `NULL` name
-  means everywhere else. The old `getSpatialNetwork` branch required an explicit
-  `name =` before it would consult the parent, on the grounds that the fan-out is
-  what `getSpatialNetwork(mg)` had always meant. That is backwards under the rule:
-  parent content is priority once it exists. `samples =` is the explicit request
-  for per-child content and skips the parent level
-- **the parent path narrows too**. The old joint branch returned the slot value
-  raw, ignoring `@cell_ID` / `@feat_ID`, so a subset multi would have reported
-  unfiltered joint content the moment these slots got used. Joint content is
-  already in globals, which is exactly what the narrowing is keyed on, so
-  `.gm_apply_view()` applies directly — no localization pass. Images are the one
-  exception, having no ID axis to narrow on
+One thing settled and kept: **a `NULL` name takes the first parent entry**, matching what
+a `NULL` name means everywhere else. The old branch required an explicit `name =` before
+it would consult the parent, which is backwards under the rule. The parent path also
+narrows through `.gm_apply_view()`; before, it returned the slot value raw and ignored
+`@cell_ID` / `@feat_ID`.
 
-Grids remain out of scope.
+### 10.4 Multi-level spatial slots — **Declined**; resolves federation §13
 
-### 10.4 Multi-level spatial slots — **Done**; resolves federation §13
+Built, then removed. §13's three options resolve to **declining**, not to the dedicated
+slot — and the build is how the reasoning got sharp, so it is recorded rather than
+erased.
 
-`giottoMulti` gained `@spatial_locs`, `@spatial_info`, `@feat_info` and `@images`
-beside `@spatial_network`, each keyed exactly as its `giotto` counterpart. §13's
-three options resolve to the dedicated slot, decided by the round trip: read
-polygons across children, buffer, write back — the result belongs to no one
-sample, and the producer is the user's pipeline rather than anything inside Giotto.
+`@spatial_locs`, `@spatial_info`, `@feat_info` and `@images` were added to `giottoMulti`
+mirroring `@spatial_network`, with parent-first getters and joint-writing setters. What
+that surfaced:
 
-Touch points, all nine per slot: `@slot` roxygen, `representation`, `prototype`,
-`[` pruning, `names<-` rewriting, `.gm_populated_joint_slots()` (which `show()`
-also prints), `.gm_universe_materialized()`, `.gm_invalidate_joint_for_mapping_change()`,
-and the getter / setter pair.
+- **the decomposition test.** A multi-level slot earns its place only when the artifact
+  cannot be split into per-sample pieces. A cross-sample edge cannot: its endpoints are
+  in two samples and there is no per-sample representation of it at all. A location, a
+  polygon, a point and a raster all can — each belongs to exactly one sample. So
+  `@spatial_network` is the only one, and that is a rule rather than an accident of what
+  got built first
+- **per-sample ownership stops being structural.** Today a thing's owning sample is the
+  child it lives in. Holding the same content at the parent makes ownership a `sample::`
+  prefix on a string — a convention every consumer must remember instead of a guarantee,
+  and per-sample ops become implicitly required where they are currently structurally
+  enforced. The attempt needed a second ID-rewrite engine
+  (`.gm_rewrite_subobject_ids()`) for precisely that reason
+- **`@feat_info` and `@images` ended up exempt from everything** — pruning, rewriting,
+  mapping invalidation. That exemption list was the smell: they participated in none of
+  the invariants the slot machinery exists to maintain
+- **joint spatial content records no frame.** `@spatial_locs` is really a *materialized
+  space*, duplicating what `@spaces` already declares with nothing keeping the two in
+  sync. And the atlas-annotation case — the strongest one, and what §13 was actually
+  about — fails here too: an annotation is only meaningful relative to a layout, and
+  nothing could tell whether a frame had already been applied. This is why `space =`
+  against joint content had to be refused while the slots existed
 
-What differed per type, which was the non-mechanical part:
+So: four setters refuse and name the way through (`mg[["<sample>"]] <- g`), which is
+where §10.2 originally had them before this section talked them out of it.
 
-- **pruning** is delegated to `.narrow_subobject()`, which already owns the
-  per-class axis knowledge; the new `.gm_walk_joint_spatial()` only walks the
-  nesting (depth 2 for `@spatial_locs`, 1 for `@spatial_info`)
-- **rewriting** had no equivalent, so `.gm_rewrite_subobject_ids()` is new —
-  `cell_ID` for a `spatLocsObj`, `poly_ID` plus centroids for a `giottoPolygon`
-- **`@feat_info` and `@images` are neither pruned nor rewritten.** Features are
-  never sample-namespaced and an image has no ID axis. A mosaic covering samples
-  that have since been dropped is stale, not wrong, and there is no correct
-  narrowing of a raster by sample
-- **`@images` is also exempt from mapping invalidation** — it is the one
-  multi-level slot with no axis key, so no mapping change can invalidate it
-- `@spatial_info` keys on polygon name, which *is* the `spat_unit` namespace;
-  `@feat_info` keys on `feat_type`. Both feed `.gm_universe_materialized()` at
-  level 1, not level 2
+**Revisit when joint spatial content can record its frame** — the same prerequisite as
+the combined build path in §10.6. Closes the logical block for the current substrate
+schema.
 
-**Found on the way:** `.narrow_subobject()` narrowed a `giottoPolygon` /
-`giottoPoints` geometry but left `@unique_ID_cache` alone, so `spatIDs()` reported
-IDs the object no longer held. A live bug, not one these slots introduced —
-reachable through `getPolygonInfo()` on a narrowed gmulti and through
-`resolveSubobject()`. Fixed at the source, with `NA_character_` preserved as the
-not-computed sentinel.
+Two things from the attempt are kept, both independent of it:
 
-**Caused on the way, and guarded rather than fixed:** `saveGiotto()` reads
-`gobject@spatial_info` / `@feat_info` / `@images` directly to run its
-`.save_external` terra-export pass. On a multi those accesses used to error on the
-missing slot; now they resolve to the *parent's* content, so the call ran to
-completion and wrote an RDS in which every child's terra pointers were dead. An
-in-memory `giottoMulti` is now refused there, loudly. A sourced one still goes to
-`GiottoDisk::snapshotSave()`. Filed as **GiottoClass #407** — a real save path has
-to run the export pass per child and agree with the loader on a layout, which is
-`snapshotSave`'s problem already solved and worth mirroring rather than
-reinventing.
+- the `space =` fix on the gmulti getters (§10.6)
+- the `.narrow_subobject()` `@unique_ID_cache` fix — a pre-existing bug, found because
+  the joint polygons exercised it, reachable today through `getPolygonInfo()` on a
+  narrowed gmulti and through `resolveSubobject()`
+
+**Caused and kept guarded:** `saveGiotto()` reads `@spatial_info` / `@feat_info` /
+`@images` directly for its terra-export pass. While the slots existed this ran to
+completion on a multi and wrote an RDS whose children held dead pointers. With them gone
+it fails on the missing slot again — true but uninformative — so the explicit refusal
+stays. **GiottoClass #407** now asks only the real question: whether an in-memory
+`giottoMulti` should be savable at all, and if so, via the per-child export pass.
 
 ### 10.5 The `spat_unit` rule — **Done**; owed to adr/0006
 
@@ -815,13 +815,39 @@ written against the pre-rework surface.
 
 ### 10.6 Still open from this thread
 
-- **`space =` on gmulti getters is broken.** The space lives on the parent, the
-  getter forwards the *name* to children, and a child resolves it against its own
-  empty `@spaces`. `materialize()` and `.gm_fused_spatlocs()` both hand children a
-  resolved, per-child-scoped handle instead; the getters should do the same
-  (`space_obj[nm]`). Fixing it collapses `.gm_fused_spatlocs()`'s hand-rolled
-  workaround. `view =` has the identical gap and is larger — each crop step names
-  its own predicate frame, so the carriers need a resolved frame map, not one handle
+- ~~**`space =` on gmulti getters is broken.**~~ **Fixed.** The space lived on the
+  parent, the getter forwarded the *name* to children, and a child resolved it
+  against its own empty `@spaces` — so `getSpatialLocations(mg, space = "atlas")`
+  failed with "'atlas' is not a registered space" against a multi that plainly had
+  one. The four spatial getters that take a frame now resolve once on the parent
+  and hand each child `sp[nm]`; `getSpatialNetwork` is untouched because its
+  `giotto` method has no `space` formal at all.
+
+  Two things settled here:
+
+  - **ownership**: a public `space =` takes a NAME the object owns, never a
+    `giottoSpace` handle, even though `.resolve_space()` accepts both. Handles are
+    the internal parent→child channel only. A detached handle on a *generator*
+    writes a frame name into `@parameters$space` that resolves against nothing;
+    on a *reader* it returns content in a frame the object cannot name. So
+    `.csn_space_plan()` keeps its `assert_string` deliberately, and the escape is
+    `giottoSpace(x, "<name>") <- sp`. Recorded in adr/0006
+  - **joint content refuses a frame.** A space scopes its steps per sample and a
+    multi-level artifact holds every sample's cells at once, so there is no one
+    chain to apply. Refused by name rather than silently applying the broadcast
+    steps only
+
+  **`.gm_fused_spatlocs()` does NOT collapse**, contrary to what this section
+  predicted. Routing its space application through the getter is provably
+  equivalent — the `spatLocsObj` resolver method *is* `.apply_space_to_subobj()`
+  with `sample = NA_character_`, which a `sp[nm]`-narrowed handle answers through
+  the sole-name rule — but it saves one line inside a loop that still has to
+  promote IDs and fold, and it would couple the fused path to the getter's default
+  coordinator choice. Noted while checking: `.apply_space_to_subobj()` takes a
+  `coordinator` it never uses.
+
+- **`view =` has the identical gap** and is larger — each crop step names its own
+  predicate frame, so the carriers need a resolved frame map, not one handle
 - **the combined build path** — `.csn_space_plan()` still plans every space
   per-sample, so a `combinedSpace` builds N networks instead of one spanning it,
   missing exactly the cross-sample edges the class exists for. The blocker was

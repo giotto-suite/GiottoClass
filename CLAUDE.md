@@ -121,12 +121,24 @@ Do not use non-UTF-8 characters; use Unicode escapes instead (e.g. `\u00F6`).
   the object into the same cells twice. A user passing `spat_unit` explicitly
   is their own business; code reaching for the frame when none was given is
   the violation. See `adr/0006`.
+- **A gobject owns the frames it works in.** Every public `space =` takes a
+  **name**, resolved against that object's `@spaces` — never a `giottoSpace`
+  handle. Handles are the internal channel (`.resolve_space()` accepts one) by
+  which a `giottoMulti` hands each child the frame narrowed to itself; a child
+  cannot resolve the parent's name. To use a detached space, register it first:
+  `giottoSpace(x, "<name>") <- sp`. See `adr/0006`.
 - **`giottoMulti` setters write at the multi level only.** No `object =`, no
   `samples =`, no way to reach a child — a per-child write would put a
   select-sample artifact in the same slot namespace as an all-sample one with
   nothing recording which is which. To edit one sample:
   `mg[["<sample>"]] <- <child>`. Getters resolve parent-first and fall back to
   a per-child fan-out.
+- **A multi-level slot exists only when the artifact cannot be decomposed into
+  per-sample pieces.** `@spatial_network` is the only spatial one: a cross-sample
+  edge has endpoints in two samples and no per-sample form. Locations, polygons,
+  points and images each belong to exactly one sample and stay on the children,
+  so the owning sample is *where the thing lives* rather than a `sample::` prefix
+  on a string. The other four spatial setters refuse. See federation §13.
 - **Data tables:** The package uses `data.table` throughout; prefer `data.table` idioms over base R for tabular operations.
 
 ---

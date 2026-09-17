@@ -146,6 +146,32 @@ composes into anything is `createSpatialNetwork()`'s default `name`. This
 clause exists to keep that true, since there is no runtime check that could —
 a guard cannot tell a defaulted `spat_unit` from a deliberately passed one.
 
+**A gobject owns the frames it is asked to work in.** Every public `space =`
+takes a **name**, resolved against that object's `@spaces`. `giottoSpace`
+handles exist and `.resolve_space()` accepts them, but that is an internal
+channel — it is how a `giottoMulti` hands each child the frame narrowed to
+itself, since a space is registered on the parent and a child's `@spaces` is
+empty. (Forwarding the *name* instead was a live bug:
+`getSpatialLocations(mg, space = "atlas")` failed with "'atlas' is not a
+registered space" against a multi that plainly had one.)
+
+Letting a caller pass a detached handle would break ownership in two places,
+and they are not equally obvious:
+
+- **on a generator**, fatally. A frame-built artifact prefixes the frame's
+  name onto its own and stores it in `@parameters$space`. A handle the object
+  never registered writes provenance pointing at nothing — a recorded frame
+  name that no later lookup can resolve. This is why
+  `createSpatialNetwork()`'s `space =` stays `assert_string`, even though the
+  resolver one line later would have taken the object.
+- **on a reader**, quietly. Nothing is persisted, so it looks harmless — but
+  the returned content is in a frame the object cannot name, and the moment
+  anyone writes it back the frame is unrecoverable.
+
+The remedy is one line and makes the ownership explicit:
+`giottoSpace(x, "<name>") <- sp`. So there is no case where a handle is
+*needed* at a public boundary, which is what makes name-only cheap to hold.
+
 ## Consequences
 
 - **`createSpatialNetwork(gobject, space = "sample_a")` is a breaking change.**
@@ -219,7 +245,15 @@ a guard cannot tell a defaulted `spat_unit` from a deliberately passed one.
   same question is the thing to avoid.
 - **Keep per-child writes and give the multi no joint slot at all** — leaves
   cross-sample edges with no home, since no child's `@spatial_network` can hold
-  an edge between two samples.
+  an edge between two samples. Adopted for *everything else*, though: a
+  multi-level spatial slot earns its place only when the artifact cannot be
+  decomposed into per-sample pieces. An edge cannot; a location, a polygon, a
+  point and a raster each belong to exactly one sample and stay on the child.
+  `@spatial_locs` / `@spatial_info` / `@feat_info` / `@images` were built on the
+  multi and then removed on that test — holding per-sample content at the parent
+  turns its owning sample from a structure (the child it lives in) into a
+  `sample::` prefix every consumer has to remember. See
+  `IMPLEMENTATION_gmulti_federation.md` §13.
 
 ## References
 

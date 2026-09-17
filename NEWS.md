@@ -121,14 +121,6 @@
   partial federations are gone. Assembled objects carry the federation
   handles on their identity tags (`spat_unit`, `feat_type`, `name`,
   `provenance`) and, for expression, a participation stamp on `@misc`.
-- `giottoMulti` gains the **multi-level spatial slots** `@spatial_locs`,
-  `@spatial_info`, `@feat_info` and `@images`, alongside `@spatial_network`.
-  Each is keyed exactly as its `giotto` counterpart. They hold content
-  belonging to no single sample — a layout read in a combined frame, a
-  stitched image, polygons buffered across the federation and written back.
-  Cell-keyed slots carry `sample::id` globals and so are pruned by `mg[i]`
-  and rewritten by `names(mg) <-`; `@feat_info` carries plain `feat_ID`s and
-  `@images` has no ID axis, so neither is.
 - Spatial-domain accessors (`get/setSpatialLocations`, `get/setSpatialNetwork`,
   `get/setPolygonInfo`, `get/setFeatureInfo`, `get/setGiottoImage`) gain
   `giottoMulti` dispatch. **Getters resolve parent-first**: multi-level
@@ -144,6 +136,13 @@
   per-child write would put a select-sample output in the same slot namespace
   as an all-sample one with nothing recording which is which. To change one
   sample, edit that child and put it back: `mg[["<sample>"]] <- <child>`.
+- `@spatial_network` is the **only** multi-level spatial slot, and the test is
+  whether the artifact can be decomposed into per-sample pieces: a cross-sample
+  edge cannot, while a location, polygon, point or image each belong to exactly
+  one sample. So `setSpatialLocations()`, `setPolygonInfo()`, `setFeatureInfo()`
+  and `setGiottoImage()` on a `giottoMulti` refuse and point at the child.
+  Holding per-sample content at the parent would make its owning sample a
+  `sample::` prefix on a string rather than where the thing lives.
 - `giottoMulti` container surface: `as(g, "giottoMulti")`, `mg[i]` child
   selection (joint slots and mapping pruned to survivors), `mg[[name]] <-`
   child add/replace with mapping auto-seeding for the new sample,
@@ -156,12 +155,18 @@
 
 ## bug fixes
 
-- `saveGiotto()` now refuses an in-memory `giottoMulti` instead of writing a
-  file whose children hold invalid terra pointers. Its terra-export pass reads
-  one object's `@spatial_info` / `@feat_info` / `@images`, which on a multi are
-  the multi-level slots, so no child's geometry was ever exported. A multi with
-  a `@source` is unaffected and still goes to `GiottoDisk::snapshotSave()`.
-  See #407.
+- `space =` on a `giottoMulti` getter resolved the frame name against each
+  *child*, whose `@spaces` is empty, so reading in a frame the multi plainly
+  had failed with `'<name>' is not a registered space`. The four spatial
+  getters that take a frame now resolve it once on the multi and hand each
+  child the frame narrowed to itself. A public `space =` takes a registered
+  name, never a `giottoSpace` handle: an object must own the frames it works
+  in, or an artifact built in one records a frame name that resolves against
+  nothing. Register a detached space first with `giottoSpace(x, "<name>") <- sp`.
+- `saveGiotto()` now refuses an in-memory `giottoMulti` with a message saying
+  why, rather than failing on a missing slot. A multi needs a per-child terra
+  export pass and a loader that agrees on the layout; a multi with a `@source`
+  is unaffected and still goes to `GiottoDisk::snapshotSave()`. See #407.
 - Narrowing a `giottoPolygon` or `giottoPoints` left `@unique_ID_cache`
   holding the pre-narrowing IDs, so `spatIDs()` / `featIDs()` reported IDs
   the geometry no longer contained. Reachable through `getPolygonInfo()` and
