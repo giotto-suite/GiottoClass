@@ -640,8 +640,47 @@ base is **`b351ed2b`** (§3), and the fresh branch is cut from the post-merge `g
 ## 10. Queued before stage 8 (added 2026-09-16)
 
 Stage 7 shipped, then reviewing the pending upstream merge opened a thread that
-reworked the space subsystem. That work is landed; what follows is owed before
-stages 8-9 resume. **These are ordered — each unblocks the next.**
+reworked the space subsystem. What follows was owed before stages 8-9 resume.
+
+### STATE as of 2026-09-17
+
+**Everything here is DONE except §10.7, which is the gate.** Start there.
+
+| | |
+|---|---|
+| 10.1 space rework | landed |
+| 10.2 setters write at the multi level only | done |
+| 10.3 getters resolve parent-first | done |
+| 10.4 multi-level spatial slots | **declined** — built, then removed |
+| 10.5 a frame may key a name, never a `spat_unit` | done |
+| 10.6 `space =`, combined build path, `view =`, `[[` membership, `::` | done |
+| 10.8 native frame loses its name; per-sample is the free kind | done |
+| **10.7 re-read stages 8-9** | **NOT STARTED** |
+
+GiottoClass `feature/gmulti-replay` **2208 / 0**, 64 ahead of `upstream/gsource`,
+0 behind. GiottoDisk `feature/gmulti-replay` **1263 / 0**, 48 ahead of
+`upstream/dev`, zero diff in its `R/` throughout. **Nothing pushed.**
+
+Commits: `e9f1b4cb` `bea4287d` `1f55964e` `264d5eba` `9a6f4a28` `c01e9e57`
+`25bd4999` `0a0b6450` `de06477c` `524607e2`.
+
+**Three design reversals, all deliberate, do not retry:** the multi-level spatial
+slots (§10.4), recording onto the native frame so a multi acts eager (§10.8), and
+`combinedSpace` as the kind you get for free (§10.8). Each is written up with why
+it looked right, so the reasoning is available without this being re-derived.
+
+**Six defects found that were on no list**, all by reading or probing rather than
+a failing test — `.csn_forward()` stripping `space`, the two network wrappers
+applying a frame without naming for it, `.narrow_subobject()` leaving
+`@unique_ID_cache` stale, a `combinedSpace` broadcast reaching non-members,
+`view_and_space.Rmd` not having built since the class split, and two `sep =`
+formals wired to nothing.
+
+**Still open, none blocking:** `.apply_space_to_subobj()` takes a `coordinator`
+it never uses; GiottoClass #407 (`saveGiotto()` on an in-memory `giottoMulti`,
+guarded not fixed); and **nothing in CI builds the vignettes**, which is why the
+one above rotted silently for the whole rework — a `Rscript` live-chunk check
+takes a minute to write.
 
 ### 10.1 Landed already
 
@@ -827,37 +866,49 @@ membership is derived from the steps, so a space whose only step names `a`
 declares a layout containing `a`, and adding `b` is a further recorded step. The
 kind flip stands on the round-trip argument, not on a bug.
 
-### 10.7 Re-read stages 8-9 before resuming them
+### 10.7 Re-read stages 8-9 before resuming them — **THE GATE, start here**
 
-**Do this before starting either stage, not while in one.** Both were written
-before the space rework, and §10.1 changed enough that their manifests may no
-longer describe the work. Specific things to check rather than a general re-read:
+**Do this before starting either stage, not while in one.** Both stage manifests
+were written before the space rework, and §10 changed enough that they may no
+longer describe the work. Specific things to check, rather than a general
+re-read. *(Revised 2026-09-17 — the original list referenced gaps that §10.6 has
+since closed; those are marked.)*
 
-**Stage 8 (carry-keys).**
+**Stage 8 (carry-keys).** All local to GiottoClass.
 
-- `.narrow_subobject()` is named as a stage-8 site and has since gained an
-  igraph branch (it round-tripped igraph -> DT -> igraph and dropped isolated
-  vertices). Confirm the stage-8 edit still applies to the current function
+- `.narrow_subobject()` is named as a stage-8 site and has since changed twice:
+  it gained an igraph branch (it round-tripped igraph -> DT -> igraph and dropped
+  isolated vertices), and then a `@unique_ID_cache` fix, without which a narrowed
+  `giottoPolygon` / `giottoPoints` reported IDs its geometry no longer held.
+  Confirm the stage-8 edit still applies to the current function
 - the `R/subset.R` "staged +87 supersedes checkpoint +92 — verify equivalence"
   check is still owed and still unverified
 - the giottoMulti hard error on positional producers overlaps §10.2's setter
-  policing — decide whether they are one guard or two, before writing a second
+  policing, which now REFUSES four of the five spatial setters outright. Decide
+  whether these are one guard or two before writing a second
 - **D1 still holds**: the Giotto-repo producer guards are in neither merge
   branch, so this stage may include writing them
 
-**Stage 9 (GiottoVisuals dispatcher, per-panel sizing).**
+**Stage 9 (GiottoVisuals dispatcher, per-panel sizing).** **Cannot be checked
+from the GiottoClass repo** — its base is **GiottoVisuals**'
+`feature/gmulti-federation-design` @ `5969cb6`.
 
-- its base is **GiottoVisuals**' `feature/gmulti-federation-design` @ `5969cb6`,
-  which predates every §10.1 change. Check it in that repo before cherry-picking:
-  anything touching a space there assumes a single `giottoSpace` class, a
-  `@samples` keyed map, the `:default:` SAMPLE sentinel, and two-index
-  `sp[[frame, sample]]`. All four are gone
-- per-panel sizing reads through the getters, so §10.3's parent-first rule
-  changes what it receives on a multi with populated joint slots
-- if it plots in a frame, §10.6's `space =` gap on gmulti getters hits it directly
+- that base predates every §10 change. Anything touching a space there assumes a
+  single `giottoSpace` class, a `@samples` keyed map, the `:default:` SAMPLE
+  sentinel, and two-index `sp[[frame, sample]]`. **All four are gone**, and
+  `:default:` no longer exists in any form (§10.8)
+- per-panel sizing reads through the getters. §10.3's parent-first rule is now
+  narrower than this bullet originally claimed: §10.4 was declined, so
+  `@spatial_network` is the ONLY spatial slot that can hold parent-level content
+  and change what a getter returns
+- ~~§10.6's `space =` gap hits it directly~~ — **fixed**. `space =` and `view =`
+  both resolve on the multi now, so plotting in a frame works rather than failing
+  at a child's empty slot. What stage 9 must respect instead: a view is evaluated
+  at the PARENT only, and a getter refuses an ad-hoc `giottoView` / `giottoSpace`
+  — pass a registered name
 
 **Also re-read** §5 (do not replay) and §6 (doc corrections owed) — both were
-written against the pre-rework surface.
+written against the pre-rework surface. §6's `":default:"` items are done.
 
 ### 10.6 Still open from this thread
 
