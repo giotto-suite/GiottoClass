@@ -481,6 +481,11 @@ createSpatialNetwork <- function(gobject,
     # The native frame is exempt: naming it explicitly must produce the same
     # artifact as omitting `space`, or the two ways of saying "where the
     # data already is" would write to different names.
+    #
+    # `name` is the ONLY key a frame may compose into. Never `spat_unit`:
+    # that keys expression, metadata and every nesting axis, so a
+    # frame-named unit forks the object into the same cells twice. A frame
+    # moves cells, it does not create them. See adr/0006.
     if (is.null(name)) {
         name <- paste0(method, "_", "network")
         if (!.is_native_space(space)) name <- paste0(space, "_", name)

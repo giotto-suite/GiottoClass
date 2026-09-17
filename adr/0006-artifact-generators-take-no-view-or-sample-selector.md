@@ -112,6 +112,40 @@ So a frame-built artifact records it twice, for two different jobs:
   in `.show_prov()` errors on a list, and the manifest's `as.character()`
   drops the names and reports the frame as a spat_unit.
 
+**A frame may key a `name`. It may never key a `spat_unit`.** These are not
+the same kind of key, and the difference decides where a frame is allowed to
+appear.
+
+A `name` is local: it distinguishes artifacts *within* one `spat_unit`, so
+adding `scaled2x_` to one creates a sibling and nothing else changes. A
+`spat_unit` is the object's primary nesting axis — it keys expression, cell
+metadata, spatial locations, polygons, every network. Introducing one is
+declaring a new population of cells. A frame does not create cells; it moves
+the ones that exist. So a `spat_unit` named after a frame would fork the
+object into two populations that are the same cells twice, with no accessor
+able to say they are the same and every downstream join silently choosing one.
+
+The failure mode is a *default*, not a call. Nothing stops a user from
+passing `spat_unit = "atlas"` deliberately, and nothing should — the two
+namespaces are separate and a collision between them is the user's to make.
+What is forbidden is code that reaches for the active frame's name when it
+needs a `spat_unit` and none was given. That is the shape to reject in
+review, because it looks like symmetry with the naming rule above and is not.
+
+The consequence for pipelines: **pulling content from a space is what departs
+from the native frame, and naming the result is the user's responsibility.**
+Reading polygons through a frame, buffering them and writing them back is a
+legitimate round trip — the user asked for the frame on the way out and knows
+what the result is. What no Giotto method or pipeline may do is close that
+loop itself *and* supply the `spat_unit` from the frame. The round trip is
+fine; the defaulting is the violation.
+
+Audited 2026-09-16 across GiottoClass, Giotto, GiottoVisuals and GiottoDisk:
+no site derives a `spat_unit` from a space, and the single place a frame name
+composes into anything is `createSpatialNetwork()`'s default `name`. This
+clause exists to keep that true, since there is no runtime check that could —
+a guard cannot tell a defaulted `spat_unit` from a deliberately passed one.
+
 ## Consequences
 
 - **`createSpatialNetwork(gobject, space = "sample_a")` is a breaking change.**

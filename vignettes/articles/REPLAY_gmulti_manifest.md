@@ -752,17 +752,34 @@ to run the export pass per child and agree with the loader on a layout, which is
 `snapshotSave`'s problem already solved and worth mirroring rather than
 reinventing.
 
-### 10.5 The `spat_unit` rule — owed to adr/0006
+### 10.5 The `spat_unit` rule — **Done**; owed to adr/0006
 
 A space prefixes an artifact's **name** (`scaled2x_kNN_network`) and that is
 sanctioned. It must never prefix **`spat_unit`**, which keys expression, metadata
-and every nesting axis — a space-derived unit would silently fork the object.
+and every nesting axis — a space-derived unit forks the object into the same cells
+twice, with no accessor able to say they are the same.
 
-So: pulling content *from a space* is what departs from the native frame, and
-naming the result is then the user's responsibility. No Giotto pipeline or method
-may pull from a space and set the result in one step **while defaulting
-`spat_unit` to the space name**. The round trip itself is fine; the defaulting is
-what is forbidden.
+The two are different kinds of key, which is the whole reason the second looks
+like it should follow from the first. A `name` distinguishes artifacts *within* a
+`spat_unit`, so prefixing one creates a sibling. A `spat_unit` declares a
+population of cells — and a frame moves cells, it does not create them.
+
+**The violation is a default, not a call.** A user may pass `spat_unit = "atlas"`
+deliberately and should be allowed to; spaces and spat_units are separate
+namespaces and a collision is theirs to make. What is forbidden is code reaching
+for the active frame's name when it needs a `spat_unit` and none was given. So
+pulling content from a space and writing it back is a fine round trip — the user
+asked for the frame and knows what came out — as long as no Giotto method closes
+that loop *and* supplies the `spat_unit` itself.
+
+There is no runtime guard for this and there cannot be one: nothing at write time
+can distinguish a defaulted `spat_unit` from a deliberately passed one. So it is
+recorded as a review rule, in `adr/0006` (Decision) and in `CLAUDE.md`, plus a
+comment at the one site where a frame name composes into anything.
+
+**Audited 2026-09-16** across GiottoClass, Giotto, GiottoVisuals and GiottoDisk:
+no site derives a `spat_unit` from a space. `createSpatialNetwork()`'s default
+`name` is the only place a frame name is composed at all.
 
 ### 10.7 Re-read stages 8-9 before resuming them
 

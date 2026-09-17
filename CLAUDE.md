@@ -114,6 +114,19 @@ Do not use non-UTF-8 characters; use Unicode escapes instead (e.g. `\u00F6`).
   returns the container takes no `view =` and no sample selector (`samples =`,
   or any formal meaning "which children"). Its job size comes from `space =`.
   Readers keep all three knobs. See `adr/0006`.
+- **A frame may key a `name`, never a `spat_unit`.** A frame-built artifact
+  prefixes its default `name` with the frame and records it in
+  `@parameters$space`. Never default a `spat_unit` to the active frame's name:
+  `spat_unit` keys expression, metadata and every nesting axis, so that forks
+  the object into the same cells twice. A user passing `spat_unit` explicitly
+  is their own business; code reaching for the frame when none was given is
+  the violation. See `adr/0006`.
+- **`giottoMulti` setters write at the multi level only.** No `object =`, no
+  `samples =`, no way to reach a child — a per-child write would put a
+  select-sample artifact in the same slot namespace as an all-sample one with
+  nothing recording which is which. To edit one sample:
+  `mg[["<sample>"]] <- <child>`. Getters resolve parent-first and fall back to
+  a per-child fan-out.
 - **Data tables:** The package uses `data.table` throughout; prefer `data.table` idioms over base R for tabular operations.
 
 ---
