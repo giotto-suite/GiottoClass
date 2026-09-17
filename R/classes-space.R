@@ -27,8 +27,12 @@
 #   mg <- spatShift(mg, dx = 8000, space = "atlas", samples = "sample_b")
 #
 # Recording twice against the same sample concatenates steps in order.
-# A step with no `samples =` is broadcast: it applies to every sample,
-# including ones first named by a later step.
+# A step with no `samples =` is broadcast, and what that means depends on
+# the kind. On a `perSampleSpace` it stays unscoped and applies to every
+# sample, including ones first named by a later step -- membership there is
+# open. On a `combinedSpace` it is EXPANDED to the current members at
+# record time, because membership there is closed: a sample outside the
+# layout must not be transformed as if it were in it.
 #
 # Q8 replaced `+` and the sample-keyed constructor `giottoSpace("sample_a")`
 # with `samples =`. The old form inherited scope from construction history:

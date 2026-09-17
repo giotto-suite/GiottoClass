@@ -948,8 +948,33 @@ written against the pre-rework surface.
   `default_name` fallback — the same pattern the accessor generics needed. Every
   door's default name is unchanged (`kNN_network`, `knn_network`,
   `Delaunay_network`, `radius_network`)
-- **whether `[[` should consult membership** on a `combinedSpace` — today
-  `sp[["c"]]` answers for a sample that was never declared a member
+- ~~**whether `[[` should consult membership** on a `combinedSpace`~~ **Fixed,
+  at record time rather than at resolution.** An unscoped step on a
+  `combinedSpace` is expanded to its members when recorded, so `sp[["c"]]` for a
+  non-member returns nothing without `[[` needing to know about membership at
+  all.
+
+  The bug was narrower than "`[[` answers for a non-member". A non-member with
+  only scoped steps already got `list()`; that is indistinguishable from a
+  declared member that never moves, but harmlessly so — both mean "apply
+  nothing" to the only consumer, and `names()` answers the membership question
+  properly. The real defect was a **broadcast** step, which `[[` handed to any
+  name at all, so a sample outside the layout was transformed as if it were in
+  it. That contradicts the documented closed membership and is behaviour, not
+  information.
+
+  **Not a return to the pre-Q8 `+`**, which also "appended to every sample keyed
+  so far". Q8's defect was that the scope stayed *implicit*: the step could not
+  say who it applied to and you had to know the construction history. Here the
+  member names are written into the step, so the recipe states its own scope and
+  `as.list()` round-trips it. Record order still decides which members a
+  broadcast caught, but the answer is inspectable rather than inferred.
+
+  An unscoped step on a **memberless** `combinedSpace` is refused, rather than
+  recorded reaching nobody. Chosen over silently allowing it because it is a bad
+  pattern there while being exactly what a `perSampleSpace` means — so the error
+  marks the difference between the kinds. `perSampleSpace` is untouched: open
+  membership, broadcast stays `NULL`.
 - ~~docs still owed~~ **Done.** The `":default:"` sentinel rule is corrected in
   `view_and_space.Rmd` and marked superseded in `IMPLEMENTATION_viewspace.md`
   (:77 and :267), and the `adr/README` backfill note for `spatIDs<-` /

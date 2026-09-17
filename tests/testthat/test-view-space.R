@@ -1826,3 +1826,50 @@ test_that("a gmulti getter takes only a view the object owns", {
     expect_error(getSpatialLocations(mg, view = giottoView(mg, "v")),
         "must be the name of a view registered on this object")
 })
+
+# combinedSpace membership is closed ####
+
+test_that("a broadcast step on a combinedSpace expands to its members", {
+    cs <- combinedSpace(c("a", "b"), name = "atlas")
+    cs <- spin(cs, 30)
+
+    # the member names are written INTO the step, so the recipe states its
+    # own scope rather than leaving it to be inferred from record order
+    expect_identical(cs[[length(cs)]]$samples, c("a", "b"))
+    expect_identical(
+        GiottoClass:::.as_giotto_space(as.list(cs), name = "atlas")[["a"]],
+        cs[["a"]])
+})
+
+test_that("a broadcast step does not reach a non-member", {
+    # Left unscoped, `[[` handed the step to any name at all, so a sample
+    # outside the layout was transformed as if it were in it -- against the
+    # documented closed membership of a combinedSpace.
+    cs <- combinedSpace(c("a", "b"), name = "atlas")
+    cs <- spin(cs, 30)
+    cs <- spatShift(cs, dx = 5, samples = "a")
+
+    expect_length(cs[["a"]], 2L)
+    expect_length(cs[["b"]], 1L)
+    expect_length(cs[["c"]], 0L)
+})
+
+test_that("a perSampleSpace broadcast still reaches an unnamed sample", {
+    # open membership by design: this is the difference between the kinds,
+    # not an oversight shared with combinedSpace
+    ps <- perSampleSpace(name = "upright")
+    ps <- spin(ps, 30)
+    expect_null(ps[[1L]]$samples)
+    expect_length(ps[["anyone"]], 1L)
+})
+
+test_that("an unscoped step on a memberless combinedSpace is refused", {
+    # it would be recorded reaching nobody -- a dead step that looks live
+    expect_error(spin(combinedSpace(name = "atlas"), 30),
+        "cannot take an unscoped step")
+    # both remedies work
+    expect_s4_class(spin(combinedSpace(name = "atlas"), 30, samples = "a"),
+        "combinedSpace")
+    expect_s4_class(spin(combinedSpace(c("a", "b"), name = "atlas"), 30),
+        "combinedSpace")
+})

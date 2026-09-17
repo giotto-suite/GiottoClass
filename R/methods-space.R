@@ -61,7 +61,35 @@ setGeneric("giottoSpaces",
 # recipe had been merged before it — invisible at the call site and
 # unrecoverable from the recorded steps. Scope is stated per call now, and
 # `+` merges two already-scoped handles rather than seeding scope.
+#
+# An unscoped step on a `combinedSpace` is EXPANDED to its members here,
+# and that is deliberately not a return to the pre-Q8 behaviour. The
+# difference is where the scope ends up: pre-Q8 it stayed implicit, so the
+# recorded step could not say who it applied to and you had to know the
+# construction history. Here the member names are written INTO the step, so
+# the recipe states its own scope, `as.list()` round-trips it, and reading
+# it back tells you what it will do. Record order still decides which
+# members a broadcast caught, but the answer is inspectable rather than
+# inferred.
+#
+# The expansion is what makes a `combinedSpace`'s membership actually
+# closed. Left unscoped, `sp[["c"]]` handed the step to any name at all --
+# so a sample outside the layout was transformed as if it were in it, which
+# contradicts the documented contract. A `perSampleSpace` is untouched: its
+# membership is open by design, and an unscoped step reaching a sample that
+# appears nowhere in the recipe is exactly what it means.
 .space_record <- function(space, op, args, samples = NULL) {
+    if (is.null(samples) && inherits(space, "combinedSpace")) {
+        samples <- .space_step_samples(space@steps)
+        if (length(samples) == 0L) {
+            stop("[space] a combinedSpace with no members cannot take an ",
+                "unscoped step: a broadcast means \"every sample in this ",
+                "layout\", and there are none yet, so the step would be ",
+                "recorded reaching nobody. Scope it with `samples = `, or ",
+                "declare the members first with `combinedSpace(<names>)`.",
+                call. = FALSE)
+        }
+    }
     space@steps <- c(space@steps,
         list(.space_step_transform(op, args, samples = samples)))
     space

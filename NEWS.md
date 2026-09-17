@@ -155,6 +155,15 @@
 
 ## bug fixes
 
+- **A `combinedSpace`'s membership is now closed in practice, not just in
+  documentation.** An unscoped ("broadcast") step recorded onto one is expanded
+  to its members at record time, so a sample outside the layout is no longer
+  transformed as if it were in it. The member names are written into the step,
+  so the recipe states its own scope and `as.list()` round-trips it. Recording
+  an unscoped step onto a `combinedSpace` with no members is an error — it would
+  reach nobody. A `perSampleSpace` is unchanged: its membership is open, and a
+  broadcast reaching a sample that appears nowhere in the recipe is what it
+  means.
 - **Recording a transform onto an unused space name now creates a
   `perSampleSpace`**, not a `combinedSpace`. A `combinedSpace` is
   declaration-only: `giottoSpace(mg, "atlas") <- combinedSpace(c("a", "b"))`.
