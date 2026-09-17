@@ -18,7 +18,14 @@ getFeatureInfo(gobject, feat_type = NULL, ...)
   space = NULL
 )
 
-\S4method{getFeatureInfo}{giottoMulti}(gobject, feat_type = NULL, ..., samples = NULL, space = NULL)
+\S4method{getFeatureInfo}{giottoMulti}(
+  gobject,
+  feat_type = NULL,
+  ...,
+  samples = NULL,
+  space = NULL,
+  view = NULL
+)
 }
 \arguments{
 \item{gobject}{giotto object}
@@ -36,7 +43,7 @@ expression and spat_info are not expected to exist.}
 \item{simplify}{logical. Whether or not to take object out of a list when
 there is a length of 1.}
 
-\item{view}{optional \code{giottoView} or character(1) name of a slotted view;
+\item{view}{optional character(1) name of a slotted view;
 applies any crop step to the points via \code{\link[=resolveSubobject]{resolveSubobject()}}. Points are
 not cell-keyed so subset predicates do not cascade here.}
 

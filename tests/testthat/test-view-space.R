@@ -1772,3 +1772,57 @@ test_that("a gmulti getter takes only a space the object owns", {
     expect_error(getSpatialLocations(mg, space = giottoSpace(mg, "atlas")),
         "must be the name of a space registered on this object")
 })
+
+# a view is evaluated at the gmulti level only ####
+
+test_that("a view resolves once at the parent, in global IDs", {
+    mg <- .fixture_gmulti()
+    mg <- subset(mg, leiden_clus == 1, view = "v")
+
+    co <- GiottoClass:::.default_view_coordinator(mg)
+    keep <- GiottoClass:::.surviving_cell_ids(mg, giottoView(mg, "v"), co)
+    # filters read joint metadata and crops read fused coordinates, both
+    # keyed by sample::id -- so one evaluation answers for every child
+    expect_true(all(grepl("::", keep)))
+    expect_gt(length(unique(sub("::.*", "", keep))), 1L)
+})
+
+test_that("gmulti getters honour a view, narrowing children by that set", {
+    mg <- .fixture_gmulti()
+    mg <- subset(mg, leiden_clus == 1, view = "v")
+    co <- GiottoClass:::.default_view_coordinator(mg)
+    keep <- GiottoClass:::.surviving_cell_ids(mg, giottoView(mg, "v"), co)
+
+    # forwarding the NAME made each child resolve it against its own empty
+    # @view and fail with "no view named 'v'"
+    out <- getSpatialLocations(mg, view = "v")
+    expect_identical(
+        sum(vapply(out, function(x) nrow(x[]), integer(1L))),
+        length(keep))
+    # the parent speaks globals; children come back local
+    expect_false(any(grepl("::", out$a[]$cell_ID)))
+    # and it narrows: unfiltered is strictly larger
+    expect_gt(nrow(getSpatialLocations(mg)$a[]), nrow(out$a[]))
+
+    # cell-keyed polygons take the same set
+    polys <- getPolygonInfo(mg, view = "v")
+    expect_identical(sum(vapply(polys, nrow, numeric(1L))),
+        as.numeric(length(keep)))
+})
+
+test_that("a loose giotto still resolves its own view", {
+    # parent-only evaluation is a giottoMulti rule; a standalone object is
+    # its own scope and is unaffected
+    g <- .fixture_giotto()
+    g <- subset(g, leiden_clus == 1, view = "gv")
+    expect_gt(nrow(getSpatialLocations(g)[]),
+        nrow(getSpatialLocations(g, view = "gv")[]))
+})
+
+test_that("a gmulti getter takes only a view the object owns", {
+    mg <- .fixture_gmulti()
+    mg <- subset(mg, leiden_clus == 1, view = "v")
+    # same ownership rule as spaces: handles are the internal channel
+    expect_error(getSpatialLocations(mg, view = giottoView(mg, "v")),
+        "must be the name of a view registered on this object")
+})

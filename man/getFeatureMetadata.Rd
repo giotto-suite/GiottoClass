@@ -47,9 +47,9 @@ getFeatureMetadata(gobject, spat_unit = NULL, feat_type = NULL, ...)
 only when
 expression and spat_info are not expected to exist.}
 
-\item{view}{optional \code{giottoView} or character(1) name of a slotted view}
+\item{view}{optional character(1) name of a slotted view}
 
-\item{space}{optional \code{giottoSpace} or character(1) name of a slotted
+\item{space}{optional character(1) name of a slotted
 space (accepted for API symmetry; feature metadata is feat-keyed so
 view/space are typically no-ops here)}
 

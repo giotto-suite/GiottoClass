@@ -190,6 +190,14 @@
   `default_name =`, the fallback used when `name` is `NULL` before the frame
   prefix is applied. Their `name` defaults change from a literal to `NULL`; the
   resulting default names are unchanged.
+- **`view =` on a `giottoMulti` is evaluated at the parent and nowhere else.**
+  The spatial getters forwarded the view *name* to each child, which looked it
+  up in its own empty `@view` and failed with `no view named`. A view resolves
+  once on the multi — filters read joint metadata, crops read fused coordinates,
+  both keyed by `sample::id` — to one global allow-list that narrows every
+  child's output. Content with no cell axis (points, images) is cropped
+  geometrically at the parent, on content the child already returned in the
+  frame. A standalone `giotto` still resolves its own view unchanged.
 - `space =` on a `giottoMulti` getter resolved the frame name against each
   *child*, whose `@spaces` is empty, so reading in a frame the multi plainly
   had failed with `'<name>' is not a registered space`. The four spatial

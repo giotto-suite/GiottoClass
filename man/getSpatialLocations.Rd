@@ -27,7 +27,8 @@ getSpatialLocations(gobject, spat_unit = NULL, name = NULL, ...)
   name = NULL,
   ...,
   samples = NULL,
-  space = NULL
+  space = NULL,
+  view = NULL
 )
 }
 \arguments{
@@ -55,7 +56,7 @@ expression and spat_info are not expected to exist.}
 \item{simplify}{logical. Whether or not to take object out of a list when
 there is a length of 1.}
 
-\item{view}{optional \code{giottoView} or character(1) name of a slotted view;
+\item{view}{optional character(1) name of a slotted view;
 when supplied, returned spatial locations are narrowed via
 \code{\link[=resolveSubobject]{resolveSubobject()}}}
 

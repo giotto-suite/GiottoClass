@@ -57,11 +57,11 @@ either matrix' for the matrix object contained in the exprObj or
 only when
 expression and spat_info are not expected to exist.}
 
-\item{view}{optional \code{giottoView} or character(1) name of a slotted view;
+\item{view}{optional character(1) name of a slotted view;
 when supplied, the returned expression is narrowed to the cell set the
 view defines via \code{\link[=resolveSubobject]{resolveSubobject()}}}
 
-\item{space}{optional \code{giottoSpace} or character(1) name of a slotted
+\item{space}{optional character(1) name of a slotted
 space; accepted for API symmetry (no-op on expression — tabular)}
 
 \item{samples}{(giottoMulti) character vector of sample names to slice

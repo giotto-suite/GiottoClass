@@ -42,10 +42,10 @@ of the embedding coordinates.}
 only when
 expression and spat_info are not expected to exist.}
 
-\item{view}{optional \code{giottoView} or character(1) name of a slotted view;
+\item{view}{optional character(1) name of a slotted view;
 narrows returned cells via \code{\link[=resolveSubobject]{resolveSubobject()}}}
 
-\item{space}{optional \code{giottoSpace} or character(1) (no-op on dim
+\item{space}{optional character(1) (no-op on dim
 reductions; accepted for API symmetry)}
 }
 \value{

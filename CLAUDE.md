@@ -131,6 +131,15 @@ Do not use non-UTF-8 characters; use Unicode escapes instead (e.g. `\u00F6`).
   the kind decides job size and only the per-sample size round-trips: it writes
   one artifact per child, the shape reading per child returns. `samples =` never
   decides the kind — it says which samples *move*, not whether they *interact*.
+- **On a `giottoMulti`, a view is evaluated at the parent and nowhere else.**
+  Filters read joint metadata and crops read fused coordinates, both keyed by
+  `sample::id`, so one resolution answers for every child; the result is a
+  global allow-list that `.gm_narrow_child_outputs()` folds in beside the eager
+  `@cell_ID` narrowing. Never forward a view to a child — it would re-resolve
+  against the child's own empty `@view`, or narrow in the wrong ID vocabulary.
+  Content with no cell axis (points, images) is cropped geometrically at the
+  parent, on what the child returned in the frame. A standalone `giotto`
+  resolves its own view as normal.
 - **A gobject owns the frames it works in.** Every public `space =` takes a
   **name**, resolved against that object's `@spaces` — never a `giottoSpace`
   handle. Handles are the internal channel (`.resolve_space()` accepts one) by

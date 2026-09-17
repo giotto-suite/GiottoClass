@@ -19,7 +19,14 @@ getSpatialNetwork(gobject, spat_unit = NULL, name = NULL, ...)
   simplify = TRUE
 )
 
-\S4method{getSpatialNetwork}{giottoMulti}(gobject, spat_unit = NULL, name = NULL, ..., samples = NULL)
+\S4method{getSpatialNetwork}{giottoMulti}(
+  gobject,
+  spat_unit = NULL,
+  name = NULL,
+  ...,
+  samples = NULL,
+  view = NULL
+)
 }
 \arguments{
 \item{gobject}{giotto object}

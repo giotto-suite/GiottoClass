@@ -996,21 +996,25 @@ setMethod(
 #' A no-op on a single giotto: there is nothing to narrow against, and the
 #' subobject is already aligned with the gobject's cells.
 #' @noRd
-.gm_apply_view <- function(x, gobject) {
+.gm_apply_view <- function(x, gobject, cells = NULL) {
     if (!inherits(gobject, "giottoMulti")) return(x)
     # Active narrowing lives in @cell_ID / @feat_ID, indexed by spat_unit /
     # feat_type. @id_map is the full identity registry, not an active filter.
     # Subobjects expose their own spat_unit / feat_type via accessors.
     su <- tryCatch(spatUnit(x), error = function(e) NULL)
     ft <- tryCatch(featType(x), error = function(e) NULL)
-    cells <- if (!is.null(su) && length(su) == 1L) {
+    allowed <- if (!is.null(su) && length(su) == 1L) {
         gobject@cell_ID[[su]]
     } else NULL
+    # a view resolved at the parent is already in globals, same vocabulary
+    if (!is.null(cells)) {
+        allowed <- if (is.null(allowed)) cells else intersect(allowed, cells)
+    }
     feats <- if (!is.null(ft) && length(ft) == 1L) {
         gobject@feat_ID[[ft]]
     } else NULL
 
-    .narrow_subobject(x, cells = cells, feats = feats)
+    .narrow_subobject(x, cells = allowed, feats = feats)
 }
 
 #' Compute a cheap length-signature of each child's ID slots.
@@ -3067,6 +3071,35 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
     .resolve_space(gobject, space)
 }
 
+#' Resolve `view =` on the multi, ONCE, at the parent.
+#'
+#' A view is evaluated here and nowhere else. Its filter predicates read
+#' joint metadata and its crop steps read fused coordinates -- both keyed
+#' by `sample::id` globals -- so the answer is one global allow-list, and a
+#' child never has to resolve anything. Forwarding the *name* instead made
+#' each child look it up in its own empty `@view` and fail with "no view
+#' named", which is the bug this replaces.
+#'
+#' Returns a list with `cells` (the surviving globals, or `NULL` when the
+#' view narrows no cell set) and `obj` (the resolved handle, which stays
+#' HERE -- the parent applies crop geometry to content that has no cell
+#' axis, rather than handing a child a view to apply). `NULL` when no view
+#' was asked for, so callers can skip the whole path.
+#' @noRd
+.gm_resolve_view_arg <- function(gobject, view, coordinator = NULL) {
+    if (is.null(view)) return(NULL)
+    if (!is.character(view)) {
+        stop("[gmulti] `view` must be the name of a view registered on ",
+            "this object, not a ", class(view)[[1L]], ". Register it ",
+            "first with `giottoView(x, \"<name>\") <- <view>`, so the ",
+            "object owns the narrowing it is read through.", call. = FALSE)
+    }
+    checkmate::assert_string(view, .var.name = "view")
+    v <- giottoView(gobject, view)
+    co <- coordinator %null% .default_view_coordinator(gobject)
+    list(obj = v, cells = .surviving_cell_ids(gobject, v, co))
+}
+
 #' Narrow a resolved space to one child.
 #'
 #' `sp[nm]` keeps the steps that name `nm` (and rescopes the broadcast ones
@@ -3111,11 +3144,19 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
 # child; feature globals are passthrough.
 #' @noRd
 .gm_narrow_child_outputs <- function(out_list, gobject, spat_unit = NULL,
-    feat_type = NULL) {
+    feat_type = NULL, cells = NULL) {
     allowed_global <- if (!is.null(spat_unit) && length(spat_unit) == 1L) {
         gobject@cell_ID[[spat_unit]]
     } else {
         NULL
+    }
+    # A view resolves at the parent to a set of globals. Folding it in here
+    # rather than at each call site is what keeps the two narrowing
+    # channels -- eager (`@cell_ID`, recorded by subset()) and lazy (a
+    # view) -- from ever disagreeing about which cells are in scope.
+    if (!is.null(cells)) {
+        allowed_global <- if (is.null(allowed_global)) cells else
+            intersect(allowed_global, cells)
     }
     allowed_feats <- if (!is.null(feat_type) && length(feat_type) == 1L) {
         gobject@feat_ID[[feat_type]]
@@ -3143,18 +3184,22 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
 #' @export
 setMethod("getSpatialLocations", signature("giottoMulti"),
     function(gobject, spat_unit = NULL, name = NULL, ...,
-        samples = NULL, space = NULL) {
+        samples = NULL, space = NULL, view = NULL) {
         su <- spat_unit %||%
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
         sp <- .gm_resolve_space_arg(gobject, space)
+        vw <- .gm_resolve_view_arg(gobject, view)
         objs <- .gm_resolve_objects(gobject, samples)
+        # cell-keyed, so the view is fully expressed by its global ID set
+        # and the children are handed no view at all
         out <- lapply(objs, function(nm) {
             getSpatialLocations(gobject@objects[[nm]],
                 spat_unit = spat_unit, name = name,
                 space = .gm_space_for_child(sp, nm), ...)
         })
         names(out) <- objs
-        .gm_narrow_child_outputs(out, gobject, spat_unit = su)
+        .gm_narrow_child_outputs(out, gobject, spat_unit = su,
+            cells = vw$cells)
     }
 )
 
@@ -3172,9 +3217,10 @@ setMethod("setSpatialLocations", signature("giottoMulti"),
 #' @export
 setMethod("getSpatialNetwork", signature("giottoMulti"),
     function(gobject, spat_unit = NULL, name = NULL, ...,
-        samples = NULL) {
+        samples = NULL, view = NULL) {
         su <- spat_unit %||%
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
+        vw <- .gm_resolve_view_arg(gobject, view)
 
         # A cross-sample network lives in the multi's own slot and is named
         # for the frame it was built in, so a plain name lookup finds it --
@@ -3182,7 +3228,11 @@ setMethod("getSpatialNetwork", signature("giottoMulti"),
         if (is.null(samples)) {
             joint <- .gm_joint_pick(
                 .gm_joint_level(gobject@spatial_network, su), name)
-            if (!is.null(joint)) return(.gm_apply_view(joint, gobject))
+            if (!is.null(joint)) {
+                # joint content is already in globals, so the view's set
+                # applies directly -- no localization step
+                return(.gm_apply_view(joint, gobject, cells = vw$cells))
+            }
         }
 
         objs <- .gm_resolve_objects(gobject, samples)
@@ -3191,7 +3241,8 @@ setMethod("getSpatialNetwork", signature("giottoMulti"),
                 spat_unit = spat_unit, name = name, ...)
         })
         names(out) <- objs
-        .gm_narrow_child_outputs(out, gobject, spat_unit = su)
+        .gm_narrow_child_outputs(out, gobject, spat_unit = su,
+            cells = vw$cells)
     }
 )
 
@@ -3221,7 +3272,8 @@ setMethod("setSpatialNetwork", signature("giottoMulti"),
 #'   **multi**
 #' @export
 setMethod("getPolygonInfo", signature("giottoMulti"),
-    function(gobject, name = NULL, ..., samples = NULL, space = NULL) {
+    function(gobject, name = NULL, ..., samples = NULL, space = NULL,
+        view = NULL) {
         # `name` is poly_info's analogue of spat_unit for narrowing — falls
         # back to the default handle when absent. (`polygon_name` is the
         # deprecated alias, still honoured on the child method.)
@@ -3229,13 +3281,15 @@ setMethod("getPolygonInfo", signature("giottoMulti"),
         su <- name %||% args$polygon_name %||% args$spat_unit %||%
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
         sp <- .gm_resolve_space_arg(gobject, space)
+        vw <- .gm_resolve_view_arg(gobject, view)
         objs <- .gm_resolve_objects(gobject, samples)
         out <- lapply(objs, function(nm) {
             getPolygonInfo(gobject@objects[[nm]], name = name,
                 space = .gm_space_for_child(sp, nm), ...)
         })
         names(out) <- objs
-        .gm_narrow_child_outputs(out, gobject, spat_unit = su)
+        .gm_narrow_child_outputs(out, gobject, spat_unit = su,
+            cells = vw$cells)
     }
 )
 
@@ -3253,15 +3307,26 @@ setMethod("setPolygonInfo", signature("giottoMulti"),
 #'   **multi**
 #' @export
 setMethod("getFeatureInfo", signature("giottoMulti"),
-    function(gobject, feat_type = NULL, ..., samples = NULL, space = NULL) {
+    function(gobject, feat_type = NULL, ..., samples = NULL, space = NULL,
+        view = NULL) {
         ft <- feat_type %||%
             .gm_resolve_axis(gobject, "feat_type", NULL)$handle
         sp <- .gm_resolve_space_arg(gobject, space)
+        vw <- .gm_resolve_view_arg(gobject, view)
         objs <- .gm_resolve_objects(gobject, samples)
+        # Points have no cell axis, so a global ID set says nothing about
+        # them -- a crop narrows them geometrically instead. That happens
+        # HERE, not in the child: the child was handed `space[nm]`, so what
+        # comes back is already in the predicate's frame and the recorded
+        # region applies to it directly. Keeping it here is what makes
+        # "a view is evaluated at the parent" structural rather than a
+        # convention children are trusted to honour.
         out <- lapply(objs, function(nm) {
-            getFeatureInfo(gobject@objects[[nm]],
+            child <- getFeatureInfo(gobject@objects[[nm]],
                 feat_type = feat_type,
                 space = .gm_space_for_child(sp, nm), ...)
+            if (is.null(vw)) child else
+                .apply_crops_geometrically(child, vw$obj)
         })
         names(out) <- objs
         # feature-axis narrowing (@feat_ID) — the fourth call site of the
@@ -3284,12 +3349,17 @@ setMethod("setFeatureInfo", signature("giottoMulti"),
 #'   **multi**
 #' @export
 setMethod("getGiottoImage", signature("giottoMulti"),
-    function(gobject, name = NULL, ..., samples = NULL, space = NULL) {
+    function(gobject, name = NULL, ..., samples = NULL, space = NULL,
+        view = NULL) {
         sp <- .gm_resolve_space_arg(gobject, space)
+        vw <- .gm_resolve_view_arg(gobject, view)
         objs <- .gm_resolve_objects(gobject, samples)
+        # images have no ID axis either -- see getFeatureInfo above
         out <- lapply(objs, function(nm) {
-            getGiottoImage(gobject@objects[[nm]], name = name,
+            child <- getGiottoImage(gobject@objects[[nm]], name = name,
                 space = .gm_space_for_child(sp, nm), ...)
+            if (is.null(vw)) child else
+                .apply_crops_geometrically(child, vw$obj)
         })
         names(out) <- objs
         out

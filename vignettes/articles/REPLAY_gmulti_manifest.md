@@ -892,8 +892,31 @@ written against the pre-rework surface.
   coordinator choice. Noted while checking: `.apply_space_to_subobj()` takes a
   `coordinator` it never uses.
 
-- **`view =` has the identical gap** and is larger — each crop step names its own
-  predicate frame, so the carriers need a resolved frame map, not one handle
+- ~~**`view =` has the identical gap**~~ **Fixed, and it was not larger.** This
+  entry claimed the carriers would need "a resolved frame map, not one handle".
+  Wrong, and recorded by analogy to the space gap without checking:
+  `.crop_carriers()` already builds carriers lazily and per frame, and
+  `.surviving_cell_ids()` already resolved a whole view — filters against joint
+  metadata, crops against fused coordinates — at the parent, in globals. Verified
+  before touching anything: a crop recorded in a named frame resolved at the
+  parent across both samples, with the frame applied.
+
+  **A view is now evaluated at the gmulti level and nowhere else.** The five
+  spatial getters gained a `view =` formal (it was falling into `...` and being
+  forwarded as a NAME, which each child then looked up in its own empty `@view`
+  and failed on). The parent resolves once to a global allow-list, which
+  `.gm_narrow_child_outputs()` folds in beside the eager `@cell_ID` narrowing —
+  one place, so the two channels cannot disagree.
+
+  Content with no cell axis (points, images) is cropped **geometrically, at the
+  parent**, on what the child returned: the child was handed `space[nm]`, so that
+  content is already in the predicate's frame. Doing it there rather than handing
+  the child a resolved view is what makes parent-only evaluation structural
+  instead of a convention children are trusted to honour — and it preserves the
+  rule that a getter refuses an ad-hoc `giottoView`, which briefly broke when the
+  object channel was opened.
+
+  A standalone `giotto` is untouched: it resolves its own view exactly as before.
 - ~~**the combined build path**~~ **Done.** Dispatch moved to
   `.create_spatial_network_from_param()`, where `param` is already built and the
   gobject is still in hand — and which all three public doors already reached, so

@@ -471,10 +471,10 @@ setGeneric("getCellMetadata",
         standardGeneric("getCellMetadata"))
 
 #' @rdname getCellMetadata
-#' @param view optional `giottoView` or character(1) name of a slotted
+#' @param view optional character(1) name of a slotted
 #'   view; when supplied, the returned subobject is projected through the
 #'   view's narrowing recipe via [resolveSubobject()]
-#' @param space optional `giottoSpace` or character(1) name of a slotted
+#' @param space optional character(1) name of a slotted
 #'   space; when supplied, applied alongside `view` (spaces are no-ops on
 #'   tabular subobjects but the param is accepted for API symmetry)
 #' @export
@@ -695,8 +695,8 @@ setGeneric("getFeatureMetadata",
         standardGeneric("getFeatureMetadata"))
 
 #' @rdname getFeatureMetadata
-#' @param view optional `giottoView` or character(1) name of a slotted view
-#' @param space optional `giottoSpace` or character(1) name of a slotted
+#' @param view optional character(1) name of a slotted view
+#' @param space optional character(1) name of a slotted
 #'   space (accepted for API symmetry; feature metadata is feat-keyed so
 #'   view/space are typically no-ops here)
 #' @export
@@ -908,10 +908,10 @@ setGeneric("getExpression",
         standardGeneric("getExpression"))
 
 #' @rdname getExpression
-#' @param view optional `giottoView` or character(1) name of a slotted view;
+#' @param view optional character(1) name of a slotted view;
 #'   when supplied, the returned expression is narrowed to the cell set the
 #'   view defines via [resolveSubobject()]
-#' @param space optional `giottoSpace` or character(1) name of a slotted
+#' @param space optional character(1) name of a slotted
 #'   space; accepted for API symmetry (no-op on expression — tabular)
 #' @export
 setMethod("getExpression", signature("gAny"), function(
@@ -1384,10 +1384,10 @@ setGeneric("getSpatialLocations",
         standardGeneric("getSpatialLocations"))
 
 #' @rdname getSpatialLocations
-#' @param view optional `giottoView` or character(1) name of a slotted view;
+#' @param view optional character(1) name of a slotted view;
 #'   when supplied, returned spatial locations are narrowed via
 #'   [resolveSubobject()]
-#' @param space optional `giottoSpace` or character(1) name of a slotted
+#' @param space optional character(1) name of a slotted
 #'   space; when supplied, the recorded transforms are applied to the
 #'   returned coordinates
 #' @export
@@ -1640,9 +1640,9 @@ setGeneric("getDimReduction",
         standardGeneric("getDimReduction"))
 
 #' @rdname getDimReduction
-#' @param view optional `giottoView` or character(1) name of a slotted view;
+#' @param view optional character(1) name of a slotted view;
 #'   narrows returned cells via [resolveSubobject()]
-#' @param space optional `giottoSpace` or character(1) (no-op on dim
+#' @param space optional character(1) (no-op on dim
 #'   reductions; accepted for API symmetry)
 #' @export
 setMethod("getDimReduction", signature("gAny"), function(gobject,
@@ -2573,10 +2573,10 @@ setGeneric("getPolygonInfo",
         standardGeneric("getPolygonInfo"))
 
 #' @rdname getPolygonInfo
-#' @param view optional `giottoView` or character(1) name of a slotted view;
+#' @param view optional character(1) name of a slotted view;
 #'   when supplied, returned polygons are narrowed by surviving cell set via
 #'   [resolveSubobject()]
-#' @param space optional `giottoSpace` or character(1) name of a slotted
+#' @param space optional character(1) name of a slotted
 #'   space; when supplied, the recorded transforms are applied to the
 #'   returned polygon geometry
 #' @export
@@ -2834,10 +2834,10 @@ setGeneric("getFeatureInfo",
         standardGeneric("getFeatureInfo"))
 
 #' @rdname getFeatureInfo
-#' @param view optional `giottoView` or character(1) name of a slotted view;
+#' @param view optional character(1) name of a slotted view;
 #'   applies any crop step to the points via [resolveSubobject()]. Points are
 #'   not cell-keyed so subset predicates do not cascade here.
-#' @param space optional `giottoSpace` or character(1) name of a slotted
+#' @param space optional character(1) name of a slotted
 #'   space; when supplied, recorded transforms are applied to the points
 #'   geometry
 #' @export
@@ -3067,9 +3067,9 @@ setGeneric("getSpatialEnrichment",
         standardGeneric("getSpatialEnrichment"))
 
 #' @rdname getSpatialEnrichment
-#' @param view optional `giottoView` or character(1) name of a slotted view;
+#' @param view optional character(1) name of a slotted view;
 #'   narrows enrichment rows by surviving cell set via [resolveSubobject()]
-#' @param space optional `giottoSpace` or character(1) (no-op; accepted for
+#' @param space optional character(1) (no-op; accepted for
 #'   API symmetry)
 #' @export
 setMethod("getSpatialEnrichment", signature("gAny"), function(gobject,
