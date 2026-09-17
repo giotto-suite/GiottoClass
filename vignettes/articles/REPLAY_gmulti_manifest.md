@@ -881,10 +881,17 @@ written against the pre-rework surface.
   `Delaunay_network`, `radius_network`)
 - **whether `[[` should consult membership** on a `combinedSpace` — today
   `sp[["c"]]` answers for a sample that was never declared a member
-- docs still owed: the `":default:"` sentinel rule in `view_and_space.Rmd:201`
-  and `IMPLEMENTATION_viewspace.md:77,:267`, and the `adr/README` backfill note
-  for `spatIDs<-` / `featIDs<-`. (Federation §13 -> Done and §14 -> Partial,
-  adr/0006's setter clause, and the NEWS entries landed with 10.2-10.4.)
+- ~~docs still owed~~ **Done.** The `":default:"` sentinel rule is corrected in
+  `view_and_space.Rmd` and marked superseded in `IMPLEMENTATION_viewspace.md`
+  (:77 and :267), and the `adr/README` backfill note for `spatIDs<-` /
+  `featIDs<-` is filed.
+
+  **`view_and_space.Rmd` did not build.** Six LIVE chunks used accessors the
+  class split removed — one `giottoSpace(g, "x")$samples` and five
+  `giottoView(g, "x")$steps[[1]]$...`. `$` does not work on these S4 recipe
+  objects; the public idiom is `v[[i]]` for a step and `length(v)` for the
+  count. All 59 live chunk lines now execute. Worth a CI thought: nothing in the
+  suite builds the vignettes, so this rotted silently across the whole rework
 - decide `::` — two `sep =` formals no caller passes, beside 11 literals
 
 

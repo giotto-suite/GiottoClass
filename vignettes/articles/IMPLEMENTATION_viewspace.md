@@ -74,8 +74,18 @@ answers with that frame and every sample in it. The gobject-level `view =` /
 construction path whichever surface asked for it, and the `<-` setters accept the
 `as.list()` form so an exported recipe reads back in.
 
-**`sp[i, j]` owns the `":default:"` rule and nothing else needs to know it
-exists.** Exact sample match, else the sentinel, else an empty step list — so
+**Superseded — a space no longer keys by sample.** Scope lives on the STEP
+(`samples =` per step), not in a per-sample map, and spaces index on ONE axis:
+`sp["a"]` narrows to a sample, `sp[[1]]` takes a step. `":default:"` is a real
+always-present zero-step `perSampleSpace`, a frame rather than a sample key. The
+paragraph below describes the superseded two-index form; it is kept because the
+`NA_character_` rule survives in a changed shape — `sp[[NA]]` answers through the
+sole-name rule, which is what lets a parent hand a child `sp[nm]` and have the
+child, who has no sample identity, resolve it. See `REPLAY_gmulti_manifest.md`
+§10.1.
+
+~~`sp[i, j]` owns the `":default:"` rule and nothing else needs to know it
+exists.~~ Exact sample match, else the sentinel, else an empty step list — so
 `spin(sp["atlas", "new_sample"], 30)` works on a sample that does not exist yet.
 `NA_character_` means "no sample identity", which is what a plain `giotto`
 presents: sentinel, else the sole key, else empty. Two keys and no sentinel does
@@ -263,12 +273,21 @@ Records deferred spatial transforms, keyed by sample.
 
 - a `spaceTransform` step captures a call to an existing transform generic — `affine`, `spin`, `spatShift`, `flip`, `rescale`, `shear`, `zoom`
 - at resolution the receiving object is spliced in as the first argument and `do.call` dispatches to the method that already exists, so spaces add **no new transform implementations**
-- `samples` is a named list: sample name → ordered step list
-- `:default:` is the sentinel for sample-anonymous (single-giotto) recording
-- there is no constructor. A space is created by recording a transform onto a
-  name (`spin(g, 30, space = "s")`), and `samples =` on the `giottoMulti` methods says which
-  children a step applies to. The sentinel is added only when a step is recorded with no
-  `samples` scope, so a per-sample space carries no stray empty key
+- ~~`samples` is a named list: sample name → ordered step list~~ **Superseded.**
+  `@steps` is one ordered list and each step carries its own `samples` scope. A
+  keyed layout cannot express `spin(everyone) → shift(a) → spin(everyone)` for a
+  sample first named at step 2, because "append to every key so far" never
+  reaches a key that appears later
+- ~~`:default:` is the sentinel for sample-anonymous (single-giotto) recording~~
+  **Superseded.** It is a frame — the always-present zero-step `perSampleSpace`
+  that `space = NULL` means — not a sample key
+- membership is DERIVED from the steps, with a `member` step for a sample that
+  belongs to a layout without moving (the one at its origin)
+- there is no constructor for a `combinedSpace`: it is created by recording a
+  transform onto an unused name (`spin(g, 30, space = "s")`), and `samples =` on
+  the `giottoMulti` methods says which children a step applies to. A
+  `perSampleSpace` is declaration-only — `perSampleSpace("name")` — because the
+  rarer intent is the one that should have to say so
 
 Properties that follow from the storage shape:
 

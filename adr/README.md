@@ -111,6 +111,14 @@ so the ADR captures the argument while it is fresh.
   `spatIDs()` and `.evaluate_*_network()` each got their own `dataStore` branch,
   and the general accessor that would retire those branches has not been chosen
   yet. (`411105d4`, `b343cfd4`)
+- **Complete `spatIDs<-` / add `featIDs<-`.** The replacement generic exists
+  (`generics.R`) with exactly one method (`giottoPolygon`) and nothing calls it.
+  Five sites do fetch -> promote IDs -> bind with three different promotion
+  spellings, two of which hand-paste `"::"` instead of consulting `@id_map` via
+  `.gm_global_cell_ids()`. The class -> ID-carrier mapping is already enumerated
+  twice (`gmulti.R`, `auxilliary.R`). Same shape as the `nodeIDs()` entry above,
+  and the same reason it is a candidate rather than done: the accessor that
+  would retire the hand-pasting has not been chosen.
 - **`spatRelate()` generic lives in GiottoClass, engines live in GiottoDisk.**
   Why the generic and the `giottoSpatial` method sit here while the
   sedona/duckdb/terra dispatch sits downstream. (`0c8588b5`, `b1e74a13`)
