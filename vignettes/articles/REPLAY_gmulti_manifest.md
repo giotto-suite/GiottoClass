@@ -195,7 +195,7 @@ federation §11 already rejected. Gated on **D2/D3** below. **Landed 2026-09-11.
 
 | | |
 |---|---|
-| **source** | checkpoint for the GiottoClass sites (`R/auxilliary.R` key auto-detect + giottoMulti hard error, `create_average_DT` / `_detection_DT` reorders, `R/interoperability.R` reorders) |
+| **source** | checkpoint for the GiottoClass sites: `R/auxilliary.R` (key auto-detect + giottoMulti hard error, `annotateGiotto`, `createMetafeats` guards) and `R/interoperability.R` (AnnData / SPE column-order alignment). **`create_average_DT` / `_detection_DT` were listed in error — neither is touched; see §10.7** |
 | **blocked** | **the Giotto-repo producer guards are in neither merge branch** — `adjustGiottoMatrix`, `runDWLSDeconv`, `runGiottoHarmony`, `findScranMarkers`, `giottoToAnnDataZarr`, `cal_cell_niche_cluster_bin`. Locate them on the Giotto side before this stage; if they were never committed, this stage includes writing them |
 | **why separate** | the giottoMulti hard error makes every positional producer fail loudly. Landing GiottoClass without the Giotto side means those verbs error on a gmulti. See **D1** |
 
@@ -203,9 +203,10 @@ federation §11 already rejected. Gated on **D2/D3** below. **Landed 2026-09-11.
 
 | | |
 |---|---|
-| **source** | `feature/gmulti-federation-design` @ `5969cb6` as the base — 3 commits, `+261/-166` over the other variant, and the `GiottoClass:::` reach is gone (verified: no references) |
-| **selective** | `wip/gmulti-visuals-checkpoint` @ `54f19e9` has **1 unique commit** bundling two things: "joint metadata injection" (superseded — see §6) and "composite plot_output_handler" (independently useful). Cherry-pick the handler only; do not take the injection |
+| **source** | `feature/gmulti-federation-design` @ `5969cb6` as the base. `GiottoClass:::` reach is gone (verified: no references). **Size: 11 commits, `+721/-128` over `upstream/gsource`** — the "3 commits" recorded earlier counts only what sits above local `gsource`, which itself carries 8 unique commits of this work |
+| ~~selective~~ | **no-op — do not cherry-pick.** `wip/gmulti-visuals-checkpoint` @ `54f19e9`'s "composite plot_output_handler" is byte-identical to `5969cb6`'s in both files it touches; its "joint metadata injection" half is superseded (D6). Taking the base takes the handler; reversing to the wip branch would lose 95 net lines |
 | **note** | both variants are 7 behind `upstream/gsource` (`eebbfc9`) |
+| **before porting** | §10.7 — one silent-wrong site (`names(slot(space, "samples"))` inside a `tryCatch`), a re-introduced `view`/`space` doc lie, and one open decision on deriving panel scope from a space |
 
 ---
 
@@ -644,7 +645,8 @@ reworked the space subsystem. What follows was owed before stages 8-9 resume.
 
 ### STATE as of 2026-09-17
 
-**Everything here is DONE except §10.7, which is the gate.** Start there.
+**§10 is DONE, gate included.** The next work is stage 8 itself — read §10.7
+first, which is what that gate produced.
 
 | | |
 |---|---|
@@ -655,7 +657,7 @@ reworked the space subsystem. What follows was owed before stages 8-9 resume.
 | 10.5 a frame may key a name, never a `spat_unit` | done |
 | 10.6 `space =`, combined build path, `view =`, `[[` membership, `::` | done |
 | 10.8 native frame loses its name; per-sample is the free kind | done |
-| **10.7 re-read stages 8-9** | **NOT STARTED** |
+| 10.7 re-read stages 8-9 | done — **read before starting either stage** |
 
 GiottoClass `feature/gmulti-replay` **2208 / 0**, 64 ahead of `upstream/gsource`,
 0 behind. GiottoDisk `feature/gmulti-replay` **1263 / 0**, 48 ahead of
@@ -866,39 +868,125 @@ membership is derived from the steps, so a space whose only step names `a`
 declares a layout containing `a`, and adding `b` is a further recorded step. The
 kind flip stands on the round-trip argument, not on a bug.
 
-### 10.7 Re-read stages 8-9 before resuming them — **THE GATE, start here**
+### 10.7 Re-read stages 8-9 before resuming them — **DONE 2026-09-17**
 
-**Do this before starting either stage, not while in one.** Both stage manifests
-were written before the space rework, and §10 changed enough that they may no
-longer describe the work. Specific things to check, rather than a general
-re-read. *(Revised 2026-09-17 — the original list referenced gaps that §10.6 has
-since closed; those are marked.)*
+The gate is closed. Findings below; §4's stage 8 and 9 rows are stale in the
+ways listed and should be read through this section, not on their own.
 
-**Stage 8 (carry-keys).** All local to GiottoClass.
+#### Stage 8 (carry-keys) — reviewed, the row is wrong in three places
 
-- `.narrow_subobject()` is named as a stage-8 site and has since changed twice:
-  it gained an igraph branch (it round-tripped igraph -> DT -> igraph and dropped
-  isolated vertices), and then a `@unique_ID_cache` fix, without which a narrowed
-  `giottoPolygon` / `giottoPoints` reported IDs its geometry no longer held.
-  Confirm the stage-8 edit still applies to the current function
-- the `R/subset.R` "staged +87 supersedes checkpoint +92 — verify equivalence"
-  check is still owed and still unverified
-- the giottoMulti hard error on positional producers overlaps §10.2's setter
-  policing, which now REFUSES four of the five spatial setters outright. Decide
-  whether these are one guard or two before writing a second
+**Two of its named checks belong to stage 2, and both are now closed.**
+
+- **`R/subset.R` "staged +87 supersedes checkpoint +92 — verify equivalence" —
+  VERIFIED, nothing owed.** The five-line difference is *comment only*: two
+  added comments inside `.subset_spatial_network`, and a different wording of
+  the `is_multi` rationale (the checkpoint cites `unionParquetExprStore`'s
+  ops-clean substore invariant; the staged one rewrites that as a self-contained
+  reason). The code is identical — same `is_multi` computation, the same five
+  skip guards, the same `@cell_ID` / `@feat_ID` recording block. HEAD carries the
+  staged variant
+- **`.narrow_subobject()` — A6 closed.** One dispatch table now covers the joint
+  classes plus `spatLocsObj`, `spatialNetworkObj`, `giottoPolygon`,
+  `giottoPoints` (feature axis) and `SpatVector`;
+  `.gm_subobj_filter_by_local_ids` is deleted rather than kept in sync; all four
+  `.gm_narrow_child_outputs()` call sites are wired, feature info included
+
+**`create_average_DT` / `create_detection_DT` are phantoms — drop them from the
+row.** `create_average_DT` exists in `R/auxilliary.R` and the checkpoint does not
+touch it (zero matches in `git diff b351ed2b 0574697b -- R/auxilliary.R`).
+`create_detection_DT` exists nowhere in GiottoClass, Giotto or GiottoVisuals.
+
+**What actually remains.** Both diffs still `git apply --3way` cleanly to HEAD:
+
+| file | content | verdict |
+|---|---|---|
+| `R/auxilliary.R` +133 | `gAny` swaps in `pDataDT`/`fDataDT` — **already on HEAD** via the gAny PR; `annotateGiotto` rewrite; `addCellMetadata`/`addFeatMetadata` giottoMulti hard error; `createMetafeats` guards | mixed |
+| `R/interoperability.R` +50 | alignment guards in `giottoToAnnData` / `giottoToSpatialExperiment` | **not gmulti** |
+| `R/subset.R` | staged variant landed | done |
+
+- **`R/interoperability.R` is a single-`giotto` correctness fix wearing a
+  federation badge.** It reorders `cell_metadata` / `spatial_locs` / `pData` to
+  the assay column order before attaching them, because `AnnData.obs` and SPE
+  `colData` are row-positional against X. Nothing in it mentions gmulti. Same
+  category as §10.6's "`space =` silently discarded on a single `giotto`" — found
+  through the replay, fixes a bug that predates it. **Upstream separately**; do
+  not gate it behind stage 8
+- **`annotateGiotto` is two changes bundled.** NA-tolerance in `cluster_column`
+  is gmulti-motivated (joint `@cell_metadata` keeps the full population while the
+  analysis pool is narrower). The `replace =` formal and the **stop -> warn**
+  relaxation for unmapped clusters are independent user-facing behaviour changes
+  that alter what a bad annotation vector does on a plain `giotto`. Decide
+  deliberately — same shape as §3's trap 2
+- **`createMetafeats` guards are necessary and correctly shaped.** Verified:
+  `giottoMulti` extends `gAny` only, *not* `giotto`, so `inherits(gobject,
+  "giotto")` is FALSE for a multi; and `list_spatial_locations()` /
+  `list_spatial_grids()` reach `gobject@spatial_locs` / `@spatial_grid` directly,
+  neither of which a multi has. Without the guard `createMetafeats(mg)` errors on
+  a missing slot rather than returning NULL
+- **One guard or two? Two.** §10.2's `.gm_refuse_per_sample_write()` refuses
+  because *the slot is not here* — structural ownership, remedy "write into the
+  child". Stage 8's refuses because *the input form carries no key* — alignment,
+  remedy "name your vector". Different causes, different remedies, both needed.
+  What should converge is the **voice**: §10.2 uses `[gmulti <site>]` with
+  `stop(call. = FALSE)`, the checkpoint's uses `"addCellMetadata: ..."`. Restyle
+  when landing
 - **D1 still holds**: the Giotto-repo producer guards are in neither merge
   branch, so this stage may include writing them
 
-**Stage 9 (GiottoVisuals dispatcher, per-panel sizing).** **Cannot be checked
-from the GiottoClass repo** — its base is **GiottoVisuals**'
-`feature/gmulti-federation-design` @ `5969cb6`.
+#### Stage 9 (GiottoVisuals dispatcher, per-panel sizing) — reviewable here after all
 
-- that base predates every §10 change. Anything touching a space there assumes a
-  single `giottoSpace` class, a `@samples` keyed map, the `:default:` SAMPLE
-  sentinel, and two-index `sp[[frame, sample]]`. **All four are gone**, and
-  `:default:` no longer exists in any form (§10.8)
-- per-panel sizing reads through the getters. §10.3's parent-first rule is now
-  narrower than this bullet originally claimed: §10.4 was declined, so
+**It is not checkable from the GiottoClass *repo*, but it is from this machine.**
+`GiottoVisuals-federation-design` is `feature/gmulti-federation-design` @
+`5969cb6`, clean, and the main `GiottoVisuals` worktree is on local `gsource`,
+clean. Both were read for what follows.
+
+- **"3 commits" is measured over local `gsource`, not upstream — the real
+  payload is 11.** Local `gsource` carries **8 unique commits** over
+  `upstream/gsource` @ `eebbfc9`: view/space threading into `spatPlot2D` /
+  `spatInSituPlotPoints` then the remaining plot functions, the v1 giottoMulti
+  error guard, per-child dispatch for spatial plots, and pass-through for
+  non-spatial and dim-reduction plots. `5969cb6` sits 3 commits on top of that.
+  Total **+721 / -128 across 13 files**, `R/gmulti.R` (+269) and
+  `R/vis_spatial_gg.R` (+158) the bulk
+- **The "cherry-pick the handler only" instruction is a no-op — drop the
+  selective row.** `wip/gmulti-visuals-checkpoint` @ `54f19e9`'s composite
+  `plot_output_handler` lives in `R/aux_visuals.R` + `R/aux_output.R`, and both
+  files are **byte-identical** between `54f19e9` and `5969cb6`. Taking the base
+  already takes it, and `5969cb6` is strictly more developed — reversing would be
+  net -95 lines with `R/gmulti.R` restructured back
+- **D6 confirms the other half in fact, not just in plan.**
+  `.gm_inject_joint_metadata` is gone from GiottoClass and `combine_metadata.R`
+  branches on `giottoMulti` directly, so the wip commit's injection half is
+  genuinely superseded
+- **Of the four dead assumptions, one is real — and it fails SILENTLY.**
+  `:default:` 0 occurrences; two-index `sp[[frame, sample]]` 0; `giottoSpace` 3,
+  all prose. **`@samples` 5, of which one is live code**: `.resolve_samples()` in
+  the new `R/gmulti.R` does `names(slot(space_obj, "samples"))` to derive the
+  panel set. There is no `@samples` slot now — `giottoSpace` is virtual with
+  `@name` + `@steps`, and membership derives from the steps. The call sits inside
+  `tryCatch(error = function(e) NULL)`, so it does not error: **`space = "S"`
+  with `samples = NULL` plots every child instead of S's members, and an explicit
+  `samples =` skips its membership check.** One-line fix — `names(space_obj)`,
+  the exported membership accessor (`names` on `giottoSpace`, i.e.
+  `.space_step_samples(x@steps)`)
+- **Stage 9 re-introduces the doc lie §10.2 just fixed.** Its `@param view,space`
+  blocks promise "a `giottoView` / `giottoSpace` **or** the name of one slotted
+  on `gobject`". §10.6 settled that a public surface takes a NAME only. Two
+  blocks visible, and the pattern was copied across the other plot functions
+- **Sample-scope-from-space needs a decision, not a port.**
+  `.resolve_samples()`'s convention — derive panels from the space's membership,
+  error if an explicit `samples =` escapes it — is the shape §10.8 rejected for
+  artifact *generators*. Plotting is arguably different: a panel set is not an
+  artifact, nothing is persisted, and the scope is visible in the call. Say which
+  before porting, because stage 9 is 34 `samples =` occurrences deep in it
+- **Unchanged and still true**: `GiottoClass:::` reach is **0**; `materialize()`
+  exists; the `@view` / `@spaces` slot names survive; `":all:"` survives; and
+  `giottoSpace-class.Rd` / `giottoView-class.Rd` still exist, so the doc links
+  resolve. Note `combinedSpace` / `perSampleSpace` are **not** in
+  `exportClasses` — fine while stage 9 links only `giottoSpace-class`, but any
+  per-kind branching there will want them
+- per-panel sizing reads through the getters, and §10.3's parent-first rule is
+  narrower than the original bullet claimed: §10.4 was declined, so
   `@spatial_network` is the ONLY spatial slot that can hold parent-level content
   and change what a getter returns
 - ~~§10.6's `space =` gap hits it directly~~ — **fixed**. `space =` and `view =`
@@ -908,7 +996,8 @@ from the GiottoClass repo** — its base is **GiottoVisuals**'
   — pass a registered name
 
 **Also re-read** §5 (do not replay) and §6 (doc corrections owed) — both were
-written against the pre-rework surface. §6's `":default:"` items are done.
+written against the pre-rework surface. §6's `":default:"` items are done, and
+item 1 (`.gm_inject_joint_metadata`) is now resolved by D6 as recorded above.
 
 ### 10.6 Still open from this thread
 
