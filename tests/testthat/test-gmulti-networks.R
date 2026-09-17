@@ -371,3 +371,125 @@ test_that("createSpatialNetwork(mg) builds in every child", {
         )
     }
 })
+
+# the combined build path ####
+#
+# A combinedSpace lays its samples in one coordinate system, so a job over
+# it is ONE job. Before this, every frame was planned per-sample: a
+# combinedSpace built N independent networks in a shared frame and missed
+# exactly the cross-sample edges it exists for.
+
+# Lay `b` beside `a` with an overlap, so cross-sample edges must exist.
+.netfix_atlas <- function(mg) {
+    e <- ext(mg@objects$a@spatial_locs$cell$raw)
+    mg <- spatShift(mg, dx = (e[2] - e[1]) * 0.9, space = "atlas",
+        samples = "b")
+    # `a` is in the layout by not moving — a member step says so
+    spatShift(mg, dx = 0, space = "atlas", samples = "a")
+}
+
+test_that("a combinedSpace builds ONE network spanning its members", {
+    mg <- .netfix_atlas(.netfix_multi())
+    expect_s4_class(giottoSpace(mg, "atlas"), "combinedSpace")
+
+    out <- createSpatialNetwork(mg, method = "kNN", k = 8, space = "atlas")
+
+    # one artifact at the multi level, children untouched
+    expect_identical(out@objects, mg@objects)
+    expect_identical(names(out@spatial_network$cell), "atlas_kNN_network")
+
+    sn <- getSpatialNetwork(out, name = "atlas_kNN_network")
+    v <- names(igraph::V(sn@network))
+    expect_true(all(grepl("::", v)))
+    expect_identical(length(v), length(spatIDs(mg)))
+})
+
+test_that("the combined network actually has cross-sample edges", {
+    # Without this the feature can pass while doing nothing: N per-sample
+    # networks stacked into one object would satisfy every check above.
+    mg <- .netfix_atlas(.netfix_multi())
+    out <- createSpatialNetwork(mg, method = "kNN", k = 8, space = "atlas")
+    el <- igraph::as_edgelist(
+        getSpatialNetwork(out, name = "atlas_kNN_network")@network)
+    cross <- sum(sub("::.*", "", el[, 1]) != sub("::.*", "", el[, 2]))
+    expect_gt(cross, 0L)
+})
+
+test_that("a combinedSpace can return the network; per-sample cannot", {
+    mg <- .netfix_atlas(.netfix_multi())
+    # one object, so the answer is unambiguous
+    expect_s4_class(
+        createSpatialNetwork(mg, method = "kNN", k = 8, space = "atlas",
+            return_gobject = FALSE),
+        "spatialNetworkObj")
+    # N objects, so there is no single one to hand back
+    expect_error(
+        createSpatialNetwork(mg, method = "kNN", k = 8,
+            return_gobject = FALSE),
+        "return_gobject = TRUE")
+})
+
+test_that("a combinedSpace naming an absent sample is refused", {
+    mg <- .netfix_atlas(.netfix_multi())
+    expect_error(
+        createSpatialNetwork(mg["a"], method = "kNN", k = 8, space = "atlas"),
+        "absent from the object")
+})
+
+test_that("the wrappers build on a giottoMulti instead of dying", {
+    # both died with `incorrect number of dimensions`: they went straight to
+    # the shared builder, where getSpatialLocations(mg) hands back a list
+    mg <- .netfix_multi()
+    expect_s4_class(createSpatialKNNnetwork(mg, k = 5), "giottoMulti")
+    expect_s4_class(
+        createSpatialDelaunayNetwork(mg, verbose = FALSE), "giottoMulti")
+})
+
+test_that("every door records the frame in the default name", {
+    # the wrappers applied a frame and did not name for it, so a framed
+    # build silently overwrote the native one under the same key
+    g <- .netfix_giotto()
+    g <- rescale(g, fx = 2, fy = 2, space = "scaled2x")
+
+    knn <- createSpatialKNNnetwork(g, k = 5, space = "scaled2x")
+    expect_true("scaled2x_knn_network" %in% names(knn@spatial_network$cell))
+    expect_false("knn_network" %in% names(knn@spatial_network$cell))
+
+    del <- createSpatialDelaunayNetwork(g, space = "scaled2x", verbose = FALSE)
+    expect_true(
+        "scaled2x_Delaunay_network" %in% names(del@spatial_network$cell))
+
+    # and each door keeps its own default spelling when unframed
+    expect_true("knn_network" %in%
+        names(createSpatialKNNnetwork(g, k = 5)@spatial_network$cell))
+    expect_true("kNN_network" %in% names(
+        createSpatialNetwork(g, method = "kNN", k = 5)@spatial_network$cell))
+})
+
+test_that("a perSampleSpace builds one network per child, in the frame", {
+    mg <- .netfix_multi()
+    # declaration-only: recording onto an unused name would declare a
+    # combinedSpace instead (adr/0006)
+    giottoSpace(mg, "upright") <- perSampleSpace("upright")
+    mg <- spatShift(mg, dx = 5000, space = "upright", samples = "b")
+    expect_s4_class(giottoSpace(mg, "upright"), "perSampleSpace")
+
+    out <- createSpatialNetwork(mg, method = "kNN", k = 5, space = "upright")
+
+    # N artifacts on the children, nothing at the multi level
+    expect_length(out@spatial_network, 0L)
+    for (nm in c("a", "b")) {
+        expect_true("upright_kNN_network" %in%
+            names(out@objects[[nm]]@spatial_network$cell))
+    }
+
+    # `.csn_forward()` used to strip `space` on the way to each child, so a
+    # framed per-sample build silently ran in the native frame. The child
+    # cannot resolve the parent's frame by name, so it is handed `space[nm]`.
+    p <- getSpatialNetwork(out@objects$b,
+        name = "upright_kNN_network")@parameters
+    expect_identical(p$space, "upright")
+    # recorded once: the per-sample path re-enters the builder per child, so
+    # an appended record would land twice
+    expect_identical(sum(names(p) == "space"), 1L)
+})

@@ -11,7 +11,8 @@ createSpatialKNNnetwork(
   feat_type = NULL,
   spat_loc_name = NULL,
   dimensions = "all",
-  name = "knn_network",
+  name = NULL,
+  default_name = "knn_network",
   k = 4,
   maximum_distance = NULL,
   minimum_k = 0,
@@ -36,6 +37,11 @@ createSpatialKNNnetwork(
 \item{dimensions}{which spatial dimensions to use (default = all)}
 
 \item{name}{name for spatial network (default = 'spatial_network')}
+
+\item{default_name}{name to fall back on when \code{name} is \code{NULL}, before the
+coordinate frame is prefixed. Exists so that one composition site can
+serve every entry point while each keeps its own spelling; callers do not
+normally set it.}
 
 \item{k}{number of nearest neighbors based on physical distance}
 

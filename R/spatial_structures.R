@@ -129,6 +129,10 @@ compatible_spatial_network <- function(spatial_network,
 #' physical distances.
 #' @param gobject giotto object
 #' @param name name for spatial network (default = 'delaunay_network')
+#' @param default_name name to fall back on when `name` is `NULL`, before the
+#'   coordinate frame is prefixed. Exists so that one composition site can
+#'   serve every entry point while each keeps its own spelling; callers do not
+#'   normally set it.
 #' @param feat_type feature type
 #' @param spat_unit spatial unit
 #' @param spat_loc_name name of spatial locations
@@ -187,7 +191,8 @@ compatible_spatial_network <- function(spatial_network,
 #' createSpatialDelaunayNetwork(g)
 #' @export
 createSpatialDelaunayNetwork <- function(gobject,
-    name = "Delaunay_network",
+    name = NULL,
+    default_name = "Delaunay_network",
     spat_unit = NULL,
     feat_type = NULL,
     spat_loc_name = NULL,
@@ -228,6 +233,7 @@ createSpatialDelaunayNetwork <- function(gobject,
         spat_loc_name = spat_loc_name,
         dimensions = dimensions,
         name = name,
+        default_name = default_name,
         verbose = verbose,
         return_gobject = return_gobject,
         output = output,
@@ -254,6 +260,10 @@ createSpatialDelaunayNetwork <- function(gobject,
 #' @param feat_type feature type
 #' @param spat_unit spatial unit
 #' @param name name for spatial network (default = 'spatial_network')
+#' @param default_name name to fall back on when `name` is `NULL`, before the
+#'   coordinate frame is prefixed. Exists so that one composition site can
+#'   serve every entry point while each keeps its own spelling; callers do not
+#'   normally set it.
 #' @param method method to create kNN network
 #' @param spat_unit spatial unit
 #' @param spat_loc_name name of spatial locations
@@ -292,7 +302,8 @@ createSpatialKNNnetwork <- function(gobject,
     feat_type = NULL,
     spat_loc_name = NULL,
     dimensions = "all",
-    name = "knn_network",
+    name = NULL,
+    default_name = "knn_network",
     k = 4,
     maximum_distance = NULL,
     minimum_k = 0,
@@ -330,6 +341,7 @@ createSpatialKNNnetwork <- function(gobject,
         spat_loc_name = spat_loc_name,
         dimensions = dimensions,
         name = name,
+        default_name = default_name,
         verbose = verbose,
         return_gobject = return_gobject,
         output = output,
@@ -449,54 +461,20 @@ createSpatialNetwork <- function(gobject,
     output = c("spatialNetworkObj", "data.table"),
     space = NULL,
     ...) {
-    # giottoMulti dispatch. `space` is a COORDINATE FRAME name, not a set of
-    # samples: an artifact generator takes no sample selector, and its job
-    # size is read from the frame. See adr/0006.
-    if (inherits(gobject, "giottoMulti")) {
-        # Both captured as statements, not as argument expressions:
-        # `parent.frame()` reads the call stack where it is evaluated, and a
-        # promise forced inside the callee would read the wrong one.
-        .cl <- match.call()
-        .env <- parent.frame()
-        return(.csn_multi(gobject, space, return_gobject,
-            .csn_forward(.cl, .env)))
-    }
-
-    # get paramters
+    # `space` is a COORDINATE FRAME name, not a set of samples: an artifact
+    # generator takes no sample selector, and its job size is read from the
+    # frame. See adr/0006. A giottoMulti needs no dispatch here -- all three
+    # arms below reach `.create_spatial_network_from_param()`, which reads
+    # the job size off the space for every door at once.
     method <- match.arg(method, c("Delaunay", "kNN", "radius"))
-
-    # Default name: `<method>_network`, prefixed by the frame when one was
-    # given. The frame has to reach the name because it changes the
-    # artifact -- `rescale`, `shear` and a general `affine` change
-    # distances, so `maximum_distance` and `radius` mean different things in
-    # each, and shear changes Delaunay topology outright -- and two frames
-    # must not collide on one name. Prefixing rather than replacing keeps
-    # framed and native names the same kind of thing, so the method is still
-    # readable off either. An explicit `name =` is taken as given.
-    #
-    # (`spin` / `flip` / `spatShift` are isometries and leave the network
-    # identical; the default does not try to detect that, because whether a
-    # frame happens to be rigid is not something a name should depend on.)
-    #
-    # The native frame is exempt: naming it explicitly must produce the same
-    # artifact as omitting `space`, or the two ways of saying "where the
-    # data already is" would write to different names.
-    #
-    # `name` is the ONLY key a frame may compose into. Never `spat_unit`:
-    # that keys expression, metadata and every nesting axis, so a
-    # frame-named unit forks the object into the same cells twice. A frame
-    # moves cells, it does not create them. See adr/0006.
-    if (is.null(name)) {
-        name <- paste0(method, "_", "network")
-        if (!.is_native_space(space)) name <- paste0(space, "_", name)
-    }
-
 
     if (method == "kNN") {
         knn_method <- match.arg(knn_method, c("dbscan"))
 
         out <- createSpatialKNNnetwork(
             gobject = gobject,
+            # keep this door's own spelling; the wrapper's differs
+            default_name = "kNN_network",
             spat_unit = spat_unit,
             feat_type = feat_type,
             method = knn_method,
@@ -519,6 +497,8 @@ createSpatialNetwork <- function(gobject,
         )
         out <- createSpatialDelaunayNetwork(
             gobject = gobject,
+            # keep this door's own spelling; the wrapper's differs
+            default_name = "Delaunay_network",
             spat_unit = spat_unit,
             feat_type = feat_type,
             spat_loc_name = spat_loc_name,
@@ -569,90 +549,127 @@ createSpatialNetwork <- function(gobject,
 }
 
 
-# createSpatialNetwork() on a giottoMulti ####
+# giottoMulti network builds ####
+#
+# The space says how big the job is (adr/0006), and that is the whole of the
+# decision:
+#
+#   combinedSpace  -- its samples share one coordinate system, so a job over
+#                     it is ONE job. Locations are fused across its members
+#                     into a single table of `sample::id` globals, one
+#                     network is built spanning them, and it goes in the
+#                     multi's own @spatial_network. This is the only place a
+#                     cross-sample edge can exist, and the reason that slot
+#                     exists at all.
+#   perSampleSpace -- each sample gets its own copy of the frame, so a job
+#                     over it is N independent jobs, one written per child.
+#
+# Reached from `.create_spatial_network_from_param()`, which means all three
+# public doors get it. Previously only `createSpatialNetwork()` handled a
+# multi at all and it planned every frame per-sample, so a `combinedSpace`
+# built N networks in a shared frame and missed exactly the cross-sample
+# edges it exists for; the two wrappers died on `incorrect number of
+# dimensions` because `getSpatialLocations(mg)` hands back a list.
+#
+# `param` arrives already built, which is also what retires the call-replay
+# this used to do. That machinery existed to avoid hand-listing 19 formals
+# to forward per child -- a list that went stale when `radius` arrived
+# upstream, binding at the container and reaching no child. A built `param`
+# has no formals to forget, so there is nothing left to drift. Do not
+# reintroduce a forward. See adr/0006.
 
-# Capture the caller's own call so it can be replayed against one child.
-#
-# `match.call()` keeps exactly the arguments the user supplied, in the form
-# they supplied them, and nothing else -- formals they omitted keep the child
-# call's own defaults. Three entries are the container's business and are
-# rewritten or dropped.
-#
-# This replaces a hand-listed forward of 19 formals. That list had to be
-# edited every time a formal was added, and when `radius` arrived upstream it
-# was not: the container bound `radius` and dropped it, so
-# `createSpatialNetwork(mg, method = "radius", radius = 50)` reached each
-# child with `radius = NULL` and failed naming the argument the user gave.
-# The merge that introduced it was textually clean, so nothing flagged it.
-# Do not reintroduce an explicit list here. See adr/0006.
-#
-# Rewriting entries of an already-matched call does not change how R
-# re-matches it, so an argument that landed in `...` still lands in `...`.
-# `do.call(f, c(list(gobject = child), as.list(cl)[-1L]))` would NOT be
-# equivalent -- it re-matches positionally and would bind a stray unnamed
-# dots argument to `name`.
 #' @noRd
-.csn_forward <- function(cl, envir) {
-    cl[["gobject"]] <- quote(.child)
-    # Dropping a name a call does not carry is an error, not a no-op.
-    if ("space" %in% names(cl)) cl[["space"]] <- NULL
-    cl[["return_gobject"]] <- TRUE
-    list(call = cl, envir = envir)
-}
-
-# Replay a captured call against one child. `.child` resolves from the data
-# mask; every other argument still evaluates in the user's frame, so a symbol
-# written at the call site means there what it meant there.
-#' @noRd
-.csn_on_child <- function(forward, child) {
-    eval(forward$call, list(.child = child), enclos = forward$envir)
-}
-
-# Read the job size off the space (adr/0006).
-#
-# There is no native-frame special case here: omitting `space` resolves the
-# always-present `":default:"` frame, a zero-step `perSampleSpace`, so the
-# job is planned the same way whether or not the caller named a frame.
-#
-# TODO(combinedSpace): a `combinedSpace` should become ONE job over
-# `names(sp)` with `sample::id` node IDs, written to the multi's
-# joint slot. Until that lands every frame is planned per-sample, which is
-# right for a `perSampleSpace` and wrong for a `combinedSpace` -- it builds
-# N independent networks in a shared frame instead of one spanning it, so
-# the cross-sample edges the frame exists for are the ones it misses.
-#' @noRd
-.csn_space_plan <- function(gobject, space) {
-    samples <- names(gobject@objects)
-    if (length(samples) == 0L) {
+.csn_multi <- function(gobject, param, method, parameters, space,
+    spat_unit, spat_loc_name, dimensions, name, verbose,
+    return_gobject, output, ...) {
+    if (length(gobject@objects) == 0L) {
         stop("[createSpatialNetwork] giottoMulti has no child gobjects",
             call. = FALSE)
     }
-    if (is.null(space)) space <- .space_default_name
-    # Name only, deliberately, even though `.resolve_space()` would accept a
-    # handle. This is an artifact GENERATOR: the frame's name is prefixed
-    # onto the artifact's default name and stored in `@parameters$space`
-    # (adr/0006), so the artifact carries a name that must still resolve on
-    # this object later. A detached handle would write a frame name the
-    # gobject does not own and cannot look up -- provenance pointing at
-    # nothing. Ownership is the reason, not the type check.
-    checkmate::assert_string(space, .var.name = "space")
-    # the getter checks the name; an unknown one raises there
-    list(kind = "per_sample", samples = samples,
-        space = giottoSpace(gobject, space))
-}
 
-#' @noRd
-.csn_multi <- function(gobject, space, return_gobject, forward) {
-    plan <- .csn_space_plan(gobject, space)
+    if (inherits(space, "combinedSpace")) {
+        return(.csn_combined(gobject, param = param, method = method,
+            parameters = parameters, space = space, spat_unit = spat_unit,
+            spat_loc_name = spat_loc_name, dimensions = dimensions,
+            name = name, verbose = verbose,
+            return_gobject = return_gobject, output = output, ...))
+    }
+
+    # per-sample: N artifacts, and no single one to hand back
     if (!isTRUE(return_gobject)) {
         stop("[createSpatialNetwork] a per-sample job builds one network ",
             "per child, so it needs the container to write them into: ",
-            "`return_gobject = TRUE`.", call. = FALSE)
+            "`return_gobject = TRUE`. A combinedSpace builds one network ",
+            "and can return it.", call. = FALSE)
     }
-    for (nm in plan$samples) {
-        gobject@objects[[nm]] <- .csn_on_child(forward, gobject@objects[[nm]])
+    for (nm in names(gobject@objects)) {
+        gobject@objects[[nm]] <- .create_spatial_network_from_param(
+            gobject = gobject@objects[[nm]],
+            param = param, method = method, parameters = parameters,
+            spat_unit = spat_unit, spat_loc_name = spat_loc_name,
+            dimensions = dimensions,
+            # composed once at the container, so every child agrees
+            name = name,
+            # the child cannot resolve the parent's frame by name, so it is
+            # handed the frame narrowed to itself
+            space = space[nm],
+            verbose = verbose, return_gobject = TRUE, output = output, ...)
     }
     gobject
+}
+
+# One job over a combinedSpace's members.
+#
+# Membership is derived from the recipe's steps (`names()`), never from
+# `names(@objects)` -- a space that claimed every child would restate the
+# object rather than declare anything. A sample that belongs to the layout
+# without moving says so with a `member` step.
+#' @noRd
+.csn_combined <- function(gobject, param, method, parameters, space,
+    spat_unit, spat_loc_name, dimensions, name, verbose,
+    return_gobject, output, ...) {
+    members <- names(space)
+    if (length(members) == 0L) {
+        stop("[createSpatialNetwork] combinedSpace '", space@name,
+            "' names no samples, so there is nothing to build over. ",
+            "Record a transform onto it, or declare membership with a ",
+            "member step.", call. = FALSE)
+    }
+    unknown <- setdiff(members, names(gobject@objects))
+    if (length(unknown) > 0L) {
+        stop("[createSpatialNetwork] combinedSpace '", space@name,
+            "' names sample(s) absent from the object: ",
+            toString(unknown), call. = FALSE)
+    }
+
+    # `.gm_fused_spatlocs()` owns the order that matters: scope the frame per
+    # child, apply, promote IDs to `sample::id`, THEN fold. Folding first
+    # would trip the duplicate-ID check, since children share local IDs.
+    sl <- .gm_fused_spatlocs(gobject, space, coordinator = NULL,
+        spat_unit = spat_unit, name = spat_loc_name, samples = members)
+    if (is.null(sl)) {
+        stop("[createSpatialNetwork] no spatial locations found for ",
+            "sample(s): ", toString(members), call. = FALSE)
+    }
+
+    want <- if (identical(output, "data.table") && !return_gobject) {
+        "data.table"
+    } else {
+        "spatialNetworkObj"
+    }
+    built <- .spatial_network_from_locs(sl, param,
+        method = method, parameters = parameters, name = name,
+        dimensions = dimensions, spat_unit = spat_unit,
+        verbose = verbose, output = want, ...)
+
+    # One artifact, so returning it is unambiguous -- unlike the per-sample
+    # path, where there are N and no single answer.
+    if (!return_gobject) return(built)
+
+    gobject <- setSpatialNetwork(gobject, x = built,
+        spat_unit = spat_unit, name = name, verbose = verbose)
+    update_giotto_params(gobject,
+        description = "_spatial_network", toplevel = 1L)
 }
 
 
@@ -706,10 +723,16 @@ createSpatialNetwork <- function(gobject,
 # Build a spatial network on cell centroids from an already-constructed
 # networkParam, and do the gobject plumbing around it.
 #
-# createSpatialKNNnetwork() and createSpatialDelaunayNetwork() each carry their
-# own copy of this plumbing; they are not migrated onto it here because they
-# are the tested paths and this is a bug-fix commit. New spatial network
-# methods should route through this instead of adding a fourth copy.
+# THE one place all three doors converge: createSpatialNetwork(),
+# createSpatialKNNnetwork() and createSpatialDelaunayNetwork() all route
+# here with `param` already built. So this is where the frame reaches the
+# name, and where a giottoMulti's job size is read off the space -- doing
+# either in a caller means doing it three times and drifting twice.
+#
+# `name` is NULL until composed here, which is why the two wrappers declare
+# `name = NULL` rather than their literal defaults: an eager default fires
+# before this function can tell a user-supplied name from a fallback, and
+# the frame prefix would then be dropped exactly when a frame was used.
 .create_spatial_network_from_param <- function(gobject,
     param,
     method,
@@ -717,7 +740,8 @@ createSpatialNetwork <- function(gobject,
     spat_unit = NULL,
     spat_loc_name = NULL,
     dimensions = "all",
-    name,
+    name = NULL,
+    default_name = NULL,
     verbose = FALSE,
     return_gobject = TRUE,
     output = c("spatialNetworkObj", "data.table"),
@@ -725,29 +749,66 @@ createSpatialNetwork <- function(gobject,
     ...) {
     output <- match.arg(output, c("spatialNetworkObj", "data.table"))
     spat_unit <- set_default_spat_unit(gobject, spat_unit = spat_unit)
+    sp <- .resolve_space(gobject, space)
+
+    # Default name: `<method>_network` (or the wrapper's own spelling),
+    # prefixed by the frame when one was given. The frame has to reach the
+    # name because it changes the artifact -- `rescale`, `shear` and a
+    # general `affine` change distances, so `maximum_distance` and `radius`
+    # mean different things in each, and shear changes Delaunay topology
+    # outright -- and two frames must not collide on one name. Prefixing
+    # rather than replacing keeps framed and native names the same kind of
+    # thing, so the method is still readable off either. An explicit
+    # `name =` is taken as given.
+    #
+    # (`spin` / `flip` / `spatShift` are isometries and leave the network
+    # identical; the default does not try to detect that, because whether a
+    # frame happens to be rigid is not something a name should depend on.)
+    #
+    # The native frame is exempt: naming it explicitly must produce the same
+    # artifact as omitting `space`, or the two ways of saying "where the
+    # data already is" would write to different names.
+    #
+    # `name` is the ONLY key a frame may compose into. Never `spat_unit`:
+    # that keys expression, metadata and every nesting axis, so a
+    # frame-named unit forks the object into the same cells twice. A frame
+    # moves cells, it does not create them. See adr/0006.
+    if (is.null(name)) {
+        name <- default_name %null% paste0(method, "_network")
+        if (!.is_native_space(sp)) name <- paste0(sp@name, "_", name)
+    }
+
+    # The native frame records as NA, however the caller spelled it: an
+    # artifact built there is indistinguishable from one built with no
+    # `space` at all, because it is the same artifact.
+    #
+    # Recorded in `parameters`, not in `@provenance`: that slot answers
+    # "which spat_units were aggregated to make this", a different question,
+    # and two of its consumers assume an atomic value.
+    #
+    # Assigned rather than appended, so that the per-sample path -- which
+    # re-enters this function once per child -- records one `space` and not
+    # a second one beside it. The child computes the same value from the
+    # frame narrowed to itself, so the write is idempotent.
+    parameters[["space"]] <-
+        if (.is_native_space(sp)) NA_character_ else sp@name
+
+    # giottoMulti: the space says how big the job is (adr/0006).
+    if (inherits(gobject, "giottoMulti")) {
+        return(.csn_multi(gobject, param = param, method = method,
+            parameters = parameters, space = sp, spat_unit = spat_unit,
+            spat_loc_name = spat_loc_name, dimensions = dimensions,
+            name = name, verbose = verbose,
+            return_gobject = return_gobject, output = output, ...))
+    }
 
     sl <- getSpatialLocations(gobject,
         spat_unit = spat_unit, name = spat_loc_name,
         output = "spatLocsObj"
     )
-
-    # Build in the requested coordinate frame. The locations are transformed
-    # here rather than fetched through the getter's own `space =`, because
-    # on a giottoMulti the frames live on the parent and the getter forwards
-    # to children -- see `.gm_fused_spatlocs()` for the same reason.
-    #
-    # The frame is recorded in `parameters`, not in `@provenance`: that slot
-    # answers "which spat_units were aggregated to make this", a different
-    # question, and two of its consumers assume an atomic value.
-    if (!.is_native_space(space)) {
-        sp <- .resolve_space(gobject, space)
+    if (!.is_native_space(sp)) {
         sl <- .apply_space_to_subobj(sl, gobject, sp, coordinator = NULL)
     }
-    # The native frame records as NA, however the caller spelled it: an
-    # artifact built there is indistinguishable from one built with no
-    # `space` at all, because it is the same artifact.
-    parameters <- c(parameters, list(
-        space = if (.is_native_space(space)) NA_character_ else space))
 
     # An edge table is only ever the answer when there is no gobject to write
     # into; with `return_gobject = TRUE` the object is built and set either way.

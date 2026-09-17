@@ -6,7 +6,8 @@
 \usage{
 createSpatialDelaunayNetwork(
   gobject,
-  name = "Delaunay_network",
+  name = NULL,
+  default_name = "Delaunay_network",
   spat_unit = NULL,
   feat_type = NULL,
   spat_loc_name = NULL,
@@ -29,6 +30,11 @@ createSpatialDelaunayNetwork(
 \item{gobject}{giotto object}
 
 \item{name}{name for spatial network (default = 'delaunay_network')}
+
+\item{default_name}{name to fall back on when \code{name} is \code{NULL}, before the
+coordinate frame is prefixed. Exists so that one composition site can
+serve every entry point while each keeps its own spelling; callers do not
+normally set it.}
 
 \item{spat_unit}{spatial unit}
 

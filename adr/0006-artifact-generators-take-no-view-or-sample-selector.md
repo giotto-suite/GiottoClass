@@ -189,9 +189,12 @@ The remedy is one line and makes the ownership explicit:
   `images`), which select keys rather than samples and are a different
   question.
 - **Per-child forwarding must not re-list formals.** The hand-listed forward is
-  what dropped `radius`; it is replaced by rewriting the caller's own
-  `match.call()`. Any future per-child dispatch owes the same treatment — an
-  enumerated list is a signature someone else owns, copied.
+  what dropped `radius`. It was first replaced by rewriting the caller's own
+  `match.call()`, and then by removing the forward entirely: dispatch moved down
+  to `.create_spatial_network_from_param()`, where the `networkParam` is already
+  built, so each child is handed an object rather than a replayed call. A built
+  param has no formals to forget. The rule generalises — if a per-child dispatch
+  needs to enumerate a signature someone else owns, it is sitting too high.
 - **The `set*` family lost its `object =` write target, and with it any way
   to reach a child.** This was originally filed as out of scope — `object =`
   named a single child to write into rather than selecting a set to compute
@@ -257,8 +260,10 @@ The remedy is one line and makes the ownership explicit:
 
 ## References
 
-- `R/spatial_structures.R` — `createSpatialNetwork()`, the `giottoMulti` arm and
-  `.csn_child_args()` / `.csn_eval_on_child()`
+- `R/spatial_structures.R` — `.create_spatial_network_from_param()`, the one
+  site all three public doors converge on: where the frame reaches the artifact's
+  name and where a `giottoMulti`'s job size is read off the space.
+  `.csn_multi()` / `.csn_combined()` are the two job sizes
 - `R/gmulti.R` — `.gm_resolve_samples()` (the helper someone reaches for when
   adding a selector), `.gm_reject_write_selector()` (what a setter does when
   someone reaches for one anyway), and the five multi-level spatial slots

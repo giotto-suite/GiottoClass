@@ -155,6 +155,26 @@
 
 ## bug fixes
 
+- **A `combinedSpace` now builds one spatial network spanning its samples**,
+  written to the `giottoMulti`'s `@spatial_network` with the children left
+  untouched, instead of N independent per-sample networks in a shared frame.
+  Cross-sample edges — the reason a combined frame exists — were never built
+  before. A `perSampleSpace` still builds one network per child.
+- `createSpatialKNNnetwork()` and `createSpatialDelaunayNetwork()` no longer
+  fail with `incorrect number of dimensions` on a `giottoMulti`.
+- **All three network entry points now record the coordinate frame in the
+  default name.** `createSpatialKNNnetwork()` and
+  `createSpatialDelaunayNetwork()` applied a frame without naming for it, so a
+  framed build silently overwrote the native one under the same key. A framed
+  build is now `scaled2x_knn_network` beside `knn_network`. Default names are
+  otherwise unchanged.
+- `createSpatialNetwork()` on a `giottoMulti` dropped `space =` on the way to
+  each child, so a per-sample frame build ran in the native frame. Each child is
+  now handed the frame narrowed to itself.
+- `createSpatialKNNnetwork()` and `createSpatialDelaunayNetwork()` gain
+  `default_name =`, the fallback used when `name` is `NULL` before the frame
+  prefix is applied. Their `name` defaults change from a literal to `NULL`; the
+  resulting default names are unchanged.
 - `space =` on a `giottoMulti` getter resolved the frame name against each
   *child*, whose `@spaces` is empty, so reading in a frame the multi plainly
   had failed with `'<name>' is not a registered space`. The four spatial

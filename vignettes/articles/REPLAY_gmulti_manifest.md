@@ -848,17 +848,37 @@ written against the pre-rework surface.
 
 - **`view =` has the identical gap** and is larger — each crop step names its own
   predicate frame, so the carriers need a resolved frame map, not one handle
-- **the combined build path** — `.csn_space_plan()` still plans every space
-  per-sample, so a `combinedSpace` builds N networks instead of one spanning it,
-  missing exactly the cross-sample edges the class exists for. The blocker was
-  getting `param` to a gobject-free builder; the answer is to dispatch at
+- ~~**the combined build path**~~ **Done.** Dispatch moved to
   `.create_spatial_network_from_param()`, where `param` is already built and the
-  gobject is still in hand. That also fixes `createSpatialKNNnetwork(mg, ...)` and
-  `createSpatialDelaunayNetwork(mg, ...)`, which currently die with
-  `incorrect number of dimensions`, and lets the space-prefix naming rule reach all
-  three doors — today the two wrappers apply a frame and do **not** record it in the
-  name, so a framed build silently overwrites the native one (measured: 4986 vs
-  3540 edges under the same name)
+  gobject is still in hand — and which all three public doors already reached, so
+  one site fixed four defects:
+
+  - a `combinedSpace` now builds **one** network over its members, via
+    `.gm_fused_spatlocs()`, written to the multi's joint slot with children
+    untouched. Measured on two overlapping sections: 9984 edges, **635 of them
+    cross-sample** — the ones the class exists for, and previously never built
+  - `createSpatialKNNnetwork(mg, ...)` and `createSpatialDelaunayNetwork(mg, ...)`
+    no longer die with `incorrect number of dimensions`
+  - all three doors now record the frame in the default name. The two wrappers
+    applied a frame and did not name for it, so a framed build silently overwrote
+    the native one (measured: 4986 vs 3540 edges under `knn_network`)
+  - `.csn_forward()` **stripped `space` from the forwarded call**, so a
+    `perSampleSpace` build ran every child in its native frame. That was a
+    workaround for children being unable to resolve a parent's frame by name;
+    with the getter fix above, each child is handed `space[nm]` instead
+
+  The call-replay machinery (`.csn_forward` / `.csn_on_child` / `.csn_space_plan`)
+  is gone. It existed to avoid hand-listing 19 formals to forward per child — the
+  list that went stale when `radius` arrived upstream. A built `param` has no
+  formals to forget, so there is nothing left to drift.
+
+  One signature change this forced: the wrappers declared eager literal defaults
+  (`name = "knn_network"`), so by the time the shared builder saw `name` it could
+  not tell a user-supplied name from a fired default, and the frame prefix would be
+  dropped exactly when a frame was used. Both are now `name = NULL` with a
+  `default_name` fallback — the same pattern the accessor generics needed. Every
+  door's default name is unchanged (`kNN_network`, `knn_network`,
+  `Delaunay_network`, `radius_network`)
 - **whether `[[` should consult membership** on a `combinedSpace` — today
   `sp[["c"]]` answers for a sample that was never declared a member
 - docs still owed: the `":default:"` sentinel rule in `view_and_space.Rmd:201`
