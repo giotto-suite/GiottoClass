@@ -1873,3 +1873,80 @@ test_that("an unscoped step on a memberless combinedSpace is refused", {
     expect_s4_class(spin(combinedSpace(c("a", "b"), name = "atlas"), 30),
         "combinedSpace")
 })
+
+
+# --- combine* forward view/space ------------------------------------------
+# These functions are the data-fetch layer GiottoVisuals plots through, so a
+# view or space they swallow is a plot silently drawn on the wrong cells or
+# in the wrong frame -- no error to notice.
+
+test_that("space applies with no view supplied", {
+    # `view` and `space` are independent knobs; materialize dispatched only
+    # on view = "character", so naming a frame alone used to fail on
+    # dispatch rather than return the frame.
+    g <- .fixture_giotto()
+    giottoSpace(g, "scaled") <- spin(perSampleSpace("scaled"), 30)
+
+    plain <- suppressWarnings(combineMetadata(g, verbose = FALSE))
+    framed <- suppressWarnings(
+        combineMetadata(g, space = "scaled", verbose = FALSE))
+
+    expect_identical(nrow(framed), nrow(plain))
+    expect_false(isTRUE(all.equal(framed$sdimx, plain$sdimx)))
+})
+
+test_that("combineCellData(space=) reaches every child of a gmulti", {
+    # the frame is registered on the PARENT only -- a child cannot resolve
+    # the name, so this passes only if the parent resolved it first
+    mg <- .fixture_gmulti()
+    giottoSpace(mg, "scaled") <- spin(perSampleSpace("scaled"), 30)
+
+    plain <- suppressWarnings(combineCellData(mg))
+    framed <- suppressWarnings(combineCellData(mg, space = "scaled"))
+
+    expect_named(framed, c("a", "b"))
+    for (nm in c("a", "b")) {
+        x <- framed[[nm]][[1L]]
+        y <- plain[[nm]][[1L]]
+        expect_identical(nrow(x), nrow(y))
+        # centroids and polygon vertices both moved
+        expect_false(isTRUE(all.equal(x$sdimx, y$sdimx)))
+        expect_false(isTRUE(all.equal(x$x, y$x)))
+    }
+})
+
+test_that("combineCellData(view=) narrows every child at the parent", {
+    mg <- .fixture_gmulti()
+    plain <- suppressWarnings(combineCellData(mg))
+    mg <- subset(mg, leiden_clus == 1, view = "sub")
+    viewed <- suppressWarnings(combineCellData(mg, view = "sub"))
+
+    for (nm in c("a", "b")) {
+        n_view <- length(unique(viewed[[nm]][[1L]]$cell_ID))
+        n_all <- length(unique(plain[[nm]][[1L]]$cell_ID))
+        expect_lt(n_view, n_all)
+        expect_gt(n_view, 0L)
+    }
+    # both children resolve against the same joint metadata, so they narrow
+    # to the same count -- a per-child resolution could not guarantee this
+    expect_identical(
+        length(unique(viewed$a[[1L]]$cell_ID)),
+        length(unique(viewed$b[[1L]]$cell_ID))
+    )
+})
+
+test_that("combineMetadata(space=) reaches every child of a gmulti", {
+    mg <- .fixture_gmulti()
+    giottoSpace(mg, "scaled") <- spin(perSampleSpace("scaled"), 30)
+
+    plain <- suppressWarnings(combineMetadata(mg, verbose = FALSE))
+    framed <- suppressWarnings(
+        combineMetadata(mg, space = "scaled", verbose = FALSE))
+
+    expect_named(framed, c("a", "b"))
+    for (nm in c("a", "b")) {
+        expect_identical(nrow(framed[[nm]]), nrow(plain[[nm]]))
+        expect_false(isTRUE(
+            all.equal(framed[[nm]]$sdimx, plain[[nm]]$sdimx)))
+    }
+})

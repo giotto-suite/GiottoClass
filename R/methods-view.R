@@ -568,6 +568,41 @@ setMethod("materialize",
     }
 )
 
+
+# materialize with no view — space only ####
+# `view` and `space` are independent knobs, so asking for a frame without
+# also naming a view is a normal request, not a degenerate one. Everything
+# below the dispatch already treats a NULL view as "no narrowing"
+# (`.view_steps_of()` returns an empty step list, `.surviving_cell_ids()`
+# returns NULL), so these methods exist to let that request through rather
+# than to add a second code path. Without them a caller that forwards its
+# own `view = NULL, space = "frame"` — as the combine* family does — fails
+# on dispatch instead of getting the frame it asked for.
+
+#' @rdname materialize
+#' @export
+setMethod("materialize",
+    signature(gobject = "giotto", view = "NULL"),
+    function(gobject, view, space = NULL, coordinator = NULL,
+             slots = NULL, ...) {
+        .materialize_giotto_resolved(gobject, NULL,
+            space = space, coordinator = coordinator,
+            slots = slots, ...)
+    }
+)
+
+#' @rdname materialize
+#' @export
+setMethod("materialize",
+    signature(gobject = "giottoMulti", view = "NULL"),
+    function(gobject, view, space = NULL, coordinator = NULL,
+             slots = NULL, ...) {
+        .materialize_gmulti_resolved(gobject, NULL,
+            space = space, coordinator = coordinator,
+            slots = slots, ...)
+    }
+)
+
 # Walk one slot list (potentially nested by spat_unit / feat_type) calling
 # resolveSubobject on each subobject. The slot is a `nullOrList`; structure
 # is recursive — list of lists of subobjects. Apply the resolver leaf-wise.

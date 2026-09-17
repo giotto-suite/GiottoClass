@@ -155,6 +155,22 @@
 
 ## bug fixes
 
+- **`materialize()` accepts `view = NULL`.** `view` and `space` are
+  independent knobs, but the generic only dispatched on `view = "character"`,
+  so asking for a frame without also naming a view failed on dispatch.
+  Everything below the dispatch already read a NULL view as "no narrowing",
+  so this lets an existing request through rather than adding a code path.
+- **The `combine*` family no longer swallows `view` / `space` on a
+  `giottoMulti`.** `combineCellData()` declared both and forwarded neither to
+  its per-child loop, so a view or frame named on a multi was silently
+  ignored — the wrong cells, or the native frame, returned without an error to
+  notice. These functions are the layer plotting reads through, so the result
+  was a plot quietly drawn on the wrong data. Both now resolve at the parent
+  before the loop, which is the only place they can resolve: a view is keyed
+  by `sample::id` against joint metadata, and a `space` is a name the parent
+  owns that a child cannot look up.
+- `combineMetadata()` gained `view` / `space`. It had neither, and is the
+  function the majority of plotting paths call.
 - **A `combinedSpace`'s membership is now closed in practice, not just in
   documentation.** An unscoped ("broadcast") step recorded onto one is expanded
   to its members at record time, so a sample outside the layout is no longer

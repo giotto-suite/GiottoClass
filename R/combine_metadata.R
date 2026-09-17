@@ -16,6 +16,10 @@
 #' @param spat_loc_name name of spatial locations to include
 #' @param spat_enr_names names of spatial enrichment results to include
 #' @param verbose verbosity
+#' @param view,space `character`. Optional name of a view / space
+#' registered on `gobject`. The object is pre-narrowed once before any
+#' slot is read, so the returned table reflects the view-scoped subset in
+#' the frame `space` names.
 #' @returns Extended cell metadata in data.table format.
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
@@ -27,9 +31,23 @@ combineMetadata <- function(gobject,
     feat_type = NULL,
     spat_loc_name = "raw",
     spat_enr_names = NULL,
-    verbose = TRUE) {
+    verbose = TRUE,
+    view = NULL,
+    space = NULL) {
     # DT vars
     cell_ID <- NULL
+
+    # Pre-narrow ONCE for the slots this combine reads, before the
+    # giottoMulti branch below — a view resolves at the parent and nowhere
+    # else, and `space` is a name the parent owns that a child cannot look
+    # up. See combineCellData for the full rationale.
+    if (!is.null(view) || !is.null(space)) {
+        gobject <- materialize(gobject, view, space = space,
+            slots = c("cell_metadata", "spatial_locs",
+                "spatial_enrichment"))
+        view <- NULL
+        space <- NULL
+    }
 
     # giottoMulti: dispatch only when per-child spatial slots are being
     # combined. When `spat_loc_name = NULL`, this function only touches
@@ -232,12 +250,13 @@ combineSpatialCellMetadataInfo <- function(gobject,
 #' sometimes produce extent-filling polygons when the original geometry is
 #' problematic or invalid. Set `TRUE` to remove these, based on whether a
 #' polygon fills up most of the x and y range.
-#' @param view,space optional [giottoView] / [giottoSpace] or
-#' the name of one slotted on `gobject`. When supplied, each constituent
-#' subobject is fetched with the view applied (predicate / crop / sample
-#' narrowing) and the space transforms composed, before being combined.
-#' Pass through to plot functions (`view = "tumor_focus"`, etc.) when the
-#' combined table should reflect a view-scoped subset.
+#' @param view,space `character`. Optional name of a view / space
+#' registered on `gobject`. When supplied, each constituent subobject is
+#' fetched with the view applied (predicate / crop / sample narrowing) and
+#' the space transforms composed, before being combined. Pass through to
+#' plot functions (`view = "tumor_focus"`, etc.) when the combined table
+#' should reflect a view-scoped subset. On a `giottoMulti` both resolve at
+#' the parent, so every child is returned narrowed and in the same frame.
 #' @concept combine cell metadata
 #' @returns data.table with combined spatial information
 #' @examples
@@ -263,9 +282,42 @@ combineCellData <- function(gobject,
     checkmate::assert_numeric(xlim, len = 2L, null.ok = TRUE)
     checkmate::assert_numeric(ylim, len = 2L, null.ok = TRUE)
 
+    # When view/space are supplied, pre-narrow the gobject ONCE for the
+    # specific slots this combine touches via materialize(slots = ...).
+    # materialize uses one resolver cache internally, so all slot
+    # narrowings here share a single predicate evaluation. Subsequent
+    # getter calls below run with view=NULL/space=NULL on the
+    # already-narrowed gobject — no per-getter resolver work.
+    #
+    # This runs BEFORE the giottoMulti branch, which is the only place it
+    # can run on a multi: a view resolves at the parent and nowhere else
+    # (joint metadata and fused coordinates are keyed `sample::id`), and a
+    # `space` is a name the parent owns, which a child cannot look up in
+    # its own empty slots. `materialize(giottoMulti)` already scopes the
+    # frame per child and narrows the joint slots, so the per-child loop
+    # below inherits both and passes neither.
+    if (!is.null(view) || !is.null(space)) {
+        need_slots <- character(0L)
+        if (isTRUE(include_spat_locs)) {
+            need_slots <- c(need_slots, "spatial_locs")
+        }
+        if (isTRUE(include_poly_info)) {
+            need_slots <- c(need_slots, "spatial_info")
+        }
+        if (isTRUE(include_spat_enr)) {
+            need_slots <- c(need_slots, "spatial_enrichment")
+        }
+        need_slots <- c(need_slots, "cell_metadata")
+        gobject <- materialize(gobject, view, space = space,
+            slots = need_slots)
+        view <- NULL
+        space <- NULL
+    }
+
     # giottoMulti: per-child loop, each child augmented with joint-only
     # metadata columns through the access layer. Returns a named list of
-    # per-sample combined results (each in its own coord frame).
+    # per-sample combined results (each in its own coord frame, or in the
+    # frame `space` named).
     # Cross-sample combining is deferred to a future `space =` form that
     # aligns frames first.
     if (inherits(gobject, "giottoMulti")) {
@@ -304,31 +356,6 @@ combineCellData <- function(gobject,
         spat_unit = poly_info,
         feat_type = feat_type
     )
-
-
-    # When view/space are supplied, pre-narrow the gobject ONCE for the
-    # specific slots this combine touches via materialize(slots = ...).
-    # materialize uses one resolver cache internally, so all slot
-    # narrowings here share a single predicate evaluation. Subsequent
-    # getter calls below run with view=NULL/space=NULL on the
-    # already-narrowed gobject — no per-getter resolver work.
-    if (!is.null(view) || !is.null(space)) {
-        need_slots <- character(0L)
-        if (isTRUE(include_spat_locs)) {
-            need_slots <- c(need_slots, "spatial_locs")
-        }
-        if (isTRUE(include_poly_info)) {
-            need_slots <- c(need_slots, "spatial_info")
-        }
-        if (isTRUE(include_spat_enr)) {
-            need_slots <- c(need_slots, "spatial_enrichment")
-        }
-        need_slots <- c(need_slots, "cell_metadata")
-        gobject <- materialize(gobject, view, space = space,
-            slots = need_slots)
-        view <- NULL
-        space <- NULL
-    }
 
     ## spatial locations ##
     if (isTRUE(include_spat_locs)) {
