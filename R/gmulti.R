@@ -37,6 +37,28 @@
 # =============================================================================
 
 
+# The separator in a global `sample::id`.
+#
+# One definition so that every site that writes or parses a global ID is
+# tied to the same searchable name rather than to a bare literal. That is
+# the whole benefit -- `.gm_id_sep` says what it is and finds its own
+# callers; `"::"` says nothing and collides with the `::` operator and with
+# comments when you grep for it.
+#
+# Cheap enough to be worth it: every use is a VECTORISED call (`paste`,
+# `paste0`, `regexpr(fixed = TRUE)`), so this is looked up once per call and
+# never per element. Nothing in an inner loop reads it.
+#
+# The value is not expected to change -- it is part of the public ID format,
+# which users read off their own results and downstream packages parse, so
+# changing it breaks that format. What went away is the pretence that a
+# CALLER could change it: two `sep =` formals defaulted to this, no caller
+# ever passed anything else, and the parse and prefix paths carried the
+# literal independently anyway. A different separator would have been
+# written but not read.
+.gm_id_sep <- "::"
+
+
 # CLASS ####
 
 #' @title S4 giottoMulti
@@ -1035,14 +1057,14 @@ setMethod(
 }
 
 #' @noRd
-.gm_build_cell_idmap <- function(objects, sep = "::") {
+.gm_build_cell_idmap <- function(objects) {
     parts <- lapply(names(objects), function(nm) {
         ids <- tryCatch(spatIDs(objects[[nm]]), error = function(e) character())
         if (length(ids) == 0L) return(NULL)
         data.table::data.table(
             object = nm,
             local_id = ids,
-            global_id = paste(nm, ids, sep = sep)
+            global_id = paste(nm, ids, sep = .gm_id_sep)
         )
     })
     parts <- Filter(Negate(is.null), parts)
@@ -1057,10 +1079,9 @@ setMethod(
 # prefix. IDs the registry does not cover fall back to the build-time rule,
 # which is what every other site in the package does by hand.
 #' @noRd
-.gm_global_cell_ids <- function(gobject, object_name, local_ids,
-                                sep = "::") {
+.gm_global_cell_ids <- function(gobject, object_name, local_ids) {
     object <- NULL  # NSE
-    fallback <- paste(object_name, local_ids, sep = sep)
+    fallback <- paste(object_name, local_ids, sep = .gm_id_sep)
     m <- gobject@id_map$cells
     if (is.null(m) || nrow(m) == 0L) return(fallback)
     sub <- m[object == object_name]
@@ -1138,7 +1159,7 @@ setMethod(
 #' @noRd
 .rewrite_sample_id <- function(ids, old_to_new) {
     # Split "sample::rest" -> ("sample", "::rest"); remap sample part.
-    pos <- regexpr("::", ids, fixed = TRUE)
+    pos <- regexpr(.gm_id_sep, ids, fixed = TRUE)
     has_sep <- pos > 0L
     if (!any(has_sep)) return(ids)
     samp <- substr(ids[has_sep], 1L, pos[has_sep] - 1L)
@@ -1638,10 +1659,10 @@ setMethod(
 #' @noRd
 .parse_sample_qualified_name <- function(name) {
     if (is.null(name) || !nzchar(name)) return(list(sample = NULL, name = name))
-    if (!grepl("::", name, fixed = TRUE)) {
+    if (!grepl(.gm_id_sep, name, fixed = TRUE)) {
         return(list(sample = NULL, name = name))
     }
-    idx <- regexpr("::", name, fixed = TRUE)
+    idx <- regexpr(.gm_id_sep, name, fixed = TRUE)
     sample <- substr(name, 1L, idx - 1L)
     rest <- substr(name, idx + 2L, nchar(name))
     list(sample = sample, name = rest)
@@ -1658,7 +1679,7 @@ setMethod(
 .gm_slice_to_samples <- function(x, samples, gobject) {
     if (is.null(samples)) return(x)
     samples <- .gm_resolve_samples(gobject, samples, "gmulti getter")
-    prefixes <- paste0(samples, "::")
+    prefixes <- paste0(samples, .gm_id_sep)
     starts_any <- function(ids) {
         # OR across prefixes: TRUE for ids that start with any of them.
         out <- rep(FALSE, length(ids))
@@ -1842,7 +1863,7 @@ setMethod(
                 nm, v_map[[nm]], r$su, r$ft))
         }
         mat <- e[]
-        colnames(mat) <- paste(nm, colnames(mat), sep = "::")
+        colnames(mat) <- paste(nm, colnames(mat), sep = .gm_id_sep)
         list(mat = mat, exprObj = e, name = nm)
     })
     names(per_child) <- contributors
@@ -1940,7 +1961,7 @@ setMethod(
                 nm, r$su, r$ft))
         }
         dt <- data.table::copy(cm[])
-        dt[, cell_ID := paste(nm, cell_ID, sep = "::")]
+        dt[, cell_ID := paste(nm, cell_ID, sep = .gm_id_sep)]
         # Sample-origin tag — matches joinGiottoObjects' convention so
         # downstream tools (e.g. runGiottoHarmony's vars_use = "list_ID"
         # default) work out of the box on the assembled multi metadata.
@@ -2075,7 +2096,7 @@ setMethod(
     )
     if (is.null(joint_cm) || nrow(joint_cm) == 0L) return(child_g)
 
-    prefix <- paste0(child_name, "::")
+    prefix <- paste0(child_name, .gm_id_sep)
     joint_cm <- joint_cm[startsWith(cell_ID, prefix)]
     if (nrow(joint_cm) == 0L) return(child_g)
     joint_cm <- data.table::copy(joint_cm)
@@ -3165,7 +3186,7 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
     }
     if (is.null(allowed_global) && is.null(allowed_feats)) return(out_list)
     Map(function(child_obj, sample_name) {
-        prefix <- paste0(sample_name, "::")
+        prefix <- paste0(sample_name, .gm_id_sep)
         local_cells <- if (!is.null(allowed_global)) {
             sub(paste0("^", prefix), "",
                 allowed_global[startsWith(allowed_global, prefix)])

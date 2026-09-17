@@ -986,7 +986,22 @@ written against the pre-rework surface.
   objects; the public idiom is `v[[i]]` for a step and `length(v)` for the
   count. All 59 live chunk lines now execute. Worth a CI thought: nothing in the
   suite builds the vignettes, so this rotted silently across the whole rework
-- decide `::` — two `sep =` formals no caller passes, beside 11 literals
+- ~~decide `::`~~ **Done** — one package-internal `.gm_id_sep`, and the two
+  `sep =` formals are gone. They defaulted to `"::"`, no caller ever passed
+  anything else, and the parse and prefix paths carried the literal
+  independently, so a different separator would have been written but not read:
+  a knob wired to nothing.
+
+  Kept as a constant rather than re-hardcoded because the cost is nil and the
+  benefit is cohesion — `.gm_id_sep` names itself and finds its own callers,
+  where `"::"` greps into the `::` operator and into comments. Every use is a
+  vectorised call (`paste`, `paste0`, `regexpr(fixed = TRUE)`), so it is read
+  once per call and never per element; nothing in an inner loop touches it.
+
+  The value is still not expected to change — it is part of the public
+  `sample::id` format that users read off results and downstream packages parse.
+  Two of the original "11 literals" were never separators at all: a comment, and
+  `"terra"::"spin"`, which is the `::` operator applied to strings.
 
 
 ---

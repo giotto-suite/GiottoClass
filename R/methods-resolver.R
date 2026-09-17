@@ -275,7 +275,8 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
             gp <- one(gobject@objects[[nm]], nm)
             if (is.null(gp)) return(NULL)
             sv <- gp@spatVector
-            sv$poly_ID <- paste(nm, terra::values(sv)$poly_ID, sep = "::")
+            sv$poly_ID <- paste(nm, terra::values(sv)$poly_ID,
+                sep = .gm_id_sep)
             gp@spatVector <- sv
             gp@unique_ID_cache <- terra::values(sv)$poly_ID
             gp
