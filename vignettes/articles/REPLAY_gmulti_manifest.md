@@ -654,7 +654,9 @@ stages 8-9 resume. **These are ordered — each unblocks the next.**
   needs no transform of its own (the one at a layout's origin)
 - spaces index on ONE axis: `sp["a"]` / `sp[["a"]]`, character = sample, numeric =
   step. `names()` is the samples the recipe mentions
-- `":default:"` is a real always-present zero-step `perSampleSpace`, not a sample key
+- `":default:"` is **gone**. It first stopped being a sample key and became a
+  frame; then the frame lost its name too. `space = NULL` is the native frame and
+  there is no second spelling — see §10.8
 - artifact generators take no sample selector; a frame-built artifact records the
   frame in its default name and in `@parameters$space` (adr/0006)
 - `.assert_space_known()` lives with the space machinery and is owned by the getter
@@ -780,6 +782,50 @@ comment at the one site where a frame name composes into anything.
 **Audited 2026-09-16** across GiottoClass, Giotto, GiottoVisuals and GiottoDisk:
 no site derives a `spat_unit` from a space. `createSpatialNetwork()`'s default
 `name` is the only place a frame name is composed at all.
+
+### 10.8 The native frame loses its name; per-sample becomes the free kind
+
+Two changes, both settled by asking what a default should be rather than what is
+typed most often.
+
+**`":default:"` is deleted.** It was a name for "no space", which R already
+spells `NULL` — so every consumer had to know the two were the same thing, which
+is exactly what `.is_native_space()` existed for. And a transform recorded onto
+the native frame would stop it being native, so the name could only ever stand
+for an empty recipe. Deleting it removed the constant, the predicate (three call
+sites collapse to `is.null(sp)`), `.assert_space_not_default()`, the sentinel
+entry in `.assert_space_known()`, and the getter's synthesize-on-miss branch.
+Nothing downstream depended on it: GiottoDisk's only two mentions are comments.
+
+`space = NULL` on a `giottoMulti` transform is refused, naming the remedy. A
+plain `giotto` still transforms eagerly.
+
+**Recording onto an unused name now creates a `perSampleSpace`**, and a
+`combinedSpace` is declaration-only. The reverse of the original decision, which
+gave combined away for free on the grounds that laying samples out together is
+overwhelmingly why a space gets named. That is an argument about *frequency*; the
+kind decides *job size*, so the tie-breaker should be which default composes. Only
+per-sample does: it writes one artifact per child, the shape reading per child
+hands back, while a combined job writes one artifact at the parent where §10.4
+deliberately left nowhere to put per-sample content back.
+
+**A dead end recorded so it is not retried.** Before this, `space = NULL` on a
+multi was made to record onto `:default:` so the object would act eager while
+children stayed immutable. It worked and was green, and it was reverted: it split
+"native" into two meanings (the frame reads default to, versus the frame with
+nothing applied), which immediately produced a silent bug — the network builder
+skipped applying a `:default:` that had moved, so an artifact was built on
+coordinates every getter reported differently. Supporting it cost a predicate on
+every getter's read path, eight reader gates, and a `.hasSlot` guard for objects
+older than the `@spaces` slot. The payoff was not having to name a space.
+
+**A framing I got wrong on the way**, corrected here so the reasoning is not
+mistaken for evidence: I claimed the old combined-by-default was a live defect,
+because `spin(mg, 30, space = "upright", samples = "a")` produced one
+parent-level network covering only `a`. That is the declared semantics working —
+membership is derived from the steps, so a space whose only step names `a`
+declares a layout containing `a`, and adding `b` is a further recorded step. The
+kind flip stands on the round-trip argument, not on a bug.
 
 ### 10.7 Re-read stages 8-9 before resuming them
 

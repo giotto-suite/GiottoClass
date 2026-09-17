@@ -121,6 +121,16 @@ Do not use non-UTF-8 characters; use Unicode escapes instead (e.g. `\u00F6`).
   the object into the same cells twice. A user passing `spat_unit` explicitly
   is their own business; code reaching for the frame when none was given is
   the violation. See `adr/0006`.
+- **The native frame has no name; `space = NULL` is it.** There is no
+  `":default:"` sentinel — a name for "no space" is a second spelling of a
+  value R already has, and a transform recorded onto the native frame would
+  stop it being native. A `giottoMulti` transform with no `space =` is refused
+  (name one); a plain `giotto` transforms eagerly.
+- **Recording onto an unused space name creates a `perSampleSpace`.** A
+  `combinedSpace` is declaration-only (`combinedSpace(c("a", "b"))`), because
+  the kind decides job size and only the per-sample size round-trips: it writes
+  one artifact per child, the shape reading per child returns. `samples =` never
+  decides the kind — it says which samples *move*, not whether they *interact*.
 - **A gobject owns the frames it works in.** Every public `space =` takes a
   **name**, resolved against that object's `@spaces` — never a `giottoSpace`
   handle. Handles are the internal channel (`.resolve_space()` accepts one) by

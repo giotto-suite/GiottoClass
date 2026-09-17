@@ -74,10 +74,12 @@ answers with that frame and every sample in it. The gobject-level `view =` /
 construction path whichever surface asked for it, and the `<-` setters accept the
 `as.list()` form so an exported recipe reads back in.
 
-**Superseded — a space no longer keys by sample.** Scope lives on the STEP
-(`samples =` per step), not in a per-sample map, and spaces index on ONE axis:
-`sp["a"]` narrows to a sample, `sp[[1]]` takes a step. `":default:"` is a real
-always-present zero-step `perSampleSpace`, a frame rather than a sample key. The
+**Superseded — a space no longer keys by sample, and the sentinel is gone.**
+Scope lives on the STEP (`samples =` per step), not in a per-sample map, and
+spaces index on ONE axis: `sp["a"]` narrows to a sample, `sp[[1]]` takes a step.
+There is no `":default:"` at all: the native frame is `space = NULL` and has no
+name, because a sentinel would be a second spelling of a value R already has and
+a transform recorded onto the native frame would stop it being native. The
 paragraph below describes the superseded two-index form; it is kept because the
 `NA_character_` rule survives in a changed shape — `sp[[NA]]` answers through the
 sole-name rule, which is what lets a parent hand a child `sp[nm]` and have the
@@ -279,15 +281,17 @@ Records deferred spatial transforms, keyed by sample.
   sample first named at step 2, because "append to every key so far" never
   reaches a key that appears later
 - ~~`:default:` is the sentinel for sample-anonymous (single-giotto) recording~~
-  **Superseded.** It is a frame — the always-present zero-step `perSampleSpace`
-  that `space = NULL` means — not a sample key
+  **Superseded, then removed.** It briefly named a frame rather than a sample
+  key; now there is no name for the native frame at all. `space = NULL` is it
 - membership is DERIVED from the steps, with a `member` step for a sample that
   belongs to a layout without moving (the one at its origin)
-- there is no constructor for a `combinedSpace`: it is created by recording a
-  transform onto an unused name (`spin(g, 30, space = "s")`), and `samples =` on
-  the `giottoMulti` methods says which children a step applies to. A
-  `perSampleSpace` is declaration-only — `perSampleSpace("name")` — because the
-  rarer intent is the one that should have to say so
+- recording a transform onto an unused name (`spin(g, 30, space = "s")`) creates
+  a **`perSampleSpace`**, and `samples =` on the `giottoMulti` methods says which
+  children a step applies to. A `combinedSpace` is declaration-only —
+  `combinedSpace(c("a", "b"))` — because the kind decides job size and only the
+  per-sample size round-trips: it writes one artifact per child, which is the
+  shape reading per child hands back. (This is the reverse of the original
+  decision, which made combined the free kind.)
 
 Properties that follow from the storage shape:
 

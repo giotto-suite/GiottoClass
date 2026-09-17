@@ -73,14 +73,35 @@ sample selector. Its job size is read from the space.
   sample at the layout's origin, which is in the layout precisely by not
   moving — is declared with a `member` step, which is why membership
   derived purely from transforms was not enough.
-- A **`perSampleSpace`** — which is what `space = NULL` means — iterates: N
-  artifacts, child-local IDs, one written per child.
+- A **`perSampleSpace`** iterates: N artifacts, child-local IDs, one written
+  per child.
 
-Recording onto an unused name declares a `combinedSpace`, on the grounds that
-laying samples out together is overwhelmingly why a space gets named.
-`perSampleSpace()` is declaration-only for the same reason: the rarer intent
-is the one that should have to say so, and `samples =` cannot be the signal
-because both kinds accept it.
+Recording onto an unused name declares a **`perSampleSpace`**, and a
+`combinedSpace` is declaration-only. `samples =` cannot be the signal either
+way, because both kinds accept it — scoping says which samples *move*, not
+whether they *interact*.
+
+The free kind is the one that composes under get/set. A per-sample job writes
+one artifact per child, which is the shape reading per child hands back, so
+content can go out and come back. A combined job writes ONE artifact at the
+parent, and there is deliberately nowhere to put per-sample content back at
+the parent (`IMPLEMENTATION_gmulti_federation.md` §13), so that round trip
+does not close. Declaring that samples share a coordinate system is a real
+claim and is made out loud.
+
+*(This reverses the original decision, which made `combinedSpace` the free
+kind on the grounds that laying samples out together is overwhelmingly why a
+space gets named. That may well be true, but it is an argument about
+frequency, and the kind decides job size — so the tie-breaker should be which
+default composes, not which is typed more often.)*
+
+**The native frame has no name.** `space = NULL` is it. There was briefly a
+`":default:"` sentinel; it is gone, because a name for "no space" is a second
+spelling of a value R already has, which every consumer then has to know is
+the same thing — and a transform recorded onto the native frame would stop it
+being native, so the name could only ever stand for an empty recipe. On a
+`giottoMulti` a transform with no `space =` is refused, naming the remedy; on
+a plain `giotto` it transforms eagerly, as it always has.
 
 "Sample selector" means any formal whose documented meaning is *which children
 to compute over*, whatever it is spelled. A caller who wants a subset of samples

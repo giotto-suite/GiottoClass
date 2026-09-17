@@ -20,10 +20,10 @@ recipe. Coverage is therefore whatever the object holds, which is why a
 consumer sizing a job reads it from the object rather than asking the
 space.
 
-It is also the only kind that cannot be created by \code{space = "<name>"} on
-a transform verb — recording onto an unused name declares a combined
-frame, on the assumption that laying samples out together is the common
-reason to name one. Build this with \code{\link[=perSampleSpace]{perSampleSpace()}} and slot it in.
+It is the kind you get by default: recording onto an unused name with
+\code{space = "<name>"} creates one. That is because the kind decides job
+size, and only this size round-trips — N artifacts, one per child, which
+is the shape reading per child hands back.
 }
 \seealso{
 \link[=giottoSpace-class]{giottoSpace}, \code{\link[=perSampleSpace]{perSampleSpace()}}

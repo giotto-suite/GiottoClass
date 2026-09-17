@@ -27,9 +27,8 @@
 #   mg <- spatShift(mg, dx = 8000, space = "atlas", samples = "sample_b")
 #
 # Recording twice against the same sample concatenates steps in order.
-# `samples = NULL` records against every sample already keyed in the space,
-# and on a new space makes it a `perSampleSpace` -- a frame that applies to
-# each sample independently, which is what a single `giotto` always wants.
+# A step with no `samples =` is broadcast: it applies to every sample,
+# including ones first named by a later step.
 #
 # Q8 replaced `+` and the sample-keyed constructor `giottoSpace("sample_a")`
 # with `samples =`. The old form inherited scope from construction history:
@@ -62,10 +61,20 @@
 # means "each sample, independently, in its own copy of this frame". That
 # is what the old `:default:` sample key was expressing -- a key that stood
 # for "no particular sample" and had to be checked for at every consumer.
-# It is now the absence of the slot, so there is nothing to check.
+# The kind carries it now, so there is nothing to check.
 #
-# Which kind a frame is gets decided by the first recorded transform: with
-# `samples =` it is combined, without it, per-sample. See `.space_record()`.
+# Recording NEVER decides the kind. `samples =` cannot be the signal --
+# scoping says which samples MOVE, not whether they INTERACT, and both
+# kinds accept it (adr/0006). Recording onto an unused name always produces
+# a `perSampleSpace`; a `combinedSpace` is declaration-only:
+#
+#   giottoSpace(mg, "atlas") <- combinedSpace(c("a", "b"))
+#
+# The free kind is the one that composes. A per-sample job writes one
+# artifact per child -- the shape reading per child hands back -- so content
+# round-trips. A combined job writes ONE artifact at the parent, where
+# there is deliberately nowhere to put per-sample content back, so that
+# round trip does not close.
 #
 # The steps stay plain lists, for the reasons given at the top of
 # `R/classes-view.R` (decisions Q7 and Q8). `args` is whitelisted to
@@ -75,35 +84,17 @@
 # Storage on gobject:
 #   `gobject@spaces` — named list of handles, one per frame name.
 #
-# The `:default:` name now names a FRAME rather than a sample: an
-# always-present zero-step `perSampleSpace` standing for the native frame.
-# It is resolvable on every object without being recorded on any, which
-# lets a consumer take `space` unconditionally instead of branching on
-# `is.null(space)`. Recording onto it is refused -- it means "the frame the
-# data is already in", and a transform on that is a contradiction.
+# There is NO name for the native frame. `space = NULL` is the native
+# frame, and that is the whole of it -- a sentinel name would be a second
+# spelling of a value R already has, which every consumer would then have
+# to know was the same thing. A transform cannot be applied to the native
+# frame anyway: the result would not be native, so the name could only ever
+# stand for an empty recipe.
 #
 # See `R/classes-view.R` for the subset/narrowing recipe.
 # See `R/methods-space.R` for the recorder and the accessors.
 # =============================================================================
 
-
-# Name of the always-present native frame. Not a sample key -- see above.
-.space_default_name <- ":default:"
-
-#' Is this `space =` argument the frame the data is already in?
-#'
-#' `NULL` and `":default:"` are the same request spelled two ways, and an
-#' artifact generator must treat them identically or the two spellings
-#' would write to different names. One predicate so no consumer decides
-#' that separately.
-#' @noRd
-.is_native_space <- function(space) {
-    if (is.null(space)) return(TRUE)
-    if (inherits(space, "giottoSpace")) {
-        return(identical(space@name, .space_default_name))
-    }
-    identical(space, .space_default_name)
-}
 
 # Transform generics a space step may defer to. A space step is executed
 # by `do.call(op, ...)`, so this list is also the guard against an
@@ -364,6 +355,13 @@ setClass("giottoSpace",
 #' no transform of its own is declared with a membership step, which
 #' [combinedSpace()] seeds and `samples =` on any transform verb adds to.
 #'
+#' **Declaration-only.** `space = "<name>"` on a transform verb creates a
+#' [perSampleSpace-class]; saying that samples share a coordinate system is
+#' a real claim and is made out loud, with [combinedSpace()]. It also writes
+#' its artifact at the parent, where there is deliberately nowhere to put
+#' per-sample content back, so the round trip that a per-sample job closes
+#' does not close here.
+#'
 #' @returns a `combinedSpace` object
 #' @seealso [giottoSpace-class], [combinedSpace()]
 #' @exportClass combinedSpace
@@ -384,10 +382,10 @@ setClass("combinedSpace", contains = "giottoSpace")
 #' consumer sizing a job reads it from the object rather than asking the
 #' space.
 #'
-#' It is also the only kind that cannot be created by `space = "<name>"` on
-#' a transform verb — recording onto an unused name declares a combined
-#' frame, on the assumption that laying samples out together is the common
-#' reason to name one. Build this with [perSampleSpace()] and slot it in.
+#' It is the kind you get by default: recording onto an unused name with
+#' `space = "<name>"` creates one. That is because the kind decides job
+#' size, and only this size round-trips — N artifacts, one per child, which
+#' is the shape reading per child hands back.
 #'
 #' @returns a `perSampleSpace` object
 #' @seealso [giottoSpace-class], [perSampleSpace()]
@@ -401,14 +399,16 @@ setClass("perSampleSpace", contains = "giottoSpace")
 #' `giottoSpace(g, "name") <- `. Transforms are recorded onto it afterwards
 #' with the usual verbs.
 #'
-#' `perSampleSpace()` exists because recording onto an unused name creates
-#' a [combinedSpace-class] — laying samples out together being the common
-#' reason to name a frame. A frame whose samples stay independent has to
-#' say so, and this is where it says it.
+#' `combinedSpace()` exists because recording onto an unused name creates a
+#' [perSampleSpace-class]. A frame whose samples share one coordinate
+#' system has to say so, and this is where it says it. It also seeds
+#' membership up front, which matters for a member that needs no transform
+#' of its own: a sample at the layout's origin is still in the layout, and
+#' nothing would otherwise record it.
 #'
-#' `combinedSpace()` seeds membership up front, which matters for a member
-#' that needs no transform of its own: a sample at the layout's origin is
-#' still in the layout, and nothing would otherwise record it.
+#' `perSampleSpace()` is rarely needed, since that is the kind recording
+#' gives you — it is here to build one before any step exists, or to state
+#' the kind explicitly.
 #'
 #' @param samples `character`. Member sample names.
 #' @param name `character(1)`. Optional; `giottoSpace<-` sets it on slotting.
@@ -433,8 +433,8 @@ perSampleSpace <- function(name = NA_character_) {
 
 #' Construct a frame of each kind, internally.
 #'
-#' Recording onto an unused name always produces a `combinedSpace`; see
-#' [perSampleSpace-class] for why the other kind is declaration-only.
+#' Recording onto an unused name always produces a `perSampleSpace`; see
+#' [combinedSpace-class] for why the other kind is declaration-only.
 #' @noRd
 .new_per_sample_space <- function(name = NA_character_, steps = list()) {
     new("perSampleSpace", name = name, steps = steps)
@@ -458,7 +458,9 @@ perSampleSpace <- function(name = NA_character_) {
             "(got '", class(space)[[1L]], "')", call. = FALSE)
     }
     nm <- name %null% NA_character_
-    if (length(space) == 0L) return(.new_combined_space(nm))
+    # No body, so no `kind` to read -- take the same default recording
+    # takes, which is the kind that round-trips.
+    if (length(space) == 0L) return(.new_per_sample_space(nm))
     # A handle holds exactly one frame, so an export form carrying several
     # has no single name to take.
     if (length(space) > 1L) {

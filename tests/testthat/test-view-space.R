@@ -180,9 +180,10 @@ test_that("recording onto an unused name creates the space", {
     s <- giottoSpace(g, "s")
     expect_s4_class(s, "giottoSpace")
     expect_identical(s@name, "s")
-    # naming an unused space declares a combined one -- laying samples out
-    # together being the common reason to name a space at all
-    expect_s4_class(s, "combinedSpace")
+    # naming an unused space declares a PER-SAMPLE one. The kind decides
+    # job size, and only the per-sample size round-trips: it writes one
+    # artifact per child, the shape reading per child returns.
+    expect_s4_class(s, "perSampleSpace")
     # a plain giotto has no child names, so the recipe mentions nobody and
     # the step is unscoped, which is how it reaches the one sample there is
     expect_identical(names(s), character())
@@ -356,9 +357,8 @@ test_that("the getter owns the space-name check, so every caller gets it", {
     expect_error(createSpatialNetwork(mg, space = "nope"),
         "not a registered space")
 
-    # the native space still resolves without being recorded, and a real
-    # one still comes back
-    expect_s4_class(giottoSpace(mg, ":default:"), "perSampleSpace")
+    # the native frame has no name to resolve -- `space = NULL` is it
+    expect_error(giottoSpace(mg, ":default:"), "not a registered space")
     expect_identical(giottoSpace(mg, "atlas")@name, "atlas")
 })
 
@@ -841,15 +841,14 @@ test_that("`[j]` resolves for j and drops the scopes it has spent", {
     expect_error(flat[NA_character_], "cannot narrow to NA")
 })
 
-test_that("recording onto an unused name declares a combined space", {
-    # laying samples out together is the common reason to name a space, so
-    # that is the kind you get for free -- whether or not the first call
-    # scopes, since scoping says nothing about sharing a coordinate system
+test_that("recording onto an unused name declares a per-sample space", {
+    # `samples =` does NOT decide the kind -- scoping says which samples
+    # move, not whether they interact -- so neither call gets a combined one
     mg <- .fixture_gmulti()
     expect_s4_class(giottoSpace(spatShift(mg, dx = 5, space = "p"), "p"),
-        "combinedSpace")
+        "perSampleSpace")
     expect_s4_class(giottoSpace(spin(mg, 5, space = "q", samples = "a"), "q"),
-        "combinedSpace")
+        "perSampleSpace")
     # membership starts empty and grows by key. Seeding it from the
     # object's children would make it a restatement of names(@objects),
     # and then neither the slot nor its growth would say anything.
@@ -934,25 +933,33 @@ test_that("a membership step declares without transforming", {
 
 test_that("`+` refuses a merge that would have no job size", {
     mg <- .fixture_gmulti()
+    giottoSpace(mg, "atlas") <- combinedSpace(name = "atlas")
     mg <- spin(mg, 30, space = "atlas", samples = "a")
     giottoSpace(mg, "each") <- perSampleSpace()
     expect_error(giottoSpace(mg, "atlas") + giottoSpace(mg, "each"),
         "cannot compose a")
-    # and two spaces that are not the same space
+    # and two spaces that are not the same space. Same KIND, or the
+    # mixed-kind check above fires first and this asserts nothing.
+    giottoSpace(mg, "other") <- combinedSpace(name = "other")
     mg <- spin(mg, 10, space = "other", samples = "b")
     expect_error(giottoSpace(mg, "atlas") + giottoSpace(mg, "other"),
         "cannot compose spaces")
 })
 
-test_that("':default:' is the native space: always there, never recorded", {
+test_that("there is no name for the native frame", {
+    # A sentinel name would be a second spelling of a value R already has,
+    # which every consumer would then have to know meant the same thing.
+    # And a transform cannot be applied to the native frame anyway -- the
+    # result would not be native -- so the name could only ever have stood
+    # for an empty recipe.
     g <- giotto()
-    d <- giottoSpace(g, ":default:")
-    expect_s4_class(d, "perSampleSpace")
-    expect_identical(d[[NA_character_]], list())
-    # it is not a recorded space, so it does not appear in the listing
     expect_length(giottoSpaces(g), 0L)
-    expect_error(spin(g, 30, space = ":default:"), "native space")
-    expect_error(`giottoSpace<-`(g, ":default:", value = d), "native space")
+    expect_error(giottoSpace(g, ":default:"), "not a registered space")
+
+    # `space = NULL` is the native frame, and on a plain giotto a transform
+    # with no space is eager rather than recorded
+    expect_s4_class(spin(g, 30), "giotto")
+    expect_length(giottoSpaces(spin(g, 30)), 0L)
 })
 
 test_that("resolving for a sample with nothing scoped to it is empty", {
@@ -1485,6 +1492,8 @@ test_that("a mistyped sample name is rejected at record time", {
 
 .demo_space <- function() {
     mg <- .fixture_gmulti()
+    # a cross-sample layout is declared, not recorded into being
+    giottoSpace(mg, "atlas") <- combinedSpace(name = "atlas")
     mg <- spin(mg, 30, space = "atlas", samples = "a")
     mg <- spatShift(mg, dx = 100, space = "atlas", samples = "b")
     giottoSpace(mg, "atlas")
@@ -1637,7 +1646,7 @@ test_that("builder verbs on a recipe record what the gobject route records", {
         selectSamples(new("giottoView"), "a", "b")@steps)
 
     g3 <- spin(giotto(), 30, space = "s")
-    direct_sp <- spin(combinedSpace(name = "s"), 30)
+    direct_sp <- spin(perSampleSpace(name = "s"), 30)
     expect_identical(giottoSpace(g3, "s"), direct_sp)
 })
 

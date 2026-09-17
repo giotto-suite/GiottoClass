@@ -65,10 +65,10 @@ back in.
 A handle holds exactly one frame, so \code{giottoSpace(g)} with no \code{name}
 returns a named \code{list} of them; \code{giottoSpace(g, "name")} returns the one.
 
-\code{":default:"} names the native frame — the one the data is already in.
-It resolves on every object without being recorded on any, so a consumer
-can ask for a frame unconditionally, and it carries no steps. Recording
-onto it is refused.
+The native frame — the one the data is already in — has no name.
+\code{space = NULL} is it, everywhere. A sentinel name would be a second
+spelling of a value R already has, and a transform cannot be recorded
+onto the native frame anyway: the result would not be native.
 }
 \examples{
 g <- giotto()

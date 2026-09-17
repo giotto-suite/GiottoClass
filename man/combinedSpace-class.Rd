@@ -19,6 +19,13 @@ recorded order, readable with \code{names()}. It is not a slot, so
 there is nothing that can disagree with the recipe. A member that needs
 no transform of its own is declared with a membership step, which
 \code{\link[=combinedSpace]{combinedSpace()}} seeds and \verb{samples =} on any transform verb adds to.
+
+\strong{Declaration-only.} \code{space = "<name>"} on a transform verb creates a
+\link[=perSampleSpace-class]{perSampleSpace}; saying that samples share a coordinate system is
+a real claim and is made out loud, with \code{\link[=combinedSpace]{combinedSpace()}}. It also writes
+its artifact at the parent, where there is deliberately nowhere to put
+per-sample content back, so the round trip that a per-sample job closes
+does not close here.
 }
 \seealso{
 \link[=giottoSpace-class]{giottoSpace}, \code{\link[=combinedSpace]{combinedSpace()}}

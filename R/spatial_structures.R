@@ -765,9 +765,10 @@ createSpatialNetwork <- function(gobject,
     # identical; the default does not try to detect that, because whether a
     # frame happens to be rigid is not something a name should depend on.)
     #
-    # The native frame is exempt: naming it explicitly must produce the same
-    # artifact as omitting `space`, or the two ways of saying "where the
-    # data already is" would write to different names.
+    # There is no name for the native frame -- `space = NULL` IS the native
+    # frame -- so a NULL `sp` here means "built where the data already is"
+    # and takes no prefix. That is why these three sites can test
+    # `is.null(sp)` rather than consult a sentinel.
     #
     # `name` is the ONLY key a frame may compose into. Never `spat_unit`:
     # that keys expression, metadata and every nesting axis, so a
@@ -775,7 +776,7 @@ createSpatialNetwork <- function(gobject,
     # moves cells, it does not create them. See adr/0006.
     if (is.null(name)) {
         name <- default_name %null% paste0(method, "_network")
-        if (!.is_native_space(sp)) name <- paste0(sp@name, "_", name)
+        if (!is.null(sp)) name <- paste0(sp@name, "_", name)
     }
 
     # The native frame records as NA, however the caller spelled it: an
@@ -791,7 +792,7 @@ createSpatialNetwork <- function(gobject,
     # a second one beside it. The child computes the same value from the
     # frame narrowed to itself, so the write is idempotent.
     parameters[["space"]] <-
-        if (.is_native_space(sp)) NA_character_ else sp@name
+        if (is.null(sp)) NA_character_ else sp@name
 
     # giottoMulti: the space says how big the job is (adr/0006).
     if (inherits(gobject, "giottoMulti")) {
@@ -806,7 +807,7 @@ createSpatialNetwork <- function(gobject,
         spat_unit = spat_unit, name = spat_loc_name,
         output = "spatLocsObj"
     )
-    if (!.is_native_space(sp)) {
+    if (!is.null(sp)) {
         sl <- .apply_space_to_subobj(sl, gobject, sp, coordinator = NULL)
     }
 

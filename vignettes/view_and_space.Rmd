@@ -219,9 +219,11 @@ overwhelmingly why a space gets named; the rarer intent has to say so, with
 `perSampleSpace()`.
 
 On a plain `giotto` there is one sample and nothing to lay out beside it, so
-the distinction only bites on a `giottoMulti`. `":default:"` is the
-always-present zero-step `perSampleSpace` that `space = NULL` means — a
-frame, not a sample key.
+the distinction only bites on a `giottoMulti`.
+
+The native frame — where the data already is — has no name. `space = NULL`
+is it, and there is no second spelling: a transform cannot be recorded onto
+the native frame, because the result would not be native.
 
 ### Scoping to samples on a `giottoMulti`
 

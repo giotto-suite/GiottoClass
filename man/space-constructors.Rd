@@ -23,14 +23,16 @@ Build an empty frame of a given kind, to slot in with
 \verb{giottoSpace(g, "name") <- }. Transforms are recorded onto it afterwards
 with the usual verbs.
 
-\code{perSampleSpace()} exists because recording onto an unused name creates
-a \link[=combinedSpace-class]{combinedSpace} — laying samples out together being the common
-reason to name a frame. A frame whose samples stay independent has to
-say so, and this is where it says it.
+\code{combinedSpace()} exists because recording onto an unused name creates a
+\link[=perSampleSpace-class]{perSampleSpace}. A frame whose samples share one coordinate
+system has to say so, and this is where it says it. It also seeds
+membership up front, which matters for a member that needs no transform
+of its own: a sample at the layout's origin is still in the layout, and
+nothing would otherwise record it.
 
-\code{combinedSpace()} seeds membership up front, which matters for a member
-that needs no transform of its own: a sample at the layout's origin is
-still in the layout, and nothing would otherwise record it.
+\code{perSampleSpace()} is rarely needed, since that is the kind recording
+gives you — it is here to build one before any step exists, or to state
+the kind explicitly.
 }
 \examples{
 mg <- giotto()

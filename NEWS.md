@@ -155,6 +155,21 @@
 
 ## bug fixes
 
+- **Recording a transform onto an unused space name now creates a
+  `perSampleSpace`**, not a `combinedSpace`. A `combinedSpace` is
+  declaration-only: `giottoSpace(mg, "atlas") <- combinedSpace(c("a", "b"))`.
+  The kind decides job size, and only the per-sample size round-trips — it
+  writes one artifact per child, which is the shape reading per child hands
+  back, whereas a combined job writes one artifact at the parent and there is
+  nowhere to put per-sample content back there. `samples =` does not decide
+  the kind either way: scoping says which samples move, not whether they
+  interact.
+- **The `":default:"` space sentinel is removed.** The native frame — the one
+  the data is already in — has no name: `space = NULL` is it. A sentinel was a
+  second spelling of a value R already has, and since a transform recorded
+  onto the native frame would stop it being native, the name could only ever
+  stand for an empty recipe. `giottoSpace(g, ":default:")` now reports an
+  unregistered space like any other unknown name.
 - **A `combinedSpace` now builds one spatial network spanning its samples**,
   written to the `giottoMulti`'s `@spatial_network` with the children left
   untouched, instead of N independent per-sample networks in a shared frame.

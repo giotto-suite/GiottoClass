@@ -100,23 +100,25 @@ setGeneric("giottoSpaces",
     if (!is.null(samples) && inherits(gobject, "giottoMulti")) {
         samples <- .gm_resolve_samples(gobject, samples, op)
     }
-    .assert_space_not_default(space, op)
-    # Recording onto an unused name DECLARES a combined space. Naming a
-    # frame is overwhelmingly done to lay samples out together, so that is
-    # the kind you get for free; a frame whose samples stay independent has
-    # to say so, with `giottoSpace(g, nm) <- perSampleSpace()`. Both kinds
-    # accept `samples =` afterwards -- scoping a step says nothing about
-    # whether the samples share a coordinate system, so it cannot be the
-    # signal that decides the kind.
+    # Recording onto an unused name DECLARES a per-sample space, and a
+    # combined one has to say so:
+    # `giottoSpace(g, nm) <- combinedSpace(...)`.
+    #
+    # The kind decides job size (adr/0006), and the two sizes are not
+    # symmetric under get/set. A per-sample job writes one artifact per
+    # child, which is the shape reading per child hands back, so content
+    # can go out and come back. A combined job writes ONE artifact at the
+    # parent, and there is deliberately nowhere to put per-sample content
+    # back at the parent (federation §13), so that round trip does not
+    # close. The kind you get for free should be the one that composes.
+    #
+    # Both kinds accept `samples =` -- scoping says which samples MOVE, not
+    # whether they INTERACT, so it cannot be the signal that decides the
+    # kind.
     existing <- if (space %in% giottoSpaces(gobject)) {
         giottoSpace(gobject, space)
     } else {
-        # Membership starts EMPTY and grows as steps name samples. Seeding
-        # it from the object's children would restate `names(@objects)`
-        # rather than declare anything, and growing it key by key would
-        # then carry no information either. A member that needs no
-        # transform of its own is declared with `combinedSpace(<names>)`.
-        .new_combined_space(space)
+        .new_per_sample_space(space)
     }
     new_space <- .space_record(existing, op, args, samples = samples)
     giottoSpace(gobject, space) <- new_space
@@ -137,19 +139,6 @@ setGeneric("giottoSpaces",
 # cross-sample layout that motivates gmulti transforms in the first place
 # is precisely what a recorded space expresses instead.
 
-# `:default:` names the frame the data is already in -- present on every
-# object without being recorded on any. A transform recorded onto it would
-# make the native frame not native, and every consumer that takes the
-# sentinel as "no frame" would silently pick the steps up.
-.assert_space_not_default <- function(space, op) {
-    if (!identical(space, .space_default_name)) return(invisible(TRUE))
-    stop(sprintf(paste0(
-        "[%s] '%s' is the native space -- the one the data is already in -- ",
-        "so it holds no transforms and cannot be recorded onto. Record ",
-        "under a name of your own; omitting `space = ` then reads the ",
-        "native space back."), op, .space_default_name), call. = FALSE)
-}
-
 # Is `space` a name this object can resolve? Raises if not.
 #
 # The membership test lives HERE rather than at the call site, with the
@@ -157,7 +146,7 @@ setGeneric("giottoSpaces",
 #' @noRd
 .assert_space_known <- function(gobject, space) {
     # check against default space and existing spaces
-    known <- c(.space_default_name, giottoSpaces(gobject))
+    known <- giottoSpaces(gobject)
     if (space %in% known) return(invisible(TRUE))
 
     msg <- sprintf("[space] '%s' is not a registered space.\n Available: %s",
@@ -347,10 +336,10 @@ setMethod("zoom", signature(x = "giottoSpace"),
 #' A handle holds exactly one frame, so `giottoSpace(g)` with no `name`
 #' returns a named `list` of them; `giottoSpace(g, "name")` returns the one.
 #'
-#' `":default:"` names the native frame — the one the data is already in.
-#' It resolves on every object without being recorded on any, so a consumer
-#' can ask for a frame unconditionally, and it carries no steps. Recording
-#' onto it is refused.
+#' The native frame — the one the data is already in — has no name.
+#' `space = NULL` is it, everywhere. A sentinel name would be a second
+#' spelling of a value R already has, and a transform cannot be recorded
+#' onto the native frame anyway: the result would not be native.
 #'
 #' @param gobject a `giotto` object
 #' @param name `character(1)`. The slot key.
@@ -375,14 +364,7 @@ setMethod("giottoSpace", signature(gobject = "gAny", name = "character"),
         # that is really a sample or a group is available everywhere
         # rather than at whichever call site remembered to ask for it.
         .assert_space_known(gobject, name)
-        s <- gobject@spaces[[name]]
-        # Past the assert, a NULL can only be the native space: it is
-        # resolvable on every object without being recorded on any, since
-        # it is where the data already is, and recording onto it is
-        # refused. Consumers can therefore take a space unconditionally
-        # instead of carrying a "no space" branch beside the space branch.
-        if (is.null(s)) return(.new_per_sample_space(.space_default_name))
-        s
+        gobject@spaces[[name]]
     }
 )
 
@@ -404,7 +386,6 @@ setMethod("giottoSpace<-",
     signature(gobject = "gAny", name = "character", value = "ANY"),
     function(gobject, name, ..., value) {
         checkmate::assert_character(name, len = 1L)
-        .assert_space_not_default(name, "giottoSpace<-")
         # coerces the `as.list()` export form and re-checks a hand-edited
         # recipe, so the boundary where a recipe enters an object is also
         # where it is validated

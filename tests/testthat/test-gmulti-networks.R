@@ -224,25 +224,24 @@ test_that("a frame prefixes the default name; native naming is unchanged", {
         k = 5, space = "scaled2x", name = "mine")))
 })
 
-test_that("naming the native space is the same as omitting it", {
-    # `":default:"` is where the data already is, so it must produce the
-    # same artifact under the same name -- a prefix there would give the
-    # two spellings of one request two different networks.
+test_that("the native frame has no name, so omitting it is the only spelling", {
+    # There used to be a `":default:"` sentinel that had to produce the same
+    # artifact as omitting `space`, or the two spellings of one request
+    # would write to different names. The sentinel is gone: `space = NULL`
+    # IS the native frame and there is no second way to say it.
     g <- .netfix_giotto()
     nms <- function(x) list_spatial_networks_names(x, spat_unit = "cell")
 
-    named <- createSpatialNetwork(g, method = "kNN", k = 5,
-        space = ":default:")
-    expect_true("kNN_network" %in% nms(named))
-    expect_false(any(grepl(":default:", nms(named), fixed = TRUE)))
-
-    sn <- getSpatialNetwork(named, name = "kNN_network",
+    bare <- createSpatialNetwork(g, method = "kNN", k = 5)
+    expect_true("kNN_network" %in% nms(bare))
+    # no frame in the name, and none recorded
+    sn <- getSpatialNetwork(bare, name = "kNN_network",
         output = "spatialNetworkObj")
     expect_true(is.na(sn@parameters$space))
 
-    bare <- getSpatialNetwork(createSpatialNetwork(g, method = "kNN", k = 5),
-        name = "kNN_network", output = "spatialNetworkObj")
-    expect_equal(nrow(.network_as_dt(sn)), nrow(.network_as_dt(bare)))
+    # and the old sentinel is now just an unregistered name like any other
+    expect_error(createSpatialNetwork(g, method = "kNN", k = 5,
+        space = ":default:"), "not a registered space")
 })
 
 test_that("the frame is recorded in @parameters, not @provenance", {
@@ -380,8 +379,13 @@ test_that("createSpatialNetwork(mg) builds in every child", {
 # exactly the cross-sample edges it exists for.
 
 # Lay `b` beside `a` with an overlap, so cross-sample edges must exist.
+# The combinedSpace is DECLARED, not recorded into existence: recording onto
+# an unused name gives a perSampleSpace. Saying two samples share a
+# coordinate system is the claim this fixture makes, and it is the claim
+# that turns N per-child jobs into one job at the parent.
 .netfix_atlas <- function(mg) {
     e <- ext(mg@objects$a@spatial_locs$cell$raw)
+    giottoSpace(mg, "atlas") <- combinedSpace(name = "atlas")
     mg <- spatShift(mg, dx = (e[2] - e[1]) * 0.9, space = "atlas",
         samples = "b")
     # `a` is in the layout by not moving — a member step says so
@@ -469,7 +473,7 @@ test_that("every door records the frame in the default name", {
 test_that("a perSampleSpace builds one network per child, in the frame", {
     mg <- .netfix_multi()
     # declaration-only: recording onto an unused name would declare a
-    # combinedSpace instead (adr/0006)
+    # perSampleSpace anyway, so declare the intent (adr/0006)
     giottoSpace(mg, "upright") <- perSampleSpace("upright")
     mg <- spatShift(mg, dx = 5000, space = "upright", samples = "b")
     expect_s4_class(giottoSpace(mg, "upright"), "perSampleSpace")
