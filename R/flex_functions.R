@@ -196,9 +196,37 @@ t_flex <- function(mymatrix) {
     } else if (inherits(mymatrix, "spatialNetworkObj")) {
         return(t(mymatrix))
     } else {
-        mymatrix <- as.matrix(mymatrix)
-        mymatrix <- base::t(mymatrix)
-        return(mymatrix)
+        # Try the carrier's own `t()` before densifying. The branches above
+        # name their carriers one by one, which means a class that defines a
+        # perfectly good `t()` -- a disk-backed store, say -- still fell
+        # through to `as.matrix()` and was materialized to answer a question
+        # it could have answered lazily. Dispatching first lets such a class
+        # work without another branch here, and leaves the densifying path
+        # for carriers that genuinely have no transpose.
+        #
+        # The first error is kept: if the fallback fails too, it is almost
+        # always the more informative of the two, and reporting only the
+        # `as.matrix()` failure would point at the wrong step.
+        first_err <- NULL
+        out <- tryCatch(
+            t(mymatrix),
+            error = function(e) {
+                first_err <<- e
+                NULL
+            }
+        )
+        if (!is.null(out)) return(out)
+
+        tryCatch(
+            base::t(as.matrix(mymatrix)),
+            error = function(e) {
+                stop("t_flex() could not transpose an object of class ",
+                    paste(class(mymatrix), collapse = "/"), ".",
+                    "\n  t():          ", conditionMessage(first_err),
+                    "\n  as.matrix():  ", conditionMessage(e),
+                    call. = FALSE)
+            }
+        )
     }
 }
 
