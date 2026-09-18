@@ -1950,3 +1950,35 @@ test_that("combineMetadata(space=) reaches every child of a gmulti", {
             all.equal(framed[[nm]]$sdimx, plain[[nm]]$sdimx)))
     }
 })
+
+
+# --- combineFeatureOverlapData reads any points carrier --------------------
+
+test_that("combineFeatureOverlapData returns the as.data.table point shape", {
+    # This site used to call .spatvector_to_dt() directly, which is only the
+    # in-memory half of as.data.table() -- so it was the one place in the
+    # combine family that a backed points store could not be read through.
+    # Pinning the column set here because the swap changes it: terra's geom
+    # bookkeeping (geom / part / hole) is gone, and what remains is what the
+    # sibling `combineFeatureData()` already returned.
+    g <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
+    g <- updateGiottoObject(g)
+    sel <- list(rna = c("Mlc1", "Gfap"))
+
+    ov <- suppressWarnings(
+        combineFeatureOverlapData(g, poly_info = "aggregate", sel_feats = sel))
+    fd <- suppressWarnings(
+        combineFeatureData(g, spat_unit = "aggregate", sel_feats = sel))
+
+    expect_true(all(c("feat_ID", "feat_ID_uniq", "x", "y") %in% names(ov$rna)))
+    # the terra-only geometry bookkeeping is no longer emitted
+    expect_false(any(c("geom", "part", "hole") %in% names(ov$rna)))
+    # and the two branches spatInSituPlotPoints() chooses between now agree
+    # on the point columns they share
+    shared <- intersect(names(ov$rna), names(fd$rna))
+    expect_true(all(c("feat_ID", "feat_ID_uniq", "x", "y") %in% shared))
+
+    # the overlap filter still narrows to overlapped points only
+    expect_gt(nrow(ov$rna), 0L)
+    expect_true(all(ov$rna$feat_ID %in% sel$rna))
+})

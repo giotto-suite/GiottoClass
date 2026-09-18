@@ -613,7 +613,7 @@ combineFeatureOverlapData <- function(gobject,
     view = NULL,
     space = NULL) {
     # data.table vars
-    feat_ID <- NULL
+    feat_ID <- feat_ID_uniq <- NULL
 
     poly_info <- set_default_spat_unit(
         gobject = gobject,
@@ -664,8 +664,26 @@ combineFeatureOverlapData <- function(gobject,
                 )
 
                 # extract overlapped points
-                pts <- pts[pts$feat_ID_uniq %in% feat_overlap@data$feat,]
-                feat_overlap_info <- .spatvector_to_dt(pts)
+                #
+                # `as.data.table()` is the carrier-agnostic route and the
+                # reason this reads a disk-backed points store with no branch
+                # here: it lands on the `SpatVector` method for an in-memory
+                # carrier and on the backing package's method for a store,
+                # which mirrors terra's signature precisely so that both
+                # answer `geom = "XY"`. `.spatvector_to_dt()` is only the
+                # in-memory half of that, so calling it directly opted this
+                # one site out of the seam every other site here goes through.
+                #
+                # The conversion has to come BEFORE the filter: `$` and
+                # logical `[` are carrier-specific spellings, while a filter
+                # on the resulting data.table is not. That is also what makes
+                # the two branches of `spatInSituPlotPoints()` agree -- the
+                # `use_overlap = FALSE` side already returns this shape.
+                feat_overlap_info <- data.table::as.data.table(
+                    pts, geom = "XY")
+                feat_overlap_info <- feat_overlap_info[
+                    feat_ID_uniq %in% feat_overlap@data$feat
+                ]
 
                 if (!is.null(sel_feats[[feat]])) {
                     selected_features <- sel_feats[[feat]]

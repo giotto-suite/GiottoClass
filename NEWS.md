@@ -171,6 +171,17 @@
   owns that a child cannot look up.
 - `combineMetadata()` gained `view` / `space`. It had neither, and is the
   function the majority of plotting paths call.
+- **`combineFeatureOverlapData()` reads a disk-backed points carrier.** It
+  reached for `.spatvector_to_dt()` directly, which is only the in-memory half
+  of `as.data.table()`, so it was the single site in the combine family that
+  opted out of the coercion seam — and the only thing standing between a
+  backed object and `spatInSituPlotPoints()`. It now converts through
+  `as.data.table(pts, geom = "XY")` and filters afterwards, since `$` and
+  logical `[` are carrier-specific spellings while a `data.table` filter is
+  not. **Output change:** the returned table no longer carries terra's
+  `geom` / `part` / `hole` bookkeeping columns, which nothing consumed; what
+  remains is the shape `combineFeatureData()` already returned, so the two
+  branches of `spatInSituPlotPoints()` now agree.
 - **A `combinedSpace`'s membership is now closed in practice, not just in
   documentation.** An unscoped ("broadcast") step recorded onto one is expanded
   to its members at record time, so a sample outside the layout is no longer
