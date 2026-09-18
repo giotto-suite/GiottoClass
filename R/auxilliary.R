@@ -511,12 +511,16 @@ addCellMetadata <- function(gobject,
     # the key-based merge path regardless of the caller's by_column value.
     # Positional cbind is fragile whenever input row order doesn't match
     # cell_metadata row order; the key-based path is safe by construction.
-    # When no key column is present the original positional path still
-    # runs, but with a warning so callers can opt in to safe alignment.
+    # With no key column a single giotto keeps the positional path for
+    # back-compat (warning only); a giottoMulti refuses, because joint
+    # @cell_metadata row order carries no guarantee worth falling back on.
     has_key <- column_cell_ID %in% colnames(new_metadata)
     if (has_key) {
         by_column <- TRUE
     } else if (!isTRUE(by_column)) {
+        if (inherits(gobject, "giottoMulti")) {
+            .gm_refuse_positional_metadata("addCellMetadata", column_cell_ID)
+        }
         warning("addCellMetadata: input has no '", column_cell_ID,
             "' column / names; falling back to positional cbind. Pass a ",
             "named vector or a table with a '", column_cell_ID,
@@ -710,12 +714,17 @@ addFeatMetadata <- function(gobject,
     # the key-based merge path regardless of the caller's by_column value.
     # Positional cbind is fragile whenever input row order doesn't match
     # feat_metadata row order; the key-based path is safe by construction.
-    # When no key column is present the original positional path still
-    # runs, but with a warning so callers can opt in to safe alignment.
+    # Same discipline as addCellMetadata. The feature axis drifts less than
+    # the cell axis -- joint @feat_metadata is deduped by feat_ID -- but a
+    # present key still wins over positional cbind, and a giottoMulti still
+    # has no row order to fall back on.
     has_key <- column_feat_ID %in% colnames(new_metadata)
     if (has_key) {
         by_column <- TRUE
     } else if (!isTRUE(by_column)) {
+        if (inherits(gobject, "giottoMulti")) {
+            .gm_refuse_positional_metadata("addFeatMetadata", column_feat_ID)
+        }
         warning("addFeatMetadata: input has no '", column_feat_ID,
             "' column / names; falling back to positional cbind. Pass a ",
             "named vector or a table with a '", column_feat_ID,

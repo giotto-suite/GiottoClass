@@ -850,6 +850,59 @@ test_that("getFeatureInfo narrows by the feature axis (A6 gap closed)", {
         sort(terra::values(out$a)$feat_ID), c("f1", "f3"))
 })
 
+# metadata setters — keyed input only (stage 8) ####
+
+# The key-based merge path in addCellMetadata / addFeatMetadata is upstream
+# already; what a giottoMulti adds is the refusal of the positional
+# fallback. Joint metadata interleaves every child's rows, so a bare vector
+# has no order to be right about.
+
+test_that("addCellMetadata refuses positional input on a giottoMulti", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(3, 4), b = .mk_minimal(2, 4)))
+
+    expect_error(addCellMetadata(mg, new_metadata = seq_len(5)),
+        "positional input is not safe")
+    # the refusal names both ways out, as the spatial ones do
+    expect_error(addCellMetadata(mg, new_metadata = seq_len(5)),
+        "Name the vector with cell_IDs")
+
+    # a plain giotto keeps the positional path — a warning, not an error
+    g <- .mk_minimal(3, 4)
+    expect_warning(addCellMetadata(g, new_metadata = seq_len(3)),
+        "falling back to positional cbind")
+})
+
+test_that("a named vector aligns by cell_ID, not by position", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(3, 4), b = .mk_minimal(2, 4)))
+    ids <- spatIDs(mg)
+
+    # deliberately reversed: a positional cbind would invert the mapping
+    v <- stats::setNames(seq_along(ids), rev(ids))
+    mg2 <- addCellMetadata(mg, new_metadata = v, vector_name = "rank")
+    cm <- getCellMetadata(mg2, output = "data.table")
+
+    expect_identical(cm$rank[match(rev(ids), cm$cell_ID)], seq_along(ids))
+})
+
+test_that("addFeatMetadata refuses positional input on a giottoMulti", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(3, 4), b = .mk_minimal(2, 4)))
+    # the feature axis is reachable only once a joint expression exists —
+    # addFeatMetadata checks the hierarchical slot first, and a multi
+    # assembles expression on read without writing it back
+    mg <- setExpression(mg, getExpression(mg, output = "exprObj"),
+        verbose = FALSE)
+
+    expect_error(addFeatMetadata(mg, new_metadata = seq_len(4)),
+        "positional input is not safe")
+    expect_error(addFeatMetadata(mg, new_metadata = seq_len(4)),
+        "Name the vector with feat_IDs")
+
+    v <- stats::setNames(seq_len(4), rev(featIDs(mg)))
+    mg2 <- addFeatMetadata(mg, new_metadata = v, vector_name = "rank")
+    fm <- getFeatureMetadata(mg2, output = "data.table")
+    expect_identical(fm$rank[match(rev(featIDs(mg)), fm$feat_ID)], seq_len(4))
+})
+
 # container surface ####
 
 test_that("as(g, 'giottoMulti') wraps a single giotto with default name", {

@@ -152,6 +152,12 @@
 - `combineMetadata()` and `combineCellData()` accept a `giottoMulti`,
   returning named per-sample tables with joint-only metadata columns merged
   in through the access layer.
+- `addCellMetadata()` and `addFeatMetadata()` refuse positional input on a
+  `giottoMulti`. Joint metadata interleaves every child's rows, so a bare
+  vector has no order it could be right about — name it with cell / feature
+  IDs, or pass a table carrying the ID column, and the existing key-based
+  merge aligns it. A plain `giotto` is unchanged and keeps the positional
+  fallback with its warning.
 
 ## bug fixes
 
