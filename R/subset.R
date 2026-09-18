@@ -312,9 +312,13 @@
             output = "spatialNetworkObj"
         )
 
-        g <- sn[]
-        keep <- igraph::V(g)$name %in% cell_ids
-        sn[] <- igraph::induced_subgraph(g, vids = keep)
+        # `.narrow_subobject()` is the one place that knows how each
+        # subobject narrows to an ID set, including which carriers a network
+        # can be held in. Doing the igraph call here instead meant this path
+        # and that table could disagree about what narrowing a network means
+        # -- and they did: a backed carrier errored here while the table
+        # quietly left it whole.
+        sn <- .narrow_subobject(sn, cells = cell_ids)
 
         gobject <<- setSpatialNetwork(
             gobject = gobject,
@@ -460,9 +464,12 @@
             output = "nnNetObj"
         )
 
-        # vertices_to_keep = igraph::V(nnObj[])[filter_bool_cells]
-        vids <- which(spatIDs(nnObj) %in% cell_ids)
-        nnObj[] <- igraph::induced_subgraph(graph = nnObj[], vids = vids)
+        # As above, through the shared narrowing table. Besides the carrier
+        # question, this drops a positional selection: the old
+        # `which(spatIDs(nnObj) %in% cell_ids)` indexed vertices by position
+        # against an order `spatIDs()` reported, which need not match the
+        # graph's own. The table selects by vertex name.
+        nnObj <- .narrow_subobject(nnObj, cells = cell_ids)
 
         gobject <<- setNearestNetwork(gobject,
             x = nnObj,
