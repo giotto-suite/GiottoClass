@@ -1759,12 +1759,22 @@ createMetafeats <- function(gobject,
     }
 
     if (inherits(x, "nnNetObj")) {
-        # @network holds a dataStore rather than an igraph on a backed
-        # object; pass those through instead of erroring inside igraph.
         net <- x@network
-        if (!is.null(cells) && inherits(net, "igraph")) {
-            keep <- names(igraph::V(net)) %in% cells
-            x@network <- igraph::induced_subgraph(net, igraph::V(net)[keep])
+        if (!is.null(cells)) {
+            if (igraph::is_igraph(net)) {
+                keep <- names(igraph::V(net)) %in% cells
+                x@network <- igraph::induced_subgraph(
+                    net, igraph::V(net)[keep])
+            } else {
+                # A backed carrier narrows itself: `[` over a vertex-ID set
+                # is defined as the induced subgraph there too, and stays
+                # lazy -- so the narrowed network keeps its backing instead
+                # of being read into memory to answer this. These used to be
+                # passed through untouched, which is worse than erroring: the
+                # caller got a network still holding every cell it had before
+                # the subset, with nothing to say so.
+                x@network <- net[cells]
+            }
         }
         return(x)
     }
@@ -1788,9 +1798,14 @@ createMetafeats <- function(gobject,
         # silently report fewer nodes than cells that survived. Same shape
         # as the nnNetObj branch above; the DT path stays for a @network
         # that is not an igraph (a dataStore on a backed object).
-        if (!is.null(cells) && inherits(net, "igraph")) {
+        if (!is.null(cells) && igraph::is_igraph(net)) {
             keep <- names(igraph::V(net)) %in% cells
             x@network <- igraph::induced_subgraph(net, igraph::V(net)[keep])
+            return(x)
+        }
+        if (!is.null(cells) && !data.table::is.data.table(net)) {
+            # backed carrier -- see the nnNetObj branch above
+            x@network <- net[cells]
             return(x)
         }
         if (!is.null(cells)) {
