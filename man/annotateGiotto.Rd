@@ -10,7 +10,8 @@ annotateGiotto(
   feat_type = NULL,
   annotation_vector = NULL,
   cluster_column = NULL,
-  name = "cell_types"
+  name = "cell_types",
+  replace = TRUE
 )
 }
 \arguments{
@@ -27,6 +28,13 @@ in the cluster column. Labels to assign are the vector values.}
 values based on.}
 
 \item{name}{new name for annotation column}
+
+\item{replace}{logical. Only consulted when the target \code{name} column
+already exists. \code{TRUE} (default) replaces it outright, so a row whose
+cluster value is \code{NA} or unmapped becomes \code{NA}. \code{FALSE} merges: a row the
+new mapping resolves is overwritten, a row it yields \code{NA} for keeps its
+existing value, which is what makes iterative annotation refinement
+possible.}
 }
 \value{
 \code{giotto} object
@@ -45,6 +53,13 @@ cell_types =  c('T-cell', 'B-cell', 'Stromal')}
 \item{3. provide original cluster names to previous vector,
 e.g. names(cell_types) = c(2, 1, 3)}
 }
+
+\code{NA} values in \code{cluster_column} are tolerated and carry through to the
+new annotation column as \code{NA} -- common on a \code{giottoMulti}, where joint
+\verb{@cell_metadata} keeps the full population while the analysis pool is
+narrower. A cluster value with no entry in \code{annotation_vector} also
+becomes \code{NA}, and both it and any unused \code{annotation_vector} key are
+reported rather than raised.
 }
 \examples{
 g <- GiottoData::loadGiottoMini("visium")

@@ -152,6 +152,10 @@
 - `combineMetadata()` and `combineCellData()` accept a `giottoMulti`,
   returning named per-sample tables with joint-only metadata columns merged
   in through the access layer.
+- `annotateGiotto(replace = FALSE)` merges into an existing annotation column
+  instead of replacing it: a row the new mapping resolves is overwritten, a
+  row it yields `NA` for keeps what it had. Annotation can then be refined in
+  passes rather than rebuilt in one vector.
 - `addCellMetadata()` and `addFeatMetadata()` refuse positional input on a
   `giottoMulti`. Joint metadata interleaves every child's rows, so a bare
   vector has no order it could be right about — name it with cell / feature
@@ -260,6 +264,13 @@
 - `relate()` on a `spatLocsObj` `x` errored with
   `x = "data.table", y = "SpatVector"`. The `as.points()` coercion was
   overwritten one line later, and the `y` branch guarded on `x`.
+- `annotateGiotto()` no longer aborts when a cluster value has no annotation.
+  An `NA` in the cluster column is a cell the clustering never placed rather
+  than a cluster without an annotation, which is normal wherever the metadata
+  population is wider than the analysis pool. Unmapped cluster values and
+  unused `annotation_vector` keys are now both reported and the affected rows
+  become `NA`, where an unmapped value previously interrupted the call. The
+  mapping is also a single vectorized lookup rather than a per-row walk.
 
 # GiottoClass 0.6.0
 
