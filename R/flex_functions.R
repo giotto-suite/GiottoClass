@@ -65,7 +65,31 @@ rowSums_flex <- function(mymatrix, ...) {
     } else if (inherits(mymatrix, "dbMatrix")) {
         return(dbMatrix::rowSums(mymatrix, ...))
     } else {
-        temp_matrix <- as.matrix(mymatrix)
+        # Try the carrier's own method before densifying: the branches
+        # above name their carriers one by one, so a class with a
+        # streaming rowSums() -- a disk-backed store -- would otherwise be
+        # materialized to answer a question it can answer by scanning.
+        # The densifying path stays for carriers that have no method.
+        first_err <- NULL
+        out <- tryCatch(
+            rowSums(mymatrix, ...),
+            error = function(e) {
+                first_err <<- e
+                NULL
+            }
+        )
+        if (!is.null(out)) return(out)
+
+        temp_matrix <- tryCatch(
+            as.matrix(mymatrix),
+            error = function(e) {
+                stop("rowSums_flex() could not reduce an object of class ",
+                    paste(class(mymatrix), collapse = "/"), ".",
+                    "\n  rowSums():   ", conditionMessage(first_err),
+                    "\n  as.matrix(): ", conditionMessage(e),
+                    call. = FALSE)
+            }
+        )
         temp_res <- matrixStats::rowSums2(temp_matrix, ...)
         names(temp_res) <- rownames(temp_matrix)
         return(temp_res)
@@ -97,7 +121,31 @@ rowMeans_flex <- function(mymatrix, ...) {
     } else if (inherits(mymatrix, "dbMatrix")) {
         return(dbMatrix::rowMeans(mymatrix, ...))
     } else {
-        temp_matrix <- as.matrix(mymatrix)
+        # Try the carrier's own method before densifying: the branches
+        # above name their carriers one by one, so a class with a
+        # streaming rowMeans() -- a disk-backed store -- would otherwise be
+        # materialized to answer a question it can answer by scanning.
+        # The densifying path stays for carriers that have no method.
+        first_err <- NULL
+        out <- tryCatch(
+            rowMeans(mymatrix, ...),
+            error = function(e) {
+                first_err <<- e
+                NULL
+            }
+        )
+        if (!is.null(out)) return(out)
+
+        temp_matrix <- tryCatch(
+            as.matrix(mymatrix),
+            error = function(e) {
+                stop("rowMeans_flex() could not reduce an object of class ",
+                    paste(class(mymatrix), collapse = "/"), ".",
+                    "\n  rowMeans():   ", conditionMessage(first_err),
+                    "\n  as.matrix(): ", conditionMessage(e),
+                    call. = FALSE)
+            }
+        )
         temp_res <- matrixStats::rowMeans2(temp_matrix, ...)
         names(temp_res) <- rownames(temp_matrix)
         return(temp_res)
@@ -129,7 +177,31 @@ colSums_flex <- function(mymatrix, ...) {
     } else if (inherits(mymatrix, "dbMatrix")) {
         return(dbMatrix::colSums(mymatrix, ...))
     } else {
-        temp_matrix <- as.matrix(mymatrix)
+        # Try the carrier's own method before densifying: the branches
+        # above name their carriers one by one, so a class with a
+        # streaming colSums() -- a disk-backed store -- would otherwise be
+        # materialized to answer a question it can answer by scanning.
+        # The densifying path stays for carriers that have no method.
+        first_err <- NULL
+        out <- tryCatch(
+            colSums(mymatrix, ...),
+            error = function(e) {
+                first_err <<- e
+                NULL
+            }
+        )
+        if (!is.null(out)) return(out)
+
+        temp_matrix <- tryCatch(
+            as.matrix(mymatrix),
+            error = function(e) {
+                stop("colSums_flex() could not reduce an object of class ",
+                    paste(class(mymatrix), collapse = "/"), ".",
+                    "\n  colSums():   ", conditionMessage(first_err),
+                    "\n  as.matrix(): ", conditionMessage(e),
+                    call. = FALSE)
+            }
+        )
         temp_res <- matrixStats::colSums2(temp_matrix, ...)
         names(temp_res) <- colnames(temp_matrix)
         return(temp_res)
@@ -161,7 +233,31 @@ colMeans_flex <- function(mymatrix, ...) {
     } else if (inherits(mymatrix, "dbMatrix")) {
         return(dbMatrix::colMeans(mymatrix, ...))
     } else {
-        temp_matrix <- as.matrix(mymatrix)
+        # Try the carrier's own method before densifying: the branches
+        # above name their carriers one by one, so a class with a
+        # streaming colMeans() -- a disk-backed store -- would otherwise be
+        # materialized to answer a question it can answer by scanning.
+        # The densifying path stays for carriers that have no method.
+        first_err <- NULL
+        out <- tryCatch(
+            colMeans(mymatrix, ...),
+            error = function(e) {
+                first_err <<- e
+                NULL
+            }
+        )
+        if (!is.null(out)) return(out)
+
+        temp_matrix <- tryCatch(
+            as.matrix(mymatrix),
+            error = function(e) {
+                stop("colMeans_flex() could not reduce an object of class ",
+                    paste(class(mymatrix), collapse = "/"), ".",
+                    "\n  colMeans():   ", conditionMessage(first_err),
+                    "\n  as.matrix(): ", conditionMessage(e),
+                    call. = FALSE)
+            }
+        )
         temp_res <- matrixStats::colMeans2(temp_matrix, ...)
         names(temp_res) <- colnames(temp_matrix)
         return(temp_res)
