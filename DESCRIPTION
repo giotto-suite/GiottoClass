@@ -1,6 +1,6 @@
 Package: GiottoClass
 Title: Giotto Suite Object Definitions and Framework
-Version: 0.6.0
+Version: 0.7.0
 Authors@R: c(
 	person("Ruben", "Dries", email = "rubendries@gmail.com",
 		 role = c("aut", "cre"), comment = c(ORCID = "0000-0001-7650-7754")),
@@ -98,6 +98,9 @@ Collate:
     'auxilliary.R'
     'buffer.R'
     'classes-binpoints.R'
+    'classes-resolver.R'
+    'classes-space.R'
+    'classes-view.R'
     'slot_accessors.R'
     'create.R'
     'data_evaluation.R'
@@ -109,6 +112,7 @@ Collate:
     'generate_poly.R'
     'giotto_structures.R'
     'globals.R'
+    'gmulti.R'
     'gstop.R'
     'images.R'
     'instructions.R'
@@ -136,15 +140,19 @@ Collate:
     'methods-overlaps.R'
     'methods-plot.R'
     'methods-rbind.R'
+    'methods-recipe.R'
     'methods-reconnect.R'
     'methods-relate.R'
     'methods-rescale.R'
+    'methods-resolver.R'
     'methods-setGiotto.R'
     'methods-shear.R'
     'methods-show.R'
+    'methods-space.R'
     'methods-spatShift.R'
     'methods-spin.R'
     'methods-transpose.R'
+    'methods-view.R'
     'methods-wrap.R'
     'methods-zoom.R'
     'nn_search_hnsw.R'

@@ -82,9 +82,9 @@ thing, not while browsing.
 So when you add one, add the pointer too, and put it where the tempting edit
 would be made rather than where the topic is documented.
 
-**None of the records below carry code pointers yet** — they were written as a
-batch ahead of the pointer pass. Adding them is owed; the sites are named in
-each record's *References*.
+**0001-0005 do not carry code pointers yet** — they were written as a batch
+ahead of the pointer pass. Adding them is owed; the sites are named in each
+record's *References*. 0006 onward carry them.
 
 ## Index
 
@@ -95,6 +95,7 @@ each record's *References*.
 | [0003](0003-five-verb-generics.md) | Five analysis verbs, split by return contract | Accepted | 2026-05-19 |
 | [0004](0004-networks-store-igraph-one-constructor.md) | Networks store a graph in `@network`; `createNetwork()` is the one constructor | Accepted | 2026-05-21 |
 | [0005](0005-jpeg2000-ome-tiff-reads-through-a-vsisubfile-vrt.md) | JPEG-2000 OME-TIFF reads through a `/vsisubfile` VRT, not a conversion | Accepted | 2026-08-28 |
+| [0006](0006-artifact-generators-take-no-view-or-sample-selector.md) | Artifact generators take no `view` and no sample selector; job size comes from the space | Accepted | 2026-09-15 |
 
 ## Backfill candidates
 
@@ -110,6 +111,14 @@ so the ADR captures the argument while it is fresh.
   `spatIDs()` and `.evaluate_*_network()` each got their own `dataStore` branch,
   and the general accessor that would retire those branches has not been chosen
   yet. (`411105d4`, `b343cfd4`)
+- **Complete `spatIDs<-` / add `featIDs<-`.** The replacement generic exists
+  (`generics.R`) with exactly one method (`giottoPolygon`) and nothing calls it.
+  Five sites do fetch -> promote IDs -> bind with three different promotion
+  spellings, two of which hand-paste `"::"` instead of consulting `@id_map` via
+  `.gm_global_cell_ids()`. The class -> ID-carrier mapping is already enumerated
+  twice (`gmulti.R`, `auxilliary.R`). Same shape as the `nodeIDs()` entry above,
+  and the same reason it is a candidate rather than done: the accessor that
+  would retire the hand-pasting has not been chosen.
 - **`spatRelate()` generic lives in GiottoClass, engines live in GiottoDisk.**
   Why the generic and the `giottoSpatial` method sit here while the
   sedona/duckdb/terra dispatch sits downstream. (`0c8588b5`, `b1e74a13`)

@@ -6,7 +6,8 @@
 \usage{
 createSpatialDelaunayNetwork(
   gobject,
-  name = "Delaunay_network",
+  name = NULL,
+  default_name = "Delaunay_network",
   spat_unit = NULL,
   feat_type = NULL,
   spat_loc_name = NULL,
@@ -21,6 +22,7 @@ createSpatialDelaunayNetwork(
   verbose = TRUE,
   return_gobject = TRUE,
   output = c("spatialNetworkObj", "data.table"),
+  space = NULL,
   ...
 )
 }
@@ -28,6 +30,11 @@ createSpatialDelaunayNetwork(
 \item{gobject}{giotto object}
 
 \item{name}{name for spatial network (default = 'delaunay_network')}
+
+\item{default_name}{name to fall back on when \code{name} is \code{NULL}, before the
+coordinate frame is prefixed. Exists so that one composition site can
+serve every entry point while each keeps its own spelling; callers do not
+normally set it.}
 
 \item{spat_unit}{spatial unit}
 
@@ -68,6 +75,17 @@ final triangulation from the output.}
 
 \item{output}{character. Object type to return spatial network as when
 \code{return_gobject = FALSE}. (default: 'spatialNetworkObj')}
+
+\item{space}{(\code{giottoMulti} only) \code{character(1)}. Name of a coordinate
+frame recorded on the object, or \code{NULL} (default) for each sample's own
+native frame. The frame decides the job: every sample it covers gets a
+network built in that frame's coordinates, written into its own
+\verb{@spatial_network} slot — so this mutates the wrapped children.
+
+This is \strong{not} a sample selector. An artifact generator takes none,
+because once the rows are in a slot nothing downstream can tell which
+the selector admitted (see \code{adr/0006}). To build over a subset of
+samples, record a space over them, or subset with \code{mg[...]} first.}
 
 \item{\dots}{Other additional parameters}
 }

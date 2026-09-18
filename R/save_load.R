@@ -53,7 +53,21 @@ saveGiotto <- function(
             ...
         ))
     }
-  
+
+    # An in-memory giottoMulti has no save path here. The externalization
+    # pass below walks ONE object's @spatial_info / @feat_info / @images to
+    # write terra objects out separately, which a multi does not have and
+    # which its children each need done for them. Without this it fails on
+    # the missing slot, which is true but says nothing; a multi needs a
+    # per-child export pass and a loader that agrees on the layout. A
+    # sourced multi is handled by the branch above. See #407.
+    if (inherits(gobject, "giottoMulti")) {
+        stop("[saveGiotto] an in-memory giottoMulti cannot be saved here: ",
+            "each child owns terra objects that need their own export pass. ",
+            "Save the children individually, or attach a source (see ",
+            "GiottoDisk::snapshotSave).", call. = FALSE)
+    }
+
     # check params
     checkmate::assert_character(foldername)
     checkmate::assert_character(dir)

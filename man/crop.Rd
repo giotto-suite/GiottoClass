@@ -8,6 +8,8 @@
 \alias{crop,spatLocsObj,ANY-method}
 \alias{crop,giottoPoints,ANY-method}
 \alias{crop,giottoPolygon,ANY-method}
+\alias{crop,giottoView,ANY-method}
+\alias{crop,gAny,ANY-method}
 \title{Crop to a spatial subset}
 \usage{
 \S4method{crop}{giottoBinPoints,ANY}(x, y, ext = FALSE, compact = "auto", ...)
@@ -21,6 +23,26 @@
 \S4method{crop}{giottoPoints,ANY}(x, y, DT = TRUE, xmin = NULL, xmax = NULL, ymin = NULL, ymax = NULL, ...)
 
 \S4method{crop}{giottoPolygon,ANY}(x, y, DT = TRUE, xmin = NULL, xmax = NULL, ymin = NULL, ymax = NULL, ...)
+
+\S4method{crop}{giottoView,ANY}(
+  x,
+  y,
+  relation = "intersects",
+  geom = c("centroid", "poly"),
+  ...,
+  view = NULL,
+  space = NULL
+)
+
+\S4method{crop}{gAny,ANY}(
+  x,
+  y,
+  relation = "intersects",
+  geom = c("centroid", "poly"),
+  ...,
+  view = NULL,
+  space = NULL
+)
 }
 \arguments{
 \item{x}{object}
@@ -48,6 +70,34 @@ path or \code{write = TRUE}.}
 
 \item{xmin, xmax, ymin, ymax}{only used if DT = TRUE. Set extent bounds
 independently}
+
+\item{relation}{\code{character(1)}. Spatial predicate. A crop narrows the
+\strong{cell set}, so each cell is reduced to a geometry (see \code{geom}) and
+tested against the region. One of \code{"intersects"} (default),
+\code{"disjoint"}, \code{"within"}, \code{"covered_by"}, \code{"touches"}, \code{"contains"},
+\code{"covers"}, \code{"overlaps"}, \code{"crosses"}. The last four are always
+\code{FALSE} against a centroid, so requesting one promotes \code{geom} to
+\code{"poly"} with a warning.}
+
+\item{geom}{\code{character(1)}. What represents a cell when the predicate is
+evaluated: \code{"centroid"} (default) uses the cell's \code{spatial_locs} row —
+cheap, and the conventional choice, but a cell whose polygon straddles
+the region boundary with its centroid outside is dropped. \code{"poly"} uses
+the cell's actual polygon — exact, and requires a polygon source on the
+object. The choice is recorded on the step, so a saved recipe states
+which question it asks.}
+
+\item{view}{\code{NULL} or \code{character(1)}. When supplied, records the crop as
+a step on the named view, creating it if it does not exist yet, instead
+of executing eagerly. Eager \code{crop()} on a \code{giotto} is not yet
+implemented.}
+
+\item{space}{\code{NULL} or \code{character(1)}. Name of a slotted space on \code{x}.
+Sets the view's \code{space} reference — the coordinate frame in which the
+crop region is interpreted at resolution time. First call sets it;
+subsequent calls that try to rebind to a different name error. \code{NULL}
+leaves the view in whatever frame it was already bound to (or the
+gobject's native frame if unbound).}
 }
 \value{
 object of same class as \code{x}, spatially subsetted

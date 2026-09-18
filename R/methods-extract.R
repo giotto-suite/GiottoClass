@@ -737,6 +737,31 @@ setReplaceMethod(
     }
 )
 
+# Recompute `@unique_ID_cache` after the geometry slot has been written.
+#
+# The cache mirrors the geometry's ID column, so any write to the geometry
+# invalidates it — and `spatIDs()` / `featIDs()` return it verbatim when
+# `use_cache = TRUE`, which is their default. A stale cache is therefore a
+# silent wrong answer rather than an error.
+#
+# `use_cache = FALSE` is what forces the recompute off the geometry itself.
+# That is also what makes this work for a foreign geometry carrier (a
+# {GiottoDisk} store held in `@spatVector`): the accessors' non-terra
+# branch reads the ID column from the carrier instead of through terra.
+#' @keywords internal
+#' @noRd
+.refresh_id_cache <- function(x) {
+    x@unique_ID_cache <- if (inherits(x, "giottoPoints")) {
+        featIDs(x, uniques = TRUE, use_cache = FALSE)
+    } else if (inherits(x, "giottoPolygon")) {
+        spatIDs(x, uniques = TRUE, use_cache = FALSE)
+    } else {
+        stop("[.refresh_id_cache] '", class(x)[[1L]],
+            "' has no unique_ID_cache", call. = FALSE)
+    }
+    x
+}
+
 #' @rdname subset_bracket
 #' @export
 setMethod(
@@ -747,8 +772,7 @@ setMethod(
     ),
     function(x, i, j) {
         x@spatVector <- x@spatVector[i]
-        x@unique_ID_cache <- featIDs(x, uniques = TRUE, use_cache = FALSE)
-        x
+        .refresh_id_cache(x)
     }
 )
 
@@ -1095,8 +1119,7 @@ setMethod(
     ),
     function(x, i, j) {
         x@spatVector <- x@spatVector[i]
-        x@unique_ID_cache <- featIDs(x, uniques = TRUE, use_cache = FALSE)
-        x
+        .refresh_id_cache(x)
     }
 )
 
@@ -1178,7 +1201,7 @@ setMethod(
     function(x, i, j) {
         x@spatVector <- x@spatVector[i]
         x@spatVectorCentroids <- x@spatVectorCentroids[i]
-        x@unique_ID_cache <- spatIDs(x, uniques = TRUE, use_cache = FALSE)
+        x <- .refresh_id_cache(x)
 
         if (is.null(x@overlaps)) {
             return(x)
@@ -1912,6 +1935,32 @@ setMethod("subset", signature("giottoPoints"), function(x,
 #' @param \dots additional params to pass to `spatValues` used with the
 #' subset param
 #' @export
+setMethod("subset", signature("giottoView"), function(
+        x,
+        subset,
+        spat_unit = NULL,
+        feat_type = NULL,
+        negate = FALSE,
+        quote = TRUE,
+        ...) {
+    if (quote) {
+        # captured here, so free vars are substituted from the caller's
+        # frame and the recipe serializes. `quote = FALSE` means the
+        # predicate arrives already finished -- running the substitution
+        # again would re-evaluate it in the wrong frame.
+        pred <- substitute(subset)
+        pred <- .eager_substitute_env(pred,
+            .find_predicate_env(pred, parent.frame()))
+    } else {
+        pred <- subset
+    }
+    .view_record_filter(x, pred, negate = negate,
+        scope_args = list(spat_unit = spat_unit, feat_type = feat_type,
+                          ...))
+})
+
+#' @rdname subset_giotto
+#' @export
 setMethod("subset", signature("giotto"), function(
         x,
         subset,
@@ -1921,7 +1970,28 @@ setMethod("subset", signature("giotto"), function(
         feat_type = NULL,
         negate = FALSE,
         quote = TRUE,
+        view = NULL,
         ...) {
+    # Indirect-usage path: `view = "<name>"` records the subset as a recipe
+    # step rather than executing eagerly, creating the view if it is new.
+    # The predicate is captured by NSE and made self-contained (free vars
+    # eagerly substituted from the user frame) so the recipe serializes.
+    if (!is.null(view)) {
+        # The predicate has to be captured HERE -- this is the only frame
+        # that can see the user's free variables. Everything downstream of
+        # that (negation, step construction, validation) is the
+        # `giottoView` method, so a step has one construction path.
+        pred <- if (quote) substitute(subset) else subset
+        pred <- .eager_substitute_env(pred,
+            .find_predicate_env(pred, parent.frame()))
+        scope_args <- list(spat_unit = spat_unit, feat_type = feat_type,
+            ...)
+        return(.record_view_on_gobject(x, view, function(v) {
+            .view_record_filter(v, pred, negate = negate,
+                scope_args = scope_args)
+        }))
+    }
+
     spat_unit <- set_default_spat_unit(
         x, spat_unit
     )

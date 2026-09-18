@@ -335,3 +335,72 @@ setMethod(
         return(TRUE)
     }
 }
+
+
+# * giotto (indirect-only via view=) ####
+# Eager crop at the gobject level is not yet implemented (it would require
+# coordinated narrowing of every spatial subobject, images, expression and
+# metadata). Until then this method only accepts `view = `, recording a
+# crop step onto the named slotted view. Eager calls without `view` error
+# with a clear pointer.
+#
+# A crop narrows the CELL SET; it is relate-based membership, not geometric
+# clipping. Surviving subobjects keep their geometry.
+
+#' @rdname crop
+#' @param relation `character(1)`. Spatial predicate. A crop narrows the
+#'   **cell set**, so each cell is reduced to a geometry (see `geom`) and
+#'   tested against the region. One of `"intersects"` (default),
+#'   `"disjoint"`, `"within"`, `"covered_by"`, `"touches"`, `"contains"`,
+#'   `"covers"`, `"overlaps"`, `"crosses"`. The last four are always
+#'   `FALSE` against a centroid, so requesting one promotes `geom` to
+#'   `"poly"` with a warning.
+#' @param geom `character(1)`. What represents a cell when the predicate is
+#'   evaluated: `"centroid"` (default) uses the cell's `spatial_locs` row —
+#'   cheap, and the conventional choice, but a cell whose polygon straddles
+#'   the region boundary with its centroid outside is dropped. `"poly"` uses
+#'   the cell's actual polygon — exact, and requires a polygon source on the
+#'   object. The choice is recorded on the step, so a saved recipe states
+#'   which question it asks.
+#' @param view `NULL` or `character(1)`. When supplied, records the crop as
+#'   a step on the named view, creating it if it does not exist yet, instead
+#'   of executing eagerly. Eager `crop()` on a `giotto` is not yet
+#'   implemented.
+#' @param space `NULL` or `character(1)`. Name of a slotted space on `x`.
+#'   Sets the view's `space` reference — the coordinate frame in which the
+#'   crop region is interpreted at resolution time. First call sets it;
+#'   subsequent calls that try to rebind to a different name error. `NULL`
+#'   leaves the view in whatever frame it was already bound to (or the
+#'   gobject's native frame if unbound).
+#' @export
+setMethod("crop", signature(x = "giottoView", y = "ANY"),
+    function(x, y, relation = "intersects", geom = c("centroid", "poly"),
+             ..., view = NULL, space = NULL) {
+        checkmate::assert_character(relation, len = 1L, any.missing = FALSE)
+        geom <- match.arg(geom)
+        region <- .normalize_crop_region(y)
+        # vocabulary checks and the poly-only promotion live in the step
+        # constructor, so they fire before anything is recorded
+        step <- .view_step_crop(region, relation, geom,
+            space = space %null% NA_character_)
+        .view_record_step(x, step)
+    }
+)
+
+#' @rdname crop
+#' @export
+setMethod("crop", signature(x = "gAny", y = "ANY"),
+    function(x, y, relation = "intersects", geom = c("centroid", "poly"),
+             ..., view = NULL, space = NULL) {
+        if (is.null(view)) {
+            stop("`crop()` on a giotto / giottoMulti requires `view = `. ",
+                "Eager gobject-level crop is not implemented. Pass ",
+                "`view = \"<name>\"` to record the step onto a view, then ",
+                "apply it with `materialize(x, \"<name>\")`.",
+                call. = FALSE)
+        }
+        .record_view_on_gobject(x, view, function(v) {
+            crop(v, y, relation = relation, geom = geom, space = space)
+        })
+    }
+)

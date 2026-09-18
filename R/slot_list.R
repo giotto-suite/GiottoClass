@@ -149,7 +149,21 @@ list_expression_names <- function(gobject,
 #' list_cell_id_names(g)
 #' @export
 list_cell_id_names <- function(gobject) {
-    return(names(gobject@cell_ID))
+    nms <- names(gobject@cell_ID)
+    # On a fresh giottoMulti @cell_ID is empty until narrowing or a first
+    # setCellMetadata materializes state. Setter check_valid paths call this
+    # to validate spat_unit; fall back to the mapping's declared handles
+    # (the authoritative universe), then the union of children's spat_units,
+    # so a first-write into the joint slot can resolve.
+    if (length(nms) == 0L && inherits(gobject, "giottoMulti")) {
+        nms <- names(gobject@mapping$spat_unit)
+        if (length(nms) == 0L) {
+            nms <- unique(unlist(lapply(gobject@objects, function(g) {
+                names(g@cell_ID)
+            }), use.names = FALSE))
+        }
+    }
+    nms
 }
 
 
@@ -795,6 +809,16 @@ list_feature_info_names <- function(gobject) {
 list_spatial_networks <- function(gobject,
     spat_unit = NULL,
     return_uniques = FALSE) {
+    # The multi's own slot has giotto's shape, so this walk would run --
+    # and report only the multi-level networks, silently omitting every
+    # per-child one. A partial answer that looks complete is worse than
+    # refusing; listing both needs a `level =` this does not have yet.
+    if (inherits(gobject, "giottoMulti")) {
+        stop("[list_spatial_networks] not yet supported on a giottoMulti: ",
+            "its networks live in two places (the multi's own slot and each ",
+            "child's), and this would report only the first.",
+            call. = FALSE)
+    }
     availableSpatNetworks <- data.table()
     uniques <- list()
     for (spatial_unit in names(gobject@spatial_network)) {
@@ -850,6 +874,14 @@ list_spatial_networks <- function(gobject,
 #' @export
 list_spatial_networks_names <- function(gobject,
     spat_unit = NULL) {
+    # See list_spatial_networks(): the multi's slot is keyed by frame
+    # first, so `[[spat_unit]]` would index frames and return spat_unit
+    # names as if they were network names.
+    if (inherits(gobject, "giottoMulti")) {
+        stop("[list_spatial_networks_names] not yet supported on a ",
+            "giottoMulti; its @spatial_network is keyed by coordinate ",
+            "frame first.", call. = FALSE)
+    }
     if (is.null(spat_unit)) stop("spat_unit must be given\n")
 
     spat_network_names <- names(gobject@spatial_network[[spat_unit]])

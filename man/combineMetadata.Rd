@@ -10,7 +10,9 @@ combineMetadata(
   feat_type = NULL,
   spat_loc_name = "raw",
   spat_enr_names = NULL,
-  verbose = TRUE
+  verbose = TRUE,
+  view = NULL,
+  space = NULL
 )
 }
 \arguments{
@@ -25,6 +27,11 @@ combineMetadata(
 \item{spat_enr_names}{names of spatial enrichment results to include}
 
 \item{verbose}{verbosity}
+
+\item{view, space}{\code{character}. Optional name of a view / space
+registered on \code{gobject}. The object is pre-narrowed once before any
+slot is read, so the returned table reflects the view-scoped subset in
+the frame \code{space} names.}
 }
 \value{
 Extended cell metadata in data.table format.

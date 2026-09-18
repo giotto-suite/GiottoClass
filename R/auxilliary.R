@@ -31,13 +31,13 @@ pDataDT <- function(gobject,
     )
 
 
-    if (!inherits(gobject, c("ExpressionSet", "SCESet", "seurat", "giotto"))) {
+    if (!inherits(gobject, c("ExpressionSet", "SCESet", "seurat", "gAny"))) {
         stop("only works with ExpressionSet (-like) objects")
     }
 
     if (inherits(gobject, c("ExpressionSet", "SCESet"))) {
         return(data.table::as.data.table(Biobase::pData(gobject)))
-    } else if (inherits(gobject, "giotto")) {
+    } else if (inherits(gobject, "gAny")) {
         if (is.null(match.call(expand.dots = TRUE)$output)) {
             output <- "data.table"
         } else {
@@ -82,9 +82,9 @@ fDataDT <- function(gobject,
         feat_type = feat_type
     )
 
-    if (!inherits(gobject, c("ExpressionSet", "SCESet", "giotto"))) {
+    if (!inherits(gobject, c("ExpressionSet", "SCESet", "gAny"))) {
         stop("only works with ExpressionSet (-like) objects")
-    } else if (inherits(gobject, "giotto")) {
+    } else if (inherits(gobject, "gAny")) {
         if (is.null(match.call(expand.dots = TRUE)$output)) {
             output <- "data.table"
         } else {
@@ -1685,4 +1685,163 @@ createMetafeats <- function(gobject,
         }
     }
     return(gobject)
+}
+
+
+# subobject narrowing ####
+
+#' Narrow a subobject to a surviving set of cell and/or feature IDs.
+#'
+#' Single source of truth for which axis of each subobject class is cell-keyed
+#' and which is feature-keyed. `NULL` for either argument means "no narrowing
+#' on that axis"; a class with no such axis passes through untouched.
+#'
+#' Two narrowing channels share this. The eager one records a surviving set on
+#' a `giottoMulti`'s `@cell_ID` / `@feat_ID` and applies it when a
+#' shared-domain getter reads a joint slot (`.gm_apply_view()`). The recipe
+#' one resolves a view lazily and applies it per subobject via
+#' `resolveSubobject()`. They differ in where the ID set comes from, not in how
+#' a given class is filtered — so that part lives here rather than in both.
+#'
+#' In-memory only: a backed subobject is materialized to be filtered. A
+#' coordinator that can push the filter into its storage should do that
+#' instead of calling this.
+#' @keywords internal
+#' @noRd
+#' Narrow a terraVectData ID cache alongside the geometry it describes.
+#'
+#' `NA_character_` is the "not computed" sentinel and must survive as-is —
+#' overwriting it with a narrowed set would claim a cache that was never
+#' built.
+#' @noRd
+.narrow_id_cache <- function(cache, keep) {
+    if (length(cache) == 1L && is.na(cache)) return(cache)
+    cache[cache %in% keep]
+}
+
+.narrow_subobject <- function(x, cells = NULL, feats = NULL) {
+    if (is.null(cells) && is.null(feats)) return(x)
+
+    if (inherits(x, "exprObj")) {
+        mat <- x[]
+        if (!is.null(cells)) {
+            mat <- mat[, colnames(mat) %in% cells, drop = FALSE]
+        }
+        if (!is.null(feats)) {
+            mat <- mat[rownames(mat) %in% feats, , drop = FALSE]
+        }
+        x[] <- mat
+        return(x)
+    }
+
+    if (inherits(x, c("cellMetaObj", "spatEnrObj"))) {
+        if (!is.null(cells)) {
+            cell_ID <- NULL # data.table NSE
+            x[] <- x[][cell_ID %in% cells]
+        }
+        return(x)
+    }
+
+    if (inherits(x, "featMetaObj")) {
+        if (!is.null(feats)) {
+            feat_ID <- NULL # data.table NSE
+            x[] <- x[][feat_ID %in% feats]
+        }
+        return(x)
+    }
+
+    if (inherits(x, "dimObj")) {
+        if (!is.null(cells)) {
+            coords <- x@coordinates
+            x@coordinates <- coords[rownames(coords) %in% cells, , drop = FALSE]
+        }
+        return(x)
+    }
+
+    if (inherits(x, "nnNetObj")) {
+        # @network holds a dataStore rather than an igraph on a backed
+        # object; pass those through instead of erroring inside igraph.
+        net <- x@network
+        if (!is.null(cells) && inherits(net, "igraph")) {
+            keep <- names(igraph::V(net)) %in% cells
+            x@network <- igraph::induced_subgraph(net, igraph::V(net)[keep])
+        }
+        return(x)
+    }
+
+    # spatial classes (cell axis) — used by the giottoMulti per-child
+    # output filter (.gm_narrow_child_outputs); IDs here are child-local
+
+    if (inherits(x, "spatLocsObj")) {
+        if (!is.null(cells)) {
+            cell_ID <- NULL # data.table NSE
+            x[] <- x[][cell_ID %in% cells]
+        }
+        return(x)
+    }
+
+    if (inherits(x, "spatialNetworkObj")) {
+        net <- x@network
+        # Narrow the graph directly when it is one. Going through the edge
+        # table instead round-trips igraph -> DT -> igraph and loses every
+        # vertex that has no surviving edge, so a narrowed network would
+        # silently report fewer nodes than cells that survived. Same shape
+        # as the nnNetObj branch above; the DT path stays for a @network
+        # that is not an igraph (a dataStore on a backed object).
+        if (!is.null(cells) && inherits(net, "igraph")) {
+            keep <- names(igraph::V(net)) %in% cells
+            x@network <- igraph::induced_subgraph(net, igraph::V(net)[keep])
+            return(x)
+        }
+        if (!is.null(cells)) {
+            from <- to <- NULL # NSE
+            x[] <- x[][from %in% cells & to %in% cells]
+        }
+        return(x)
+    }
+
+    if (inherits(x, "giottoPolygon")) {
+        if (!is.null(cells)) {
+            sv <- x@spatVector
+            keep <- terra::values(sv)$poly_ID %in% cells
+            x@spatVector <- sv[keep, ]
+            if (!is.null(x@spatVectorCentroids)) {
+                cv <- x@spatVectorCentroids
+                keep_c <- terra::values(cv)$poly_ID %in% cells
+                x@spatVectorCentroids <- cv[keep_c, ]
+            }
+            # The cache is what spatIDs() reads, so leaving it alone makes
+            # a narrowed polygon report IDs its geometry no longer has.
+            x@unique_ID_cache <- .narrow_id_cache(x@unique_ID_cache, cells)
+        }
+        return(x)
+    }
+
+    # spatial class (feature axis) — giottoPoints geometries key on
+    # feat_ID, so the narrowing axis is features, not cells
+
+    if (inherits(x, "giottoPoints")) {
+        if (!is.null(feats)) {
+            sv <- x@spatVector
+            keep <- terra::values(sv)$feat_ID %in% feats
+            x@spatVector <- sv[keep, ]
+            x@unique_ID_cache <- .narrow_id_cache(x@unique_ID_cache, feats)
+        }
+        return(x)
+    }
+
+    # bare SpatVector — what getPolygonInfo / getFeatureInfo return when not
+    # wrapped as giotto classes. The ID column names the axis: poly_ID is
+    # cell-keyed, feat_ID is feature-keyed.
+    if (inherits(x, "SpatVector")) {
+        vals <- terra::values(x)
+        if (!is.null(cells) && "poly_ID" %in% names(vals)) {
+            x <- x[vals$poly_ID %in% cells, ]
+        } else if (!is.null(feats) && "feat_ID" %in% names(vals)) {
+            x <- x[vals$feat_ID %in% feats, ]
+        }
+        return(x)
+    }
+
+    x
 }

@@ -110,6 +110,54 @@ Do not use non-UTF-8 characters; use Unicode escapes instead (e.g. `\u00F6`).
 - **Imports:** Add all `@importFrom` declarations to `R/package_imports.R`, not scattered across files.
 - **Error handling:** Use `GiottoUtils` helpers (`gstop()`, `gwarn()`, `gmessage()`) rather than bare `stop()`/`warning()`.
 - **Validation:** Use `checkmate` for input validation at function boundaries.
+- **Artifact generators:** a function that persists something into a slot and
+  returns the container takes no `view =` and no sample selector (`samples =`,
+  or any formal meaning "which children"). Its job size comes from `space =`.
+  Readers keep all three knobs. See `adr/0006`.
+- **A frame may key a `name`, never a `spat_unit`.** A frame-built artifact
+  prefixes its default `name` with the frame and records it in
+  `@parameters$space`. Never default a `spat_unit` to the active frame's name:
+  `spat_unit` keys expression, metadata and every nesting axis, so that forks
+  the object into the same cells twice. A user passing `spat_unit` explicitly
+  is their own business; code reaching for the frame when none was given is
+  the violation. See `adr/0006`.
+- **The native frame has no name; `space = NULL` is it.** There is no
+  `":default:"` sentinel — a name for "no space" is a second spelling of a
+  value R already has, and a transform recorded onto the native frame would
+  stop it being native. A `giottoMulti` transform with no `space =` is refused
+  (name one); a plain `giotto` transforms eagerly.
+- **Recording onto an unused space name creates a `perSampleSpace`.** A
+  `combinedSpace` is declaration-only (`combinedSpace(c("a", "b"))`), because
+  the kind decides job size and only the per-sample size round-trips: it writes
+  one artifact per child, the shape reading per child returns. `samples =` never
+  decides the kind — it says which samples *move*, not whether they *interact*.
+- **On a `giottoMulti`, a view is evaluated at the parent and nowhere else.**
+  Filters read joint metadata and crops read fused coordinates, both keyed by
+  `sample::id`, so one resolution answers for every child; the result is a
+  global allow-list that `.gm_narrow_child_outputs()` folds in beside the eager
+  `@cell_ID` narrowing. Never forward a view to a child — it would re-resolve
+  against the child's own empty `@view`, or narrow in the wrong ID vocabulary.
+  Content with no cell axis (points, images) is cropped geometrically at the
+  parent, on what the child returned in the frame. A standalone `giotto`
+  resolves its own view as normal.
+- **A gobject owns the frames it works in.** Every public `space =` takes a
+  **name**, resolved against that object's `@spaces` — never a `giottoSpace`
+  handle. Handles are the internal channel (`.resolve_space()` accepts one) by
+  which a `giottoMulti` hands each child the frame narrowed to itself; a child
+  cannot resolve the parent's name. To use a detached space, register it first:
+  `giottoSpace(x, "<name>") <- sp`. See `adr/0006`.
+- **`giottoMulti` setters write at the multi level only.** No `object =`, no
+  `samples =`, no way to reach a child — a per-child write would put a
+  select-sample artifact in the same slot namespace as an all-sample one with
+  nothing recording which is which. To edit one sample:
+  `mg[["<sample>"]] <- <child>`. Getters resolve parent-first and fall back to
+  a per-child fan-out.
+- **A multi-level slot exists only when the artifact cannot be decomposed into
+  per-sample pieces.** `@spatial_network` is the only spatial one: a cross-sample
+  edge has endpoints in two samples and no per-sample form. Locations, polygons,
+  points and images each belong to exactly one sample and stay on the children,
+  so the owning sample is *where the thing lives* rather than a `sample::` prefix
+  on a string. The other four spatial setters refuse. See federation §13.
 - **Data tables:** The package uses `data.table` throughout; prefer `data.table` idioms over base R for tabular operations.
 
 ---
