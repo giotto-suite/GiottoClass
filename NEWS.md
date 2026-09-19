@@ -157,11 +157,16 @@
   row it yields `NA` for keeps what it had. Annotation can then be refined in
   passes rather than rebuilt in one vector.
 - `addCellMetadata()` and `addFeatMetadata()` refuse positional input on a
-  `giottoMulti`. Joint metadata interleaves every child's rows, so a bare
-  vector has no order it could be right about — name it with cell / feature
-  IDs, or pass a table carrying the ID column, and the existing key-based
-  merge aligns it. A plain `giotto` is unchanged and keeps the positional
-  fallback with its warning.
+  `giottoMulti`. The case this is for is a value computed through a view or
+  from a subset of samples and then written back: it describes a narrower
+  population than the joint metadata it lands in, so its row position lines
+  up with nothing, and the lengths can still agree — which is what made the
+  misalignment silent. Name it with cell / feature IDs, or pass a table
+  carrying the ID column, and the existing key-based merge aligns it.
+  **Any caller that hands one of these a bare vector now fails loudly on a
+  multi** rather than mis-assigning; this is deliberate, and such callers
+  should carry their IDs. A plain `giotto` is unchanged and keeps the
+  positional fallback with its warning.
 
 ## bug fixes
 
