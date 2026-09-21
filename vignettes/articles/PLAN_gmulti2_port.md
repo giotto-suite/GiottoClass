@@ -623,7 +623,7 @@ overtook it around the §10 rework and nothing came back to say so.
 | # | recorded | actual | action |
 |---|---|---|---|
 | 9 | Defer — "depends on federation §11 and Q3" | **shipped** — a space step expands its group at record time, with a test | close |
-| 10 | Defer — "intentional error" | **the error is gone with the method** — Q8's rework removed `+`, so there is no longer a stub to speak for it. Composable views are now simply *absent*, not refused | restate: absent, undesigned |
+| 10 | Defer — "intentional error" | **shipped** — `+` is implemented for `giottoView` and for both space kinds in `R/methods-recipe.R`, and tested (`"+` composes views naming different frames`"). The stub is long gone. Composition is **concatenation**, hence AND-narrowing for views; cross-kind space composition is refused by design, as is merging two differently-named spaces | close; doc gaps only, see §9.2 |
 | 11 | Defer — "GiottoClass `spatRelate` has 1 signature vs GiottoDisk's 7" | **blocker dissolved** — `gsource` has six `spatRelate` signatures (`SpatVector`, `spatLocsObj`, and four `giottoSpatial` arms) plus two `relate` methods | re-decide on merit |
 | 12 | Defer — "pairs with federation §10" | federation §10 was dropped, so the pairing no longer holds. GiottoDisk's resolver already reaches sedona | restate the rationale |
 | 13 | Drop the stub | **executed** — 0 references anywhere | close |
@@ -639,6 +639,29 @@ overtook it around the §10 rework and nothing came back to say so.
 | Q6 | open | **still open**, and now the only open question here |
 | Q7 | decided — yes | **shipped** — 0 step `setClass`es |
 | Q8 | decided — yes | **did not ship**; see the note at §Q8 |
+
+### 9.2 Composition (`+`) — shipped, with three things undocumented
+
+`+` exists for `giottoView`, `combinedSpace` and `perSampleSpace`, and the
+pre-Q8 footgun is gone: `.space_record()` used to append to every sample keyed
+so far, so a step's scope came from construction history, whereas every step now
+carries its own `samples` and concatenation preserves it. What is missing is
+prose, not code:
+
+- **`+` is AND, and union has no representation.** Concatenating steps narrows
+  successively, so `v1 + v2` is the intersection. That is settled in tests
+  (`spatValues view = composed predicate AND-narrows correctly`) but stated
+  nowhere a user reads, and the recipe form cannot express a union at all —
+  a step chain has no branch. Worth writing down as a deliberate limit rather
+  than leaving someone to infer it from behaviour.
+- **Order-sensitivity is still only in code comments.** This is §5 vs6's
+  doc-only remainder and manifest A8, still owed. `+` is where a user meets it
+  most directly.
+- **Space `+` merges two handles on the *same* frame**, not two frames:
+  `.space_merged_name()` refuses differing names outright. Sensible, but the
+  operator's shape suggests otherwise and nothing says so outside the error.
+
+---
 
 ### 9.1 What stage 8 taught about this document
 
