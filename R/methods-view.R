@@ -341,6 +341,9 @@ setMethod("giottoView<-",
         # recipe, so the boundary where a recipe enters an object is also
         # where it is validated
         value <- .validate_view(value, .var.name = "value")
+        # A slotted entry holds exactly the view it is keyed under, so the
+        # name travels with the recipe and `setGiotto()` can place it.
+        value@name <- name
         if (is.null(gobject@view)) gobject@view <- list()
         gobject@view[[name]] <- value
         gobject

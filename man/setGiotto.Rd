@@ -16,6 +16,8 @@
 \alias{setGiotto,giotto,spatialNetworkObj-method}
 \alias{setGiotto,giotto,giottoLargeImage-method}
 \alias{setGiotto,giotto,giottoImage-method}
+\alias{setGiotto,gAny,giottoView-method}
+\alias{setGiotto,gAny,giottoSpace-method}
 \title{Set giotto subobjects into giotto object}
 \usage{
 \S4method{setGiotto}{giotto,giottoBinPoints}(gobject, x, ...)
@@ -45,6 +47,10 @@
 \S4method{setGiotto}{giotto,giottoLargeImage}(gobject, x, ...)
 
 \S4method{setGiotto}{giotto,giottoImage}(gobject, x, ...)
+
+\S4method{setGiotto}{gAny,giottoView}(gobject, x, ...)
+
+\S4method{setGiotto}{gAny,giottoSpace}(gobject, x, ...)
 }
 \arguments{
 \item{gobject}{giotto object}

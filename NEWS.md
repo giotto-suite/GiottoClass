@@ -1,3 +1,29 @@
+# GiottoClass 0.7.1
+
+## changes
+
+- **View and space recipes carry their own name**, through the same
+  `nameData` virtual class every other named subobject uses. `giottoView` had
+  no name at all and `giottoSpace` declared the slot itself; both now inherit
+  it, which is what puts recipes in the `as.list()` / `setGiotto()` loop
+  instead of beside it.
+- `setGiotto()` accepts a `giottoView` or a `giottoSpace` and places it under
+  the name it carries, the same way `setGiotto()` places a `giottoImage`. A
+  recipe with no name is refused rather than given an invented key — a frame
+  keyed by something nothing resolves against is worse than an error. Name it
+  with `objName(x) <- ` or place it directly with `giottoView(x, "<name>") <- `.
+- `objName()` / `objName<-()` work on both recipe kinds, inherited rather than
+  written.
+- `as.list(<giottoView>)` is now **name-keyed** — `list("<name>" = list(steps
+  = ...))` — matching the space export and `@view` itself, so the export form
+  states where a recipe belongs. The flat `list(steps = ...)` form a
+  hand-written recipe takes is still accepted and arrives unnamed.
+- Placing the same recipe under two keys now yields two recipes differing by
+  name. The content round-trips unchanged; only the identity follows the key.
+
+No migration is needed: `@view` and `@spaces` have never appeared in a
+released version, so no stored object holds a recipe.
+
 # GiottoClass 0.7.0
 
 ## new
