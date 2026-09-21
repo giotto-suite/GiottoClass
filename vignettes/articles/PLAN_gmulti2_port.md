@@ -625,7 +625,7 @@ overtook it around the §10 rework and nothing came back to say so.
 | 9 | Defer — "depends on federation §11 and Q3" | **shipped** — a space step expands its group at record time, with a test | close |
 | 10 | Defer — "intentional error" | **shipped** — `+` is implemented for `giottoView` and for both space kinds in `R/methods-recipe.R`, and tested (`"+` composes views naming different frames`"). The stub is long gone. Composition is **concatenation**, hence AND-narrowing for views; cross-kind space composition is refused by design, as is merging two differently-named spaces | close; doc gaps only, see §9.2 |
 | 11 | Defer — "GiottoClass `spatRelate` has 1 signature vs GiottoDisk's 7" | **blocker dissolved** — `gsource` has six `spatRelate` signatures (`SpatVector`, `spatLocsObj`, and four `giottoSpatial` arms) plus two `relate` methods | re-decide on merit |
-| 12 | Defer — "pairs with federation §10" | federation §10 was dropped, so the pairing no longer holds. GiottoDisk's resolver already reaches sedona | restate the rationale |
+| 12 | Defer — "pairs with federation §10" | **still not done**; only the rationale changes. Federation §10 was dropped, so the pairing no longer holds. The lowering itself is unimplemented: the two sedona mentions in GiottoDisk's `methods-resolveSubobject.R` are **comments**. What exists is indirect — a crop step calls `spatRelate()`, which has sedona / duckdb / terra engines when the polygon carrier is backed — which is not the same as lowering a view or space into SQL | keep deferred, restate the blocker |
 | 13 | Drop the stub | **executed** — 0 references anywhere | close |
 
 ### Decisions (§6)
