@@ -3039,6 +3039,28 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
         site, what, site), call. = FALSE)
 }
 
+#' Refuse positional metadata input on a `giottoMulti`.
+#'
+#' A different cause from `.gm_refuse_per_sample_write()`, so a different
+#' remedy: there the slot is not here, here the input carries no key.
+#'
+#' The case this is really for is a value computed through a view or from a
+#' subset of samples and then written back. That value describes a narrower
+#' population than the joint metadata it lands in, so its row position does
+#' not line up with anything -- and the misalignment is silent, because the
+#' lengths can still agree. A single `giotto` keeps the positional fallback
+#' for back-compat; here there is nothing safe to fall back on.
+#' @noRd
+.gm_refuse_positional_metadata <- function(site, key) {
+    stop(sprintf(paste0(
+        "[gmulti %s] positional input is not safe here: a value computed ",
+        "through a view or from a subset of samples covers a different ",
+        "population than the joint metadata it is written to, so row ",
+        "position does not line up. Name the vector with %ss, or pass a ",
+        "data.table / data.frame carrying a '%s' column."),
+        site, key, key), call. = FALSE)
+}
+
 #' Read a key off a subobject, tolerating a class that has no such accessor.
 #' @noRd
 .gm_key_of <- function(x, f) {

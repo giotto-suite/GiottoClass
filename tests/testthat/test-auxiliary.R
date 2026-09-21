@@ -172,3 +172,125 @@ test_that("createMetafeat can use rescale", {
     dimnames(test_m_num) <- NULL
     expect_identical(test_m_num, expect_m)
 })
+
+# annotateGiotto ####
+
+# The mapping is a lookup, not a per-row walk, and an unclustered cell
+# (NA in the cluster column) is a cell the clustering never placed rather
+# than a cluster with no annotation. See the giottoMulti note in the docs.
+
+.annot_g <- function(clusters) {
+    m <- matrix(seq_len(3 * length(clusters)),
+        ncol = length(clusters),
+        dimnames = list(
+            sprintf("gene_%s", letters[seq(3)]),
+            sprintf("cell_%d", seq_along(clusters))
+        )
+    )
+    gg <- createGiottoObject(expression = m, verbose = FALSE)
+    addCellMetadata(gg,
+        new_metadata = stats::setNames(clusters, colnames(m)),
+        vector_name = "clus"
+    )
+}
+
+test_that("annotateGiotto maps cluster values to names", {
+    gg <- .annot_g(c(1, 2, 1))
+    out <- annotateGiotto(gg,
+        annotation_vector = c("1" = "A", "2" = "B"),
+        cluster_column = "clus", name = "ct"
+    )
+    cm <- pDataDT(out)
+    expect_identical(cm$ct[match(c("cell_1", "cell_2", "cell_3"), cm$cell_ID)],
+        c("A", "B", "A"))
+})
+
+test_that("an NA cluster value carries through as NA", {
+    gg <- .annot_g(c(1, NA, 2))
+    out <- annotateGiotto(gg,
+        annotation_vector = c("1" = "A", "2" = "B"),
+        cluster_column = "clus", name = "ct"
+    )
+    cm <- pDataDT(out)
+    expect_identical(cm$ct[match(c("cell_1", "cell_2", "cell_3"), cm$cell_ID)],
+        c("A", NA, "B"))
+})
+
+test_that("an unmapped cluster is reported and becomes NA", {
+    gg <- .annot_g(c(1, 2, 3))
+    expect_message(
+        annotateGiotto(gg,
+            annotation_vector = c("1" = "A", "2" = "B"),
+            cluster_column = "clus", name = "ct"
+        ),
+        "no entry in annotation_vector"
+    )
+    out <- suppressMessages(annotateGiotto(gg,
+        annotation_vector = c("1" = "A", "2" = "B"),
+        cluster_column = "clus", name = "ct"
+    ))
+    cm <- pDataDT(out)
+    expect_identical(cm$ct[match("cell_3", cm$cell_ID)], NA_character_)
+})
+
+test_that("an annotation_vector key matching no cluster is reported", {
+    gg <- .annot_g(c(1, 2, 1))
+    expect_message(
+        annotateGiotto(gg,
+            annotation_vector = c("1" = "A", "2" = "B", "9" = "Z"),
+            cluster_column = "clus", name = "ct"
+        ),
+        "do not match any cluster value"
+    )
+})
+
+test_that("replace = FALSE refines an existing column instead of clobbering", {
+    gg <- .annot_g(c(1, 2, 3))
+    out <- suppressMessages(annotateGiotto(gg,
+        annotation_vector = c("1" = "A", "2" = "B", "3" = "C"),
+        cluster_column = "clus", name = "ct"
+    ))
+    # a second pass that only resolves one cluster
+    out2 <- suppressMessages(annotateGiotto(out,
+        annotation_vector = c("2" = "B_refined"),
+        cluster_column = "clus", name = "ct", replace = FALSE
+    ))
+    cm <- pDataDT(out2)
+    expect_identical(
+        cm$ct[match(c("cell_1", "cell_2", "cell_3"), cm$cell_ID)],
+        c("A", "B_refined", "C")
+    )
+
+    # the default still clobbers: unresolved rows go NA
+    out3 <- suppressMessages(annotateGiotto(out,
+        annotation_vector = c("2" = "B_refined"),
+        cluster_column = "clus", name = "ct"
+    ))
+    cm3 <- pDataDT(out3)
+    expect_identical(
+        cm3$ct[match(c("cell_1", "cell_2", "cell_3"), cm3$cell_ID)],
+        c(NA, "B_refined", NA)
+    )
+})
+
+test_that("re-annotating an existing name overwrites it", {
+    gg <- .annot_g(c(1, 2, 1))
+    out <- annotateGiotto(gg,
+        annotation_vector = c("1" = "A", "2" = "B"),
+        cluster_column = "clus", name = "ct"
+    )
+    expect_message(
+        annotateGiotto(out,
+            annotation_vector = c("1" = "X", "2" = "Y"),
+            cluster_column = "clus", name = "ct"
+        ),
+        "already used"
+    )
+    out <- suppressMessages(annotateGiotto(out,
+        annotation_vector = c("1" = "X", "2" = "Y"),
+        cluster_column = "clus", name = "ct"
+    ))
+    cm <- pDataDT(out)
+    expect_identical(cm$ct[match("cell_1", cm$cell_ID)], "X")
+    expect_false("ct.1" %in% colnames(cm))
+})
