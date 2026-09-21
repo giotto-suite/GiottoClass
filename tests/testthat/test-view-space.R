@@ -938,12 +938,41 @@ test_that("`+` refuses a merge that would have no job size", {
     giottoSpace(mg, "each") <- perSampleSpace()
     expect_error(giottoSpace(mg, "atlas") + giottoSpace(mg, "each"),
         "cannot compose a")
-    # and two spaces that are not the same space. Same KIND, or the
+    # Two spaces that are not the same space DO compose -- the result just
+    # has no name, because it has no single destination. Same KIND, or the
     # mixed-kind check above fires first and this asserts nothing.
     giottoSpace(mg, "other") <- combinedSpace(name = "other")
     mg <- spin(mg, 10, space = "other", samples = "b")
-    expect_error(giottoSpace(mg, "atlas") + giottoSpace(mg, "other"),
-        "cannot compose spaces")
+    both <- giottoSpace(mg, "atlas") + giottoSpace(mg, "other")
+    expect_s4_class(both, "combinedSpace")
+    expect_true(is.na(objName(both)))
+    expect_length(both,
+        length(giottoSpace(mg, "atlas")) + length(giottoSpace(mg, "other")))
+})
+
+test_that("a composed recipe inherits a name only when it is unambiguous", {
+    # `+` says how to build a recipe, not where it belongs. Deriving a key
+    # from the operands would have setGiotto() write somewhere never named,
+    # and silently overwrite on a repeat since the derivation is fixed.
+    nm <- function(x, n) { objName(x) <- n; x }
+    a <- nm(spin(perSampleSpace(), 30, samples = "a"), "atlas")
+    b <- nm(spin(perSampleSpace(), 10, samples = "b"), "tumor")
+    u <- spin(perSampleSpace(), 5, samples = "c")
+
+    expect_true(is.na(objName(a + b)))          # two destinations -> none
+    expect_identical(objName(a + u), "atlas")   # extending atlas is atlas
+    expect_identical(objName(u + a), "atlas")
+    expect_identical(objName(a + nm(u, "atlas")), "atlas")
+
+    # views follow the same rule: inheriting e1's name would place the
+    # composed view over the one it was built from
+    v1 <- .new_view(name = "v1")
+    v2 <- .new_view(name = "v2")
+    expect_true(is.na(objName(v1 + v2)))
+    expect_identical(objName(v1 + .new_view()), "v1")
+
+    # and an unnamed result is refused by the setter, not given a key
+    expect_error(setGiotto(giotto(), v1 + v2), "has no name")
 })
 
 test_that("there is no name for the native frame", {
