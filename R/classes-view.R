@@ -349,6 +349,7 @@
 #' as.list(v)
 #' @exportClass giottoView
 setClass("giottoView",
+    contains = "nameData",
     representation(steps = "list"),
     prototype = prototype(steps = list())
 )
@@ -358,8 +359,8 @@ setClass("giottoView",
 #' The single place a view's shape is written down, so a field added here
 #' reaches every producer.
 #' @noRd
-.new_view <- function(steps = list()) {
-    new("giottoView", steps = steps)
+.new_view <- function(steps = list(), name = NA_character_) {
+    new("giottoView", steps = steps, name = name)
 }
 
 #' Coerce whatever a caller supplied into a `giottoView`.
@@ -375,6 +376,20 @@ setClass("giottoView",
         stop("[view] `", .var.name, "` must be a giottoView or a list ",
             "(got '", class(view)[[1L]], "')", call. = FALSE)
     }
+    # Two accepted shapes. `as.list()` writes the NAME-KEYED form, matching
+    # the space export and `@view` itself, which is what lets a recipe carry
+    # its own destination through `setGiotto()`. The flat form is what a
+    # hand-written recipe looks like and stays accepted, unnamed.
+    nm <- NA_character_
+    if (!"steps" %in% names(view) && length(view) == 1L &&
+        !is.null(names(view)) && nzchar(names(view)[[1L]])) {
+        nm <- names(view)[[1L]]
+        view <- view[[1L]]
+        if (!is.list(view)) {
+            stop("[view] `", .var.name, "` frame body must be a list, as ",
+                "`as.list()` writes it.", call. = FALSE)
+        }
+    }
     unknown <- setdiff(names(view), .view_fields)
     if (length(unknown) > 0L) {
         stop("[view] unknown field(s): ",
@@ -382,7 +397,7 @@ setClass("giottoView",
             ". A view holds: ", paste(.view_fields, collapse = ", "),
             call. = FALSE)
     }
-    .new_view(steps = view$steps %null% list())
+    .new_view(steps = view$steps %null% list(), name = nm)
 }
 
 #' Validate a whole view, whatever produced it.

@@ -340,8 +340,9 @@
 #' as.list(sp)
 #' @exportClass giottoSpace
 setClass("giottoSpace",
-    representation("VIRTUAL", name = "character", steps = "list"),
-    prototype = prototype(name = NA_character_, steps = list())
+    contains = c("VIRTUAL", "nameData"),
+    representation(steps = "list"),
+    prototype = prototype(steps = list())
 )
 
 #' @title Class for a frame shared by named samples

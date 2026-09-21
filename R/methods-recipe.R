@@ -103,7 +103,7 @@ setMethod("names", signature(x = "giottoView"),
 #' @rdname giottoView-access
 #' @export
 setMethod("as.list", signature(x = "giottoView"),
-    function(x, ...) list(steps = x@steps))
+    function(x, ...) stats::setNames(list(list(steps = x@steps)), x@name))
 
 #' @rdname giottoView-access
 #' @export

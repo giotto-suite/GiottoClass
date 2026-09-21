@@ -178,3 +178,41 @@ setMethod(
         gobject
     }
 )
+
+# recipes ####
+
+# A recipe is keyed by name in `@view` / `@spaces`, so it can place itself
+# the way every other named subobject does. The name is not optional here:
+# `setGiotto()` has nowhere to put a recipe that does not say where it goes,
+# and inventing a key would put a frame somewhere nothing resolves against.
+# Use `giottoView(x, "<name>") <- ` to name and place in one step.
+.recipe_set_name <- function(x, what) {
+    nm <- objName(x)
+    if (length(nm) != 1L || is.na(nm) || !nzchar(nm)) {
+        stop("[setGiotto] this ", what, " has no name, so there is no slot ",
+            "to place it in. Name it with `objName(x) <- \"<name>\"`, or ",
+            "place it directly with `", what, "(gobject, \"<name>\") <- x`.",
+            call. = FALSE)
+    }
+    nm
+}
+
+#' @rdname setGiotto
+#' @export
+setMethod(
+    "setGiotto", signature("gAny", "giottoView"),
+    function(gobject, x, ...) {
+        giottoView(gobject, .recipe_set_name(x, "giottoView")) <- x
+        gobject
+    }
+)
+
+#' @rdname setGiotto
+#' @export
+setMethod(
+    "setGiotto", signature("gAny", "giottoSpace"),
+    function(gobject, x, ...) {
+        giottoSpace(gobject, .recipe_set_name(x, "giottoSpace")) <- x
+        gobject
+    }
+)

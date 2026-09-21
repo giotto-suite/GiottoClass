@@ -1650,16 +1650,61 @@ test_that("builder verbs on a recipe record what the gobject route records", {
     expect_identical(giottoSpace(g3, "s"), direct_sp)
 })
 
+test_that("a recipe carries its own name, so setGiotto() can place it", {
+    # `nameData` is the same slot every other named subobject uses, which is
+    # what puts recipes in the `as.list()` / `setGiotto()` loop rather than
+    # beside it.
+    v <- .demo_view()
+    expect_true(is(v, "nameData"))
+    expect_identical(objName(v), "v")
+
+    g <- giotto()
+    g <- setGiotto(g, v)
+    expect_identical(giottoViews(g), "v")
+    expect_identical(giottoView(g, "v"), v)
+
+    sp <- spin(perSampleSpace("flat"), 30)
+    mg <- .fixture_gmulti()
+    mg <- setGiotto(mg, sp)
+    expect_identical(giottoSpaces(mg), "flat")
+    expect_identical(giottoSpace(mg, "flat"), sp)
+})
+
+test_that("setGiotto() refuses a recipe that does not say where it goes", {
+    # inventing a key would put a frame somewhere nothing resolves against
+    g <- giotto()
+    expect_error(setGiotto(g, .new_view()), "has no name")
+    expect_error(setGiotto(g, perSampleSpace()), "has no name")
+
+    # naming it is the way through
+    v <- .new_view()
+    objName(v) <- "named"
+    expect_identical(giottoViews(setGiotto(g, v)), "named")
+})
+
 test_that("as.list() is the export seam and round-trips losslessly", {
     v <- .demo_view()
     lv <- as.list(v)
     expect_type(lv, "list")
-    expect_named(lv, "steps")
+    # name-keyed, like the space form and like `@view` itself -- this is
+    # what carries a recipe's destination through `setGiotto()`
+    expect_named(lv, "v")
+    expect_named(lv$v, "steps")
 
     g <- giotto()
     giottoView(g, "from_obj") <- v
     giottoView(g, "from_list") <- lv
-    expect_identical(giottoView(g, "from_obj"), giottoView(g, "from_list"))
+    # the CONTENT round-trips; the name is the key it was placed under, so
+    # the same recipe slotted twice differs by name and nothing else
+    expect_identical(giottoView(g, "from_obj")@steps,
+        giottoView(g, "from_list")@steps)
+    expect_identical(objName(giottoView(g, "from_obj")), "from_obj")
+    expect_identical(objName(giottoView(g, "from_list")), "from_list")
+
+    # the flat hand-written form is still accepted, and arrives unnamed
+    flat <- .as_giotto_view(list(steps = v@steps))
+    expect_identical(flat@steps, v@steps)
+    expect_true(is.na(objName(flat)))
 
     sp <- .demo_space()
     lsp <- as.list(sp)
