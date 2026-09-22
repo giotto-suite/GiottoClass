@@ -822,7 +822,7 @@ that loop *and* supplies the `spat_unit` itself.
 
 There is no runtime guard for this and there cannot be one: nothing at write time
 can distinguish a defaulted `spat_unit` from a deliberately passed one. So it is
-recorded as a review rule, in `adr/0006` (Decision) and in `CLAUDE.md`, plus a
+recorded as a review rule, in `adr/0006` (Decision) and in `AGENTS.md`, plus a
 comment at the one site where a frame name composes into anything.
 
 **Audited 2026-09-16** across GiottoClass, Giotto, GiottoVisuals and GiottoDisk:

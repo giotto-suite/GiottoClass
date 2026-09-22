@@ -13,7 +13,7 @@ Keep the boundary sharp — each of these answers a question the others do not:
 
 | Doc | Answers | Tense |
 |---|---|---|
-| `CLAUDE.md` | What invariants hold right now, and where the code is | present, terse |
+| `AGENTS.md` | What invariants hold right now, and where the code is | present, terse |
 | `vignettes/articles/design.Rmd` | Why the architecture is shaped the way it is | present, narrative |
 | `vignettes/overview.Rmd` | How the object model works and hangs together | present, narrative |
 | `NEWS.md` | What changed, per release | past, per-version |
@@ -21,7 +21,7 @@ Keep the boundary sharp — each of these answers a question the others do not:
 
 Practical test for where something belongs:
 
-- "Generics go in `R/generics.R`, methods in `R/methods-<topic>.R`" → CLAUDE.md
+- "Generics go in `R/generics.R`, methods in `R/methods-<topic>.R`" → AGENTS.md
   (a convention a code change must respect).
 - "`giotto` slot lists are keyed by `spat_unit` / `feat_type`" → overview.Rmd.
 - "The subobject virtuals split into a schema family and a storage family, and
@@ -30,9 +30,9 @@ Practical test for where something belongs:
 - "We rejected a `gMemSource` null object because an absent backend has no path"
   → ADR.
 
-The overlap is intentional and one-directional: CLAUDE.md and the vignettes
+The overlap is intentional and one-directional: AGENTS.md and the vignettes
 state the *outcome* of an ADR without rehearsing the argument; the ADR is where
-the argument and the discarded options live. When they disagree, CLAUDE.md wins
+the argument and the discarded options live. When they disagree, AGENTS.md wins
 for current behaviour and the ADR wins for intent — and the disagreement is
 itself a signal that a superseding ADR is owed.
 
@@ -73,7 +73,7 @@ Roughly: a decision that constrains future code, was contested or non-obvious,
 or has a cost worth remembering.
 
 Not: bug fixes, refactors that preserve behaviour, or naming conventions (those
-go in CLAUDE.md "Coding Conventions").
+go in AGENTS.md "Coding Conventions").
 
 ## Finding these
 
