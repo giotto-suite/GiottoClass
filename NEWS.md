@@ -1,3 +1,46 @@
+# GiottoClass 0.7.2
+
+## bug fixes
+
+- `plot()` on a `spatialNetworkObj` failed with igraph's "Invalid vertex names"
+  because it still indexed the coordinate columns the pre-0.6.0 edge table
+  carried. A network stores edges between named cells and no geometry, so it
+  now says that instead of guessing, and `plot(<spatialNetworkObj>,
+  <spatLocsObj>)` draws it against the locations that supply the coordinates.
+
+## changes
+
+- **`annotateSpatialNetwork()`'s two annotations are now independent, and both
+  are optional.** A network stores only edges, so anything about the cells an
+  edge runs between is attached rather than read back — and attaching a label
+  and attaching a position turn out to be one operation on two sources: take a
+  cell-keyed value, write it onto each end of the edge.
+  - `cluster_column` is optional (was required) and resolves through
+    [spatValues()], so a label may come from cell metadata, an expression
+    feature, an enrichment score or any other slot that function searches. It
+    was read straight out of cell metadata before.
+  - `coordinates` (default `TRUE`, as before) attaches `sdim[xyz]_begin` /
+    `_end`, read live from the spatial locations so a transform already applied
+    to them is carried along. `spat_loc_name` says which locations to read;
+    previously the default set was always used, which could attach the wrong
+    coordinates on an object holding more than one.
+  - `...` passes through to `spatValues()`.
+  - Callers that want labels and no geometry can now skip the merge — seven of
+    the eleven in-suite call sites never read the coordinates. Callers that
+    want geometry and no labels, chiefly plotting, previously had no way to
+    ask at all.
+- The coordinate join is an **inner** one, which is what narrowing means for a
+  network: an edge whose endpoint is absent from the locations has no position
+  and is dropped, so narrowing the locations narrows the edges to the induced
+  subgraph. Nodes are not the network's to supply — an edge table has no row
+  for a cell with no edges — so a consumer takes its node set from the
+  locations. Stated in `adr/0004` and the design article.
+
+## docs
+
+- `vignettes/articles/design.Rmd` arrives on this branch, where
+  `IMPLEMENTATION_gmulti.md` already linked to it.
+
 # GiottoClass 0.7.1
 
 ## changes
