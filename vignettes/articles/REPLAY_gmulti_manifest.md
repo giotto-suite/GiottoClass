@@ -1174,8 +1174,16 @@ the batch-corrected matrix moves by up to 1.74. `upstream/suite` and
 `upstream/suite_dev` carry the identical unguarded pattern with no alignment
 guard anywhere in `R/` — a backport decision that is still open.
 
-Remaining: **stage 9**, plus the `suite` backport and the
-`interoperability.R` alignment guards §10.7 set aside to upstream separately.
+Remaining: **stage 9**, then **the documentation consolidation (PLAN §10)** as
+the closing step — permanent homes in `design.Rmd` or a subsystem vignette for
+what is durable, deletion for what is a snapshot, and a new view/space article
+for the subsystem that has the most design argument and no home. Note its
+prerequisite: `design.Rmd` is not on `upstream/gsource` at all, only on local
+and `origin` `gsource` at `ad66a280`, so the destination has to land first.
+
+Outside the stage sequence: the `suite` / `suite_dev` backport of Giotto#1304,
+and the `interoperability.R` alignment guards §10.7 set aside to upstream
+separately.
 
 ---
 

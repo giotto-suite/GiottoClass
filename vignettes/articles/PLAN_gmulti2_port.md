@@ -684,4 +684,57 @@ are worth naming because they will recur:
 
 ---
 
+## 10. Final step — give the documentation permanent homes
+
+After stage 9, the articles directory is 3,760 lines across seven files, most
+of it written to carry the port rather than to be read afterwards. The closing
+step is to move what is durable into permanent homes and delete the rest.
+
+**The rule, which is the repo's existing one rather than a new one:** a
+*decision and its argument* belong in `design.Rmd` or in a subsystem vignette;
+*mechanism* stays in code comments next to the code; and a *snapshot of what
+exists right now* is transient — it gets deleted, not moved, because it rots
+in about a week. Once a section lands in `design.Rmd`, the inline comments it
+now owns get slimmed to point at it.
+
+### 10.1 Prerequisite — `design.Rmd` is not upstream
+
+The destination does not exist. `vignettes/articles/design.Rmd` (405 lines,
+twelve sections: the two-tier object model, the schema, `initialize()` as the
+consistency engine, versioning, accessors, analysis verbs, networks,
+instructions, the disk-backed arc, interoperability) lives only on **local and
+`origin` `gsource`, at `ad66a280`**. `upstream/gsource` has never carried it —
+§5 listed that commit under "do not replay" as *"design article + hnswKNN; not
+gmulti"*, which was the right call for the replay and had the side effect that
+it was never upstreamed at all.
+
+Two consequences: `IMPLEMENTATION_gmulti.md:22` links to `design.Rmd` and
+resolves to nothing on `gsource`; and §8's risk — *"`design.Rmd` has no gmulti
+coverage … it needs a section before any of this lands on `gsource`"* — is now
+**realised rather than pending**, since the work landed without it. Upstream
+`design.Rmd` first, on its own, because it is not gmulti work.
+
+### 10.2 Disposition per document
+
+| document | lines | disposition |
+|---|---|---|
+| `design.Rmd` *(not upstream)* | 405 | **upstream first**, then gains the gmulti / federation / recipe sections it never got |
+| `IMPLEMENTATION_viewspace.md` | 580 | **split** — the design half becomes a view/space subsystem article; the usage half belongs with `vignettes/view_and_space.Rmd`, which already exists and should stay the usage vignette rather than be duplicated |
+| `DESIGN_gmulti_federation.md` | 424 | **fold** the durable argument into `design.Rmd`; keep a federation article only for what is too long to sit there |
+| `IMPLEMENTATION_gmulti_federation.md` | 558 | **harvest then delete** — it is a per-item status table, the most rot-prone shape in the set |
+| `IMPLEMENTATION_gmulti.md` | 310 | **harvest then delete**; fix or remove its dangling `design.Rmd` link on the way |
+| `STATUS_gmulti_federation.md` | 159 | **delete** — status is what git and this manifest are for |
+| `PLAN_gmulti2_port.md`, `REPLAY_gmulti_manifest.md` | 579 + 1150 | **retire once stage 9 lands.** They are port scaffolding. §9.1 is the evidence for retiring rather than maintaining them: a stage row survived long enough to name two functions that do not exist |
+
+### 10.3 The one new vignette
+
+A **view/space subsystem article** is the piece with no home today. It is the
+subsystem with the most design argument spread across the most places — the
+recipe/step split (Q7), why the containers stayed S4 with kinds (§Q8's
+correction), the frame/predicate separation, composition and its
+order-sensitivity (§9.2's three doc gaps), and parent-only view evaluation on a
+`giottoMulti`. Writing it is what lets `IMPLEMENTATION_viewspace.md` go.
+
+---
+
 *Companion to the [implementation plan](IMPLEMENTATION_gmulti.md). Created 2026-08-12.*
