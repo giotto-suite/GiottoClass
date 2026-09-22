@@ -14,6 +14,7 @@ Keep the boundary sharp — each of these answers a question the others do not:
 | Doc | Answers | Tense |
 |---|---|---|
 | `CLAUDE.md` | What invariants hold right now, and where the code is | present, terse |
+| `vignettes/articles/design.Rmd` | Why the architecture is shaped the way it is | present, narrative |
 | `vignettes/overview.Rmd` | How the object model works and hangs together | present, narrative |
 | `NEWS.md` | What changed, per release | past, per-version |
 | `adr/` (here) | Why we chose this over the alternatives, and when | past, immutable |
@@ -23,6 +24,8 @@ Practical test for where something belongs:
 - "Generics go in `R/generics.R`, methods in `R/methods-<topic>.R`" → CLAUDE.md
   (a convention a code change must respect).
 - "`giotto` slot lists are keyed by `spat_unit` / `feat_type`" → overview.Rmd.
+- "The subobject virtuals split into a schema family and a storage family, and
+  why" → design.Rmd.
 - "`spatialNetworkObj` slots were renamed in 0.6.0" → NEWS.md.
 - "We rejected a `gMemSource` null object because an absent backend has no path"
   → ADR.
@@ -96,6 +99,7 @@ record's *References*. 0006 onward carry them.
 | [0004](0004-networks-store-igraph-one-constructor.md) | Networks store a graph in `@network`; `createNetwork()` is the one constructor | Accepted | 2026-05-21 |
 | [0005](0005-jpeg2000-ome-tiff-reads-through-a-vsisubfile-vrt.md) | JPEG-2000 OME-TIFF reads through a `/vsisubfile` VRT, not a conversion | Accepted | 2026-08-28 |
 | [0006](0006-artifact-generators-take-no-view-or-sample-selector.md) | Artifact generators take no `view` and no sample selector; job size comes from the space | Accepted | 2026-09-15 |
+| [0007](0007-packed-classes-unmaintained.md) | `packed*` / `wrap()` / `vect()` are unmaintained; serialize by reference | Accepted | 2026-08-11 |
 
 ## Backfill candidates
 

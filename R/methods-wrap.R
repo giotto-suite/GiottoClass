@@ -5,8 +5,14 @@
 #' @description Extension of wrap methods from terra for Giotto's terra-based S4
 #' objects. Allows pointer information to be packaged into memory so that it can
 #' be passed over a connection (e.g. nodes on a computer cluster)
+#'
+#' This pattern is no longer maintained and may be removed in a future release.
+#' Do not build on it. Use the by-reference path instead: `saveGiotto()` /
+#' `loadGiotto()` for persistence, and a `gsource` backend to make data
+#' reachable from a worker process.
 #' @param x giottoPolygon or giottoPoints
 #' @returns wrapped giottoPolygon or giottoPoints
+#' @seealso [saveGiotto()], [loadGiotto()]
 #' @examples
 #' g <- GiottoData::loadSubObjectMini("giottoPoints")
 #'
@@ -15,6 +21,10 @@ NULL
 # ---------------------------------------------------------------- #
 
 # terra-based object serialization ####
+# adr/0007 -- unmaintained; may be removed. Do not add packed* classes or
+# wrap()/vect() methods. New terra-backed classes get .save_external() /
+# .load_external() instead. Kept because {GiottoData} minis and older user .RDS
+# files are stored as packedGiotto* and still have to read back.
 ## wrap methods ####
 
 #' @describeIn wrap Wrap giottoPolygon
