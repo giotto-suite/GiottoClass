@@ -113,7 +113,7 @@ setMethod("+", signature(e1 = "giottoView", e2 = "giottoView"),
         # region was read in, so concatenating cannot reinterpret either
         # side. The NAME does need reconciling -- inheriting `e1`'s would
         # place the composed view over the one it was built from.
-        e1@name <- .merged_recipe_name(e1, e2)
+        e1 <- .unname_recipe(e1)
         e1@steps <- c(e1@steps, e2@steps)
         e1
     }
@@ -165,7 +165,9 @@ setMethod("show", signature(object = "giottoView"), function(object) {
 #' * `names(sp)` — the samples this recipe mentions
 #' * `length(sp)` — step count
 #' * `as.list(sp)` — the plain export form
-#' * `sp1 + sp2` — merge two handles on the same space, concatenating steps
+#' * `sp1 + sp2` — concatenate two spaces' steps. The result is unnamed:
+#'   composition says how to build a recipe, not where it belongs, so name
+#'   it when you place it
 #'
 #' @section Sample resolution:
 #' One rule, both kinds, resolved here and nowhere else: a step with no
@@ -223,23 +225,24 @@ NULL
 # The space name a merge result carries. An unnamed handle -- one built
 # directly rather than read off a gobject -- takes the other's name.
 #' @noRd
-# A composed recipe inherits a name only when that name is unambiguous.
+# A composed recipe is always unnamed.
 #
-# Two differently-named operands describe two destinations, so the result has
-# none: `+` says how to build a recipe, not where it belongs, and deriving a
-# key from the operands would have `setGiotto()` write somewhere the user
-# never named -- silently overwriting on a repeat, since the derivation is
-# deterministic. NA is not a gap here, it is the honest answer, and the
-# setters turn it into an error that names the way through.
+# `+` says how to BUILD a recipe, never where it belongs. Carrying an
+# operand's name through would make `setGiotto(x, a + b)` write over `a` --
+# a destructive result from an operator that reads as constructive, and the
+# damage is silent because the write succeeds. Deriving a name instead
+# ("atlas-tumor", an id) only moves the problem: a deterministic derivation
+# overwrites itself on a repeat, and a random one litters the slot.
 #
-# One named operand is different: extending a named recipe with an unnamed
-# one is still that recipe.
-.merged_recipe_name <- function(e1, e2) {
-    n1 <- objName(e1)
-    n2 <- objName(e2)
-    if (is.na(n1)) return(n2)
-    if (is.na(n2) || identical(n1, n2)) return(n1)
-    NA_character_
+# Inheriting when exactly one operand is named was considered and dropped.
+# It is defensible -- extending a named recipe is arguably still that
+# recipe -- but it makes the safety of `+` depend on which operands you
+# happened to pass, so a user cannot reason about it without checking. One
+# rule with no exceptions is worth more than the saved keystroke: name the
+# result when you place it, `giottoSpace(x, "<name>") <- a + b`.
+.unname_recipe <- function(x) {
+    x@name <- NA_character_
+    x
 }
 
 #' @noRd
@@ -325,7 +328,7 @@ setMethod("as.list", signature(x = "perSampleSpace"),
 #' @export
 setMethod("+", signature(e1 = "combinedSpace", e2 = "combinedSpace"),
     function(e1, e2) {
-        e1@name <- .merged_recipe_name(e1, e2)
+        e1 <- .unname_recipe(e1)
         e1@steps <- c(e1@steps, e2@steps)
         e1
     }
@@ -335,7 +338,7 @@ setMethod("+", signature(e1 = "combinedSpace", e2 = "combinedSpace"),
 #' @export
 setMethod("+", signature(e1 = "perSampleSpace", e2 = "perSampleSpace"),
     function(e1, e2) {
-        e1@name <- .merged_recipe_name(e1, e2)
+        e1 <- .unname_recipe(e1)
         e1@steps <- c(e1@steps, e2@steps)
         e1
     }

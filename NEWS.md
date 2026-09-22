@@ -20,16 +20,16 @@
   hand-written recipe takes is still accepted and arrives unnamed.
 - Placing the same recipe under two keys now yields two recipes differing by
   name. The content round-trips unchanged; only the identity follows the key.
-- **`+` composes two differently-named recipes** instead of refusing them. The
-  result carries no name: `+` says how to build a recipe, not where it belongs,
-  and deriving a key from the operands would have `setGiotto()` write somewhere
-  the user never named — silently overwriting on a repeat, since the derivation
-  is deterministic. A name is inherited only when unambiguous, so extending a
-  named recipe with an unnamed one keeps the name. The setters turn the unnamed
-  case into an error that names the way through.
-- `+` on two named `giottoView`s no longer silently inherits the left operand's
-  name, which would have placed the composed view over the one it was built
-  from.
+- **`+` composes any two recipes of a kind, and the result is always unnamed.**
+  It previously refused two differently-named spaces, and on views it silently
+  kept the left operand's name. Both are gone: composition says how to *build* a
+  recipe, never where it belongs. Carrying a name through would let
+  `setGiotto(x, a + b)` overwrite `a` — a destructive result from an operator
+  that reads as constructive, and silent, because the write succeeds. Deriving a
+  name instead only moves the problem, since a deterministic derivation
+  overwrites itself on a repeat and a random one litters the slot. Name the
+  result where you place it: `giottoSpace(x, "<name>") <- a + b`. Composing is
+  therefore safe to do freely; only placing can overwrite.
 
 No migration is needed: `@view` and `@spaces` have never appeared in a
 released version, so no stored object holds a recipe.
