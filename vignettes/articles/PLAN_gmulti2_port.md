@@ -316,8 +316,9 @@ thing." Mapping says how to *find* it (sample → child-level name); space says 
 | expression federation | silently **dropped** (`Filter(Negate(is.null), per_child)`) |
 | space resolution | silently **included at untransformed native coordinates** (`methods-resolver.R:294-301`) |
 
-Space appears better only because `GiottoVisuals/R/gmulti.R:203` errors on samples outside
-the space's key set — that check lives in **one consumer**, not in the engine.
+Space appears better only because GiottoVisuals' `.resolve_samples()` errors on samples
+outside a `combinedSpace`'s membership — that check lives in **one consumer**, not in the
+engine, and stage 9 left it there rather than widening its reach.
 `.space_sample_key_for` likewise returns `NULL` on ambiguity and
 `.apply_space_to_subobj` then returns the subobject untouched. Called directly rather than
 through the plot dispatcher, a non-participating child comes back silently mispositioned —
@@ -488,9 +489,10 @@ Each stage should build, test, and be independently reviewable.
 | **8** | fed 9 — carry-keys, on its own | GiottoClass + Giotto |
 | **9** | fed 19, 20 — dispatcher, panel sizing | GiottoVisuals |
 
-Stages 0–8 are done; stage 9 is the remainder. Status per stage is tracked in
-the [replay manifest](REPLAY_gmulti_manifest.md) §4, which is authoritative for
-it — this table is the original plan of record, not a progress board.
+**All ten stages are done** (stage 9 landed 2026-09-22 as GiottoVisuals
+0.2.16); §10 below is what is left. Status per stage is tracked in the [replay
+manifest](REPLAY_gmulti_manifest.md) §4, which is authoritative for it — this
+table is the original plan of record, not a progress board.
 
 Stages 1–5 are the substance and are GiottoClass-only. Giotto is untouched until stage
 8, which is convenient given that's where the drift is.
@@ -591,7 +593,7 @@ recipe.
 ## 8. Risks
 
 - **Nothing is backed up.** The three checkpoint branches have no remote; ~106 commits exist only on local disk. Push before relying on them as the port source.
-- **Two divergent GiottoVisuals variants** — `wip/gmulti-visuals-checkpoint` and `GiottoVisuals-federation-design` differ. Reconcile before stage 9, and note the former calls `GiottoClass:::.gm_inject_joint_metadata`, which federation §7 claims to have removed the need for.
+- ~~**Two divergent GiottoVisuals variants**~~ — resolved. `wip/gmulti-visuals-checkpoint` was a no-op over `feature/gmulti-federation-design` (byte-identical in the two files its unique commit touched) and its `GiottoClass:::.gm_inject_joint_metadata` half is superseded; stage 9 took the latter alone.
 - **`test-gmulti-structural-ops.R` (419 lines) was never tracked** and has no counterpart on the federation branch. Read it before stage 2 — it may cover cases `test-gmulti.R` doesn't.
 - **`design.Rmd` has no gmulti coverage.** It documents the object model, schema, `initialize()`, and accessors — all of which gmulti extends. It needs a section before any of this lands on `gsource`.
 - **Dispositions here are from the docs plus targeted verification, not a full read of 4,393 lines.** The Port items are judged on design rationale; drift and code quality inside them is unverified. Treat per-item review as part of each stage, not as done.
@@ -616,7 +618,7 @@ overtook it around the §10 rework and nothing came back to say so.
 | 14 | Defer, "wants the combined-space story first" | **shipped** — a `combinedSpace` builds one network over its members via `.gm_fused_spatlocs()`, written to the joint slot. The combined-space story it was waiting for is the thing that delivered it | close |
 | 15 | Re-decide (Q6) | **still open** — `getSpatialLocations(mg)` still returns a named per-child list | keep open |
 | 16 | Defer | still deferred, but `.gm_fused_spatlocs()` now exists and is the substrate it was waiting on | keep, restate the blocker |
-| 19, 20 | Defer (stage 9) | unported; see the manifest's stage-9 row | keep |
+| 19, 20 | Defer (stage 9) | **shipped 2026-09-22** — GiottoVisuals 0.2.16; see the manifest's stage-9 row | close |
 
 ### View / space (§5)
 
@@ -634,7 +636,7 @@ overtook it around the §10 rework and nothing came back to say so.
 |---|---|---|
 | Q1 | decided — block on expansion | **shipped**, named in-source as the Q1 rule |
 | Q2 / Q3 | decided 2026-09-11 | **shipped** — stage 7 |
-| Q4 | decided — port all 57 | **half shipped**: 32 `space =` and 25 `view =` formals on `GiottoClass@gsource`; the GiottoVisuals half is entirely unlanded and arrives with stage 9. The "surface is not uniform until the GiottoVisuals stage" caveat is still live |
+| Q4 | decided — port all 57 | **shipped** — 32 `space =` and 25 `view =` formals on `GiottoClass@gsource`, the GiottoVisuals half with stage 9. The "surface is not uniform until the GiottoVisuals stage" caveat is spent |
 | Q5 | decided | **shipped** — all three axes, loud failure, handle stamping |
 | Q6 | open | **still open**, and now the only open question here |
 | Q7 | decided — yes | **shipped** — 0 step `setClass`es |
