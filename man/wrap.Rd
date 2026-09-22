@@ -33,6 +33,11 @@ wrapped giottoPolygon or giottoPoints
 Extension of wrap methods from terra for Giotto's terra-based S4
 objects. Allows pointer information to be packaged into memory so that it can
 be passed over a connection (e.g. nodes on a computer cluster)
+
+This pattern is no longer maintained and may be removed in a future release.
+Do not build on it. Use the by-reference path instead: \code{saveGiotto()} /
+\code{loadGiotto()} for persistence, and a \code{gsource} backend to make data
+reachable from a worker process.
 }
 \section{Methods (by class)}{
 \itemize{
@@ -53,4 +58,7 @@ be passed over a connection (e.g. nodes on a computer cluster)
 g <- GiottoData::loadSubObjectMini("giottoPoints")
 
 wrap(g)
+}
+\seealso{
+\code{\link[=saveGiotto]{saveGiotto()}}, \code{\link[=loadGiotto]{loadGiotto()}}
 }
