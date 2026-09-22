@@ -203,15 +203,27 @@ Shipped as GiottoClass#413 (the refusal + `annotateGiotto`) and Giotto#1303
 | **row corrections** | `create_average_DT` / `_detection_DT` were phantoms; the "`createMetafeats` guards" are really `.giotto_alloc_dt()` (git funcname heuristic skips dot-names); and the producer guards were a **port**, not a write. See PLAN §9.1 |
 | **D1 in hindsight** | the rationale — "the giottoMulti hard error makes every positional producer fail loudly" — selects exactly three verbs, and all three were fixed here. The six functions D1 named do not call the metadata setters at all; they were a different defect class and shipped separately as Giotto#1304 (see below) |
 
-### Stage 9 — GiottoVisuals dispatcher, per-panel sizing (fed 19, 20)
+### Stage 9 — GiottoVisuals dispatcher, per-panel sizing (fed 19, 20) — **DONE 2026-09-22**
+
+Shipped as GiottoVisuals `feature/gmulti-visuals-stage9` (0.2.16). Ten of the
+eleven source commits cherry-picked onto `upstream/gsource` **with no
+conflicts**; the eleventh (`c6fdce8`, the `readGiottoInstructions` migration) is
+an unrelated refactor and was dropped, which is most of the difference between
+the `+719/-126` measured here and the `+666/-39` that actually landed across 11
+`R/` files and one test file. It should be upstreamed on its own.
 
 | | |
 |---|---|
-| **source** | `feature/gmulti-federation-design` as the base. `GiottoClass:::` reach is gone (verified: no references). **Re-measured 2026-09-21: 11 commits ahead of `upstream/gsource` and 14 behind it.** The payload itself has not moved — `R/` + `tests/` is `+719/-126` across 13 files, matching the earlier figure — so what the delay cost is base drift, not scope. Rebase first and re-check the 12 `R/` files; `man/` (42 files, `+318/-181`) is regenerated, not reviewed |
+| **source** | `feature/gmulti-federation-design`. `GiottoClass:::` reach confirmed 0 |
 | ~~selective~~ | **no-op — do not cherry-pick.** `wip/gmulti-visuals-checkpoint` @ `54f19e9`'s "composite plot_output_handler" is byte-identical to `5969cb6`'s in both files it touches; its "joint metadata injection" half is superseded (D6). Taking the base takes the handler; reversing to the wip branch would lose 95 net lines |
-| **note** | both variants are 7 behind `upstream/gsource` (`eebbfc9`) |
-| **before porting** | §10.7, and read it *instead of* this row where they differ. Three things, in order: (1) **decide** whether a space's membership defines the panel set and whether an explicit `samples =` may escape it — §10.8 rejected that shape for artifact generators, plotting is arguably different, and it is 34 `samples =` sites deep; (2) fix the silent-wrong `names(slot(space_obj, "samples"))` at `R/gmulti.R:175`, still present on the source branch, which reads a slot that no longer exists inside a `tryCatch` so `space = "S"` plots every child; (3) do not re-introduce the `view`/`space` doc lie — a public surface takes a **name**, never a handle |
-| **Q4 consequence** | the 52 GiottoVisuals `space =` / `view =` formals land here. Until they do, the uniform surface Q4 bought is half-built: `GiottoClass@gsource` carries 32 and 25 |
+| **(1) panel scope — decided** | a space sets the panel set **only when its membership is closed**. A `combinedSpace` lays its members out relative to one another, so a sample outside the layout has no position in the frame: it defines the panels and refuses a `samples =` that escapes it. A `perSampleSpace` is open by design — an unscoped step means "whatever sample it meets" — so `names()` on it lists what the recipe mentions, not what it covers, and it transforms every panel without narrowing which are drawn. This is narrower than §10.8's rule for artifact generators, and the reason is stated on `.resolve_samples`: a panel set is not persisted under a name that would later read as covering more than it does |
+| **(2) the silent bug — fixed** | and it was **two** bugs, not one. The `names(slot(space_obj, "samples"))` read was the known half. The other: `.gg_multi_dispatch_spatial()` set `a$space <- NULL` before each panel call while materializing with `space = NULL`, so the frame reached nothing — `space =` changed which panels were drawn and never how. It has to be applied on the multi, because `materialize()` scopes the recipe per child (`space_obj[samp]`) and a panel child is a plain `giotto` with no name left to resolve against |
+| **(3) the doc lie — not re-introduced** | and now asserted rather than only documented: `checkmate::assert_string()` on both `view` and `space` in `.gg_materialize()` and the dispatcher, matching what `.apply_view_space()` does in GiottoClass. Without it an inline recipe failed as "unable to find an inherited method" |
+| **also** | `.gg_assert_giotto_single()`'s giottoMulti branch is now unreachable from any public entry — the spatial functions return through the dispatcher above their guard, the rest dropped the guard. Its message told users a feature was missing; it now names a missed dispatch inside the package, which is the only way to reach it |
+| **Q4 consequence — 2D only** | the GiottoVisuals `space =` / `view =` formals landed on the 2D surface: 22 exported functions carry both, and the `spatPlot` / `dimPlot` / `plotUMAP` wrappers forward through `...` (verified: `spatPlot(view =)` narrows 462 → 72). The **3D / plotly family has neither** — `dimPlot3D`, `spatPlot3D`, `spatDimPlot3D`, `spatDimFeatPlot3D` and `dimFeatPlot3D` do not even take `...`, so there is no pass-through either. Q4's count was of the 2D surface, so this is scope rather than regression, but "uniform" is not yet true |
+| **tests** | `test_gmulti_dispatch.R` grew from 9 to 15 cases: the kind-aware membership rules, and two that go through the real dispatcher because `.resolve_samples()` cannot see whether the frame reached the panels (3 panels unconstrained vs 2 under a two-member `combinedSpace`; a one-member space's drawn `sdimx` equal to the native coordinates plus the recorded shift). Suite: 0 failures, 37 passes — the one `test_save.R:75` failure seen first was `svglite` not installed, and it is not in `Suggests` |
+| **gaps left open, named** | (1) the 3D / plotly family takes no `view` / `space`, per the Q4 row above; (2) **spatial grids are never narrowed** — `spatial_grid` is not in `.materialize_default_slots` and has no `resolveSubobject` method, so `show_grid = TRUE` draws the grid in the native frame whatever the view or space, which is the same class of gap the spatial network had; (3) the in-situ window still resolves as a second view rather than composing with a caller-supplied one, as the GiottoVisuals design article records. The nearest-neighbour network in dim plots is **not** a gap — it already inner-merges its edges onto the dim coordinates, which materialize does narrow, and that is the pattern the spatial network should have followed |
+| **stale in §10.7** | `combinedSpace` / `perSampleSpace` **are** in `exportClasses` on `gsource`, so the per-kind branching this stage needed did not require a GiottoClass change |
 
 ---
 
@@ -1174,10 +1186,14 @@ the batch-corrected matrix moves by up to 1.74. `upstream/suite` and
 `upstream/suite_dev` carry the identical unguarded pattern with no alignment
 guard anywhere in `R/` — a backport decision that is still open.
 
-Remaining: **stage 9**, then **the documentation consolidation (PLAN §10)** as
-the closing step — permanent homes in `design.Rmd` or a subsystem vignette for
-what is durable, deletion for what is a snapshot, and a new view/space article
-for the subsystem that has the most design argument and no home. Note its
+**Stage 9 landed 2026-09-22** (GiottoVisuals 0.2.16) — see its row in §4 for
+what the decision was and for the second silent bug the port carried, which
+§10.7 had not found. **The stage sequence is complete.**
+
+Remaining: **the documentation consolidation (PLAN §10)** as the closing
+step — permanent homes in `design.Rmd` or a subsystem vignette for what is
+durable, deletion for what is a snapshot, and a new view/space article for the
+subsystem that has the most design argument and no home. Note its
 prerequisite: `design.Rmd` is not on `upstream/gsource` at all, only on local
 and `origin` `gsource` at `ad66a280`, so the destination has to land first.
 
