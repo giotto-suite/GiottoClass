@@ -26,11 +26,16 @@ without mutating the underlying data.
 | Effect on accessors | narrows which cells survive | reframes spatial geometry of survivors |
 | Use case | "show me cluster 3 inside this region" | "rotate sample B by 45° and shift to land next to sample A" |
 | Built by | `subset()` / `crop()` / `selectSamples()` with `view = "name"` | a transform verb with `space = "name"` |
-| Stored as | a plain list under `gobject@view$name` | a plain list under `gobject@spaces$name` |
+| Stored as | a `giottoView` under `gobject@view$name` | a `giottoSpace` under `gobject@spaces$name` |
 
-Both are **plain lists**, not S4 objects, and both are created by *recording*
-onto a name: there is no constructor and no standalone builder. The first call
-naming a view or space creates it; later calls with the same name append.
+Both are created by *recording* onto a name: there is no constructor and no
+standalone builder. The first call naming a view or space creates it; later
+calls with the same name append.
+
+Each is an S4 object holding an ordered list of **steps**, and each step is a
+plain tagged list carrying no closure and no external pointer. That is what lets
+a recipe survive `saveRDS()` and reach a parallel worker — a filter predicate is
+stored deparsed, a crop region as WKT.
 
 They're separate by design: a view is a cell-identity filter (predicates on
 metadata or expression, optionally a spatial crop bbox), while a space is a
@@ -147,13 +152,14 @@ mandatory for now; an eager call errors with a pointer to it.
 
 ### Predicate frame vs output frame
 
-A view's `crop()` can carry an additional `space = ` arg that binds the
-view's `space` field — the **frame the crop region is interpreted in**.
-This is a separate concern from any output frame the consumer might
-request:
+A view's `crop()` can carry an additional `space = ` arg naming the
+**frame the crop region was drawn in**. It is recorded on that crop step,
+beside the region it describes, so a view may crop in one frame and then
+another. This is a separate concern from any output frame the consumer
+might request:
 
 ```{r, eval=FALSE}
-# Crop region drawn in "rotate" coords; binds the view's `space`.
+# Crop region drawn in "rotate" coords; the frame is recorded on the step.
 g <- crop(g, ext(3000, 4000, -3000, -2000), view = "test", space = "rotate")
 
 # Default: predicate uses "rotate" frame to decide cells, output stays
@@ -168,18 +174,18 @@ The two arguments are independent:
 
 | | source | what it affects |
 |---|---|---|
-| **Predicate frame** | the view's `space` field (set by `crop(..., space = "name")`) | how the recorded crop region is interpreted |
+| **Predicate frame** | the crop step's `space` (set by `crop(..., space = "name")`) | how the recorded crop region is interpreted |
 | **Output frame** | explicit `space = ` arg on the getter | what frame the returned coordinates are in |
 
-The view's `space` is read at the crop step and used to project the region
-into whatever the output frame turns out to be — getters that don't
+The step's `space` is read when the crop resolves and used to project the
+region into whatever the output frame turns out to be — getters that don't
 pass `space = ` keep returning native-frame coords. The behavior is
 identical across `getSpatialLocations` / `getCellMetadata` /
 `getPolygonInfo` / `getExpression`: same recipe, same cell set.
 
-Note the arg overload: `space = ` on `crop()` binds the view's
-predicate frame; `space = ` on transform verbs (`spin()`, `affine()`,
-…) records the transform as a step onto the named space recipe. Same
+Note the arg overload: `space = ` on `crop()` names the frame the region
+was drawn in; `space = ` on transform verbs (`spin()`, `affine()`, …)
+records the transform as a step onto the named space recipe. Same
 referent (the slotted space `"name"`), different operation per verb.
 
 ### Sample selection (giottoMulti only)
@@ -213,10 +219,17 @@ A space is one of two kinds, and the difference is whether its samples
 **interact**. A `combinedSpace` lays them out in one coordinate system, so a
 job over it is one job and cross-sample distances mean something. A
 `perSampleSpace` gives each sample its own copy of the frame, so a job over
-it is N independent jobs. Recording onto an unused name declares a
-`combinedSpace`, on the grounds that laying samples out together is
-overwhelmingly why a space gets named; the rarer intent has to say so, with
-`perSampleSpace()`.
+it is N independent jobs.
+
+Recording onto an unused name always produces a `perSampleSpace`. A
+`combinedSpace` has to be declared, because it has to name its members:
+
+```{r, eval=FALSE}
+giottoSpace(mg, "atlas") <- combinedSpace(c("visium_a", "visium_b"))
+```
+
+Scoping a transform with `samples =` does *not* decide the kind — it says
+which samples move, not whether they interact.
 
 On a plain `giotto` there is one sample and nothing to lay out beside it, so
 the distinction only bites on a `giottoMulti`.
@@ -322,9 +335,9 @@ across in-memory objects and backed stores.
 
 Both are `character(1)` — the key the recipe lives under. Passing a recipe
 inline was considered and deliberately rejected (see
-`vignettes/articles/DESIGN_gmulti_federation.md`): recipes are curated,
-named artifacts, and accepting one inline would make the same call site
-sometimes return a gobject and sometimes return a recipe.
+`vignettes/articles/design_view_space.Rmd`): recipes are curated, named
+artifacts, and accepting one inline would make the same call site sometimes
+return a gobject and sometimes return a recipe.
 
 There is no separate constructor to reach for, because recording *is* the
 construction path — the first call naming a view or space creates it. So
@@ -344,7 +357,6 @@ giottoView(g2, "cluster1") <- giottoView(g, "cluster1")   # copy across
 giottoView(g, "cluster1") <- NULL                          # remove
 ```
 
-### Why the same verbs
 ### Why the same verbs
 
 The intent is that users keep the verbs they already know. The optional
@@ -371,6 +383,26 @@ giottoView(g, "cluster1_only")
 Several recipes coexist on one object, which is the point: an object can
 carry competing narrowings and frames at once, and each accessor call picks
 one by name.
+
+## Reading and editing a recipe
+
+A recipe is inspectable, and the accessors are class-preserving where that is
+useful, so a recipe can be narrowed and handed on:
+
+```{r, eval=FALSE}
+v <- giottoView(g, "stripe1")
+
+length(v)          # how many steps
+v[[2]]             # the second step, as a plain list
+v[1:2]             # a giottoView of the first two steps
+v[2, "space"]      # one attribute of one step: the frame its region was drawn in
+
+as.list(v)         # the plain nested form, which the setter reads back
+```
+
+A space indexes on one axis at a time — `sp["visium_a"]` narrows to a sample,
+`sp[[1]]` takes a step. `+` merges two recipes that are already scoped, so it
+concatenates step lists and cannot change whose steps they are.
 
 ## Applying views and spaces
 
@@ -460,11 +492,12 @@ getter calls downstream reuse that cache.
   `materialize()` returns a new gobject, or you pass the name to a getter
   per-call. Recording a step is the one write, and it touches only the
   recipe, never the data.
-* **Plain lists.** A view is `list(steps = , space = , misc = )`; a space is
-  `list(samples = , misc = )`. Neither is S4. That is what lets a recipe
-  survive `saveRDS()` and reach a parallel worker: the predicate is stored
-  deparsed with its environment's values substituted in, and a crop region
-  is stored as WKT rather than a terra pointer.
+* **Plain steps in a class.** The recipe object is S4 — it is the handle
+  `[`, the builder verbs and `as.list()` act on — but every step inside it is
+  a plain tagged list. That is what lets a recipe survive `saveRDS()` and
+  reach a parallel worker: the predicate is stored deparsed with its
+  environment's values substituted in, and a crop region is stored as WKT
+  rather than a terra pointer.
 * **Lazy.** On a disk-backed gobject (via `gsource`), view predicates and
   spatial crops are pushed into the backend's lazy query plan. The actual
   data pull happens only when a downstream call collects.
@@ -477,7 +510,9 @@ getter calls downstream reuse that cache.
 
 ## See also
 
-* [giottoMulti vignette](giottoMulti.html) — multi-sample container that
+* `vignettes/articles/design_view_space.Rmd` — why the subsystem is shaped
+  this way, and what is deliberately left undone.
+* `vignettes/articles/design_gmulti.Rmd` — the multi-sample container that
   view and space integrate with most deeply.
 * `?materialize` — the full resolver entry point.
 * `?giottoView` — slotted view accessors.
