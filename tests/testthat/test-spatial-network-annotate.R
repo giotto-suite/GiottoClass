@@ -104,7 +104,7 @@ test_that("a network refuses to plot itself but plots against locations", {
     sl <- getSpatialLocations(g, spat_unit = "aggregate",
         output = "spatLocsObj")
 
-    expect_error(plot(sn), "cannot be drawn on its own")
+    expect_error(plot(sn), "passed as `y`")
 
     pdf(NULL)
     on.exit(dev.off(), add = TRUE)

@@ -322,9 +322,9 @@ setMethod(
 setMethod("plot", signature(x = "spatialNetworkObj", y = "missing"),
         function(x, ...) {
     stop("[plot] a spatialNetworkObj stores edges between named cells and no ",
-        "coordinates, so it cannot be drawn on its own. Pass the spatial ",
-        "locations it was built over as the second argument:\n",
-        "    plot(network, spatlocs)", call. = FALSE)
+        "coordinates of its own, so it cannot be drawn alone. It requires the ",
+        "spatLocsObj it was built over, passed as `y`:\n",
+        "    plot(<spatialNetworkObj>, y = <spatLocsObj>)", call. = FALSE)
 })
 
 #' @describeIn plot-generic Plot a spatialNetworkObj against the
