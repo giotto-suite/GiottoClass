@@ -7,6 +7,12 @@ The [implementation plan](IMPLEMENTATION_gmulti.md) describes **what exists on t
 checkpoint**. This page decides **what comes across, in what order, and what gets
 re-argued first**. Where the two disagree, this page wins.
 
+> **Read §9 first.** It re-verifies every open item against the repos as of
+> 2026-09-21 and **supersedes anything above it**. Several dispositions below
+> are recorded as open but have shipped, one deferral's blocker has dissolved,
+> and Q8's decision did not ship at all. Per-stage status lives in the
+> [replay manifest](REPLAY_gmulti_manifest.md) §4, not here.
+
 Source of truth for the old work: `feature/gmulti-federation-design` @ `4f58d861`
 (GiottoClass), plus `feature/giotto-view` @ `1c08c9af` (gmulti-v2, reference only),
 `wip/gmulti-visuals-checkpoint` @ `54f19e9` (GiottoVisuals).
@@ -482,12 +488,28 @@ Each stage should build, test, and be independently reviewable.
 | **8** | fed 9 — carry-keys, on its own | GiottoClass + Giotto |
 | **9** | fed 19, 20 — dispatcher, panel sizing | GiottoVisuals |
 
+Stages 0–8 are done; stage 9 is the remainder. Status per stage is tracked in
+the [replay manifest](REPLAY_gmulti_manifest.md) §4, which is authoritative for
+it — this table is the original plan of record, not a progress board.
+
 Stages 1–5 are the substance and are GiottoClass-only. Giotto is untouched until stage
 8, which is convenient given that's where the drift is.
 
 ---
 
 ### Q8 — the containers become plain lists too (supersedes Q7's "keep containers S4")
+
+> **SUPERSEDED BY THE IMPLEMENTATION (verified 2026-09-21).** This decision did
+> not ship and the reasoning below should not be acted on. `gsource` carries
+> **four** S4 classes — `giottoView`, a virtual `giottoSpace`, and
+> `combinedSpace` / `perSampleSpace` extending it — all four in
+> `exportClasses`, with `R/classes-view.R`, `R/classes-space.R` and
+> `R/classes-resolver.R` still present. The kind distinction (combined vs
+> per-sample) is what the plain-list form could not express, and it is
+> load-bearing: it decides job size, and only the per-sample kind round-trips.
+> Q7 *did* ship — the steps are plain tagged lists, and there are no step
+> `setClass`es. What survives from Q8 is `samples =` on the transform verbs,
+> which did land and did remove the implicit-scope footgun. See §9.
 
 Q7 converted the *steps* to tagged lists and kept `giottoView` / `giottoSpace` S4. Measured
 against the code as it stands after stage 5, the three reasons given for keeping them do not
@@ -573,6 +595,145 @@ recipe.
 - **`test-gmulti-structural-ops.R` (419 lines) was never tracked** and has no counterpart on the federation branch. Read it before stage 2 — it may cover cases `test-gmulti.R` doesn't.
 - **`design.Rmd` has no gmulti coverage.** It documents the object model, schema, `initialize()`, and accessors — all of which gmulti extends. It needs a section before any of this lands on `gsource`.
 - **Dispositions here are from the docs plus targeted verification, not a full read of 4,393 lines.** The Port items are judged on design rationale; drift and code quality inside them is unverified. Treat per-item review as part of each stage, not as done.
+
+---
+
+## 9. Revision pass — verified 2026-09-21
+
+Every open disposition re-checked against `GiottoClass@gsource`,
+`Giotto@gsource`, `GiottoVisuals@gsource` and `GiottoDisk@dev` as they stand,
+with a grep behind each row. The drift had moved into this document: the code
+overtook it around the §10 rework and nothing came back to say so.
+
+### Federation (§4)
+
+| # | recorded | actual | action |
+|---|---|---|---|
+| 8 | Re-decide (Q5) | **shipped** — `@mapping` carries the `values` axis, `on_missing` exists, `.gm_resolve_axis` returns `su_handle` / `ft_handle`, participation is declared not inferred | close |
+| 9 | Port, staged separately | **shipped** — GiottoClass#413, Giotto#1303. The producer half was a different defect class and landed separately as Giotto#1304 | close; see §9.1 |
+| 10 | Drop | **executed** — 0 references in all four repos | close |
+| 13 | Defer, "genuinely unsolved" | **decided, not deferred** — §10.4 declined multi-level per-sample spatial content; `.gm_refuse_per_sample_write()` enforces it at 6 sites | close as *declined* |
+| 14 | Defer, "wants the combined-space story first" | **shipped** — a `combinedSpace` builds one network over its members via `.gm_fused_spatlocs()`, written to the joint slot. The combined-space story it was waiting for is the thing that delivered it | close |
+| 15 | Re-decide (Q6) | **still open** — `getSpatialLocations(mg)` still returns a named per-child list | keep open |
+| 16 | Defer | still deferred, but `.gm_fused_spatlocs()` now exists and is the substrate it was waiting on | keep, restate the blocker |
+| 19, 20 | Defer (stage 9) | unported; see the manifest's stage-9 row | keep |
+
+### View / space (§5)
+
+| # | recorded | actual | action |
+|---|---|---|---|
+| 9 | Defer — "depends on federation §11 and Q3" | **shipped** — a space step expands its group at record time, with a test | close |
+| 10 | Defer — "intentional error" | **shipped** — `+` is implemented for `giottoView` and for both space kinds in `R/methods-recipe.R`, and tested (`"+` composes views naming different frames`"). The stub is long gone. Composition is **concatenation**, hence AND-narrowing for views; cross-kind space composition is refused by design, as is merging two differently-named spaces | close; doc gaps only, see §9.2 |
+| 11 | Defer — "GiottoClass `spatRelate` has 1 signature vs GiottoDisk's 7" | **blocker dissolved** — `gsource` has six `spatRelate` signatures (`SpatVector`, `spatLocsObj`, and four `giottoSpatial` arms) plus two `relate` methods | re-decide on merit |
+| 12 | Defer — "pairs with federation §10" | **still not done**; only the rationale changes. Federation §10 was dropped, so the pairing no longer holds. The lowering itself is unimplemented: the two sedona mentions in GiottoDisk's `methods-resolveSubobject.R` are **comments**. What exists is indirect — a crop step calls `spatRelate()`, which has sedona / duckdb / terra engines when the polygon carrier is backed — which is not the same as lowering a view or space into SQL | keep deferred, restate the blocker |
+| 13 | Drop the stub | **executed** — 0 references anywhere | close |
+
+### Decisions (§6)
+
+| Q | recorded | actual |
+|---|---|---|
+| Q1 | decided — block on expansion | **shipped**, named in-source as the Q1 rule |
+| Q2 / Q3 | decided 2026-09-11 | **shipped** — stage 7 |
+| Q4 | decided — port all 57 | **half shipped**: 32 `space =` and 25 `view =` formals on `GiottoClass@gsource`; the GiottoVisuals half is entirely unlanded and arrives with stage 9. The "surface is not uniform until the GiottoVisuals stage" caveat is still live |
+| Q5 | decided | **shipped** — all three axes, loud failure, handle stamping |
+| Q6 | open | **still open**, and now the only open question here |
+| Q7 | decided — yes | **shipped** — 0 step `setClass`es |
+| Q8 | decided — yes | **did not ship**; see the note at §Q8 |
+
+### 9.2 Composition (`+`) — shipped, with three things undocumented
+
+`+` exists for `giottoView`, `combinedSpace` and `perSampleSpace`, and the
+pre-Q8 footgun is gone: `.space_record()` used to append to every sample keyed
+so far, so a step's scope came from construction history, whereas every step now
+carries its own `samples` and concatenation preserves it. What is missing is
+prose, not code:
+
+- **`+` is AND, and union has no representation.** Concatenating steps narrows
+  successively, so `v1 + v2` is the intersection. That is settled in tests
+  (`spatValues view = composed predicate AND-narrows correctly`) but stated
+  nowhere a user reads, and the recipe form cannot express a union at all —
+  a step chain has no branch. Worth writing down as a deliberate limit rather
+  than leaving someone to infer it from behaviour.
+- **Order-sensitivity is still only in code comments.** This is §5 vs6's
+  doc-only remainder and manifest A8, still owed. `+` is where a user meets it
+  most directly.
+- **Space `+` merges two handles on the *same* frame**, not two frames:
+  `.space_merged_name()` refuses differing names outright. Sensible, but the
+  operator's shape suggests otherwise and nothing says so outside the error.
+
+---
+
+### 9.1 What stage 8 taught about this document
+
+Stage 8's row was wrong in three ways, each a different failure mode, and they
+are worth naming because they will recur:
+
+- **Phantoms.** `create_average_DT` / `create_detection_DT` were listed as
+  sites to fix. The first is untouched by the checkpoint; the second exists
+  nowhere in any repo.
+- **A misattributed hunk.** The "createMetafeats guards" are in
+  `.giotto_alloc_dt()`. Git's default funcname heuristic does not match a
+  leading-dot name, so `git diff` labelled the hunk with the previous
+  non-dot function and the row copied it. Any row sourced from a hunk header
+  in this codebase is suspect for the same reason.
+- **Port described as write.** D1 said the Giotto producer guards were "in
+  neither merge branch" and that the stage might include writing them. True of
+  the merge branches — but all three were already written on
+  `feature/gmulti-federation-design` and needed only porting. "Absent from the
+  merge branches" is not "absent".
+
+---
+
+## 10. Final step — give the documentation permanent homes
+
+After stage 9, the articles directory is 3,760 lines across seven files, most
+of it written to carry the port rather than to be read afterwards. The closing
+step is to move what is durable into permanent homes and delete the rest.
+
+**The rule, which is the repo's existing one rather than a new one:** a
+*decision and its argument* belong in `design.Rmd` or in a subsystem vignette;
+*mechanism* stays in code comments next to the code; and a *snapshot of what
+exists right now* is transient — it gets deleted, not moved, because it rots
+in about a week. Once a section lands in `design.Rmd`, the inline comments it
+now owns get slimmed to point at it.
+
+### 10.1 Prerequisite — `design.Rmd` is not upstream
+
+The destination does not exist. `vignettes/articles/design.Rmd` (405 lines,
+twelve sections: the two-tier object model, the schema, `initialize()` as the
+consistency engine, versioning, accessors, analysis verbs, networks,
+instructions, the disk-backed arc, interoperability) lives only on **local and
+`origin` `gsource`, at `ad66a280`**. `upstream/gsource` has never carried it —
+§5 listed that commit under "do not replay" as *"design article + hnswKNN; not
+gmulti"*, which was the right call for the replay and had the side effect that
+it was never upstreamed at all.
+
+Two consequences: `IMPLEMENTATION_gmulti.md:22` links to `design.Rmd` and
+resolves to nothing on `gsource`; and §8's risk — *"`design.Rmd` has no gmulti
+coverage … it needs a section before any of this lands on `gsource`"* — is now
+**realised rather than pending**, since the work landed without it. Upstream
+`design.Rmd` first, on its own, because it is not gmulti work.
+
+### 10.2 Disposition per document
+
+| document | lines | disposition |
+|---|---|---|
+| `design.Rmd` *(not upstream)* | 405 | **upstream first**, then gains the gmulti / federation / recipe sections it never got |
+| `IMPLEMENTATION_viewspace.md` | 580 | **split** — the design half becomes a view/space subsystem article; the usage half belongs with `vignettes/view_and_space.Rmd`, which already exists and should stay the usage vignette rather than be duplicated |
+| `DESIGN_gmulti_federation.md` | 424 | **fold** the durable argument into `design.Rmd`; keep a federation article only for what is too long to sit there |
+| `IMPLEMENTATION_gmulti_federation.md` | 558 | **harvest then delete** — it is a per-item status table, the most rot-prone shape in the set |
+| `IMPLEMENTATION_gmulti.md` | 310 | **harvest then delete**; fix or remove its dangling `design.Rmd` link on the way |
+| `STATUS_gmulti_federation.md` | 159 | **delete** — status is what git and this manifest are for |
+| `PLAN_gmulti2_port.md`, `REPLAY_gmulti_manifest.md` | 579 + 1150 | **retire once stage 9 lands.** They are port scaffolding. §9.1 is the evidence for retiring rather than maintaining them: a stage row survived long enough to name two functions that do not exist |
+
+### 10.3 The one new vignette
+
+A **view/space subsystem article** is the piece with no home today. It is the
+subsystem with the most design argument spread across the most places — the
+recipe/step split (Q7), why the containers stayed S4 with kinds (§Q8's
+correction), the frame/predicate separation, composition and its
+order-sensitivity (§9.2's three doc gaps), and parent-only view evaluation on a
+`giottoMulti`. Writing it is what lets `IMPLEMENTATION_viewspace.md` go.
 
 ---
 

@@ -191,22 +191,27 @@ in all three repos for `gmultiGroup` / `expand_groups` / `gmultiSpatialAlias`, w
 returns doc commits only. The sole prior art is DESIGN §7's `gmultiSpatialAlias`, which
 federation §11 already rejected. Gated on **D2/D3** below. **Landed 2026-09-11.**
 
-### Stage 8 — carry-keys (fed 9)
+### Stage 8 — carry-keys (fed 9) — **DONE 2026-09-21**
+
+Shipped as GiottoClass#413 (the refusal + `annotateGiotto`) and Giotto#1303
+(the three keyed metadata writes), both merged to `gsource`.
 
 | | |
 |---|---|
-| **source** | checkpoint for the GiottoClass sites: `R/auxilliary.R` (key auto-detect + giottoMulti hard error, `annotateGiotto`, `createMetafeats` guards) and `R/interoperability.R` (AnnData / SPE column-order alignment). **`create_average_DT` / `_detection_DT` were listed in error — neither is touched; see §10.7** |
-| **blocked** | **the Giotto-repo producer guards are in neither merge branch** — `adjustGiottoMatrix`, `runDWLSDeconv`, `runGiottoHarmony`, `findScranMarkers`, `giottoToAnnDataZarr`, `cal_cell_niche_cluster_bin`. Locate them on the Giotto side before this stage; if they were never committed, this stage includes writing them |
-| **why separate** | the giottoMulti hard error makes every positional producer fail loudly. Landing GiottoClass without the Giotto side means those verbs error on a gmulti. See **D1** |
+| **what landed** | `addCellMetadata()` / `addFeatMetadata()` refuse positional input on a `giottoMulti`, via `.gm_refuse_positional_metadata()`; `annotateGiotto()` tolerates unmapped clusters and gains `replace =`; the last three unkeyed metadata writes in Giotto (`addPolygonCells`, the HMRF writer, `exprCellCellcom`) key on `cell_ID` |
+| **not carried** | the `.giotto_alloc_dt()` guards. Unreachable for a multi today — `saveGiotto()` refuses an in-memory multi (#407) and GiottoDisk's `snapshotLoad` returns before the `loadGiotto` completion step its own comment says is owed. Revisit when that wiring lands |
+| **row corrections** | `create_average_DT` / `_detection_DT` were phantoms; the "`createMetafeats` guards" are really `.giotto_alloc_dt()` (git funcname heuristic skips dot-names); and the producer guards were a **port**, not a write. See PLAN §9.1 |
+| **D1 in hindsight** | the rationale — "the giottoMulti hard error makes every positional producer fail loudly" — selects exactly three verbs, and all three were fixed here. The six functions D1 named do not call the metadata setters at all; they were a different defect class and shipped separately as Giotto#1304 (see below) |
 
 ### Stage 9 — GiottoVisuals dispatcher, per-panel sizing (fed 19, 20)
 
 | | |
 |---|---|
-| **source** | `feature/gmulti-federation-design` @ `5969cb6` as the base. `GiottoClass:::` reach is gone (verified: no references). **Size: 11 commits, `+721/-128` over `upstream/gsource`** — the "3 commits" recorded earlier counts only what sits above local `gsource`, which itself carries 8 unique commits of this work |
+| **source** | `feature/gmulti-federation-design` as the base. `GiottoClass:::` reach is gone (verified: no references). **Re-measured 2026-09-21: 11 commits ahead of `upstream/gsource` and 14 behind it.** The payload itself has not moved — `R/` + `tests/` is `+719/-126` across 13 files, matching the earlier figure — so what the delay cost is base drift, not scope. Rebase first and re-check the 12 `R/` files; `man/` (42 files, `+318/-181`) is regenerated, not reviewed |
 | ~~selective~~ | **no-op — do not cherry-pick.** `wip/gmulti-visuals-checkpoint` @ `54f19e9`'s "composite plot_output_handler" is byte-identical to `5969cb6`'s in both files it touches; its "joint metadata injection" half is superseded (D6). Taking the base takes the handler; reversing to the wip branch would lose 95 net lines |
 | **note** | both variants are 7 behind `upstream/gsource` (`eebbfc9`) |
-| **before porting** | §10.7 — one silent-wrong site (`names(slot(space, "samples"))` inside a `tryCatch`), a re-introduced `view`/`space` doc lie, and one open decision on deriving panel scope from a space |
+| **before porting** | §10.7, and read it *instead of* this row where they differ. Three things, in order: (1) **decide** whether a space's membership defines the panel set and whether an explicit `samples =` may escape it — §10.8 rejected that shape for artifact generators, plotting is arguably different, and it is 34 `samples =` sites deep; (2) fix the silent-wrong `names(slot(space_obj, "samples"))` at `R/gmulti.R:175`, still present on the source branch, which reads a slot that no longer exists inside a `tryCatch` so `space = "S"` plots every child; (3) do not re-introduce the `view`/`space` doc lie — a public surface takes a **name**, never a handle |
+| **Q4 consequence** | the 52 GiottoVisuals `space =` / `view =` formals land here. Until they do, the uniform surface Q4 bought is half-built: `GiottoClass@gsource` carries 32 and 25 |
 
 ---
 
@@ -1143,6 +1148,42 @@ item 1 (`.gm_inject_joint_metadata`) is now resolved by D6 as recorded above.
   Two of the original "11 literals" were never separators at all: a comment, and
   `"terra"::"spin"`, which is the `::` operator applied to strings.
 
+
+---
+
+### 11. Revision pass (2026-09-21)
+
+Stage 8 shipped, and every remaining disposition was re-verified against the
+four repos with a grep behind each row. Results are in **PLAN §9**; the short
+version is that five items recorded as open are in fact shipped or decided
+(fed 8, 13, 14; vs 9, 13), one deferral's stated blocker has dissolved
+(vs 11 — `spatRelate` now has six signatures, not one), two rationales no
+longer hold (vs 10, vs 12), and **Q8 did not ship** — the containers are still
+four exported S4 classes, not plain lists.
+
+Q6 (`getSpatialLocations(mg)` output shape) is now the only open design
+question in the plan.
+
+**A third PR came out of stage 8 that the plan never anticipated.** Giotto#1304
+keys the cell metadata to the expression axis in `adjustGiottoMatrix()`,
+`runGiottoHarmony()` and `runDWLSDeconv()`, all of which paired a metadata
+column with expression columns positionally. It is not federation work and is
+deliberately not framed as such: it needs no multi, no view and no subset. The
+mini visium fixture disagrees on cell order at **zero of 624 positions**, and
+the batch-corrected matrix moves by up to 1.74. `upstream/suite` and
+`upstream/suite_dev` carry the identical unguarded pattern with no alignment
+guard anywhere in `R/` — a backport decision that is still open.
+
+Remaining: **stage 9**, then **the documentation consolidation (PLAN §10)** as
+the closing step — permanent homes in `design.Rmd` or a subsystem vignette for
+what is durable, deletion for what is a snapshot, and a new view/space article
+for the subsystem that has the most design argument and no home. Note its
+prerequisite: `design.Rmd` is not on `upstream/gsource` at all, only on local
+and `origin` `gsource` at `ad66a280`, so the destination has to land first.
+
+Outside the stage sequence: the `suite` / `suite_dev` backport of Giotto#1304,
+and the `interoperability.R` alignment guards §10.7 set aside to upstream
+separately.
 
 ---
 
