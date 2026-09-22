@@ -842,28 +842,123 @@ createSpatialNetwork <- function(gobject,
 
 
 
+# Write each endpoint's position onto its edge.
+#
+# `edges` is an edge table (`from`, `to`, plus whatever the network carries),
+# `locs` a cell-keyed table of coordinates. Emits `sdim[xyz]_begin` for the
+# `from` end and `_end` for the `to` end, however many dimensions `locs` has.
+#
+# INNER on purpose: an edge whose endpoint is missing from `locs` has no
+# position, so it is dropped rather than carried with NA coordinates. That is
+# what makes the result agree with a narrowed object -- the locations are the
+# surviving cells and the edges follow. Cells that keep no edges have no row
+# here at all; an edge table cannot represent them and never could, which is
+# why a consumer takes its node set from the locations instead.
+#' @keywords internal
+#' @noRd
+.attach_edge_coords <- function(edges, locs) {
+    coord_cols <- intersect(c("sdimx", "sdimy", "sdimz"), names(locs))
+    if (length(coord_cols) == 0L) {
+        stop("[spatial network] no coordinate columns to attach",
+            call. = FALSE)
+    }
+    keys <- locs[, c("cell_ID", coord_cols), with = FALSE]
+
+    attach_one <- function(net, side, suffix) {
+        merge(net,
+            data.table::setnames(
+                data.table::copy(keys),
+                c("cell_ID", coord_cols),
+                c(side, paste0(coord_cols, "_", suffix))
+            ),
+            by = side
+        )
+    }
+    attach_one(attach_one(edges, "from", "begin"), "to", "end")
+}
+
+
+# Subobject-level coordinate attach, for consumers holding a
+# `spatialNetworkObj` and a `spatLocsObj` rather than a gobject to read them
+# out of. `annotateSpatialNetwork()` is the gobject-level entry point.
+#' @keywords internal
+#' @noRd
+.network_with_coords <- function(x, y) {
+    .attach_edge_coords(
+        data.table::as.data.table(x),
+        data.table::as.data.table(y[])
+    )
+}
+
+
 #' @title annotateSpatialNetwork
 #' @name annotateSpatialNetwork
-#' @description Annotate spatial network with cell metadata information.
+#' @description
+#' Attach cell-level information to the ends of a spatial network's edges.
+#'
+#' A network stores only edges: since GiottoClass 0.6.0 a
+#' [spatialNetworkObj-class] holds an igraph whose vertices carry a name and
+#' nothing else, so anything about the cells an edge runs between has to be
+#' looked up and attached. Both annotations this offers are the same operation
+#' on different sources -- take a cell-keyed value and write it onto each end of
+#' the edge -- and both are optional, so a caller pays only for what it reads.
+#'
+#' * `cluster_column` attaches a label, resolved through [spatValues()], and
+#'   derives the interaction columns from it (see Value).
+#' * `coordinates` attaches the endpoint positions, read live from the spatial
+#'   locations so that any transform already applied to them is carried along.
+#'
+#' Nodes are not part of the result and cannot be: an edge table has no row for
+#' a cell with no edges. The node set belongs to the spatial locations, which is
+#' also where a caller drawing this should take it from.
 #' @param gobject giotto object
 #' @param spat_unit spatial unit
 #' @param feat_type feature type
 #' @param spatial_network_name name of spatial network to use
-#' @param cluster_column name of column to use for clusters
+#' @param cluster_column character. Name of a cell-level value to label each
+#' edge end with. Resolved with [spatValues()], so it may name a cell metadata
+#' column, an expression feature, an enrichment or any other slot that function
+#' searches. `NULL` (default) attaches no label and skips the lookup entirely.
 #' @param create_full_network convert from reduced to full network
 #' representation
-#' @returns annotated network in data.table format
+#' @param coordinates logical. Attach endpoint coordinates as
+#' `sdim[xyz]_begin` / `sdim[xyz]_end`. `TRUE` by default, since a network
+#' carries no coordinates of its own and consumers that draw edges as segments
+#' need them.
+#' @param spat_loc_name name of the spatial locations to read endpoint
+#' coordinates from. `NULL` uses the default set.
+#' @param \dots additional arguments passed to [spatValues()] when
+#' `cluster_column` is given, e.g. `expression_values` or `spat_enr_name` to
+#' scope where the label is looked up.
+#' @returns `data.table` of edges. Always `from`, `to` and the edge attributes
+#' the network carries. With `coordinates`, the `sdim*_begin` / `sdim*_end`
+#' columns. With `cluster_column`, `from_cell_type` and `to_cell_type`, plus
+#' `type_int` (`"homo"` / `"hetero"`), `from_to` (direction-specific) and
+#' `unified_int` (direction-agnostic).
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
+#' # labels and coordinates
 #' annotateSpatialNetwork(g, cluster_column = "leiden_clus")
+#'
+#' # coordinates only -- what a plotting function wants
+#' annotateSpatialNetwork(g)
+#'
+#' # labels only -- what a proximity analysis wants
+#' annotateSpatialNetwork(g, cluster_column = "leiden_clus",
+#'     coordinates = FALSE)
 #' @export
 annotateSpatialNetwork <- function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     spatial_network_name = "Delaunay_network",
-    cluster_column,
-    create_full_network = FALSE) {
+    cluster_column = NULL,
+    create_full_network = FALSE,
+    coordinates = TRUE,
+    spat_loc_name = NULL,
+    ...) {
+    checkmate::assert_flag(coordinates)
+    checkmate::assert_character(cluster_column, len = 1L, null.ok = TRUE)
     # Set feat_type and spat_unit
     spat_unit <- set_default_spat_unit(
         gobject = gobject,
@@ -897,55 +992,34 @@ annotateSpatialNetwork <- function(gobject,
         spatial_network <- unique(rbind(spatial_network, rev))
     }
 
-    # Attach sdim*_begin / sdim*_end coords from spatLocsObj. Networks
-    # no longer cache coords (as of 0.6.0), so we join them here for
-    # downstream consumers that draw line segments. These are read from
-    # the live spatLocsObj so any spatial transforms automatically
-    # propagate.
-    sl_dt <- getSpatialLocations(gobject,
-        spat_unit = spat_unit, output = "data.table"
-    )
-    coord_cols <- intersect(c("sdimx", "sdimy", "sdimz"), names(sl_dt))
-    sl_keys <- sl_dt[, c("cell_ID", coord_cols), with = FALSE]
-    begin_cols <- paste0(coord_cols, "_begin")
-    end_cols <- paste0(coord_cols, "_end")
-
-    spatial_network <- merge(
-        spatial_network,
-        data.table::setnames(
-            data.table::copy(sl_keys),
-            c("cell_ID", coord_cols),
-            c("from", begin_cols)
-        ),
-        by = "from"
-    )
-    spatial_network <- merge(
-        spatial_network,
-        data.table::setnames(
-            data.table::copy(sl_keys),
-            c("cell_ID", coord_cols),
-            c("to", end_cols)
-        ),
-        by = "to"
-    )
-
-
-
-    # cell metadata
-    cell_metadata <- getCellMetadata(gobject,
-        feat_type = feat_type,
-        spat_unit = spat_unit,
-        output = "data.table",
-        copy_obj = TRUE
-    )
-    if (!cluster_column %in% colnames(cell_metadata)) {
-        stop("\n the cluster column does not exist in pDataDT(gobject) \n")
+    # Coordinate annotation. Read from the LIVE spatial locations, so any
+    # transform already applied to them is carried along with no work here.
+    # `.attach_edge_coords()` owns the join rule.
+    if (isTRUE(coordinates)) {
+        sl_dt <- getSpatialLocations(gobject,
+            spat_unit = spat_unit, name = spat_loc_name,
+            output = "data.table"
+        )
+        spatial_network <- .attach_edge_coords(spatial_network, sl_dt)
     }
-    cluster_type_vector <- cell_metadata[[cluster_column]]
-    names(cluster_type_vector) <- cell_metadata[["cell_ID"]]
 
     # data.table variables
     to_cell_type <- to <- from_cell_type <- from <- type_int <- from_to <- NULL
+
+    if (is.null(cluster_column)) return(spatial_network)
+
+    # Label annotation. Resolved through spatValues() rather than read out
+    # of cell metadata directly, so a label may come from any slot it
+    # searches -- an expression feature or an enrichment score annotates an
+    # edge exactly as well as a cluster assignment does.
+    label_dt <- spatValues(gobject,
+        feats = cluster_column,
+        spat_unit = spat_unit,
+        feat_type = feat_type,
+        ...
+    )
+    cluster_type_vector <- label_dt[[cluster_column]]
+    names(cluster_type_vector) <- label_dt[["cell_ID"]]
 
     spatial_network_annot <- data.table::copy(spatial_network)
     spatial_network_annot[, to_cell_type := cluster_type_vector[to]]

@@ -321,6 +321,48 @@ which duplicated data already in `spatLocsObj` and needed explicit
 full/reduced conversion helpers to emulate undirected semantics a graph has
 natively. ADR 0004 has the full argument.
 
+### A network is edges; everything else is attached
+
+That decision fixes a seam worth stating directly, because it is easy to read
+the getter as withholding something. `getSpatialNetwork(output = "networkDT")`
+returns `from`, `to` and the edge attributes, and that is the whole of what a
+network stores: the vertices carry a name and nothing else. Anything about the
+*cells* an edge runs between — a cluster label, a position — is not held back,
+it is absent.
+
+Attaching it is `annotateSpatialNetwork()`'s job, and its two annotations are
+one operation on two sources: take a cell-keyed value and write it onto each end
+of the edge. `cluster_column` resolves through `spatValues()`, so a label may
+come from metadata, expression or enrichment alike. `coordinates` reads the
+spatial locations and emits `sdim[xyz]_begin` / `_end`. Both are optional, so a
+caller pays only for what it reads — a plot asks for coordinates and no label, a
+proximity analysis asks for a label and no coordinates. `.attach_edge_coords()`
+holds the join, and `plot(spatialNetworkObj, spatLocsObj)` is the subobject-level
+entry to it; a network alone refuses to draw, because it has no geometry to draw
+with.
+
+Three things follow, and all three are consequences of not storing coordinates
+rather than rules anyone has to enforce.
+
+**Coordinates are read live.** A transform applied to the locations is carried
+by anything that joins against them, so no consumer needs frame-aware code for
+networks. `distance` is the one scale-sensitive field a network does carry, and
+nothing derives geometry from it.
+
+**The join is inner, and that is what narrowing means for a network.** An edge
+whose endpoint is absent from the locations has no position, so it is dropped.
+Narrow the locations — through a view, a subset, a crop — and the edges follow,
+with no narrowing logic anywhere in the network path. The result is the induced
+subgraph, which is deliberately *not* the network you would get by rebuilding on
+the subset: a Delaunay triangulation of the survivors is not the original with
+vertices deleted. Keeping this a property of the attachment rather than of the
+stored object is what stops the two being confused.
+
+**Nodes are not the network's to supply.** An edge table has no row for a cell
+with no edges, in this or any schema, so the node set comes from the spatial
+locations. A cell that survives a narrowing but keeps no neighbours is still a
+cell; a consumer that took its nodes from the edges would silently lose it.
+
 One consequence still outstanding: accessors that reach into `@network` assuming
 `igraph` — `spatIDs()` on network objects among them — need a `dataStore` branch
 or a polymorphic `nodeIDs()` generic. The gap is recorded in ADR 0004's

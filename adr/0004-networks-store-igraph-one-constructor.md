@@ -48,6 +48,19 @@ rebuilds via the constructors, converting edge tables to `igraph` on the way.
   semantics come from igraph rather than from an expand/filter/reduce cycle.
   `convert_to_full_spatial_network()` and its reduced counterpart are gone;
   consumers that genuinely need a full edge table build it with one `rbind`.
+- **Anything geometric about an edge is now attached at use, and that had to be
+  given a home.** `annotateSpatialNetwork()` is it: `coordinates` writes the
+  endpoint positions from the live `spatLocsObj`, `cluster_column` writes a
+  label resolved through `spatValues()`, and both are optional so a caller pays
+  only for what it reads. Leaving this implicit cost a regression — the drawing
+  code in GiottoVisuals kept reading `sdimx_begin` after the columns stopped
+  existing, and because ggplot resolves aesthetics lazily it failed at render
+  rather than at fetch, so nothing caught it. Two further properties fall out of
+  the attachment and should not be re-derived elsewhere: the join is **inner**,
+  so narrowing the locations narrows the edges to the induced subgraph (which is
+  not the network a rebuild on the subset would give); and an edge table cannot
+  represent a cell with no edges, so the **node set comes from the locations**,
+  never from the edges.
 - **`@network` is polymorphic** (`igraph` | `dataStore`). Anything that reaches
   into the slot and calls an igraph function on it breaks on a backed project.
   This is a live gap, not a solved problem: `spatIDs()` on `nnNetObj` /

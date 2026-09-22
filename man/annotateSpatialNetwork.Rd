@@ -9,8 +9,11 @@ annotateSpatialNetwork(
   spat_unit = NULL,
   feat_type = NULL,
   spatial_network_name = "Delaunay_network",
-  cluster_column,
-  create_full_network = FALSE
+  cluster_column = NULL,
+  create_full_network = FALSE,
+  coordinates = TRUE,
+  spat_loc_name = NULL,
+  ...
 )
 }
 \arguments{
@@ -22,19 +25,63 @@ annotateSpatialNetwork(
 
 \item{spatial_network_name}{name of spatial network to use}
 
-\item{cluster_column}{name of column to use for clusters}
+\item{cluster_column}{character. Name of a cell-level value to label each
+edge end with. Resolved with \code{\link[=spatValues]{spatValues()}}, so it may name a cell metadata
+column, an expression feature, an enrichment or any other slot that function
+searches. \code{NULL} (default) attaches no label and skips the lookup entirely.}
 
 \item{create_full_network}{convert from reduced to full network
 representation}
+
+\item{coordinates}{logical. Attach endpoint coordinates as
+\verb{sdim[xyz]_begin} / \verb{sdim[xyz]_end}. \code{TRUE} by default, since a network
+carries no coordinates of its own and consumers that draw edges as segments
+need them.}
+
+\item{spat_loc_name}{name of the spatial locations to read endpoint
+coordinates from. \code{NULL} uses the default set.}
+
+\item{\dots}{additional arguments passed to \code{\link[=spatValues]{spatValues()}} when
+\code{cluster_column} is given, e.g. \code{expression_values} or \code{spat_enr_name} to
+scope where the label is looked up.}
 }
 \value{
-annotated network in data.table format
+\code{data.table} of edges. Always \code{from}, \code{to} and the edge attributes
+the network carries. With \code{coordinates}, the \verb{sdim*_begin} / \verb{sdim*_end}
+columns. With \code{cluster_column}, \code{from_cell_type} and \code{to_cell_type}, plus
+\code{type_int} (\code{"homo"} / \code{"hetero"}), \code{from_to} (direction-specific) and
+\code{unified_int} (direction-agnostic).
 }
 \description{
-Annotate spatial network with cell metadata information.
+Attach cell-level information to the ends of a spatial network's edges.
+
+A network stores only edges: since GiottoClass 0.6.0 a
+\link[=spatialNetworkObj-class]{spatialNetworkObj} holds an igraph whose vertices carry a name and
+nothing else, so anything about the cells an edge runs between has to be
+looked up and attached. Both annotations this offers are the same operation
+on different sources -- take a cell-keyed value and write it onto each end of
+the edge -- and both are optional, so a caller pays only for what it reads.
+\itemize{
+\item \code{cluster_column} attaches a label, resolved through \code{\link[=spatValues]{spatValues()}}, and
+derives the interaction columns from it (see Value).
+\item \code{coordinates} attaches the endpoint positions, read live from the spatial
+locations so that any transform already applied to them is carried along.
+}
+
+Nodes are not part of the result and cannot be: an edge table has no row for
+a cell with no edges. The node set belongs to the spatial locations, which is
+also where a caller drawing this should take it from.
 }
 \examples{
 g <- GiottoData::loadGiottoMini("visium")
 
+# labels and coordinates
 annotateSpatialNetwork(g, cluster_column = "leiden_clus")
+
+# coordinates only -- what a plotting function wants
+annotateSpatialNetwork(g)
+
+# labels only -- what a proximity analysis wants
+annotateSpatialNetwork(g, cluster_column = "leiden_clus",
+    coordinates = FALSE)
 }
