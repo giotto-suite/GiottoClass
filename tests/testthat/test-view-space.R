@@ -950,29 +950,40 @@ test_that("`+` refuses a merge that would have no job size", {
         length(giottoSpace(mg, "atlas")) + length(giottoSpace(mg, "other")))
 })
 
-test_that("a composed recipe inherits a name only when it is unambiguous", {
-    # `+` says how to build a recipe, not where it belongs. Deriving a key
-    # from the operands would have setGiotto() write somewhere never named,
-    # and silently overwrite on a repeat since the derivation is fixed.
+test_that("a composed recipe is always unnamed", {
+    # One rule, no exceptions: `+` builds, it does not place. Carrying an
+    # operand's name through would make setGiotto(x, a + b) overwrite `a`,
+    # silently, from an operator that reads as constructive.
     nm <- function(x, n) { objName(x) <- n; x }
     a <- nm(spin(perSampleSpace(), 30, samples = "a"), "atlas")
     b <- nm(spin(perSampleSpace(), 10, samples = "b"), "tumor")
     u <- spin(perSampleSpace(), 5, samples = "c")
 
-    expect_true(is.na(objName(a + b)))          # two destinations -> none
-    expect_identical(objName(a + u), "atlas")   # extending atlas is atlas
-    expect_identical(objName(u + a), "atlas")
-    expect_identical(objName(a + nm(u, "atlas")), "atlas")
+    for (r in list(a + b, a + u, u + a, u + u, a + nm(u, "atlas"))) {
+        expect_true(is.na(objName(r)))
+    }
+    # steps still concatenate, and order still matters
+    expect_length(a + b, length(a) + length(b))
+    expect_false(identical(as.list(a + b), as.list(b + a)))
 
-    # views follow the same rule: inheriting e1's name would place the
-    # composed view over the one it was built from
     v1 <- .new_view(name = "v1")
     v2 <- .new_view(name = "v2")
     expect_true(is.na(objName(v1 + v2)))
-    expect_identical(objName(v1 + .new_view()), "v1")
+    expect_true(is.na(objName(v1 + .new_view())))
 
-    # and an unnamed result is refused by the setter, not given a key
+    # the operands are untouched -- `+` does not reach back
+    expect_identical(objName(a), "atlas")
+    expect_identical(objName(v1), "v1")
+
+    # an unnamed result is refused by the setter rather than given a key,
+    # so a composed recipe cannot overwrite anything by accident
     expect_error(setGiotto(giotto(), v1 + v2), "has no name")
+    expect_error(setGiotto(.fixture_gmulti(), a + b), "has no name")
+
+    # naming it at the point of placement is the way through
+    mg <- .fixture_gmulti()
+    giottoSpace(mg, "combined") <- a + b
+    expect_identical(objName(giottoSpace(mg, "combined")), "combined")
 })
 
 test_that("there is no name for the native frame", {

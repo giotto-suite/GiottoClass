@@ -69,7 +69,9 @@ reconstructs the original. Numeric: the space holding steps \code{i}.
 \item \code{names(sp)} — the samples this recipe mentions
 \item \code{length(sp)} — step count
 \item \code{as.list(sp)} — the plain export form
-\item \code{sp1 + sp2} — merge two handles on the same space, concatenating steps
+\item \code{sp1 + sp2} — concatenate two spaces' steps. The result is unnamed:
+composition says how to build a recipe, not where it belongs, so name
+it when you place it
 }
 }
 \section{Sample resolution}{
