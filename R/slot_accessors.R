@@ -3892,7 +3892,7 @@ spatValues <- function(gobject,
     # through the resolver at the subobject level.
     if (!is.null(view) || !is.null(space)) {
         # view contract: character(1) name of a slotted view, or NULL.
-        # Inline giottoView objects rejected — see DESIGN_gmulti_federation.md.
+        # Inline giottoView objects rejected — see design_view_space.Rmd.
         if (!is.null(view)) {
             checkmate::assert_string(view, .var.name = "view")
         }

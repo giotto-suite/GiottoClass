@@ -85,7 +85,7 @@ The free kind is the one that composes under get/set. A per-sample job writes
 one artifact per child, which is the shape reading per child hands back, so
 content can go out and come back. A combined job writes ONE artifact at the
 parent, and there is deliberately nowhere to put per-sample content back at
-the parent (`IMPLEMENTATION_gmulti_federation.md` §13), so that round trip
+the parent (`design_gmulti.Rmd`, "What does not live at the parent"), so that round trip
 does not close. Declaring that samples share a coordinate system is a real
 claim and is made out loud.
 
@@ -277,7 +277,7 @@ The remedy is one line and makes the ownership explicit:
   multi and then removed on that test — holding per-sample content at the parent
   turns its owning sample from a structure (the child it lives in) into a
   `sample::` prefix every consumer has to remember. See
-  `IMPLEMENTATION_gmulti_federation.md` §13.
+  `design_gmulti.Rmd`, "What does not live at the parent".
 
 ## References
 
@@ -294,6 +294,6 @@ The remedy is one line and makes the ownership explicit:
   rule. Scope lives on the step rather than on a per-sample list, so one
   ordered list replays correctly for a sample first named after a broadcast
   step was already recorded
-- `vignettes/articles/IMPLEMENTATION_gmulti_federation.md` §14 — the joint
-  `@spatial_network` sketch this partially implements
+- `vignettes/articles/design_gmulti.Rmd`, "The one exception: joint
+  `@spatial_network`" — the joint slot this partially implements
 - ADR 0004 — `@network` polymorphism, the other constraint on network writers

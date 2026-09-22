@@ -51,7 +51,7 @@
 # -- one pass per step per subobject -- and should not be: all the ops
 # except `zoom` are affine, and `affine2d` already composes them. Planned,
 # with the shape and the exactness argument, in
-# vignettes/articles/IMPLEMENTATION_viewspace.md section 5.
+# vignettes/articles/design_view_space.Rmd ("Deliberately not done").
 #
 # A handle holds exactly ONE frame, named by `@name`. `giottoSpace` is
 # virtual and the kind of frame is the class:

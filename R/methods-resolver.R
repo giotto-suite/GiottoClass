@@ -486,7 +486,7 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     # Inline giottoView objects were considered and rejected — views
     # are curated artifacts; build + slot via giottoView<-(g, name) <- v
     # if programmatic composition is needed. See
-    # vignettes/articles/DESIGN_gmulti_federation.md for the reasoning.
+    # vignettes/articles/design_view_space.Rmd for the reasoning.
     if (!is.null(view)) {
         checkmate::assert_string(view, .var.name = "view")
     }
