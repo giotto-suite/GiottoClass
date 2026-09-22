@@ -311,10 +311,30 @@ setMethod(
 
 # * spatialNetworkObj ####
 
-#' @describeIn plot-generic Plot a spatialNetworkObj
+# A network holds edges between named vertices and no geometry of its own,
+# so it cannot draw itself -- the positions live in the spatial locations the
+# network was built over. Rather than guess at them, the one-argument method
+# says what is missing and the two-argument method takes it.
+
+#' @describeIn plot-generic Plot a spatialNetworkObj. Errors: a network has no
+#' coordinates of its own, so pass the matching `spatLocsObj` as `y`.
 #' @export
-setMethod("plot", signature(x = "spatialNetworkObj", y = "missing"), 
+setMethod("plot", signature(x = "spatialNetworkObj", y = "missing"),
         function(x, ...) {
+    stop("[plot] a spatialNetworkObj stores edges between named cells and no ",
+        "coordinates, so it cannot be drawn on its own. Pass the spatial ",
+        "locations it was built over as the second argument:\n",
+        "    plot(network, spatlocs)", call. = FALSE)
+})
+
+#' @describeIn plot-generic Plot a spatialNetworkObj against the
+#' `spatLocsObj` that supplies its coordinates. Edges with an endpoint absent
+#' from `y` are not drawn.
+#' @export
+setMethod("plot",
+        signature(x = "spatialNetworkObj", y = "spatLocsObj"),
+        function(x, y, ...) {
+    x <- .network_with_coords(x, y)
     l <- list(...)
     if (is.null(l$asp)) l$asp <- 1
     if (is.null(l$xlab)) l$xlab <- ""
@@ -339,8 +359,8 @@ setMethod("plot", signature(x = "spatialNetworkObj", y = "missing"),
         l$lty <- NULL
     }
     # find nodes
-    nodes <- unique(rbind(x[][, c("sdimx_begin", "sdimy_begin")],
-        x[][, c("sdimx_end", "sdimy_end")],
+    nodes <- unique(rbind(x[, c("sdimx_begin", "sdimy_begin")],
+        x[, c("sdimx_end", "sdimy_end")],
         use.names = FALSE
     ))
     if (nrow(nodes) > 10000L) {
@@ -349,8 +369,8 @@ setMethod("plot", signature(x = "spatialNetworkObj", y = "missing"),
     do.call(
         "plot", append(l, list(x = nodes$sdimx_begin, y = nodes$sdimy_begin)))
     graphics::segments(
-        x0 = x[]$sdimx_begin, y0 = x[]$sdimy_begin,
-        x1 = x[]$sdimx_end, y1 = x[]$sdimy_end,
+        x0 = x$sdimx_begin, y0 = x$sdimy_begin,
+        x1 = x$sdimx_end, y1 = x$sdimy_end,
         col = line_col, lty = line_type, lwd = line_width
     )
 })
