@@ -12,10 +12,9 @@
 # method with no `giottoMulti` signature fails loudly instead of reading an
 # empty slot.
 #
-# STAGED PORT — stages 1-3 of the sequence in
-# `vignettes/articles/PLAN_gmulti2_port.md` (§7). This file carries the class,
-# its construction path, the identity registry, the `@cell_ID` / `@feat_ID`
-# narrowing contract, and (from stage 3) the `@mapping` federation layer:
+# Design record: `vignettes/articles/design_gmulti.Rmd`. This file carries
+# the class, its construction path, the identity registry, the `@cell_ID` /
+# `@feat_ID` narrowing contract, and the `@mapping` federation layer:
 #
 #   * `gmultiMapping()` / `gmultiMapping<-` — the three-axis federation
 #     declaration (`spat_unit`, `feat_type`, `values`), validated, with

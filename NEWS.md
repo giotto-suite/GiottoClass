@@ -38,8 +38,20 @@
 
 ## docs
 
-- `vignettes/articles/design.Rmd` arrives on this branch, where
-  `IMPLEMENTATION_gmulti.md` already linked to it.
+- `vignettes/articles/design.Rmd` arrives on this branch, and gains summary
+  sections on multi-sample federation and on the view / space recipe layers.
+- **Two new contributor articles**, `design_gmulti.Rmd` and
+  `design_view_space.Rmd`, hold the design record for those two subsystems:
+  what was decided, what was tried and removed, and what is deliberately left
+  undone.
+- The seven port-scaffolding documents in `vignettes/articles/` are retired.
+  They were written to carry the gmulti / view-space port rather than to be
+  read afterwards; the durable argument is in the three articles above, and
+  status belongs to git.
+- `vignettes/view_and_space.Rmd` is corrected where the subsystem moved
+  underneath it: the recipe containers are classes holding plain steps,
+  recording a space produces a `perSampleSpace` and a `combinedSpace` is
+  declared, and a crop's frame lives on its step.
 
 # GiottoClass 0.7.1
 

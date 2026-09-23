@@ -26,6 +26,10 @@ is the user-facing walkthrough of the same object model. Where a decision was
 contested or has a cost worth remembering, it has an `adr/` record; those are
 cited inline below rather than restated.
 
+Two subsystems are large enough to have their own articles, summarised here and
+recorded in full there: `design_gmulti.Rmd` for multi-sample federation, and
+`design_view_space.Rmd` for the view / space recipe layers.
+
 ## What GiottoClass is for
 
 GiottoClass owns the object model for the Giotto suite and nothing else. It
@@ -175,7 +179,7 @@ representation. `packedGiotto`, `packedGiottoPolygon` and `packedGiottoPoints`
 hold those payloads, and `wrap()`/`vect()` convert in both directions.
 
 **This pattern is unmaintained and may be removed. Do not build on it**
-(ADR 0005). Copying every layer into the R heap does not hold at project scale,
+(ADR 0007). Copying every layer into the R heap does not hold at project scale,
 and the by-reference path below covers persistence while a `gsource` backend
 covers reaching data from a worker process. It stays in place only because
 `{GiottoData}`'s `giottoPoints` / `giottoPolygon` minis and older user `.RDS`
@@ -211,6 +215,64 @@ for `saveRDS()` on a gobject is never right.
 holds a live handle to a file on disk, `saveGiotto()` writes it out with
 `terra::writeRaster()` and records the new path on the image object, and
 `reconnect()` re-opens from that path on load.
+
+## Federation — many samples in one object
+
+There is a third container, and it is a sibling of `giotto` rather than a
+subclass of it:
+
+```
+gAny (virtual)
+├── giotto
+└── giottoMulti
+```
+
+`giottoMulti` presents N child `giotto` objects as one analysable unit. It does
+**not** inherit from `giotto`: its per-dataset spatial slots are absent, not
+inherited-empty, and inheriting would let a spatial-domain method fall through to
+an empty slot and return a plausible-looking nothing. With a virtual base, an
+undefined method fails loudly through no-method dispatch, while shared-domain
+methods are written once.
+
+The organising rule is a split by what can be decomposed. **Non-spatial content
+is joint** — expression, metadata, dimension reductions, enrichments live in slots
+at the parent, assembled across children. **Spatial content is not**, and stays
+on the children, because a location, a polygon, a point or a raster each belongs
+to exactly one sample and a per-sample representation of it always exists. A
+cross-sample network edge is the one artifact that fails that test — its
+endpoints are in two samples — so `@spatial_network` is the one spatial slot at
+the parent.
+
+Three declaration layers keep the federation addressable, and they are routinely
+confused with one another:
+
+| layer | declares | scope |
+|---|---|---|
+| `@mapping` | which child-level handles a parent-level handle federates | the indexing axes — spat_unit, feat_type, values |
+| `@groups` | that a name refers to several samples | sample membership, by enumeration |
+| `@spaces` | a coordinate frame | frame only |
+
+`@mapping` is what lets children spell the same modality differently — `"rna"` in
+one sample, `"transcripts"` in another — without renaming data on disk. It is
+auto-discovered at construction and editable afterwards.
+
+Two properties are load-bearing and easy to collapse into one another. `@id_map`
+is the **identity registry**, a global vocabulary of which IDs exist in which
+child, and it is *never* narrowed. `@cell_ID` / `@feat_ID` are the **active
+narrowing**, and `NULL` means unfiltered. Keeping them apart is what lets a
+narrowing be widened or dropped without having lost the population. Children are
+never mutated by any of this; narrowing lives at the parent only.
+
+The joint slots are simultaneously a cache and the source of truth: the first
+access to a federated handle assembles it from the children, and everything
+derived at parent scope lives there natively. The trap is that they are
+*lazily populated* — empty on a fresh multi, and `getExpression()` does not
+cache back — so any logic deriving keys from `names(@expression)` silently sees
+nothing.
+
+`vignettes/articles/design_gmulti.Rmd` is the full record: the access layer, the
+carry-keys discipline that alignment between independently assembled joint slots
+requires, what was tried and removed, and what is still open.
 
 ## `initialize()` as the consistency engine
 
@@ -274,6 +336,62 @@ Three surfaces, deliberately distinct:
 The asymmetry to keep in mind: `get*()` returning a subobject is the default
 because the tags travel with it; several getters take `output =` to drop to a
 bare `data.table` or matrix, and that is a one-way door.
+
+## Views and spaces — deferred narrowing and reframing
+
+Two recipe layers sit over any `gAny`, so they work on a plain `giotto` as well
+as on a `giottoMulti`. They change what subsequent accessors see without
+mutating data.
+
+- **`giottoView`** — read-only narrowing: which cells and features are in scope.
+- **`giottoSpace`** — a coordinate frame: where the data sits. Not read-only;
+  running an analysis in a non-native frame is fine, the coordinates just differ,
+  and mutations still target the underlying data in its native frame.
+
+They are two classes rather than one because a single recipe carrying both could
+not answer "in what frame?" for a crop extent, could not tell an artifact
+generator whether its transforms or its filters were the meaningful part, and
+made "view" mean both selection and positioning in the same vocabulary.
+
+**There is no constructor; a recipe is created by recording.** The first
+`subset()` / `crop()` / `selectSamples()` call naming a view creates it, and a
+transform verb naming a space does the same; later calls with that name append.
+Eager behaviour is unchanged — `spin(g, 30)` still spins the object — and the
+presence of `space =` is what switches from acting to recording. Consequently
+`view =` and `space =` on a public function take a **name**, never a handle: a
+detached recipe on a generator writes a frame name that resolves against
+nothing, and on a reader returns content in a frame the object cannot name
+(adr/0006).
+
+**The steps are plain tagged lists; the containers are classes.** That division
+is where the serialization guarantee lives — a step carries no closure and no
+external pointer, so a predicate is stored deparsed, a crop region as WKT, and
+transform arguments whitelisted — while the container remains the handle that
+`[`, the builder verbs and `as.list()` act on.
+
+Two invariants are worth knowing before touching any consumer:
+
+- **A crop resolves to a cell_ID set**, and every cell-keyed target narrows by
+  that same set — locations, metadata, expression and a backed polygon store
+  alike. A recipe cannot mean different things depending on which slot it is read
+  through. What derives the set (`geom = "centroid" | "poly"`) is declared on the
+  step rather than inferred, so a serialized recipe states which question it asks
+  and a backed resolver reads the field instead of re-deriving it.
+- **Predicate frame and output frame are separate.** The frame a crop region was
+  drawn in lives on the crop step; the frame results come back in is the explicit
+  `space =` argument, with no fallback between them. That is what lets an ROI
+  drawn on a rotated image select cells that are returned in native coordinates.
+
+`materialize(g, view, space)` applies the recipes and returns a new gobject whose
+ordinary accessors see the narrowed, reframed data. It is plumbing rather than a
+user verb — exported so GiottoVisuals can call it — and the user-facing route is
+the `view =` / `space =` arguments on the accessors themselves.
+
+`vignettes/view_and_space.Rmd` is the user-facing walkthrough.
+`vignettes/articles/design_view_space.Rmd` is the full design record: the space
+kinds and why the per-sample one is free, why the native frame has no name, how
+scope is stated per call rather than inherited from build order, parent-only
+evaluation on a multi, and the deferrals.
 
 ## Analysis verbs
 
@@ -440,7 +558,7 @@ on a base generic for a class the package does not own.
 | `R/package_imports.R` | all `@importFrom` declarations, centralized |
 | `adr/` | decision records — why, and what was rejected |
 | `vignettes/` | user-facing walkthroughs |
-| `vignettes/articles/` | contributor-facing design docs (this file); not built as vignettes |
+| `vignettes/articles/` | contributor-facing design docs (this file, `design_gmulti.Rmd`, `design_view_space.Rmd`); not built as vignettes |
 
 The generic/method file split is not cosmetic: a generic defined next to one of
 its methods reads as belonging to that method, and the next person adds a

@@ -56,7 +56,7 @@ NULL
 .record_view_on_gobject <- function(gobject, view, f) {
     # view contract: character(1) name. Views are identified by name only —
     # passing a recipe inline was considered and rejected (see
-    # vignettes/articles/DESIGN_gmulti_federation.md), because it would make
+    # vignettes/articles/design_view_space.Rmd), because it would make
     # the same call site sometimes return a gobject and sometimes a recipe.
     # A view that does not exist yet is created here, so recording is the
     # construction path.

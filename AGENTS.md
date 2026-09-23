@@ -19,8 +19,11 @@ live elsewhere:
 | Doc | Role |
 |---|---|
 | `AGENTS.md` (this file) | Code navigation, constraints, conventions. Read first when modifying code. |
-| `vignettes/articles/design.Rmd` | Architectural rationale: two-tier object model, the schema, subobject hierarchy, `initialize()`, versioning, the five analysis verbs, the disk-backed arc. |
+| `vignettes/articles/design.Rmd` | Architectural rationale: two-tier object model, the schema, subobject hierarchy, `initialize()`, versioning, the five analysis verbs, the disk-backed arc. Summarises the two subsystem articles below. |
+| `vignettes/articles/design_gmulti.Rmd` | Multi-sample federation: `gAny`, `giottoMulti`, `@mapping` / `@groups`, joint slots, the narrowing contract, carry-keys. |
+| `vignettes/articles/design_view_space.Rmd` | The `giottoView` / `giottoSpace` recipe subsystem: recording, step shape, frames, the crop invariant, `materialize()`. |
 | `vignettes/overview.Rmd` | User-facing walkthrough of the object model — nesting, accessors, subobjects. |
+| `vignettes/view_and_space.Rmd` | User-facing walkthrough of views and spaces. |
 | `adr/` | Architecture Decision Records: why a choice was made, what was rejected, what it costs. Dated and immutable — read when you are about to change a decision, not to learn current behaviour. |
 | `NEWS.md` | User-visible changes per version. Add an entry when you change behaviour, an argument, or an export. |
 
@@ -41,7 +44,7 @@ R/                        # All source code (78 files, ~53k lines)
 tests/testthat/           # testthat Edition 3 tests (23 files)
 man/                      # Roxygen2-generated .Rd files (never edit manually)
 vignettes/                # Package vignettes (knitr, built)
-vignettes/articles/       # Contributor design docs (pkgdown articles, Rbuildignored)
+vignettes/articles/       # Contributor design docs (pkgdown articles; shipped, not built as vignettes)
 adr/                      # Architecture Decision Records (Rbuildignored)
 .github/workflows/        # CI/CD (staging, dev, feature branch workflows)
 DESCRIPTION               # Package metadata and dependencies

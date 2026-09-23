@@ -1439,7 +1439,7 @@ test_that("geom = poly with no polygon source errors, naming the remedy", {
 })
 
 test_that("one recipe narrows every cell-keyed slot identically", {
-    # IMPLEMENTATION_viewspace.md section 4: one usage layer per predicate
+    # design_view_space.Rmd: one usage layer per predicate
     g <- .fixture_giotto()
     box <- .box_at_centre(g)
     g <- crop(g, box, relation = "within", geom = "poly", view = "w")
