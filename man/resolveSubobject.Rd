@@ -2,55 +2,20 @@
 % Please edit documentation in R/methods-resolver.R
 \name{resolveSubobject}
 \alias{resolveSubobject}
-\alias{resolveSubobject,cellMetaObj,ANY,ANY,ANY,dataTableCoordinator-method}
-\alias{resolveSubobject,exprObj,ANY,ANY,ANY,dataTableCoordinator-method}
-\alias{resolveSubobject,dimObj,ANY,ANY,ANY,dataTableCoordinator-method}
-\alias{resolveSubobject,spatEnrObj,ANY,ANY,ANY,dataTableCoordinator-method}
-\alias{resolveSubobject,featMetaObj,ANY,ANY,ANY,dataTableCoordinator-method}
-\alias{resolveSubobject,spatLocsObj,ANY,ANY,ANY,dataTableCoordinator-method}
-\alias{resolveSubobject,giottoPolygon,ANY,ANY,ANY,dataTableCoordinator-method}
-\alias{resolveSubobject,giottoPoints,ANY,ANY,ANY,dataTableCoordinator-method}
-\alias{resolveSubobject,giottoLargeImage,ANY,ANY,ANY,dataTableCoordinator-method}
-\alias{resolveSubobject,giottoAffineImage,ANY,ANY,ANY,dataTableCoordinator-method}
-\alias{resolveSubobject,giottoImage,ANY,ANY,ANY,dataTableCoordinator-method}
 \title{resolveSubobject}
 \usage{
 resolveSubobject(subobj, gobject, view, space, coordinator, ...)
-
-\S4method{resolveSubobject}{cellMetaObj,ANY,ANY,ANY,dataTableCoordinator}(subobj, gobject, view, space, coordinator, ...)
-
-\S4method{resolveSubobject}{exprObj,ANY,ANY,ANY,dataTableCoordinator}(subobj, gobject, view, space, coordinator, ...)
-
-\S4method{resolveSubobject}{dimObj,ANY,ANY,ANY,dataTableCoordinator}(subobj, gobject, view, space, coordinator, ...)
-
-\S4method{resolveSubobject}{spatEnrObj,ANY,ANY,ANY,dataTableCoordinator}(subobj, gobject, view, space, coordinator, ...)
-
-\S4method{resolveSubobject}{featMetaObj,ANY,ANY,ANY,dataTableCoordinator}(subobj, gobject, view, space, coordinator, ...)
-
-\S4method{resolveSubobject}{spatLocsObj,ANY,ANY,ANY,dataTableCoordinator}(subobj, gobject, view, space, coordinator, ...)
-
-\S4method{resolveSubobject}{giottoPolygon,ANY,ANY,ANY,dataTableCoordinator}(subobj, gobject, view, space, coordinator, ...)
-
-\S4method{resolveSubobject}{giottoPoints,ANY,ANY,ANY,dataTableCoordinator}(subobj, gobject, view, space, coordinator, ...)
-
-\S4method{resolveSubobject}{giottoLargeImage,ANY,ANY,ANY,dataTableCoordinator}(subobj, gobject, view, space, coordinator, ...)
-
-\S4method{resolveSubobject}{giottoAffineImage,ANY,ANY,ANY,dataTableCoordinator}(subobj, gobject, view, space, coordinator, ...)
-
-\S4method{resolveSubobject}{giottoImage,ANY,ANY,ANY,dataTableCoordinator}(subobj, gobject, view, space, coordinator, ...)
 }
 \arguments{
 \item{subobj}{a giotto subobject (e.g. \code{cellMetaObj}, \code{spatLocsObj}, ...)}
 
-\item{gobject}{the parent \code{giotto} (needed for cross-slot lookups via
-\code{spatValues()})}
+\item{gobject}{the parent \code{giotto}}
 
 \item{view}{a \link{giottoView} or \code{NULL}}
 
 \item{space}{a \link{giottoSpace} or \code{NULL}}
 
-\item{coordinator}{a \link[=viewCoordinator-class]{viewCoordinator}-inheriting object brokering
-IDs and joins between storage backings}
+\item{coordinator}{a \link[=viewCoordinator-class]{viewCoordinator}-inheriting object}
 
 \item{...}{reserved for backend-specific args}
 }
@@ -58,8 +23,8 @@ IDs and joins between storage backings}
 the projected subobject (same class as \code{subobj})
 }
 \description{
-Apply a \link{giottoView} (and optional \link{giottoSpace})
-recipe to a single subobject, returning the projected subobject. Dispatch
-is on \verb{(subobj, coordinator)} so different storage-bridging coordinators
-register different methods.
+Deprecated in 0.7.2. Superseded by \code{\link[=resolve]{resolve()}}, which is one
+generic for both the container and the leaf, and which hands a leaf its
+evaluated context instead of the parent gobject.
 }
+\keyword{internal}

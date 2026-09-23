@@ -42,7 +42,7 @@ combineMetadata <- function(gobject,
     # else, and `space` is a name the parent owns that a child cannot look
     # up. See combineCellData for the full rationale.
     if (!is.null(view) || !is.null(space)) {
-        gobject <- materialize(gobject, view, space = space,
+        gobject <- resolve(gobject, view = view, space = space,
             slots = c("cell_metadata", "spatial_locs",
                 "spatial_enrichment"))
         view <- NULL
@@ -181,7 +181,7 @@ combineSpatialCellMetadataInfo <- function(gobject,
     # Pre-narrow the gobject for the slots we touch — see notes in
     # `combineCellData`. One resolver pass, two slots narrowed.
     if (!is.null(view) || !is.null(space)) {
-        gobject <- materialize(gobject, view, space = space,
+        gobject <- resolve(gobject, view = view, space = space,
             slots = c("spatial_info", "cell_metadata"))
         view <- NULL
         space <- NULL
@@ -202,7 +202,7 @@ combineSpatialCellMetadataInfo <- function(gobject,
     res_list <- list()
     for (feat in unique(feat_type)) {
         # get spatial cell metadata (view applied via the pre-narrow
-        # materialize call above).
+        # resolve call above).
         cell_meta <- getCellMetadata(
             gobject = gobject,
             spat_unit = spat_unit,
@@ -283,8 +283,8 @@ combineCellData <- function(gobject,
     checkmate::assert_numeric(ylim, len = 2L, null.ok = TRUE)
 
     # When view/space are supplied, pre-narrow the gobject ONCE for the
-    # specific slots this combine touches via materialize(slots = ...).
-    # materialize uses one resolver cache internally, so all slot
+    # specific slots this combine touches via resolve(slots = ...).
+    # resolve uses one resolver cache internally, so all slot
     # narrowings here share a single predicate evaluation. Subsequent
     # getter calls below run with view=NULL/space=NULL on the
     # already-narrowed gobject — no per-getter resolver work.
@@ -293,7 +293,7 @@ combineCellData <- function(gobject,
     # can run on a multi: a view resolves at the parent and nowhere else
     # (joint metadata and fused coordinates are keyed `sample::id`), and a
     # `space` is a name the parent owns, which a child cannot look up in
-    # its own empty slots. `materialize(giottoMulti)` already scopes the
+    # its own empty slots. `resolve(giottoMulti)` already scopes the
     # frame per child and narrows the joint slots, so the per-child loop
     # below inherits both and passes neither.
     if (!is.null(view) || !is.null(space)) {
@@ -308,7 +308,7 @@ combineCellData <- function(gobject,
             need_slots <- c(need_slots, "spatial_enrichment")
         }
         need_slots <- c(need_slots, "cell_metadata")
-        gobject <- materialize(gobject, view, space = space,
+        gobject <- resolve(gobject, view = view, space = space,
             slots = need_slots)
         view <- NULL
         space <- NULL
@@ -374,7 +374,7 @@ combineCellData <- function(gobject,
     ## spatial poly ##
     if (isTRUE(include_poly_info)) {
         # get spatial poly information. View/space already applied via
-        # the pre-narrowing materialize() pass above (when supplied).
+        # the pre-narrowing resolve() pass above (when supplied).
         sv <- getPolygonInfo(
             gobject = gobject,
             polygon_name = poly_info,
@@ -518,7 +518,7 @@ combineFeatureData <- function(gobject,
     # Pre-narrow the gobject for the slots we touch — see
     # `combineCellData` notes.
     if (!is.null(view) || !is.null(space)) {
-        gobject <- materialize(gobject, view, space = space,
+        gobject <- resolve(gobject, view = view, space = space,
             slots = c("feat_info", "feat_metadata"))
         view <- NULL
         space <- NULL
@@ -598,7 +598,7 @@ combineFeatureData <- function(gobject,
 #' the name of one slotted on `gobject`. Threaded through the underlying
 #' getFeatureMetadata / getPolygonInfo / getFeatureInfo calls — the
 #' returned table reflects the view-scoped subset. One resolver pass is
-#' shared via `materialize(slots = ...)` so the predicate evaluates once.
+#' shared via `resolve(slots = ...)` so the predicate evaluates once.
 #' @concept combine feature metadata
 #' @returns data.table with combined spatial polygon information
 #' @examples
@@ -627,7 +627,7 @@ combineFeatureOverlapData <- function(gobject,
 
     # Pre-narrow once for the slots we touch.
     if (!is.null(view) || !is.null(space)) {
-        gobject <- materialize(gobject, view, space = space,
+        gobject <- resolve(gobject, view = view, space = space,
             slots = c("feat_metadata", "spatial_info", "feat_info"))
         view <- NULL
         space <- NULL

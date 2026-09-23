@@ -16,7 +16,7 @@
 # Pattern mirrors GiottoClass's other strategy generics (`processData`,
 # `analyzeData`, etc.) where the entry-point generic dispatches on both the
 # data class and the strategy class. Here the entry point is
-# `resolveSubobject(subobj, gobject, view, space, coordinator, ...)`.
+# `resolve(subobj, coordinator, keep =, space =, view =)`.
 #
 # Protocol methods the coordinator provides:
 #   prepareIds(coordinator, ids, ...)

@@ -134,7 +134,7 @@ test_that("crop() with polygon region works", {
     expect_type(step$region, "character")
 })
 
-test_that("materialize with polygon crop narrows by region", {
+test_that("resolve with polygon crop narrows by region", {
     g <- .fixture_giotto()
     # build a polygon equivalent to a known extent
     poly <- terra::vect(rbind(
@@ -148,7 +148,7 @@ test_that("materialize with polygon crop narrows by region", {
                     sl$sdimy >= -5000 & sl$sdimy <= -3500)
 
     g <- crop(g, poly, view = "poly_crop")
-    g2 <- materialize(g, "poly_crop")
+    g2 <- resolve(g, view = "poly_crop")
     expect_equal(nrow(pDataDT(g2)), expected)
 })
 
@@ -452,12 +452,12 @@ test_that("defaultViewCoordinator() S4 dispatch is registrable from downstream",
 })
 
 
-# --- materialize() end-to-end on visium mini ------------------------------
+# --- resolve() end-to-end on visium mini ------------------------------
 
-test_that("materialize() with empty view returns equivalent gobject", {
+test_that("resolve() with empty view returns equivalent gobject", {
     g <- .fixture_giotto()
     giottoView(g, "empty") <- .empty_view()
-    g2 <- materialize(g, "empty")
+    g2 <- resolve(g, view = "empty")
     expect_equal(nrow(pDataDT(g2)), nrow(pDataDT(g)))
     expect_equal(
         nrow(getSpatialLocations(g2, output = "data.table")),
@@ -465,23 +465,23 @@ test_that("materialize() with empty view returns equivalent gobject", {
     )
 })
 
-test_that("materialize() narrows tabular slots by subset predicate", {
+test_that("resolve() narrows tabular slots by subset predicate", {
     g <- .fixture_giotto()
     n_total <- length(spatIDs(g))
     n_target <- sum(pDataDT(g)$leiden_clus == "1")
 
     g <- subset(g, leiden_clus == "1", view = "c1")
-    g2 <- materialize(g, "c1")
+    g2 <- resolve(g, view = "c1")
 
     expect_lt(nrow(pDataDT(g2)), n_total)
     expect_equal(nrow(pDataDT(g2)), n_target)
     expect_equal(ncol(getExpression(g2, output = "matrix")), n_target)
 })
 
-test_that("materialize() narrows spatial slots via cell_ID cascade", {
+test_that("resolve() narrows spatial slots via cell_ID cascade", {
     g <- .fixture_giotto()
     g <- subset(g, leiden_clus == "1", view = "c1")
-    g2 <- materialize(g, "c1")
+    g2 <- resolve(g, view = "c1")
 
     n_filter <- nrow(pDataDT(g2))
     expect_equal(
@@ -491,16 +491,16 @@ test_that("materialize() narrows spatial slots via cell_ID cascade", {
         n_filter)
 })
 
-test_that("materialize() with %in% and env-resident value works (NSE)", {
+test_that("resolve() with %in% and env-resident value works (NSE)", {
     g <- .fixture_giotto()
     targets <- c("1", "2")
     g <- subset(g, leiden_clus %in% targets, view = "c12")
-    g2 <- materialize(g, "c12")
+    g2 <- resolve(g, view = "c12")
     expected <- sum(pDataDT(g)$leiden_clus %in% targets)
     expect_equal(nrow(pDataDT(g2)), expected)
 })
 
-test_that("materialize() with expression-column predicate routes via spatValues", {
+test_that("resolve() with expression-column predicate routes via spatValues", {
     g <- .fixture_giotto()
     # pick a gene known to be in the panel by literal name to avoid NSE
     gene <- "Gfap"
@@ -509,11 +509,11 @@ test_that("materialize() with expression-column predicate routes via spatValues"
 
     expected <- sum(getExpression(g, output = "matrix")[gene, ] > 0)
     g <- subset(g, Gfap > 0, view = "gfap_pos")
-    g2 <- materialize(g, "gfap_pos")
+    g2 <- resolve(g, view = "gfap_pos")
     expect_equal(nrow(pDataDT(g2)), expected)
 })
 
-test_that("materialize() with crop narrows via spatLocs extent", {
+test_that("resolve() with crop narrows via spatLocs extent", {
     g <- .fixture_giotto()
     sl <- getSpatialLocations(g, output = "data.table")
     ext <- c(4000, 5500, -5000, -3500)
@@ -521,18 +521,18 @@ test_that("materialize() with crop narrows via spatLocs extent", {
                     sl$sdimy >= ext[3L] & sl$sdimy <= ext[4L])
 
     g <- crop(g, ext, view = "ext_crop")
-    g2 <- materialize(g, "ext_crop")
+    g2 <- resolve(g, view = "ext_crop")
     expect_equal(nrow(pDataDT(g2)), expected)
     expect_equal(
         nrow(getSpatialLocations(g2, output = "data.table")), expected)
 })
 
-test_that("materialize() with space transforms spatial coords only", {
+test_that("resolve() with space transforms spatial coords only", {
     g <- .fixture_giotto()
     g <- spin(g, 30, space = "tilted")
     giottoView(g, "empty") <- .empty_view()
 
-    g2 <- materialize(g, "empty", space = "tilted")
+    g2 <- resolve(g, view = "empty", space = "tilted")
     sl_native <- getSpatialLocations(g, output = "data.table")
     sl_tilted <- getSpatialLocations(g2, output = "data.table")
 
@@ -542,18 +542,148 @@ test_that("materialize() with space transforms spatial coords only", {
     expect_equal(nrow(pDataDT(g2)), nrow(pDataDT(g)))
 })
 
-test_that("materialize() with filter + space combines both", {
+test_that("resolve() with filter + space combines both", {
     g <- .fixture_giotto()
     g <- spin(g, 30, space = "tilted")
     g <- subset(g, leiden_clus %in% c("1", "2"), view = "c12")
 
-    g2 <- materialize(g, "c12", space = "tilted")
+    g2 <- resolve(g, view = "c12", space = "tilted")
 
     expected <- sum(pDataDT(g)$leiden_clus %in% c("1", "2"))
     sl_tilted <- getSpatialLocations(g2, output = "data.table")
     sl_native <- getSpatialLocations(g, output = "data.table")
     expect_equal(nrow(sl_tilted), expected)
     expect_false(isTRUE(all.equal(sl_tilted$sdimx, sl_native$sdimx[1:expected])))
+})
+
+
+# --- resolve() leaf contract ----------------------------------------------
+# The point of one generic is that a leaf takes the context the container
+# computed rather than the gobject it would have to recompute from. These
+# tests pin that contract down, because it is the part a downstream
+# coordinator has to implement against.
+
+test_that("a leaf resolves on its own, with no gobject anywhere", {
+    g <- .fixture_giotto()
+    sub <- getCellMetadata(g, output = "cellMetaObj", copy_obj = TRUE)
+    keep <- pDataDT(g)$cell_ID[1:5]
+
+    out <- resolve(sub, dataTableCoordinator(), keep = keep)
+
+    expect_s4_class(out, "cellMetaObj")
+    expect_setequal(out[]$cell_ID, keep)
+})
+
+test_that("a leaf given keep = NULL is a no-op", {
+    g <- .fixture_giotto()
+    sub <- getCellMetadata(g, output = "cellMetaObj", copy_obj = TRUE)
+    expect_equal(nrow(resolve(sub, dataTableCoordinator())[]), nrow(sub[]))
+})
+
+test_that("leaves that do not narrow by cell never force `keep`", {
+    # `keep` reaches a leaf as a promise. That is what lets the container
+    # compute the surviving ID set once without paying for it on a walk that
+    # touches only feature-keyed or geometric slots -- the property the old
+    # per-leaf `.cache` lookup bought. An erroring promise is the only honest
+    # way to assert it: if anything forces `keep`, this fails loudly.
+    g <- .fixture_giotto()
+    boom <- quote(stop("`keep` was forced on a non-cell-keyed leaf"))
+
+    fm <- getFeatureMetadata(g, output = "featMetaObj", copy_obj = TRUE)
+    expect_no_error(
+        eval(bquote(resolve(fm, dataTableCoordinator(), keep = .(boom))))
+    )
+
+    gp <- tryCatch(getFeatureInfo(g, return_giottoPoints = TRUE),
+        error = function(e) NULL)
+    skip_if(is.null(gp), "fixture has no giottoPoints")
+    expect_no_error(
+        eval(bquote(resolve(gp, dataTableCoordinator(), keep = .(boom))))
+    )
+})
+
+test_that("resolve() dispatches on x and coordinator only", {
+    expect_identical(
+        methods::getGeneric("resolve")@signature,
+        c("x", "coordinator")
+    )
+})
+
+test_that("a container accepts a coordinator without dispatching on it", {
+    # container methods register against `ANY` -- passing one explicitly must
+    # not send the call somewhere else.
+    g <- .fixture_giotto()
+    giottoView(g, "empty") <- .empty_view()
+    out <- resolve(g, coordinator = dataTableCoordinator(), view = "empty")
+    expect_s4_class(out, "giotto")
+    expect_equal(nrow(pDataDT(out)), nrow(pDataDT(g)))
+})
+
+
+# --- deprecated aliases ---------------------------------------------------
+# {GiottoDisk} registers 8 methods on `resolveSubobject` and tracks released
+# GiottoClass, so both names have to keep working for one release.
+
+test_that("materialize() still resolves", {
+    # The deprecation warning itself is not asserted: lifecycle rate-limits
+    # it per session, so whether it fires depends on test order.
+    g <- .fixture_giotto()
+    g <- subset(g, leiden_clus == "1", view = "c1")
+
+    old <- suppressWarnings(materialize(g, "c1"))
+    expect_equal(nrow(pDataDT(old)), nrow(pDataDT(resolve(g, view = "c1"))))
+})
+
+test_that("a coordinator with only resolveSubobject methods still resolves", {
+    # The compat path a downstream coordinator lands on for one release:
+    # there is no `resolve` method for this (subobj, coordinator) pair, so the
+    # walk must fall back to the old generic -- and hand it the gobject and
+    # the `.cache` those methods were written against.
+    setClass("_test_legacy_coord_", contains = "viewCoordinator",
+        where = globalenv())
+    on.exit(removeClass("_test_legacy_coord_", where = globalenv()),
+        add = TRUE)
+
+    seen <- new.env(parent = emptyenv())
+    seen$n <- 0L
+    setMethod("resolveSubobject",
+        signature(subobj = "cellMetaObj",
+            coordinator = "_test_legacy_coord_"),
+        function(subobj, gobject, view, space, coordinator, ...) {
+            seen$n <- seen$n + 1L
+            seen$gobject <- gobject
+            seen$cache <- list(...)$.cache
+            subobj
+        },
+        where = globalenv())
+    on.exit(removeMethod("resolveSubobject",
+        signature(subobj = "cellMetaObj",
+            coordinator = "_test_legacy_coord_"),
+        where = globalenv()), add = TRUE)
+
+    g <- .fixture_giotto()
+    g <- subset(g, leiden_clus == "1", view = "c1")
+    out <- resolve(g, coordinator = new("_test_legacy_coord_"),
+        view = "c1", slots = "cell_metadata")
+
+    expect_gt(seen$n, 0L)
+    expect_s4_class(seen$gobject, "giotto")
+    expect_true(is.environment(seen$cache))
+    # that method returned its input untouched, so nothing narrowed -- which
+    # is the proof the call went there and not to a dataTableCoordinator leaf
+    expect_equal(nrow(pDataDT(out)), nrow(pDataDT(g)))
+})
+
+test_that("resolveSubobject() still reaches the new leaf methods", {
+    g <- .fixture_giotto()
+    g <- subset(g, leiden_clus == "1", view = "c1")
+    sub <- getCellMetadata(g, output = "cellMetaObj", copy_obj = TRUE)
+
+    out <- suppressWarnings(resolveSubobject(sub, g, giottoView(g, "c1"),
+        NULL, dataTableCoordinator()))
+
+    expect_s4_class(out, "cellMetaObj")
+    expect_equal(nrow(out[]), sum(pDataDT(g)$leiden_clus == "1"))
 })
 
 
@@ -701,14 +831,14 @@ test_that("spatValues view = ... matches getCellMetadata view = ... narrowing", 
     expect_setequal(sv$cell_ID, cm$cell_ID)
 })
 
-test_that("spatValues view = ... is consistent with materialize -> spatValues raw", {
+test_that("spatValues view = ... is consistent with resolve -> spatValues raw", {
     g <- .fixture_giotto()
     g <- subset(g, leiden_clus == "1", view = "c1")
     direct <- spatValues(g, feats = "leiden_clus", view = "c1")
-    g_m <- materialize(g, "c1")
-    via_materialize <- spatValues(g_m, feats = "leiden_clus")
-    # direct narrowing should match the materialized-then-raw path
-    expect_setequal(direct$cell_ID, via_materialize$cell_ID)
+    g_m <- resolve(g, view = "c1")
+    via_resolve <- spatValues(g_m, feats = "leiden_clus")
+    # direct narrowing should match the resolved-then-raw path
+    expect_setequal(direct$cell_ID, via_resolve$cell_ID)
 })
 
 test_that("spatValues view that filters to zero cells returns empty data.table", {
@@ -1012,10 +1142,10 @@ test_that("resolving for a sample with nothing scoped to it is empty", {
     expect_length(s[[NA_character_]], 1L)
 })
 
-test_that("materialize on giottoMulti narrows children via a sample step", {
+test_that("resolve on giottoMulti narrows children via a sample step", {
     mg <- .fixture_gmulti()
     mg <- subset(mg, samples = "a", view = "only_a")
-    out <- materialize(mg, "only_a")
+    out <- resolve(mg, view = "only_a")
     expect_identical(names(out@objects), "a")
 })
 
@@ -1113,10 +1243,10 @@ test_that("eager subset(samples = ) slices the multi", {
     expect_error(subset(mg, view = "v"), "`subset` or `samples` is required")
 })
 
-test_that("materialize on giottoMulti applies view per-child", {
+test_that("resolve on giottoMulti applies view per-child", {
     mg <- .fixture_gmulti()
     mg <- subset(mg, leiden_clus == "1", view = "c1")
-    out <- materialize(mg, "c1")
+    out <- resolve(mg, view = "c1")
     expect_named(out@objects, c("a", "b"))
     # each child has been narrowed
     n_a <- nrow(pDataDT(out@objects$a))
@@ -1125,12 +1255,12 @@ test_that("materialize on giottoMulti applies view per-child", {
     expect_lt(n_b, length(spatIDs(mg@objects$b)))
 })
 
-test_that("materialize on giottoMulti scopes space per-child", {
+test_that("resolve on giottoMulti scopes space per-child", {
     mg <- .fixture_gmulti()
     mg <- spin(mg, 30, space = "atlas", samples = "a")
     mg <- spin(mg, 45, space = "atlas", samples = "b")
     giottoView(mg, "empty") <- .empty_view()
-    out <- materialize(mg, "empty", space = "atlas")
+    out <- resolve(mg, view = "empty", space = "atlas")
 
     sl_a_native <- getSpatialLocations(mg@objects$a, output = "data.table")
     sl_b_native <- getSpatialLocations(mg@objects$b, output = "data.table")
@@ -1166,13 +1296,13 @@ test_that("spatValues on giottoMulti finds features in joint expression", {
     expect_true(gene %in% colnames(sv))
 })
 
-test_that("materialize on giottoMulti narrows joint shared slots", {
+test_that("resolve on giottoMulti narrows joint shared slots", {
     mg <- .fixture_gmulti()
     mg <- subset(mg, leiden_clus == "1", view = "c1")
     n_total <- nrow(pDataDT(mg))
     n_target <- sum(pDataDT(mg)$leiden_clus == "1")
 
-    out <- materialize(mg, "c1")
+    out <- resolve(mg, view = "c1")
 
     # joint cell_metadata narrowed
     expect_equal(nrow(pDataDT(out)), n_target)
@@ -1181,10 +1311,10 @@ test_that("materialize on giottoMulti narrows joint shared slots", {
     expect_equal(ncol(getExpression(out, output = "matrix")), n_target)
 })
 
-test_that("materialize via slotted view name dispatches on multi", {
+test_that("resolve via slotted view name dispatches on multi", {
     mg <- .fixture_gmulti()
     mg <- subset(mg, samples = "a", view = "x")
-    out <- materialize(mg, "x")
+    out <- resolve(mg, view = "x")
     expect_identical(names(out@objects), "a")
 })
 
@@ -1249,8 +1379,8 @@ test_that("a view recipe round-trips through saveRDS and still resolves", {
     giottoView(g, "a") <- v
     giottoView(g, "b") <- v2
     expect_identical(
-        pDataDT(materialize(g, "a"))$cell_ID,
-        pDataDT(materialize(g, "b"))$cell_ID)
+        pDataDT(resolve(g, view = "a"))$cell_ID,
+        pDataDT(resolve(g, view = "b"))$cell_ID)
 })
 
 test_that("a space recipe round-trips through saveRDS and still resolves", {
@@ -1493,8 +1623,8 @@ test_that("intersects and disjoint partition the cell set", {
     box <- .box_at_centre(g)
     g <- crop(g, box, relation = "intersects", view = "i")
     g <- crop(g, box, relation = "disjoint", view = "d")
-    n_i <- length(pDataDT(materialize(g, "i"))$cell_ID)
-    n_d <- length(pDataDT(materialize(g, "d"))$cell_ID)
+    n_i <- length(pDataDT(resolve(g, view = "i"))$cell_ID)
+    n_d <- length(pDataDT(resolve(g, view = "d"))$cell_ID)
     expect_identical(n_i + n_d, nrow(getSpatialLocations(g,
         output = "data.table")))
     expect_gt(n_i, 0L)
@@ -1509,8 +1639,8 @@ test_that("geom changes the answer at a fixed relation", {
     box <- .box_at_centre(g)
     g <- crop(g, box, relation = "within", geom = "centroid", view = "w_c")
     g <- crop(g, box, relation = "within", geom = "poly", view = "w_p")
-    cells_c <- pDataDT(materialize(g, "w_c"))$cell_ID
-    cells_p <- pDataDT(materialize(g, "w_p"))$cell_ID
+    cells_c <- pDataDT(resolve(g, view = "w_c"))$cell_ID
+    cells_p <- pDataDT(resolve(g, view = "w_p"))$cell_ID
     expect_lt(length(cells_p), length(cells_c))
     expect_true(all(cells_p %in% cells_c))
 })
@@ -1524,12 +1654,12 @@ test_that("geom = poly with no polygon source errors, naming the remedy", {
     expect_null(g@spatial_info)
 
     g <- crop(g, c(0, 10, 0, 10), geom = "poly", view = "p")
-    expect_error(materialize(g, "p"), "no polygon source")
-    expect_error(materialize(g, "p"), "geom = \"centroid\"")
+    expect_error(resolve(g, view = "p"), "no polygon source")
+    expect_error(resolve(g, view = "p"), "geom = \"centroid\"")
 
     # the centroid arm resolves on the same object
     g <- crop(g, c(0, 10, 0, 10), view = "c")
-    expect_length(pDataDT(materialize(g, "c"))$cell_ID, 3L)
+    expect_length(pDataDT(resolve(g, view = "c"))$cell_ID, 3L)
 })
 
 test_that("one recipe narrows every cell-keyed slot identically", {
@@ -1921,8 +2051,8 @@ test_that("crop steps in different frames resolve in their own frames", {
     g <- crop(g, box, view = "native_only")
     keyed <- c("cell_metadata", "spatial_locs", "expression")
     expect_setequal(
-        pDataDT(materialize(g, "mixed", slots = keyed))$cell_ID,
-        pDataDT(materialize(g, "native_only", slots = keyed))$cell_ID)
+        pDataDT(resolve(g, view = "mixed", slots = keyed))$cell_ID,
+        pDataDT(resolve(g, view = "native_only", slots = keyed))$cell_ID)
 })
 
 # `space =` on giottoMulti getters ####
@@ -2060,9 +2190,10 @@ test_that("an unscoped step on a memberless combinedSpace is refused", {
 # in the wrong frame -- no error to notice.
 
 test_that("space applies with no view supplied", {
-    # `view` and `space` are independent knobs; materialize dispatched only
-    # on view = "character", so naming a frame alone used to fail on
-    # dispatch rather than return the frame.
+    # `view` and `space` are independent knobs. The pre-0.7.2 `materialize()`
+    # dispatched on view = "character", so naming a frame alone used to fail
+    # on dispatch rather than return the frame; `resolve()` takes `view` as a
+    # named argument defaulting to NULL, which is what that always was.
     g <- .fixture_giotto()
     giottoSpace(g, "scaled") <- spin(perSampleSpace("scaled"), 30)
 

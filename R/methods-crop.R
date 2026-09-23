@@ -396,7 +396,7 @@ setMethod("crop", signature(x = "gAny", y = "ANY"),
             stop("`crop()` on a giotto / giottoMulti requires `view = `. ",
                 "Eager gobject-level crop is not implemented. Pass ",
                 "`view = \"<name>\"` to record the step onto a view, then ",
-                "apply it with `materialize(x, \"<name>\")`.",
+                "apply it with `resolve(x, view = \"<name>\")`.",
                 call. = FALSE)
         }
         .record_view_on_gobject(x, view, function(v) {

@@ -26,7 +26,7 @@ combineFeatureOverlapData(
 the name of one slotted on \code{gobject}. Threaded through the underlying
 getFeatureMetadata / getPolygonInfo / getFeatureInfo calls — the
 returned table reflects the view-scoped subset. One resolver pass is
-shared via \code{materialize(slots = ...)} so the predicate evaluates once.}
+shared via \code{resolve(slots = ...)} so the predicate evaluates once.}
 }
 \value{
 data.table with combined spatial polygon information

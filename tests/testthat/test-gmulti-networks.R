@@ -155,7 +155,7 @@ test_that("artifact generators carry neither a view nor a sample selector", {
 # converts the same object to points.
 test_that("fused spatlocs span samples in one object with global IDs", {
     mg <- .netfix_multi()
-    sl <- .gm_fused_spatlocs(mg, space = NULL, coordinator = NULL)
+    sl <- .gm_fused_spatlocs(mg, space = NULL)
 
     expect_s4_class(sl, "spatLocsObj")
     ids <- sl[]$cell_ID
@@ -172,24 +172,24 @@ test_that("fused spatlocs span samples in one object with global IDs", {
 
 test_that("fused spatlocs narrow to named samples, and say so when they cannot", {
     mg <- .netfix_multi()
-    one <- .gm_fused_spatlocs(mg, space = NULL, coordinator = NULL,
+    one <- .gm_fused_spatlocs(mg, space = NULL,
         samples = "a")
     expect_true(all(grepl("^a::", one[]$cell_ID)))
 
     # A group is a sample name here -- this is a reader, so adr/0006 permits
     # the selector.
     gmultiGroup(mg, "pair") <- c("a", "b")
-    both <- .gm_fused_spatlocs(mg, space = NULL, coordinator = NULL,
+    both <- .gm_fused_spatlocs(mg, space = NULL,
         samples = "pair")
     expect_identical(
         sort(both[]$cell_ID),
-        sort(.gm_fused_spatlocs(mg, NULL, NULL)[]$cell_ID)
+        sort(.gm_fused_spatlocs(mg, NULL)[]$cell_ID)
     )
 
     # Silently folding fewer children than asked for is the failure mode
     # this cannot afford.
     expect_error(
-        .gm_fused_spatlocs(mg, NULL, NULL, samples = "nope"),
+        .gm_fused_spatlocs(mg, NULL, samples = "nope"),
         "unknown sample"
     )
 })
@@ -295,7 +295,7 @@ test_that("a non-isometric frame actually changes the network", {
 # "this is a multi-level artifact", which is where it has to go: no child's
 # slot can hold an edge whose endpoints are in different samples.
 .netfix_joint <- function(mg, frame = "atlas") {
-    sl <- .gm_fused_spatlocs(mg, space = NULL, coordinator = NULL)
+    sl <- .gm_fused_spatlocs(mg, space = NULL)
     sn <- .spatial_network_from_locs(sl,
         param = kNNNetworkParam(k = 5, filter = TRUE, output = "igraph"),
         method = "kNN", parameters = list(k = 5),

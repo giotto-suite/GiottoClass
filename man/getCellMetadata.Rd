@@ -51,7 +51,7 @@ expression and spat_info are not expected to exist.}
 
 \item{view}{optional character(1) name of a slotted
 view; when supplied, the returned subobject is projected through the
-view's narrowing recipe via \code{\link[=resolveSubobject]{resolveSubobject()}}}
+view's narrowing recipe via \code{\link[=resolve]{resolve()}}}
 
 \item{space}{optional character(1) name of a slotted
 space; when supplied, applied alongside \code{view} (spaces are no-ops on

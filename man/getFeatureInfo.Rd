@@ -44,7 +44,7 @@ expression and spat_info are not expected to exist.}
 there is a length of 1.}
 
 \item{view}{optional character(1) name of a slotted view;
-applies any crop step to the points via \code{\link[=resolveSubobject]{resolveSubobject()}}. Points are
+applies any crop step to the points via \code{\link[=resolve]{resolve()}}. Points are
 not cell-keyed so subset predicates do not cascade here.}
 
 \item{space}{(giottoMulti) name of a coordinate frame registered on the
