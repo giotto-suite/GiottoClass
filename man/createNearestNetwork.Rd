@@ -21,7 +21,6 @@ createNearestNetwork(
   top_shared = 3,
   engine = c("dbscan", "hnsw"),
   ef = 200,
-  n_threads_build = 1L,
   verbose = TRUE,
   ...
 )
@@ -69,13 +68,6 @@ network's undirected edges in 11.8s against 79.9s. Requires
 default 200 -- the recall/speed dial. Higher values search more of the
 graph, moving the result closer to the exact \code{"dbscan"} answer at the cost
 of query time.}
-
-\item{n_threads_build}{integer or \code{NULL}. \code{"hnsw"} only, ignored otherwise.
-Threads for the index build, default \code{1}. A parallel build is not
-reproducible -- insertion order varies, so neighbours differ slightly
-between runs and that propagates to clustering even with a fixed seed.
-\code{NULL} inherits the search thread count and trades reproducibility for
-speed.}
 
 \item{verbose}{be verbose}
 

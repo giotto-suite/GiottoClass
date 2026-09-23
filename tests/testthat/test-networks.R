@@ -450,8 +450,7 @@ test_that(".DollarNames lists every param for autocomplete", {
     expect_setequal(
         .DollarNames(kNNNetworkParam()),
         c("k", "filter", "maximum_distance", "minimum_k", "weight_fun",
-          "include_weight", "include_distance", "output", "engine", "ef",
-          "n_threads_build")
+          "include_weight", "include_distance", "output", "engine", "ef")
     )
     expect_false("maximum_distance" %in% names(kNNNetworkParam()@param))
 

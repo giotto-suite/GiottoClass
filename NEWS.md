@@ -10,6 +10,30 @@
 
 ## changes
 
+- **`n_threads_build` is gone from `hnswKNN()`, `kNNNetworkParam()`,
+  `sNNNetworkParam()` and `createNearestNetwork()`.** The HNSW index build now
+  always runs on one thread, and that is no longer a choice. It was briefly an
+  argument whose only non-default value was the wrong one: a parallel build
+  races on insertion order, and no seed can pin it, because the interleaving is
+  not drawn from an RNG. On a 169,528-cell Atera section, two runs of an
+  otherwise identical script with a parallel build disagreed on how many cell
+  types there were -- 34 against 33, ARI 0.7998 -- while the serial build gave
+  bit-identical neighbour lists across five runs. Passing `n_threads_build`
+  still works and now warns, rather than being absorbed by `...` in silence and
+  leaving the caller believing they had enabled something. `n_threads`, which
+  controls the read-only search, is unaffected and stays parallel.
+
+- **`nnToUwot()`**, converting a `kNN`/`NN` object from `hnswKNN()` or
+  `dbscan::kNN()` into the `list(idx =, dist =)` that `uwot::umap()` and
+  `uwot::umap2()` take as `nn_method`. Two conventions have to be reconciled
+  and uwot validates neither, so getting either wrong corrupts the embedding
+  silently instead of erroring: uwot names the matrix `idx` where a `kNN`
+  object names it `id`, and uwot requires each observation to be its own first
+  neighbour -- it drops column 1 when fitting the local connectivity offset --
+  where both search functions *remove* self-matches. Handing their output over
+  unchanged discards every observation's true nearest neighbour. The converter
+  refuses input that already carries self, and refuses unsorted distances.
+
 - **`annotateSpatialNetwork()`'s two annotations are now independent, and both
   are optional.** A network stores only edges, so anything about the cells an
   edge runs between is attached rather than read back — and attaching a label
@@ -420,15 +444,12 @@ released version, so no stored object holds a recipe.
       158,662-cell Xenium sample at `k = 30`: `ef = 50` reproduced 99.225% of
       the exact network's undirected edges, `ef = 200` reproduced 99.995%, for
       2.30s against 2.83s.
-    - `n_threads_build` (default `1`) makes the search reproducible. Only the
-      index build is nondeterministic -- concurrent insertion makes the graph
-      depend on thread interleaving, while the search is read-only and
-      deterministic at any thread count. With a parallel build, two runs of a
-      seeded Leiden gave ARI 0.9368-0.9655; building on one thread they are
-      identical (ARI 1.000000). Costs 2.82s -> 11.8s, still 6.8x faster than
-      the 79.85s exact `dbscan::kNN()`, with accuracy unchanged (recall
-      0.999980). Set to `NULL` to inherit `n_threads` and trade
-      reproducibility for speed while exploring.
+    - The index build is always single-threaded and this is not adjustable.
+      Only the build is nondeterministic -- concurrent insertion makes the
+      graph depend on thread interleaving, while the search is read-only and
+      deterministic at any thread count, so `n_threads` stays parallel.
+      Costs 2.82s -> 11.8s, still 6.8x faster than the 79.85s exact
+      `dbscan::kNN()`, with accuracy unchanged (recall 0.999980).
     - An `engine = "auto"` that selects by dataset size is planned; for now
       prefer `"dbscan"` on small data, where it is both exact and faster.
 
