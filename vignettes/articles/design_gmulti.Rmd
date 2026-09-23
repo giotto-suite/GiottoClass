@@ -268,7 +268,7 @@ logic deriving keys or universes from `names(@expression)` silently sees nothing
 That is what caused the narrowing bug above, and it is not merely a first-access
 window.
 
-Open: what signals eager materialization? Lazy is the default and `materialize()`
+Open: what signals eager materialization? Lazy is the default and `resolve()`
 is the presumed trigger, but that is not formally the contract.
 
 ## The access layer

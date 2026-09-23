@@ -117,6 +117,39 @@
   subgraph. Nodes are not the network's to supply — an edge table has no row
   for a cell with no edges — so a consumer takes its node set from the
   locations. Stated in `adr/0004` and the design article.
+- **`resolve()` replaces `materialize()` and `resolveSubobject()`**, which were
+  the same operation under two names, split at the point where one called the
+  other. One generic now spans both levels of the walk: a container evaluates
+  the recipe once and walks its slots, a subobject leaf applies the context it
+  is handed. Dispatch is on `(x, coordinator)` and everything past `x` is
+  passed by name — `resolve(g, view = "roi", space = "layout")`.
+  - `materialize` was the wrong word, and an already-taken one: it is used
+    elsewhere in the stack for pulling lazy or backed data into memory, which
+    is the one thing this does not do — a resolved gobject's subobjects are
+    still whatever they were. `resolve` was already the subsystem's own word.
+  - **A leaf no longer takes the parent gobject.** It used it for exactly one
+    thing, deriving the surviving cell_ID set, and that belongs at the
+    container, which is the thing walking the nesting keys. A leaf now takes
+    `keep`, `space` and `view`, so `resolve(myExprObj, co, keep = ids)` is a
+    unit test rather than a call needing a whole object graph. `keep` arrives
+    as a promise, so a leaf that does not narrow by cell still never pays for
+    it.
+  - The per-leaf `.cache` lookup through `...` is gone with it: the value is
+    computed once where it is known, which makes recomputation structurally
+    impossible rather than merely avoided.
+  - Removing the one use of a coordinator inside the space-application helper
+    exposed that it had been threaded through the whole crop-carrier chain to
+    reach it, and read nowhere else. Five internal helpers lose the argument.
+    `.surviving_cell_ids()` keeps it: that is a seam a backend replaces rather
+    than parameterises.
+  - `resolveSubobject()`'s five-slot dispatch signature is gone. Every
+    registration used only `(subobj, coordinator)`; the middle three were
+    always `ANY`.
+  - **Both old names keep working for one release.** `resolveSubobject()`
+    forwards to `resolve()`, and the walk still routes through it for any
+    coordinator that has not registered `resolve` methods yet — a coordinator
+    registered outside this package has a release in which both names resolve
+    before the alias is dropped.
 
 ## docs
 
@@ -134,6 +167,9 @@
   underneath it: the recipe containers are classes holding plain steps,
   recording a space produces a `perSampleSpace` and a `combinedSpace` is
   declared, and a crop's frame lives on its step.
+- `design_view_space.Rmd` gains the record for the `resolve()` merge: why the
+  name changed, why `view` left the dispatch signature, and why a leaf is
+  handed its context instead of the gobject.
 
 # GiottoClass 0.7.1
 

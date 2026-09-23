@@ -441,16 +441,17 @@ The view is named, not passed inline — see
 [`view = ` and `space = ` take a name, not a recipe](#view---and-space---take-a-name-not-a-recipe)
 above.
 
-<!-- materialize() is hidden until it is replaced by resolve()
+<!-- resolve() is plumbing for consumers such as plot functions, not a user
+verb: its output gobject is scaffolding, not an object to keep working on.
 
-### Via `materialize()`
+### Via `resolve()`
 
-`materialize(g, view, space)` applies the recipe across all relevant
+`resolve(g, view =, space =)` applies the recipe across all relevant
 slots at once, returning a narrowed gobject. Useful when several
 downstream calls need the same narrowing:
 
 ```{r, eval=FALSE}
-g_narrow <- materialize(g, "cluster1_only")
+g_narrow <- resolve(g, view = "cluster1_only")
 g_narrow
 
 # Subsequent accessors see the narrowed view automatically
