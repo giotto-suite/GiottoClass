@@ -145,11 +145,22 @@
   - `resolveSubobject()`'s five-slot dispatch signature is gone. Every
     registration used only `(subobj, coordinator)`; the middle three were
     always `ANY`.
+  - **`prepareIds()` is removed**, not deprecated. It was an exported
+    identity transform with no call sites in any package, and the two
+    companion generics its design note promised — one to apply a prepared ID
+    set, one to translate a predicate — were never written. All three
+    dispatched on the coordinator, which is now what the leaf generic
+    dispatches on, so each coordinator's `resolve` methods do that work
+    directly.
   - **Both old names keep working for one release.** `resolveSubobject()`
     forwards to `resolve()`, and the walk still routes through it for any
     coordinator that has not registered `resolve` methods yet — a coordinator
     registered outside this package has a release in which both names resolve
-    before the alias is dropped.
+    before the alias is dropped. The routing test is whether a method is
+    registered under the old name for that pair, not whether a `resolve`
+    method exists — concrete coordinators inherit the in-memory one, so the
+    latter is always true and would send backed data down the in-memory path
+    without an error.
 
 ## docs
 

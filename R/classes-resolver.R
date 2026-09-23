@@ -2,39 +2,29 @@
 # viewCoordinator — cross-storage bridging for view + space resolution
 # =============================================================================
 #
-# DESIGN NOTES (sketch, 2026-05-28)
-# ---------------------------------
 # A `viewCoordinator` is the dispatch tag for HOW a giottoView + giottoSpace
 # recipe gets executed across the gobject's storage backings. It is NOT a
 # strategy class for picking an execution engine — the engine is owned by
 # the storage (GiottoDisk parquet stores expose lazy ops + storeRead output
-# modes that already select the engine at materialization time). The
-# coordinator's role is to provide a common protocol for moving IDs and
-# effecting joins between storages so they can collaborate during view
-# resolution.
+# modes that already select the engine at read time).
 #
 # Pattern mirrors GiottoClass's other strategy generics (`processData`,
 # `analyzeData`, etc.) where the entry-point generic dispatches on both the
 # data class and the strategy class. Here the entry point is
-# `resolve(subobj, coordinator, keep =, space =, view =)`.
+# `resolve(subobj, coordinator, keep =, space =, view =)`, and it is the ONLY
+# entry point.
 #
-# Protocol methods the coordinator provides:
-#   prepareIds(coordinator, ids, ...)
-#     Promote an R-memory cell_ID character vector into the form the
-#     coordinator's preferred backend wants. For dataTableCoordinator the
-#     identity transform; for duckDBCoordinator an ephemeral duckdb-
-#     registered table; for sedonaCoordinator a sedona view. The "prepared"
-#     form is then usable as the right-hand side of a JOIN / IN filter
-#     against any subobject the coordinator handles.
-#
-# Future-facing protocol (deferred until first cross-backing case lands):
-#   applyIdsFilter(coordinator, subobj, prepared_ids, id_col)
-#     Apply prepared IDs as a row filter on a subobject. Dispatches on
-#     (coordinator, subobj_class) so each combination knows whether it's
-#     an in-memory %in%, a backed JOIN, or an ephemeral-register-then-JOIN.
-#   translatePredicate(coordinator, predicate, target_subobj)
-#     Map an R predicate into the backend's filter form (delegating to the
-#     store's existing `subset()` + `.r_expr_to_sql()` for parquet stores).
+# There is no separate coordinator protocol. The original sketch (2026-05-28)
+# proposed three generics -- `prepareIds()` to promote an ID set into the
+# backend's form, `applyIdsFilter()` to apply it, `translatePredicate()` to
+# map an R predicate into the backend's filter language. They were designed
+# before the leaf generic dispatched on the coordinator; once it does, they
+# select on exactly the same thing one layer further down. Each coordinator's
+# `resolve` methods do all three internally, in the form its storage wants,
+# and share the work between their own leaves with ordinary internal helpers
+# rather than exported generics. `prepareIds()` shipped as an exported
+# identity transform with zero call sites and was removed in 0.7.2; the other
+# two were never written.
 #
 # Concrete coordinators:
 #   dataTableCoordinator   — all in-memory; IDs as R character vector;

@@ -451,6 +451,27 @@ ask for its own; the container is the thing walking the nesting keys, so
 computing `keep` per spat_unit hands each leaf the correct set by
 construction.
 
+### The coordinator protocol was a layer that never existed
+
+The 2026-05-28 sketch gave the coordinator three generics of its own:
+`prepareIds()` to promote an ID set into the backend's form,
+`applyIdsFilter()` to apply it, and `translatePredicate()` to map an R
+predicate into the backend's filter language. Only the first was ever written
+— as an exported identity transform for `dataTableCoordinator`, with zero call
+sites in any package.
+
+They were designed before the leaf generic dispatched on the coordinator. Once
+it does, all three select on exactly the same thing, one layer further down. A
+coordinator's `resolve` methods already do the work each one describes, in the
+form its own storage wants, and share it between their own leaves with
+ordinary internal helpers — which is cheaper than an exported generic and does
+not commit the package to a signature before there is a second implementation
+to check it against.
+
+`prepareIds()` was removed in 0.7.2. The other two stay unwritten. If a
+cross-backing case ever does need a shared vocabulary, it should be derived
+from two working backends rather than sketched ahead of one.
+
 ### Both old names survive one release
 
 `materialize()` and `resolveSubobject()` are deprecated, not removed.
@@ -458,10 +479,24 @@ GiottoDisk has 8 `resolveSubobject` registrations, **zero** call sites, and
 tracks *released* GiottoClass — so dropping the generic in the same release
 that introduces `resolve()` would unwire backed view resolution the moment it
 landed. `resolveSubobject`'s default method forwards to `resolve()`, and the
-walk falls back to `resolveSubobject` for any coordinator that has not
-registered `resolve` methods yet, passing the gobject and the `.cache` those
-methods were written against. GiottoDisk switches against a release carrying
-both; then the alias goes.
+walk routes to `resolveSubobject` for any pair a downstream package still
+registers under that name, passing the gobject and the `.cache` those methods
+were written against. GiottoDisk switches against a release carrying both;
+then the alias goes.
+
+**The test for "still registered" cannot be "is there a `resolve` method".**
+Concrete coordinators *inherit* `dataTableCoordinator` —
+`parquetCoordinator` is declared `contains = "dataTableCoordinator"` so that
+an in-memory subobject sitting inside an otherwise-backed gobject falls
+through to the in-memory path. That inheritance means every leaf class
+already has a `resolve` method for a backed coordinator, by inheritance from
+the in-memory one. Asking that question answers "yes, use the new path" and
+quietly routes backed data through the leaf that materialises it, losing
+every pushdown and every lazy op, with no error. The walk asks the question
+that actually decides it instead: is a method registered under the old name
+for this pair, i.e. is the selected method's `@defined` signature something
+other than all-`ANY`? When a downstream package switches it deletes that
+registration, and the check flips on its own — no version test, no flag.
 
 One thing that survey got wrong and is worth recording, because it changes
 what "hand the leaf its context" can mean downstream: the claim that *every*
@@ -469,11 +504,11 @@ leaf uses the gobject only to derive `keep` holds for GiottoClass and not for
 GiottoDisk. Its leaves push the view down into the store as a predicate —
 `.narrow_store_by_predicate(…, gobject = …)`, `.crop_carriers(gobject, …)` —
 and in cache mode compute the surviving set as an **arrow table** rather than
-a character vector, scoped by spat_unit and feat_type. So the eventual
-coordinator-side contract is not "a character vector of IDs" but "the
-surviving set in the coordinator's preferred form", which is what
-`prepareIds()` exists to produce. That generalisation is deferred until
-GiottoDisk switches; naming it here so the next pass does not rediscover it.
+a character vector, scoped by spat_unit and feat_type. So the leaf contract's
+`keep` is not "a character vector of IDs" but "the surviving set in whatever
+form this coordinator's methods want" — the coordinator in the signature is
+what makes that well defined. Naming it here so the next pass does not
+rediscover it.
 
 ### A view on a `giottoMulti` is evaluated at the parent and nowhere else
 

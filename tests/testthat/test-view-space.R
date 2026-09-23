@@ -407,11 +407,6 @@ test_that(".default_view_coordinator returns dataTableCoordinator for in-memory"
     expect_s4_class(p, "dataTableCoordinator")
 })
 
-test_that("prepareIds() for dataTableCoordinator is identity", {
-    ids <- c("a", "b", "c")
-    expect_identical(prepareIds(dataTableCoordinator(), ids), ids)
-})
-
 test_that("defaultViewCoordinator() defaults to dataTableCoordinator for any source", {
     # ANY signature method
     p <- defaultViewCoordinator(NULL)  # NULL is technically ANY
@@ -635,11 +630,18 @@ test_that("materialize() still resolves", {
 })
 
 test_that("a coordinator with only resolveSubobject methods still resolves", {
-    # The compat path a downstream coordinator lands on for one release:
-    # there is no `resolve` method for this (subobj, coordinator) pair, so the
-    # walk must fall back to the old generic -- and hand it the gobject and
-    # the `.cache` those methods were written against.
-    setClass("_test_legacy_coord_", contains = "viewCoordinator",
+    # The compat path a downstream coordinator lands on for one release: the
+    # walk must reach the old generic, and hand it the gobject and the
+    # `.cache` those methods were written against.
+    #
+    # `contains = "dataTableCoordinator"` is deliberate and load-bearing --
+    # it is how the real backed coordinator is declared, so that in-memory
+    # subobjects inside a backed gobject fall through to the in-memory path.
+    # It also means this pair ALREADY has a `resolve` method by inheritance,
+    # so a fallback keyed on "is there a resolve method" silently sends backed
+    # data through the leaf that materialises it. Declaring the fake with a
+    # plain `viewCoordinator` parent would let that bug pass.
+    setClass("_test_legacy_coord_", contains = "dataTableCoordinator",
         where = globalenv())
     on.exit(removeClass("_test_legacy_coord_", where = globalenv()),
         add = TRUE)
@@ -666,11 +668,15 @@ test_that("a coordinator with only resolveSubobject methods still resolves", {
     out <- resolve(g, coordinator = new("_test_legacy_coord_"),
         view = "c1", slots = "cell_metadata")
 
+    # the inherited in-memory method exists for this pair and must not win
+    expect_true(methods::hasMethod("resolve",
+        c("cellMetaObj", "_test_legacy_coord_")))
+
     expect_gt(seen$n, 0L)
     expect_s4_class(seen$gobject, "giotto")
     expect_true(is.environment(seen$cache))
     # that method returned its input untouched, so nothing narrowed -- which
-    # is the proof the call went there and not to a dataTableCoordinator leaf
+    # is the proof the call went there and not to the inherited in-memory leaf
     expect_equal(nrow(pDataDT(out)), nrow(pDataDT(g)))
 })
 

@@ -147,32 +147,6 @@ setGeneric("resolveSubobject",
     useAsDefault = .resolveSubobject_default)
 
 
-# Coordinator protocol ####
-
-#' @title prepareIds
-#' @name prepareIds
-#' @description Coordinator-side protocol method: promote an R-memory
-#' cell_ID character vector into the form the coordinator's preferred
-#' backend uses for filtering. For [dataTableCoordinator-class] this is
-#' the identity transform; downstream coordinators (e.g. duckDB / sedona
-#' from GiottoDisk) register methods that perform ephemeral table
-#' registration or similar.
-#'
-#' @param coordinator a [viewCoordinator-class]-inheriting object
-#' @param ids character vector of cell_IDs
-#' @param ... reserved
-#' @returns the prepared IDs in the coordinator's preferred form
-#' @export
-setGeneric("prepareIds",
-    function(coordinator, ids, ...) standardGeneric("prepareIds"))
-
-#' @rdname prepareIds
-#' @export
-setMethod("prepareIds", signature(coordinator = "dataTableCoordinator"),
-    function(coordinator, ids, ...) ids
-)
-
-
 # Helpers ####
 
 #' @title defaultViewCoordinator
@@ -635,11 +609,39 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     ids
 }
 
-# The one leaf call site. Prefers `resolve()` and falls back to the deprecated
-# `resolveSubobject()` for any coordinator that has not registered `resolve`
-# methods yet -- {GiottoDisk}'s 8 parquetCoordinator registrations land here
-# until its own switch ships. That arm passes the gobject and the `.cache`
-# they were written against, unchanged.
+# Does a downstream package still register this (subobj, coordinator) pair
+# under the deprecated name?
+#
+# It cannot be answered with `hasMethod("resolve", ...)`, and the reason is
+# worth stating because getting it wrong is silent. Concrete coordinators
+# INHERIT `dataTableCoordinator` -- {GiottoDisk}'s `parquetCoordinator` is
+# declared `contains = "dataTableCoordinator"` so that in-memory subobjects
+# inside an otherwise-backed gobject fall through to the in-memory path. That
+# inheritance means every leaf class already "has" a `resolve` method for a
+# backed coordinator, by inheritance from the in-memory one. Asking that
+# question would answer "yes, use the new path" and quietly route backed data
+# through the leaf that materialises it, losing every pushdown.
+#
+# So ask the question that actually decides it: has a real method been
+# registered under the old name for this pair? A `@defined` signature that is
+# not all-`ANY` means yes; all-`ANY` is the generic's own default. When a
+# downstream package switches, it deletes that registration and this turns
+# false on its own -- no version check, no flag.
+#' @keywords internal
+#' @noRd
+.has_legacy_leaf_method <- function(subobj, coordinator) {
+    m <- methods::selectMethod("resolveSubobject",
+        c(class(subobj)[1L], "ANY", "ANY", "ANY", class(coordinator)[1L]),
+        optional = TRUE)
+    if (!methods::is(m, "MethodDefinition")) return(FALSE)
+    !all(m@defined == "ANY")
+}
+
+# The one leaf call site. Prefers `resolve()`, and uses the deprecated
+# `resolveSubobject()` when a downstream package still registers this pair
+# under that name -- {GiottoDisk}'s 8 parquetCoordinator registrations land
+# here until its own switch ships. That arm passes the gobject and the
+# `.cache` they were written against, unchanged.
 #
 # On the `resolve()` arm `keep` is handed over as a promise. Leaves that never
 # read it -- points, images, feature metadata -- never trigger the ID
@@ -649,8 +651,7 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 #' @noRd
 .resolve_leaf <- function(subobj, gobject, view, space, coordinator,
                           cache = NULL) {
-    if (!methods::hasMethod("resolve",
-            c(class(subobj)[1L], class(coordinator)[1L]))) {
+    if (.has_legacy_leaf_method(subobj, coordinator)) {
         return(resolveSubobject(subobj, gobject, view, space, coordinator,
             .cache = cache))
     }
@@ -737,11 +738,11 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # surviving cell_ID set and are otherwise untouched by space transforms, which
 # are no-ops on non-spatial data.
 #
-# Note: for dataTableCoordinator, `prepareIds()` is the identity transform, so
-# these methods consume `keep` directly via `%in%`. Backed coordinators
-# (duckDB / sedona) register their own methods that route through
-# `prepareIds()` to promote the ID set into a JOIN-able table reference before
-# applying it.
+# Note: `keep` arrives in whatever form its coordinator's method wants, which
+# for dataTableCoordinator is a plain character vector consumed via `%in%`. A
+# backed coordinator registers its own methods and promotes the set to a
+# JOIN-able reference itself -- there is no separate protocol step for that,
+# because dispatching on the coordinator is what selects the promotion.
 #
 # `keep` is read with `is.null()`, never `missing()`: an S4 method whose
 # formals extend the generic's is wrapped in a `.local` call, and `missing()`
