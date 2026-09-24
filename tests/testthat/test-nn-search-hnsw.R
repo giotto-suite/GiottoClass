@@ -183,3 +183,35 @@ test_that("nnToUwot output is accepted by uwot", {
     expect_identical(dim(emb), c(nrow(m), 2L))
     expect_false(anyNA(emb))
 })
+
+test_that("an sNN build keeps the kNN it was derived from", {
+    skip_if_not_installed("GiottoData")
+    g <- GiottoData::loadGiottoMini("visium", verbose = FALSE)
+
+    g <- createNearestNetwork(g, type = "sNN", dim_reduction_to_use = "pca",
+        dimensions_to_use = 1:10, k = 10, engine = "hnsw", verbose = FALSE)
+
+    nets <- list_nearest_networks(g)
+    expect_true("sNN" %in% nets$nn_type)
+    # the kNN used to be computed, used once and dropped, which left nothing
+    # for runUMAP() to share -- it had to repeat an identical search
+    expect_true("kNN" %in% nets$nn_type)
+    expect_true("kNN.pca" %in% nets$name)
+
+    # and it must be the SAME graph, not merely one built the same way
+    ref <- hnswKNN(
+        getDimReduction(g, reduction_method = "pca", name = "pca",
+                        output = "dimObj")[][, 1:10, drop = FALSE],
+        k = 10
+    )
+    stored <- getNearestNetwork(g, nn_type = "kNN", name = "kNN.pca",
+                                output = "data.table")
+    expect_identical(nrow(stored), sum(!is.na(ref$id)))
+
+    # opting out leaves the object as it was before
+    g2 <- GiottoData::loadGiottoMini("visium", verbose = FALSE)
+    g2 <- createNearestNetwork(g2, type = "sNN", dim_reduction_to_use = "pca",
+        dimensions_to_use = 1:10, k = 10, engine = "hnsw",
+        keep_knn = FALSE, verbose = FALSE)
+    expect_false("kNN.pca" %in% list_nearest_networks(g2)$name)
+})

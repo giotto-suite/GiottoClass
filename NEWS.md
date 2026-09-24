@@ -23,6 +23,17 @@
   leaving the caller believing they had enabled something. `n_threads`, which
   controls the read-only search, is unaffected and stays parallel.
 
+- **`createNearestNetwork(type = "sNN")` now keeps the kNN it was derived
+  from**, under `kNN.<dim_reduction_to_use>`, controlled by the new `keep_knn`
+  argument (default `TRUE`). An sNN is a transform of a kNN and the kNN is the
+  expensive half, but it was previously computed, used once and dropped — so
+  nothing else could share it, and anything wanting the same neighbourhood
+  (`runUMAP()`, in particular) had to repeat an identical search. The search
+  now runs once and both networks are built from it, which is what makes an
+  embedding and a partition rest on one graph rather than on two that happen
+  to agree. `.net_dt_knn()` gained the `nn_network` short-circuit
+  `.net_dt_snn()` already had, and the validation both use is now shared.
+
 - **`nnToUwot()`**, converting a `kNN`/`NN` object from `hnswKNN()` or
   `dbscan::kNN()` into the `list(idx =, dist =)` that `uwot::umap()` and
   `uwot::umap2()` take as `nn_method`. Two conventions have to be reconciled

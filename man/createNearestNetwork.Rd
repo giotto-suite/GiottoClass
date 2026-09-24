@@ -21,6 +21,7 @@ createNearestNetwork(
   top_shared = 3,
   engine = c("dbscan", "hnsw"),
   ef = 200,
+  keep_knn = TRUE,
   verbose = TRUE,
   ...
 )
@@ -68,6 +69,14 @@ network's undirected edges in 11.8s against 79.9s. Requires
 default 200 -- the recall/speed dial. Higher values search more of the
 graph, moving the result closer to the exact \code{"dbscan"} answer at the cost
 of query time.}
+
+\item{keep_knn}{logical. For \code{type = "sNN"}, also store the kNN the sNN
+was built from, under \verb{kNN.<dim_reduction_to_use>}. Default \code{TRUE}. An
+sNN is a transform of a kNN and the kNN is the expensive half; keeping it
+costs one more edge table and lets anything else that needs the same
+neighbourhood -- \code{runUMAP()}, in particular -- use that graph instead of
+repeating an identical search. Only applies to the dimension-reduction
+path.}
 
 \item{verbose}{be verbose}
 
