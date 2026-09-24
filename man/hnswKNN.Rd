@@ -12,7 +12,6 @@ hnswKNN(
   ef_construction = 200L,
   ef = 200L,
   n_threads = NULL,
-  n_threads_build = 1L,
   ...
 )
 }
@@ -41,15 +40,8 @@ reproduced 99.995\%, for 2.30s against 2.83s.}
 
 \item{n_threads}{integer. Threads for the \strong{search}. Defaults to
 \code{\link[GiottoUtils:determine_cores]{GiottoUtils::determine_cores()}}. The search is deterministic at any
-thread count, so this can be left parallel.}
-
-\item{n_threads_build}{integer or \code{NULL}. Threads for the index \strong{build},
-default \code{1}. A multithreaded build is not reproducible: insertion order
-varies, so the graph and hence the neighbours differ slightly between
-runs, which propagates to clustering even with a fixed seed. Building on
-one thread makes repeated calls bit-identical. Set to \code{NULL} to inherit
-\code{n_threads} and trade reproducibility for speed while exploring --
-measured at 11.8s against 2.82s on 158,662 cells.}
+thread count, so this can be left parallel. The index \strong{build} is not
+threaded and is not configurable; see Details.}
 
 \item{...}{unused, for signature compatibility with \code{\link[dbscan:kNN]{dbscan::kNN()}}.}
 }
@@ -69,10 +61,10 @@ HNSW is \emph{approximate}: recall is high but not guaranteed to be 1.0. Use
 \code{\link[dbscan:kNN]{dbscan::kNN()}} when exactness matters, or on small data where the exact
 search is both faster and exact.
 
-Repeated calls are reproducible by default. The index build is the only
+Repeated calls are reproducible. The index build is the only
 nondeterministic phase -- concurrent insertion makes the graph depend on
-thread interleaving -- so \code{n_threads_build} defaults to \code{1}. Searching is
-unaffected and stays parallel.
+thread interleaving -- so it always runs on one thread and this cannot be
+changed. Searching is unaffected and stays parallel over \code{n_threads}.
 }
 \examples{
 \dontrun{

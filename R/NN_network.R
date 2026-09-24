@@ -103,12 +103,6 @@ setClass("delaunayNetworkParam", contains = "networkParam")
 #'   default 200 -- the recall/speed dial. Higher values search more of the
 #'   graph, moving the result closer to the exact `"dbscan"` answer at the cost
 #'   of query time.
-#' @param n_threads_build integer or `NULL`. `"hnsw"` only, ignored otherwise.
-#'   Threads for the index build, default `1`. A parallel build is not
-#'   reproducible -- insertion order varies, so neighbours differ slightly
-#'   between runs and that propagates to clustering even with a fixed seed.
-#'   `NULL` inherits the search thread count and trades reproducibility for
-#'   speed.
 #' @param output one of `"auto"`, `"data.table"`, `"igraph"`, `"parquet"`
 #' @export
 kNNNetworkParam <- function(k = 30L, filter = FALSE,
@@ -116,7 +110,7 @@ kNNNetworkParam <- function(k = 30L, filter = FALSE,
         weight_fun = function(d) 1 / (1 + d),
         include_weight = TRUE, include_distance = TRUE,
         output = c("auto", "data.table", "igraph", "parquet"),
-        engine = c("dbscan", "hnsw"), ef = 200, n_threads_build = 1L) {
+        engine = c("dbscan", "hnsw"), ef = 200) {
     output <- match.arg(output)
     engine <- match.arg(engine)
     checkmate::assert_count(k, positive = TRUE)
@@ -139,7 +133,6 @@ kNNNetworkParam <- function(k = 30L, filter = FALSE,
     p$output <- output
     p$engine <- engine
     p$ef <- as.numeric(ef)
-    p$n_threads_build <- n_threads_build
     p
 }
 
@@ -161,19 +154,13 @@ kNNNetworkParam <- function(k = 30L, filter = FALSE,
 #'   default 200 -- the recall/speed dial. Higher values search more of the
 #'   graph, moving the result closer to the exact `"dbscan"` answer at the cost
 #'   of query time.
-#' @param n_threads_build integer or `NULL`. `"hnsw"` only, ignored otherwise.
-#'   Threads for the index build, default `1`. A parallel build is not
-#'   reproducible -- insertion order varies, so neighbours differ slightly
-#'   between runs and that propagates to clustering even with a fixed seed.
-#'   `NULL` inherits the search thread count and trades reproducibility for
-#'   speed.
 #' @param output one of `"auto"`, `"data.table"`, `"igraph"`, `"parquet"`
 #' @export
 sNNNetworkParam <- function(k = 30L, top_shared = 3L, minimum_shared = 5L,
         weight_fun = function(d) 1 / (1 + d),
         include_weight = TRUE, include_distance = TRUE,
         output = c("auto", "data.table", "igraph", "parquet"),
-        engine = c("dbscan", "hnsw"), ef = 200, n_threads_build = 1L) {
+        engine = c("dbscan", "hnsw"), ef = 200) {
     output <- match.arg(output)
     engine <- match.arg(engine)
     checkmate::assert_count(k, positive = TRUE)
@@ -194,7 +181,6 @@ sNNNetworkParam <- function(k = 30L, top_shared = 3L, minimum_shared = 5L,
     p$output <- output
     p$engine <- engine
     p$ef <- as.numeric(ef)
-    p$n_threads_build <- n_threads_build
     p
 }
 
@@ -396,7 +382,6 @@ setMethod("createNetwork", signature("matrix", "kNNNetworkParam"),
             include_distance = param$include_distance,
             engine = param$engine,
             ef = param$ef,
-            n_threads_build = param$n_threads_build,
             verbose = verbose, ...
         )
         .finalize_network(dt, x = x, node_ids = node_ids,
@@ -447,7 +432,6 @@ setMethod("createNetwork", signature("matrix", "sNNNetworkParam"),
             include_distance = param$include_distance,
             engine = param$engine,
             ef = param$ef,
-            n_threads_build = param$n_threads_build,
             verbose = verbose, ...
         )
         # sNN: symmetric relation, collapse to undirected unique pairs.
@@ -702,13 +686,38 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
 # of createNearestNetwork() at PCA dimensionality, and why it pays off on large
 # datasets. Both return the same `c("kNN", "NN")` shape, so everything
 # downstream is identical.
+# Shared validation for a caller-supplied kNN, used by both `.net_dt_knn()`
+# and `.net_dt_snn()`.
+.check_nn_network <- function(nn_network, x, k) {
+    if (!inherits(nn_network, "kNN")) {
+        stop(wrap_txt(errWidth = TRUE,
+            "[createNetwork] `nn_network` must be a kNN object, as
+            returned by dbscan::kNN() or hnswKNN()."
+        ), call. = FALSE)
+    }
+    if (ncol(nn_network$id) < k) {
+        stop(wrap_txtf(
+            "[createNetwork] `nn_network` has %d neighbours per node,
+            fewer than the requested k = %d.",
+            ncol(nn_network$id), k
+        ), call. = FALSE)
+    }
+    if (nrow(nn_network$id) != nrow(x)) {
+        stop(wrap_txtf(
+            "[createNetwork] `nn_network` covers %d nodes but `x` has %d.",
+            nrow(nn_network$id), nrow(x)
+        ), call. = FALSE)
+    }
+    invisible(TRUE)
+}
+
 .nn_search <- function(x, k, engine = c("dbscan", "hnsw"), ...) {
     engine <- match.arg(engine)
     if (identical(engine, "dbscan")) {
-        # ef / n_threads_build are hnsw-only; accepting and ignoring them here
-        # lets a caller set them once and switch engines freely.
+        # ef is hnsw-only; accepting and ignoring it here lets a caller set
+        # it once and switch engines freely.
         dots <- list(...)
-        dots[c("ef", "n_threads_build")] <- NULL
+        dots[["ef"]] <- NULL
         return(do.call(dbscan::kNN,
             c(list(x = x, k = k, sort = TRUE), dots)))
     }
@@ -723,7 +732,7 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
         weight_fun = function(d) 1 / (1 + d),
         engine = c("dbscan", "hnsw"),
         ef = 200,
-        n_threads_build = 1L,
+        nn_network = NULL,
         verbose = NULL, ...) {
     # NSE vars
     from <- to <- distance <- NULL
@@ -738,8 +747,14 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
     # distances must be calculated when a limit is set
     if (!is.null(maximum_distance)) include_distance <- TRUE
 
-    nn_network <- .nn_search(x, k = k, engine = engine, ef = ef,
-        n_threads_build = n_threads_build, ...)
+    # Same short-circuit as `.net_dt_snn()`: a caller holding a kNN passes it
+    # rather than paying for the search again. `createNearestNetwork()` uses
+    # this to build an sNN and its underlying kNN from one search.
+    if (is.null(nn_network)) {
+        nn_network <- .nn_search(x, k = k, engine = engine, ef = ef, ...)
+    } else {
+        .check_nn_network(nn_network, x, k)
+    }
 
     nn_network_dt <- data.table::data.table(
         from = rep(seq_len(nrow(nn_network$id)), k),
@@ -855,7 +870,6 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
         weight_fun = function(d) 1 / (1 + d),
         engine = c("dbscan", "hnsw"),
         ef = 200,
-        n_threads_build = 1L,
         nn_network = NULL,
         verbose = NULL, ...) {
     # NSE vars
@@ -876,28 +890,9 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
     # shared with a UMAP that reuses the same neighbours -- passes it here
     # instead of paying for it twice.
     if (is.null(nn_network)) {
-        nn_network <- .nn_search(x, k = k, engine = engine, ef = ef,
-        n_threads_build = n_threads_build, ...)
+        nn_network <- .nn_search(x, k = k, engine = engine, ef = ef, ...)
     } else {
-        if (!inherits(nn_network, "kNN")) {
-            stop(wrap_txt(errWidth = TRUE,
-                "[createNetwork] `nn_network` must be a kNN object, as
-                returned by dbscan::kNN() or GiottoDisk::hnswKNN()."
-            ), call. = FALSE)
-        }
-        if (ncol(nn_network$id) < k) {
-            stop(wrap_txtf(
-                "[createNetwork] `nn_network` has %d neighbours per node,
-                fewer than the requested k = %d.",
-                ncol(nn_network$id), k
-            ), call. = FALSE)
-        }
-        if (nrow(nn_network$id) != nrow(x)) {
-            stop(wrap_txtf(
-                "[createNetwork] `nn_network` covers %d nodes but `x` has %d.",
-                nrow(nn_network$id), nrow(x)
-            ), call. = FALSE)
-        }
+        .check_nn_network(nn_network, x, k)
     }
     snn_network <- dbscan::sNN(x = nn_network, k = k, kt = NULL)
 
@@ -1168,12 +1163,13 @@ edge_distances <- function(x, y, x_node_ids = NULL) {
 #'   default 200 -- the recall/speed dial. Higher values search more of the
 #'   graph, moving the result closer to the exact `"dbscan"` answer at the cost
 #'   of query time.
-#' @param n_threads_build integer or `NULL`. `"hnsw"` only, ignored otherwise.
-#'   Threads for the index build, default `1`. A parallel build is not
-#'   reproducible -- insertion order varies, so neighbours differ slightly
-#'   between runs and that propagates to clustering even with a fixed seed.
-#'   `NULL` inherits the search thread count and trades reproducibility for
-#'   speed.
+#' @param keep_knn logical. For `type = "sNN"`, also store the kNN the sNN
+#'   was built from, under `kNN.<dim_reduction_to_use>`. Default `TRUE`. An
+#'   sNN is a transform of a kNN and the kNN is the expensive half; keeping it
+#'   costs one more edge table and lets anything else that needs the same
+#'   neighbourhood -- `runUMAP()`, in particular -- use that graph instead of
+#'   repeating an identical search. Only applies to the dimension-reduction
+#'   path.
 #' @param verbose be verbose
 #' @param ... additional parameters for kNN and sNN functions from dbscan
 #' @returns giotto object with updated NN network
@@ -1226,7 +1222,7 @@ createNearestNetwork <- function(
         top_shared = 3,
         engine = c("dbscan", "hnsw"),
         ef = 200,
-        n_threads_build = 1L,
+        keep_knn = TRUE,
         verbose = TRUE,
         ...) {
     # NB: thin wrapper over createNetwork() + nnNetObj construction.
@@ -1254,12 +1250,12 @@ createNearestNetwork <- function(
     # build Param; output = "igraph" because nnNetObj wraps an igraph
     param <- if (type == "kNN") {
         kNNNetworkParam(k = k, output = "igraph", engine = engine,
-            ef = ef, n_threads_build = n_threads_build)
+            ef = ef)
     } else {
         sNNNetworkParam(k = k,
             minimum_shared = minimum_shared, top_shared = top_shared,
             output = "igraph", engine = engine,
-            ef = ef, n_threads_build = n_threads_build
+            ef = ef
         )
     }
 
@@ -1271,9 +1267,38 @@ createNearestNetwork <- function(
             name = dim_reduction_name, output = "dimObj"
         )
         provenance <- prov(dim_obj)
-        nn_igraph <- createNetwork(dim_obj, param,
-            dimensions_to_use = dimensions_to_use, verbose = verbose, ...
-        )
+
+        # An sNN is a transform of a kNN, and the kNN is the expensive half.
+        # It used to be computed here, used once and dropped, which left
+        # nothing for anything else to share -- `runUMAP()` then had to
+        # repeat an identical search to embed the same neighbourhood. The
+        # search now runs once and both networks are built from it, so the
+        # embedding and the partition demonstrably rest on one graph rather
+        # than on two that happen to agree.
+        if (type == "sNN" && keep_knn) {
+            coords <- dim_obj[]
+            if (!is.null(dimensions_to_use)) {
+                du <- dimensions_to_use[
+                    dimensions_to_use %in% seq_len(ncol(coords))
+                ]
+                coords <- coords[, du, drop = FALSE]
+            }
+            knn_obj <- .nn_search(coords, k = k, engine = engine, ef = ef)
+            nn_igraph <- createNetwork(coords, param,
+                node_ids = rownames(coords), nn_network = knn_obj,
+                verbose = verbose, ...
+            )
+            knn_igraph <- createNetwork(coords,
+                kNNNetworkParam(k = k, output = "igraph", engine = engine,
+                    ef = ef),
+                node_ids = rownames(coords), nn_network = knn_obj,
+                verbose = verbose, ...
+            )
+        } else {
+            nn_igraph <- createNetwork(dim_obj, param,
+                dimensions_to_use = dimensions_to_use, verbose = verbose, ...
+            )
+        }
     } else {
         # legacy: build NN from raw expression matrix
         expression_values <- match.arg(
@@ -1320,6 +1345,25 @@ createNearestNetwork <- function(
         nn_type = type, name = name,
         verbose = verbose
     )
+
+    # The kNN the sNN was derived from, stored alongside it.
+    if (exists("knn_igraph", inherits = FALSE)) {
+        knn_name <- paste0("kNN.", dim_reduction_to_use)
+        gobject <- setNearestNetwork(gobject,
+            x = create_nn_net_obj(
+                name = knn_name,
+                nn_type = "kNN",
+                network = knn_igraph,
+                spat_unit = spat_unit,
+                feat_type = feat_type,
+                provenance = provenance
+            ),
+            spat_unit = spat_unit, feat_type = feat_type,
+            nn_type = "kNN", name = knn_name,
+            verbose = verbose
+        )
+    }
+
     gobject <- update_giotto_params(gobject, description = "_nn_network", toplevel = 1L)
     gobject
 }

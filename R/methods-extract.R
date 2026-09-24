@@ -461,8 +461,8 @@ setMethod("$", signature("networkParam"), function(x, name) {
 .DollarNames.kNNNetworkParam <- function(x, pattern) {
     unique(c(
         c("k", "filter", "maximum_distance", "minimum_k", "weight_fun",
-            "include_weight", "include_distance", "output", "engine", "ef",
-            "n_threads_build"),
+            "include_weight", "include_distance", "output", "engine",
+            "ef"),
         names(x@param)
     ))
 }
@@ -480,7 +480,7 @@ setMethod("$", signature("networkParam"), function(x, name) {
 .DollarNames.sNNNetworkParam <- function(x, pattern) {
     unique(c(
         c("k", "top_shared", "minimum_shared", "weight_fun", "include_weight",
-            "include_distance", "output", "engine", "ef", "n_threads_build"),
+            "include_distance", "output", "engine", "ef"),
         names(x@param)
     ))
 }

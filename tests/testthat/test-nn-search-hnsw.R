@@ -66,10 +66,12 @@ test_that("higher ef does not reduce recall", {
     expect_gte(rec(200), rec(20))
 })
 
-test_that("the default build is reproducible", {
-    # n_threads_build = 1 is the default precisely so repeated calls agree:
-    # a multithreaded build varies with insertion order.
+test_that("the build is reproducible", {
+    # The build runs on one thread precisely so repeated calls agree: a
+    # multithreaded build varies with insertion order. This is the regression
+    # guard for that, and the search is left parallel throughout.
     expect_identical(hnswKNN(m, k = 15)$id, hnswKNN(m, k = 15)$id)
+    expect_identical(hnswKNN(m, k = 15)$dist, hnswKNN(m, k = 15)$dist)
 })
 
 test_that("k must be less than the number of observations", {
@@ -103,13 +105,113 @@ test_that("dbscan remains the default engine", {
     expect_identical(eval(formals(createNearestNetwork)$engine)[1], "dbscan")
 })
 
-test_that("ef and n_threads_build are carried on the params and ignored by dbscan", {
-    p <- kNNNetworkParam(k = 10, ef = 300, n_threads_build = 2L)
+test_that("ef is carried on the params and ignored by dbscan", {
+    p <- kNNNetworkParam(k = 10, ef = 300)
     expect_identical(p$ef, 300)
-    expect_identical(p$n_threads_build, 2L)
     # inert under dbscan rather than an error, so engines can be swapped freely
     expect_no_error(
         createNetwork(m, kNNNetworkParam(k = 10, engine = "dbscan",
-            ef = 300, n_threads_build = 2L, output = "data.table"))
+            ef = 300, output = "data.table"))
     )
+})
+
+test_that("the index build cannot be made parallel", {
+    # The serial build is the whole reproducibility guarantee: it takes no
+    # seed, and none would help, because the interleaving of a parallel build
+    # is not drawn from an RNG. So the knob is gone rather than defaulted --
+    # on a 169,528-cell section, two runs of an identical script with a
+    # parallel build disagreed on the number of clusters, 34 against 33.
+    expect_false("n_threads_build" %in% names(formals(hnswKNN)))
+    expect_false("n_threads_build" %in% names(formals(kNNNetworkParam)))
+    expect_false("n_threads_build" %in% names(formals(sNNNetworkParam)))
+    expect_false("n_threads_build" %in% names(formals(createNearestNetwork)))
+    # `...` is kept for dbscan::kNN() compatibility, so it would swallow the
+    # removed argument silently. Warn, so a caller who thinks they have
+    # enabled a parallel build finds out they have not.
+    expect_warning(hnswKNN(m, k = 15, n_threads_build = 8L),
+                   "no longer exists")
+    expect_identical(
+        suppressWarnings(hnswKNN(m, k = 15, n_threads_build = 8L))$id,
+        hnswKNN(m, k = 15)$id
+    )
+})
+
+test_that("nnToUwot adds the self column uwot expects", {
+    nn <- hnswKNN(m, k = 15)
+    u <- nnToUwot(nn)
+
+    expect_named(u, c("idx", "dist"))
+    # k + 1 wide: uwot drops column 1 when fitting the local connectivity
+    # offset, so the self entry has to be there or a real neighbour is lost
+    expect_identical(dim(u$idx), c(nrow(m), 16L))
+    expect_identical(dim(u$dist), dim(u$idx))
+    expect_identical(u$idx[, 1L], seq_len(nrow(m)))
+    expect_true(all(u$dist[, 1L] == 0))
+    expect_type(u$idx, "integer")
+
+    # the neighbours themselves are carried through untouched
+    expect_identical(u$idx[, -1L, drop = FALSE],
+                     matrix(as.integer(nn$id), nrow = nrow(m)))
+    expect_equal(u$dist[, -1L, drop = FALSE],
+                 matrix(nn$dist, nrow = nrow(m)))
+})
+
+test_that("nnToUwot refuses input it cannot interpret", {
+    nn <- hnswKNN(m, k = 15)
+
+    # already self-referential: adding another self column would push a real
+    # neighbour out of the window uwot reads
+    expect_error(nnToUwot(nnToUwot(nn)), "must carry `id` and `dist`")
+    already <- list(id = cbind(seq_len(nrow(m)), nn$id),
+                    dist = cbind(0, nn$dist))
+    expect_error(nnToUwot(already), "already lists each observation")
+
+    # unsorted distances give wrong weights and no error from uwot
+    unsorted <- nn
+    unsorted$dist <- unsorted$dist[, rev(seq_len(ncol(unsorted$dist)))]
+    expect_error(nnToUwot(unsorted), "sorted ascending")
+
+    expect_error(nnToUwot(list(id = 1:5, dist = 1:5)),
+                 "must carry `id` and `dist`")
+})
+
+test_that("nnToUwot output is accepted by uwot", {
+    skip_if_not_installed("uwot")
+    nn <- hnswKNN(m, k = 15)
+    emb <- uwot::umap2(m, nn_method = nnToUwot(nn), n_epochs = 10,
+                       verbose = FALSE)
+    expect_identical(dim(emb), c(nrow(m), 2L))
+    expect_false(anyNA(emb))
+})
+
+test_that("an sNN build keeps the kNN it was derived from", {
+    skip_if_not_installed("GiottoData")
+    g <- GiottoData::loadGiottoMini("visium", verbose = FALSE)
+
+    g <- createNearestNetwork(g, type = "sNN", dim_reduction_to_use = "pca",
+        dimensions_to_use = 1:10, k = 10, engine = "hnsw", verbose = FALSE)
+
+    nets <- list_nearest_networks(g)
+    expect_true("sNN" %in% nets$nn_type)
+    # the kNN used to be computed, used once and dropped, which left nothing
+    # for runUMAP() to share -- it had to repeat an identical search
+    expect_true("kNN" %in% nets$nn_type)
+    expect_true("kNN.pca" %in% nets$name)
+
+    # and it must be the SAME graph, not merely one built the same way
+    ref <- hnswKNN(
+        getDimReduction(g, reduction_method = "pca", name = "pca",
+                        output = "dimObj")[][, 1:10, drop = FALSE],
+        k = 10
+    )
+    stored <- getNearestNetwork(g, nn_type = "kNN", name = "kNN.pca",
+                                output = "data.table")
+    expect_identical(nrow(stored), sum(!is.na(ref$id)))
+
+    # opting out leaves the object as it was before
+    g2 <- GiottoData::loadGiottoMini("visium", verbose = FALSE)
+    g2 <- createNearestNetwork(g2, type = "sNN", dim_reduction_to_use = "pca",
+        dimensions_to_use = 1:10, k = 10, engine = "hnsw",
+        keep_knn = FALSE, verbose = FALSE)
+    expect_false("kNN.pca" %in% list_nearest_networks(g2)$name)
 })
