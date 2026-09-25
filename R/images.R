@@ -755,35 +755,22 @@ reconnect_giottoImage_MG <- function(
         raster_object <- raster_object@raster_object
     }
 
-    # assemble argslist for terra::spatSample()
-    argslist <- list(
-        x = raster_object,
+    # "display" lets GDAL read from overviews when present. "regular" ignores
+    # them and costs ~2s per call on a JPEG-2000 VRT. Overview pixels are
+    # block averages, so the data.frame output (intensity range estimate)
+    # under-reports outliers -- acceptable, since it only sets display
+    # defaults. Returns a SpatRaster; other outputs convert from it.
+    res <- terra::spatSample(raster_object,
         size = size,
-        as.df = TRUE, # default behavior
-        method = "regular",
-        value = TRUE,
+        method = "display",
         ...
     )
-
-    if (output != "data.frame") {
-        # if desired output is not data.frame, all other outputs require raster
-        argslist$as.raster <- TRUE
-        argslist$as.df <- FALSE
-        # image outputs are for display: "display" lets GDAL read from
-        # overviews when present. "regular" ignores them and costs ~2s per
-        # call on a JPEG-2000 VRT. data.frame stays "regular" so intensity
-        # statistics come from exact pixels.
-        argslist$method <- "display"
-    }
-
-    res <- do.call(terra::spatSample, args = argslist)
+    if (output == "SpatRaster") return(res)
 
     # convert and handle NA values
-    if (isTRUE(argslist$as.df)) {
-        res <- stats::na.omit(res) # data.frame remove NAs
+    if (output == "data.frame") {
+        res <- stats::na.omit(terra::as.data.frame(res, na.rm = FALSE))
     } else {
-        if (output == "SpatRaster") return(res)
-        # all others
         res <- terra::as.array(res)
         na_bool <- is.na(res)
         res[na_bool] <- 0L # set NA values to 0
@@ -846,8 +833,10 @@ reconnect_giottoImage_MG <- function(
 .spatraster_is_int <- function(
         raster_object,
         sample_values = .spatraster_sample_values(raster_object)) {
-    # find out if image is int or floating point
-    identical(sample_values, round(sample_values))
+    # find out if image is int or floating point. Compare values, not
+    # identical(): sampled values can be integer-typed, and round() returns
+    # double.
+    all(sample_values == round(sample_values))
 }
 
 
