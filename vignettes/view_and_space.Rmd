@@ -50,8 +50,8 @@ same space can be applied to any cell subset.
   composed in order. Sample-keyed so different children of a `giottoMulti`
   can carry different transforms.
 * **Both:** apply the view first to pick which cells, then the space to
-  decide where to draw them. `materialize()` (or the `view=` / `space=`
-  args on getters) accepts both.
+  decide where to draw them. The `view=` / `space=` args on getters accept
+  both.
 
 ## Recording a view
 
@@ -140,7 +140,7 @@ subobjects is not modified — only the cell set narrows.
 
 Views mix step kinds freely, since every verb records onto the same name:
 
-```{r, eval=FALSE}
+```{r}
 g <- crop(g, roi, relation = "within", geom = "poly", view = "stripe1")
 g <- subset(g, total_expr > 1, view = "stripe1")  # appends to the same view
 ```
@@ -158,9 +158,12 @@ beside the region it describes, so a view may crop in one frame and then
 another. This is a separate concern from any output frame the consumer
 might request:
 
-```{r, eval=FALSE}
+```{r}
+# A frame to draw the region in (see "Recording a space" below)
+g <- spin(g, angle = 45, space = "rotate")
+
 # Crop region drawn in "rotate" coords; the frame is recorded on the step.
-g <- crop(g, ext(3000, 4000, -3000, -2000), view = "test", space = "rotate")
+g <- crop(g, terra::ext(0, 1000, -6500, -5500), view = "test", space = "rotate")
 
 # Default: predicate uses "rotate" frame to decide cells, output stays
 # in NATIVE frame.
@@ -194,7 +197,12 @@ When the view will be applied to a `giottoMulti`, `selectSamples()` records
 which children participate. The step is resolved first, before any filter
 or crop steps:
 
-```{r, eval=FALSE}
+```{r}
+mg <- createGiottoMulti(list(
+    visium_a = GiottoData::loadGiottoMini("visium", verbose = FALSE),
+    visium_b = GiottoData::loadGiottoMini("visium", verbose = FALSE)
+))
+
 mg <- selectSamples(mg, "visium_a", "visium_b", view = "pair")
 mg <- subset(mg, leiden_clus == 1, view = "pair")
 ```
@@ -224,7 +232,7 @@ it is N independent jobs.
 Recording onto an unused name always produces a `perSampleSpace`. A
 `combinedSpace` has to be declared, because it has to name its members:
 
-```{r, eval=FALSE}
+```{r}
 giottoSpace(mg, "atlas") <- combinedSpace(c("visium_a", "visium_b"))
 ```
 
@@ -244,7 +252,7 @@ On a `giottoMulti`, `samples = ` says which children a transform applies
 to. This is how a cross-sample layout is built — one call per child,
 against the same space name:
 
-```{r, eval=FALSE}
+```{r}
 # leave visium_a where it is; move visium_b next to it
 mg <- spin(mg, angle = 90, space = "layout", samples = "visium_b")
 mg <- spatShift(mg, dx = 8000, dy = 0, space = "layout",
@@ -254,7 +262,7 @@ mg <- spatShift(mg, dx = 8000, dy = 0, space = "layout",
 `samples = ` accepts several children at once, and omitting it means
 "every sample this space already keys" — the whole-layout case:
 
-```{r, eval=FALSE}
+```{r}
 mg <- spin(mg, 30, space = "layout", samples = c("visium_a", "visium_b"))
 mg <- spatShift(mg, dx = 10, space = "layout")   # applies to both
 ```
@@ -321,7 +329,7 @@ rather than a silent fallback to the centroid answer:
 ```r
 # no @spatial_info on this object
 g_nopoly <- crop(g_nopoly, box, geom = "poly", view = "p")
-materialize(g_nopoly, "p")
+getCellMetadata(g_nopoly, view = "p")
 #> Error: [crop] geom = "poly" was requested (relation 'intersects'), but
 #> this object has no polygon source to evaluate it on.
 #> Either add polygons (`setPolygonInfo()`) or use geom = "centroid".
@@ -352,7 +360,9 @@ The setter's remaining job is moving a recipe between objects, or dropping
 one. It validates what it is handed, since the recipe is a plain list that
 nothing else type-checks:
 
-```{r, eval=FALSE}
+```{r}
+g2 <- GiottoData::loadGiottoMini("visium", verbose = FALSE)
+
 giottoView(g2, "cluster1") <- giottoView(g, "cluster1")   # copy across
 giottoView(g, "cluster1") <- NULL                          # remove
 ```
@@ -373,7 +383,6 @@ A recipe lives on the gobject from the moment it is recorded — under
 nothing needs rebuilding per call:
 
 ```{r}
-g <- GiottoData::loadGiottoMini("visium", verbose = FALSE)
 g <- subset(g, leiden_clus == 1, view = "cluster1_only")
 
 giottoViews(g)
@@ -389,7 +398,7 @@ one by name.
 A recipe is inspectable, and the accessors are class-preserving where that is
 useful, so a recipe can be narrowed and handed on:
 
-```{r, eval=FALSE}
+```{r}
 v <- giottoView(g, "stripe1")
 
 length(v)          # how many steps
@@ -427,13 +436,15 @@ The view is named, not passed inline — see
 [`view = ` and `space = ` take a name, not a recipe](#view---and-space---take-a-name-not-a-recipe)
 above.
 
+<!-- materialize() is hidden until it is replaced by resolve()
+
 ### Via `materialize()`
 
 `materialize(g, view, space)` applies the recipe across all relevant
 slots at once, returning a narrowed gobject. Useful when several
 downstream calls need the same narrowing:
 
-```{r}
+```{r, eval=FALSE}
 g_narrow <- materialize(g, "cluster1_only")
 g_narrow
 
@@ -445,14 +456,16 @@ The `slots = ` argument scopes which slots to narrow — handy when only a
 subset of data is needed (e.g. plot functions narrow only the slots they
 read).
 
+-->
+
 ### Combining view and space
 
 The view runs first to pick cell survivors, then the space transforms the
 spatial geometry of those survivors:
 
-```{r, eval=FALSE}
+```{r}
 g <- spatShift(g, dx = 100, dy = 0, space = "layout")
-g_out <- materialize(g, view = "cluster1_only", space = "layout")
+getSpatialLocations(g, view = "cluster1_only", space = "layout")
 ```
 
 For plain `getCellMetadata` / `spatValues` calls, `space` is accepted for
@@ -472,7 +485,7 @@ On a `giottoMulti`, views and spaces carry sample scope:
 Together they build a "place these samples together, filtered to cluster 3"
 recipe without touching the underlying data:
 
-```{r, eval=FALSE}
+```{r}
 mg <- selectSamples(mg, "visium_a", "visium_b", view = "cluster3")
 mg <- subset(mg, leiden_clus == 3, view = "cluster3")
 
@@ -480,7 +493,7 @@ mg <- subset(mg, leiden_clus == 3, view = "cluster3")
 mg <- spatShift(mg, dx = 8000, dy = 0, space = "side_by_side",
     samples = "visium_b")
 
-mg_out <- materialize(mg, view = "cluster3", space = "side_by_side")
+getSpatialLocations(mg, view = "cluster3", space = "side_by_side")
 ```
 
 The view's surviving cell IDs are computed once across the gmulti; per-child
@@ -489,8 +502,7 @@ getter calls downstream reuse that cache.
 ## Design notes
 
 * **Recipes, not state.** *Resolving* a view doesn't mutate the gobject —
-  `materialize()` returns a new gobject, or you pass the name to a getter
-  per-call. Recording a step is the one write, and it touches only the
+  you pass the name to a getter per-call. Recording a step is the one write, and it touches only the
   recipe, never the data.
 * **Plain steps in a class.** The recipe object is S4 — it is the handle
   `[`, the builder verbs and `as.list()` act on — but every step inside it is
@@ -514,6 +526,5 @@ getter calls downstream reuse that cache.
   this way, and what is deliberately left undone.
 * `vignettes/articles/design_gmulti.Rmd` — the multi-sample container that
   view and space integrate with most deeply.
-* `?materialize` — the full resolver entry point.
 * `?giottoView` — slotted view accessors.
 * `?giottoSpace` — slotted space accessors.
