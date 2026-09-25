@@ -569,7 +569,7 @@ createSpatialNetwork <- function(gobject,
 # multi at all and it planned every frame per-sample, so a `combinedSpace`
 # built N networks in a shared frame and missed exactly the cross-sample
 # edges it exists for; the two wrappers died on `incorrect number of
-# dimensions` because `getSpatialLocations(mg)` hands back a list.
+# dimensions` because `getSpatialLocations(mg)` handed back a list.
 #
 # `param` arrives already built, which is also what retires the call-replay
 # this used to do. That machinery existed to avoid hand-listing 19 formals

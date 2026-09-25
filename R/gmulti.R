@@ -3280,31 +3280,74 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
     }, out_list, names(out_list))
 }
 
+#' Each child's spatial locations, as a named list keyed by sample, with the
+#' view's narrowing applied in each child's local IDs. The per-sample form the
+#' getter folds, and the one `.gm_fused_spatlocs()` needs because it applies
+#' a frame's chain per sample before folding.
+#' @noRd
+.gm_spatlocs_by_sample <- function(gobject, spat_unit = NULL, name = NULL,
+    samples = NULL, space = NULL, vw = NULL, ...) {
+    su <- spat_unit %||% .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
+    objs <- .gm_read_objects(gobject, samples, vw)
+    # cell-keyed, so the view is fully expressed by its global ID set and the
+    # children are handed no view at all
+    out <- lapply(objs, function(nm) {
+        getSpatialLocations(gobject@objects[[nm]],
+            spat_unit = spat_unit, name = name,
+            space = .gm_space_for_child(space, nm), ...)
+    })
+    names(out) <- objs
+    .gm_narrow_child_outputs(out, gobject, spat_unit = su, cells = vw$cells)
+}
+
 #' @rdname getSpatialLocations
 #' @param samples (giottoMulti) children to read from. `NULL` = all children
 #' @param space (giottoMulti) name of a coordinate frame registered on the
 #'   **multi**. Each child is handed the frame narrowed to itself
+#' @details
+#' On a `giottoMulti`, the samples' locations are returned as one object with
+#' `sample::cell_ID` IDs, the same vocabulary as joint cell metadata and
+#' expression, so they can be plotted or joined across samples directly. A
+#' sample's own object, with its local IDs, is `getSpatialLocations(mg[["a"]])`.
 #' @export
 setMethod("getSpatialLocations", signature("giottoMulti"),
-    function(gobject, spat_unit = NULL, name = NULL, ...,
+    function(gobject, spat_unit = NULL, name = NULL,
+        output = c("spatLocsObj", "data.table"), ...,
         samples = NULL, space = NULL, view = NULL) {
-        su <- spat_unit %||%
-            .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
-        sp <- .gm_resolve_space_arg(gobject, space)
-        vw <- .gm_resolve_view_arg(gobject, view)
-        objs <- .gm_read_objects(gobject, samples, vw)
-        # cell-keyed, so the view is fully expressed by its global ID set
-        # and the children are handed no view at all
-        out <- lapply(objs, function(nm) {
-            getSpatialLocations(gobject@objects[[nm]],
-                spat_unit = spat_unit, name = name,
-                space = .gm_space_for_child(sp, nm), ...)
-        })
-        names(out) <- objs
-        .gm_narrow_child_outputs(out, gobject, spat_unit = su,
-            cells = vw$cells)
+        output <- match.arg(output)
+        per_sample <- .gm_spatlocs_by_sample(gobject,
+            spat_unit = spat_unit, name = name, samples = samples,
+            space = .gm_resolve_space_arg(gobject, space),
+            vw = .gm_resolve_view_arg(gobject, view), ...)
+        out <- .gm_fold_spatlocs(gobject, per_sample)
+        switch(output, spatLocsObj = out, data.table = out[])
     }
 )
+
+#' Fold per-sample locations into one object in the joint `sample::id`
+#' vocabulary. IDs are promoted before the fold: children share local IDs,
+#' and `rbind2()` refuses duplicates.
+#' @noRd
+.gm_fold_spatlocs <- function(gobject, per_sample) {
+    cell_ID <- NULL  # NSE
+    if (length(per_sample) == 0L) {
+        stop("[gmulti getSpatialLocations] no samples to read",
+            call. = FALSE)
+    }
+    parts <- lapply(names(per_sample), function(nm) {
+        sl <- per_sample[[nm]]
+        if (!inherits(sl, "spatLocsObj")) {
+            stop(sprintf(paste0("[gmulti getSpatialLocations] sample '%s' ",
+                "returned more than one set of locations; pass a single ",
+                "`name`."), nm), call. = FALSE)
+        }
+        dt <- data.table::copy(sl[])
+        dt[, cell_ID := .gm_global_cell_ids(gobject, nm, cell_ID)]
+        sl[] <- dt
+        sl
+    })
+    Reduce(rbind2, parts)
+}
 
 #' @rdname setSpatialLocations
 #' @export
