@@ -319,6 +319,16 @@ is the documented escape hatch. `.gm_narrow_child_outputs()` applies the
 allow-list to the assembled per-child list, translating globals back to local IDs
 by prefix, and returns the list untouched when no narrowing is active.
 
+**Spatial locations come back folded.** `getSpatialLocations(mg)` narrows per
+child as above, then promotes each child's IDs to `sample::id` and folds them
+into one `spatLocsObj` — the vocabulary of joint `@cell_metadata`, `@expression`
+and `spatValues`, and the shape `.gm_fused_spatlocs()` already built for crops
+and cross-sample networks. A child's own locations, with local IDs, are
+`getSpatialLocations(mg[["a"]])`. The other spatial getters still return one
+entry per sample: polygons, points and images are per-sample objects with no
+single natural concatenation, and have not been unified. GiottoVisuals builds
+its panels from the children directly, so the fold did not reach it.
+
 **The feature axis does not yet compose with points.**
 `.gm_narrow_child_outputs()` is wired into `getSpatialLocations`,
 `getSpatialNetwork` and `getPolygonInfo` but not `getFeatureInfo`, and the
@@ -485,17 +495,6 @@ payload and semi-joins it into live queries, so the R-side resolver handles
 predicate-frame projection and the viewer stays frame-naive.
 
 ## Open directions
-
-**`getSpatialLocations` unification.** Return one concatenated `spatLocsObj` with
-`sample::id` globals instead of a named list of per-child objects with local IDs.
-It would match joint `@cell_metadata`, `@expression` and `spatValues`, reinforce
-"joint output is ground truth" by keeping consumers off the per-child reach that
-previously caused an alignment and leak chain, and make the per-child narrowing
-filter redundant for spatial locations. The substrate is already `data.table`, so
-this is an `rbindlist` after the per-child fetch with each `cell_ID` rewritten to
-global form. The ripple is on the consumer side: every GiottoVisuals caller
-iterating the list by sample, and tests comparing `length(out)` (samples) against
-`nrow(out[])` (cells), which both flip.
 
 **Cross-sample aggregation.** The fan-out-then-reduce shape — computing *across*
 samples in a shared frame. Spaces can position samples relative to one another,

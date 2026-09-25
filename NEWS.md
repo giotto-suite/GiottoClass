@@ -16,6 +16,16 @@
 
 ## changes
 
+- **Breaking (gsource only):** `getSpatialLocations()` on a `giottoMulti`
+  returns one `spatLocsObj` across the samples, with `sample::cell_ID` IDs,
+  instead of a named list of per-sample objects with local IDs. It matches
+  joint cell metadata and expression, so locations join and plot across
+  samples directly, and it gains `output = "data.table"`. `samples =`,
+  `view =` and `space =` apply as before. A sample's own locations are
+  `getSpatialLocations(mg[["a"]])`. The other spatial getters still return
+  one entry per sample. `spatValues()` can now read `sdimx` / `sdimy` from a
+  multi.
+
 - `selectSamples()` is removed. A view's sample step is recorded with
   `subset(mg, samples = , view = )`, which can record a filter in the same
   call, and `subset(mg, samples = )` without `view =` slices the multi. The
