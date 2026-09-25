@@ -1,0 +1,557 @@
+# View and space: design
+
+This article is the contributor-facing record of the recipe subsystem:
+what `giottoView` and `giottoSpace` are, why they are two things rather
+than one, and which of their properties are decisions someone could
+reasonably reverse. `vignettes/view_and_space.Rmd` is the user-facing
+walkthrough of the same subsystem and is the better starting point if
+you want to *use* them. `vignettes/articles/design.Rmd` places the
+subsystem in the wider architecture.
+
+The subsystem dispatches on `gAny`, so it works on a plain `giotto` as
+well as a `giottoMulti`. It is **not** part of gmulti, and the places
+where the two meet — `selectSamples`, sample-scoped transforms,
+parent-only evaluation — are called out below rather than assumed.
+
+Two labels recur in the code comments and are worth resolving once.
+**Q7** and **Q8** were numbered design questions from the port that
+produced this subsystem; their conclusions are the “steps are plain
+lists” and “the containers are classes, and scope is stated per call”
+decisions below. The port documents they were numbered in are gone; the
+conclusions are here.
+
+## Two layers, and why not one
+
+- **view** — read-only narrowing. Which cells and features are in scope.
+- **space** — coordinate frame. Where the data sits. *Not* read-only:
+  running an analysis in a non-native frame is fine, the coordinates
+  just differ, and mutations still target the underlying data in its
+  native frame.
+
+An earlier unified `giottoView` carried transforms, filters, crops and
+sample selection together. Four things were unresolvable in that shape:
+
+- `calculateOverlap(v)` could not tell whether a view’s transforms or
+  its filters were the meaningful part for the artifact it was about to
+  write.
+- Crop extents were ambiguous — *in what frame?*
+- The read-only contract applied uniformly, including to transforms-only
+  views that had no need of it.
+- “View” did two jobs in the vocabulary at once: selection and
+  positioning.
+
+The split also makes the composition story simple in the direction that
+matters: the same view applies in any frame, and the same space applies
+to any cell subset.
+
+**Why transforms are centralized rather than owned per subobject.** Each
+slotted space is already an alternate frame, so multiple frames work
+without giving every subobject its own transform state. The alternative
+means extending `giottoAffineImage`’s affine slot to every spatial
+subobject *and* keying several affines by frame name. Centralizing
+matches Giotto’s sample-level alignment workflow without that cost, and
+can be extended later if multi-modal microscopy pushes for it.
+
+## Recorded, not constructed
+
+There is no constructor. The first
+[`subset()`](https://rdrr.io/r/base/subset.html) /
+[`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
+/
+[`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md)
+call naming a view creates it; likewise a transform verb naming a space.
+Later calls with the same name append.
+
+``` r
+
+g <- subset(g, leiden_clus == 1, view = "cluster1")   # creates, records a filter
+g <- crop(g, roi, view = "cluster1", space = "atlas") # appends a crop
+g <- spin(g, 30, space = "rotated")                   # creates a space, one step
+```
+
+Recording rather than constructing is what removes a whole category of
+question. A standalone builder has to decide what a half-built recipe
+means, what happens when it is attached to an object whose columns do
+not match, and where the frame of a region drawn before any step existed
+is recorded. None of those arise when the gobject is in hand at every
+call.
+
+It also fixes the argument overload that otherwise reads as
+inconsistent. `space =` on `spin` / `affine` / `spatShift` / `rescale` /
+`flip` **appends a step** to the named space; `space =` on `crop`
+**names the frame the region was drawn in**. Same referent — the slotted
+frame — two operations, and the verb decides which. All gobject ops stay
+eager by default: `spin(g, 30)` is unchanged, and the presence of
+`space =` is the switch from acting to recording.
+
+Consequently the accessors exist to inspect, copy and remove, not to
+build, and `view =` / `space =` on a public function take a **name**,
+never a handle. A detached handle passed to a generator writes a frame
+name into `@parameters` that resolves against nothing; passed to a
+reader it returns content in a frame the object cannot name. Handles are
+the internal parent-to-child channel only; the user-facing escape is
+`giottoSpace(x, "<name>") <- sp` (adr/0006).
+
+## Steps are plain lists; the containers are classes
+
+    giottoView      @steps   list(<step>, ...)
+    perSampleSpace  @steps   list(<step>, ...)
+    combinedSpace   @steps   list(<step>, ...)   + closed membership
+
+    step (view)     list(type = "filter",    predicate = , scope_args = )
+                    list(type = "crop",      region = , relation = , geom = , space = )
+                    list(type = "samples",   samples = )
+    step (space)    list(type = "transform", op = , args = )
+
+**The steps are where the serialization guarantees live** (Q7): no
+closure, no external pointer, survives
+[`saveRDS()`](https://rdrr.io/r/base/readRDS.html), reaches a parallel
+worker. Three payloads made that false, and each is normalized at record
+time rather than at resolve time — a filter predicate is deparsed to a
+string with env-resident scalars substituted in, a crop region is stored
+as WKT, and transform arguments are whitelisted to serializable types.
+GiottoDisk’s `@ops` chain is the same shape for the same reason.
+
+**The containers are classes because they are the handle** (Q8’s
+correction). `[` and `[[` read one, the builder verbs append to one,
+[`as.list()`](https://rdrr.io/r/base/list.html) exports one. An
+intermediate design made the containers lists too, which removed the
+write surface and left recipe edits to hand-built lists at every call
+site. Q8’s actual objection — scope inherited from construction history,
+so that `(a + b) |> spin(30)` differed from `(a |> spin(30)) + b` — is
+answered by scoping through `[` rather than through construction order,
+not by removing the container.
+
+The slots Q8 dropped stay dropped: `name` (redundant, the name is the
+key under `@view` / `@spaces`), `source` (documented as reserved, never
+read), and `misc` (no reader and no writer anywhere).
+
+Validation runs in `setValidity()` **and** at record time. The
+duplication is deliberate: record time is where the user’s call site is
+still in scope for the error message. `.validate_view_step()` is also
+the guard for a hand-edited step, since a step is a plain list a user
+can legitimately write directly.
+
+|  | view | space |
+|----|----|----|
+| **access** | `v[i]` steps `i`, class-preserving · `v[[i]]` the step · `v[i, j]` one attribute (`v[2, "space"]` is the frame) · `length` / `names` | `sp[i]` narrows to a sample · `sp[[i]]` takes a step · `length` / `names` |
+| **append** | [`subset()`](https://rdrr.io/r/base/subset.html) · [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md) · [`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md) · `+` | [`spin()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md) · [`spatShift()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.md) · [`affine()`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md) · [`flip()`](https://giotto-suite.github.io/GiottoClass/dev/reference/flip.md) · [`rescale()`](https://giotto-suite.github.io/GiottoClass/dev/reference/rescale.md) · [`shear()`](https://giotto-suite.github.io/GiottoClass/dev/reference/shear.md) · [`zoom()`](https://giotto-suite.github.io/GiottoClass/dev/reference/zoom.md) · `+` |
+| **export** | [`as.list()`](https://rdrr.io/r/base/list.html) | [`as.list()`](https://rdrr.io/r/base/list.html) |
+
+`sp[[NA]]` resolves through the sole-name rule, which is what lets a
+parent hand a child `sp[nm]` and have the child — who has no sample
+identity — resolve it.
+
+## The crop step names its own frame
+
+A region is a set of numbers, and numbers mean nothing without a frame,
+so `space` sits on the crop step beside `region`, exactly as `relation`
+and `geom` do. The step states its whole question.
+
+The pre-Q8 class carried the frame on the *container*, and that was
+forced by the constructor: `giottoView(space = "atlas") |> crop(...)`
+declared a frame before any step existed, so the container was the only
+place it could go — and it brought a rebind guard with it, because one
+field then served every region in the view. Recording replaced the
+constructor. Three things follow: `+` concatenates unconditionally,
+`v[i]` carries exactly the frames its steps need, and a view may
+legitimately crop in one frame and then another.
+
+### Predicate frame versus output frame
+
+These are strictly separate, and the separation is the point of the
+feature. An ROI hand-drawn on a rotated or registered image is defined
+in *that* frame’s coordinates, but the cells it selects should usually
+come back in native coordinates.
+
+| concern | source | consumed by |
+|----|----|----|
+| **predicate frame** — how the crop region is interpreted | the crop step’s `space` | `.surviving_cell_ids`, `.surviving_cell_ids_arrow`, `.push_view_to_dt`, `.push_view_to_pstore` |
+| **output frame** — what frame returned coordinates live in | the explicit `space =` argument only, no fallback | `.apply_space_to_subobj` |
+
+``` r
+
+getSpatialLocations(g, view = "test")
+#   native-frame coords, narrowed to cells satisfying the crop in the step's frame
+getSpatialLocations(g, view = "test", space = "rotate")
+#   rotated-frame coords, same cells
+```
+
+`.resolve_space()` is explicit-only — deliberately **no** fallback from
+the crop step’s frame to the output frame.
+`.project_region_between_spaces()` pushes the region’s WKT into the
+output frame when the two differ.
+
+**Known gap.** `.apply_crops_geometrically()` — the points and image
+path — clips with the recorded region and no reference to the frame it
+was drawn in, so a crop naming a non-native frame mismatches on those
+slots. Closing it needs the region-reprojection machinery GiottoDisk has
+and GiottoClass does not.
+
+## A crop resolves to a cell_ID set
+
+**The invariant: one usage layer per predicate.** A crop step resolves
+to a surviving cell_ID set, and every cell-keyed target narrows by that
+same set — spatial locations, cell metadata, expression, and a backed
+polygon store alike. A recipe cannot mean different things depending on
+which slot you read it through.
+
+What derives the set is *declared* on the step, not inferred.
+`geom = "centroid" | "poly"` picks the geometry that represents a cell,
+and `engine` picks who evaluates it. Neither is a function of the
+target’s storage kind. Declaration rather than inference is what lets a
+serialized recipe say which question it asks, and it removes any
+shared-contract problem with GiottoDisk, which simply reads the field.
+
+Both arms are one public expression on either side of the boundary:
+
+``` r
+spatIDs(spatRelate(<carrier>, region, relation))
+```
+
+[`spatRelate()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatRelate.md)
+is carrier-agnostic: the `(giottoSpatial, SpatVector)` method delegates
+to whoever owns the geometry, so a backed `@spatVector` dispatches to
+GiottoDisk’s store method and brings its own engines. The terra
+primitive sits at `(SpatVector, SpatVector)` and owns the optimizer — an
+AABB pre-filter for points, an exact fast path when the region is its
+own bounding box, and `disjoint` answered as the complement of
+`intersects` rather than as its own predicate, which keeps the fast
+paths available and computes the smaller of the two sets.
+
+> Read the invariant as **“cell_ID set”**, not as “centroid”. An earlier
+> statement of it said “always narrows via the *centroid-derived*
+> cell_ID set”, written before `geom` existed, when centroid was the
+> only way to derive one. Misreading the stale half once cost a broken
+> invariant — a polygon store given its own `spat_relate` pushdown —
+> recorded in GiottoDisk `adr/0015`, which is the authority on the
+> resolution contract.
+
+**Three subset axes exist; only cells is modelled.**
+
+| axis | key | status |
+|----|----|----|
+| cells | `cell_ID` | modelled — this section |
+| features | `feat_ID` | not modelled; `resolveSubobject(featMetaObj)` returns its input untouched for this reason |
+| subcellular points | transcript id | not modelled |
+
+A crop reaching a transcript points store therefore cannot yet be
+expressed as an ID set and is applied as a geometric clip on the store’s
+own geometry — parity with the in-memory path, which clips points the
+same way. This is not permanent: points can carry tracked transcript IDs
+and are subject to feature subsets, so once those axes land a points
+crop resolves to an ID set like any other. Features and subcellular
+points are deferred together to a v2 of the coordinators.
+
+## Space kinds, and the frame that has no name
+
+`giottoSpace` is virtual and the **kind of frame is the class**. A
+handle holds exactly one frame.
+
+- **`perSampleSpace`** — membership is open. Each sample gets its own
+  copy of the frame, so a job over it is N independent jobs.
+- **`combinedSpace`** — membership is closed and declared. The samples
+  are laid out in one coordinate system, so a job over it is one job and
+  cross-sample distances mean something.
+
+The split answers “which samples participate, and do they interact”. A
+`combinedSpace` names its members, so it declares a job over them; a
+`perSampleSpace` is structurally unable to name anyone. That is what the
+old `":default:"` sample key was expressing — a key standing for “no
+particular sample” that every consumer had to check for. The kind
+carries it now, so there is nothing to check.
+
+**Recording never decides the kind.** `samples =` cannot be the signal:
+scoping says which samples *move*, not whether they *interact*, and both
+kinds accept it (adr/0006). Recording onto an unused name always
+produces a `perSampleSpace`; a `combinedSpace` is declaration-only:
+
+``` r
+
+giottoSpace(mg, "atlas") <- combinedSpace(c("a", "b"))
+```
+
+**The free kind is the one that composes**, and this is the reverse of
+the original decision. That decision gave `combinedSpace` away for free
+on the grounds that laying samples out together is overwhelmingly why a
+space gets named — an argument about *frequency*, where the kind decides
+*job size*. A per-sample job writes one artifact per child, which is the
+shape reading per child hands back, so content round-trips. A combined
+job writes one artifact at the parent, where there is deliberately
+nowhere to put per-sample content back, so that round trip does not
+close.
+
+**The native frame has no name.** `space = NULL` is it. `":default:"`
+was a name for “no space”, which R already spells `NULL`, so every
+consumer had to know the two were the same thing — which is exactly what
+`.is_native_space()` existed for. And a transform recorded onto the
+native frame would stop it being native, so the name could only ever
+stand for an empty recipe. Deleting it removed the constant, the
+predicate, `.assert_space_not_default()`, the sentinel entry in
+`.assert_space_known()`, and the getter’s synthesize-on-miss branch.
+
+> **A dead end, recorded so it is not retried.** Before this,
+> `space = NULL` on a multi recorded onto `:default:` so the object
+> would act eager while children stayed immutable. It worked and it was
+> green, and it was reverted: it split “native” into two meanings — the
+> frame reads default to, versus the frame with nothing applied — which
+> immediately produced a silent bug, where the network builder skipped
+> applying a `:default:` that had moved and built an artifact on
+> coordinates every getter reported differently. Supporting it cost a
+> predicate on every getter’s read path, eight reader gates, and a
+> `.hasSlot` guard for objects older than the `@spaces` slot. The payoff
+> was not having to name a space.
+
+### Scope is stated per call, not inherited from build order
+
+`.space_record()` once appended a step to **every sample currently keyed
+in the space**, which made composition order-sensitive:
+`(giottoSpace("a") |> spin(30)) + giottoSpace("b")` spun only `a`, while
+`(giottoSpace("a") + giottoSpace("b")) |> spin(30)` spun both. The
+group-plus-individual composition the design wanted did work, but only
+through a rule that lived in one code comment, and the same expression
+meant different things depending on how much of the recipe had been
+merged already.
+
+`samples =` on the `giottoMulti` transform methods states the scope at
+each call:
+
+``` r
+
+mg <- spin(mg, 30, space = "atlas", samples = "a")
+mg <- spatShift(mg, dx = 8000, space = "atlas", samples = "b")
+mg <- affine(mg, M, space = "atlas")                  # broadcast
+```
+
+`+` is back, but only as a merge of two handles that are **already
+scoped** — it concatenates step lists under matching keys and cannot
+change whose steps they are. That is a different operation from the one
+described above, which mutated construction-time scope.
+
+The broadcast case survives as an omitted `samples =`, and what it means
+depends on the kind. On a `perSampleSpace` the step stays unscoped and
+applies to every sample, including ones first named by a later step,
+because membership is open. On a `combinedSpace` it is expanded to the
+current members at record time, because membership is closed and a
+sample outside the layout must not be transformed as if it were in it. A
+mistyped child name is rejected at record time rather than silently
+creating a chain nothing resolves against.
+
+A keyed layout — sample name to ordered step list — was tried and cannot
+express `spin(everyone) → shift(a) → spin(everyone)` for a sample first
+named at step 2, because “append to every key so far” never reaches a
+key that appears later. One ordered list with per-step scope can.
+
+### Properties that follow from the storage shape
+
+- **The space owns the transforms, not the objects.** Nothing is written
+  to the data. That is what lets one object participate in several
+  frames at once and makes per-object composition well defined.
+- **Anchor defaults to `(0, 0)`** for `spin` / `affine` recorded onto a
+  space, not the data’s centre, so a recorded rotation is reproducible
+  independent of the extent. Overridable per call.
+- **Sample-uniform scope, deliberately.** Within a sample, cells,
+  polygons, points, images and spatial locations all move together.
+  Per-element overrides are unsupported; the documented path is
+  [`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
+  plus per-element transforms afterwards. This does put
+  image-versus-polygon registration — the hard alignment problem — out
+  of scope.
+- A `spaceTransform` step captures a call to an existing transform
+  generic. At resolution the receiving object is spliced in as the first
+  argument and [`do.call()`](https://rdrr.io/r/base/do.call.html)
+  dispatches to the method that already exists, so spaces add **no new
+  transform implementations**.
+
+## `materialize()`
+
+`materialize(g, view, space)` resolves the recipes and returns a new
+gobject where ordinary accessors see the narrowed, reframed data — no
+recipe argument needed downstream. `slots =` limits which slots are
+materialized, and the `combine*()` family routes through it so one
+resolution is reused rather than recomputed. On a `giottoMulti` it walks
+participating children and applies each one’s step list. Its resolved
+surviving-ID set is what GiottoLens pre-renders as a view payload.
+
+[`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
+is plumbing rather than a user verb: it is exported so that
+GiottoVisuals’ `.gg_materialize()` can call it, and the user-facing
+route to the same effect is the `view =` / `space =` arguments on the
+ordinary accessors.
+
+**Open — image-slot semantics.** Warp at materialize time, or keep
+images as references with the transform applied at render? Unresolved,
+and it matters for anything that exports a materialized gobject.
+
+### A view on a `giottoMulti` is evaluated at the parent and nowhere else
+
+The parent resolves a view once, to a global allow-list, which
+`.gm_narrow_child_outputs()` folds in beside the eager `@cell_ID`
+narrowing — one place, so the two channels cannot disagree.
+`.crop_carriers()` builds carriers lazily and per frame, and
+`.surviving_cell_ids()` resolves a whole view — filters against joint
+metadata, crops against fused coordinates — at the parent, in global
+IDs.
+
+Content with no cell axis (points, images) is cropped **geometrically,
+at the parent**, on what the child returned: the child was handed
+`sp[nm]`, so that content is already in the predicate’s frame. Doing it
+there rather than handing the child a resolved view is what makes
+parent-only evaluation structural instead of a convention children are
+trusted to honour, and it preserves the rule that a getter refuses an
+ad-hoc handle. A standalone `giotto` is untouched: it resolves its own
+view exactly as before.
+
+The failure this replaced is worth recognizing, because it recurs
+whenever a new formal is added to a gmulti getter: `view` and `space`
+were falling into `...` and being forwarded to each child *as a name*,
+which the child then looked up in its own empty `@view` / `@spaces` and
+failed on. A parent-level recipe reaching a child by name cannot work.
+
+## Where a selection can come from
+
+Three mechanisms narrow the sample axis, and they are deliberately not
+one:
+
+| form | mechanism | when |
+|----|----|----|
+| ad hoc | `samples =` at the call site | “show me these samples now” |
+| recorded | a [`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md) view step | part of a named, reused recipe |
+| registered | a `@groups` entry | a selection that has stopped being ad hoc |
+
+`samples` is a verb at the call site; views and spaces are nouns users
+build, name and reference repeatedly. Forcing `samples` into the noun
+vocabulary would mean inventing synthetic slotted recipes for trivial
+selections, or making users write `view = selectSamples(...)` every
+time. The precedent is `subset(g, predicate)`, which sugars over a
+filter step for the same ergonomic reason. `@groups` completes the
+reasoning rather than contradicting it: it names the case where a
+selection is reused often enough to deserve a noun.
+
+## Threading through the ordinary generics
+
+`view =` and `space =` are exposed on the ordinary API so recipes are
+built and applied through the natural verbs rather than only through
+[`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md).
+The current reach is roughly 57 formals across 20 files.
+
+**This surface is under review, and the question should be settled
+before it is relied on further** — removing formals afterwards is a
+breaking change. Most sites are pass-through plumbing nobody will call
+with `space =`, and a getter-level `space =` is largely redundant with
+`materialize(g, space = ...)` followed by ordinary accessors, which is
+the pattern the user vignette already presents as primary. `view =` is
+the stronger case, since narrowing is reused and expensive to recompute.
+Trimming to
+[`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
+plus the plot entry points would remove most of the maintenance and
+documentation burden while keeping the capability.
+
+One data point for weighing it: GiottoLens is **not** a consumer of
+server-side spaces. It applies per-sample 3×3 affines client-side via
+deck.gl `modelMatrix` with no tile reload, so `giottoSpace` serves
+R-side plotting and analysis.
+
+## Deliberately not done
+
+Each of these is a considered deferral, not an oversight.
+
+**Composable views (`view1 + view2`).** Errors with “not yet
+implemented”. Spaces compose freely; views do not. Intersecting filters
+is obvious, union-versus-intersection for crops is not, and two views
+binding different predicate frames conflict in ways that need a rule.
+Chaining [`subset()`](https://rdrr.io/r/base/subset.html) /
+[`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
+on a single view covers current needs.
+
+**Groups as space keys.** Letting a registered group name key a space,
+so one transform declaratively lands on every member and still composes
+with per-child steps. Late binding is the right shape — the step records
+the group name and `.gm_resolve_sample_names()` expands it at resolve
+time, so group edits propagate, consistent with filter predicates
+resolving against current object state. The cost is that the
+participation set is no longer readable off the space alone, and that a
+group edit silently changes a saved layout, which argues for surfacing
+group-derived scope wherever a space is summarised. The expansion needs
+three guards: terminate on cyclic group definitions (dedupe against
+already-expanded *group* names, not against the output); reject a group
+whose name collides with a sample’s at assignment time rather than
+shadowing the child at read time; and error when a scope resolves to
+zero samples, which otherwise looks like a step that worked.
+
+**A `viewSpatRelate` step type — dropped as specified.** Its motivation
+is answered by `geom` on the crop step. Two corrections to the original
+reasoning, measured against terra rather than assumed: `within` and
+`touches` *are* well defined on a centroid (strict interior and
+boundary-only), so they were never in the geometry-only set; only
+`contains`, `covers`, `overlaps` and `crosses` are always `FALSE`
+against a point. Polygon-versus-polygon already has two routes — a
+recorded crop step whose region is an arbitrary polygon with
+`geom = "poly"`, or an ad-hoc `spatRelate(x, y, relation)`. The only
+case neither covers is a predicate whose `y` side is another *live
+subobject* of the same gobject (“keep cells intersecting the vessels
+layer”). Nothing has asked for it; reopen with that as the scope if
+something does.
+
+**Sedonadb lowering for view recipes.** Compile a whole recipe into a
+single SQL plan rather than resolving steps one at a time. Views already
+push into the backend’s lazy plan, but the folding happens step by step.
+This pairs with `federatedReadHandle`, where a cross-sample read’s
+fragments lower into one plan instead of materializing per substore;
+together they are what makes an atlas-scale narrowing a single query.
+Further out on the same list: ephemeral analysis steps inside a view, so
+a recipe can carry a derived structure rather than only a narrowing.
+
+**`attach_derived()`.** The write direction.
+[`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
+projects a view into a new gobject where derived outputs live; without a
+way back, anything computed on a materialized subset is stranded there
+and the only route to the parent is a manual key-based join. That join
+is exactly the operation the carry-keys discipline says must carry keys,
+so this is the natural place to enforce it rather than leaving each
+caller to get it right. The generic and a `giotto` method exist; the
+body is a stop.
+
+**Collapsing a space’s chain into one transform before applying it.**
+Recording stays stepwise; the *application* should not be.
+`.apply_space_to_subobj()` is the only site that applies a space step,
+and it loops, so an N-step space is N sequential eager dispatches **per
+subobject**, each rewriting that subobject’s coordinates before the next
+reads them. All of `spin`, `spatShift`, `affine`, `flip`, `rescale` and
+`shear` are affine — only `zoom` is not — and `affine2d` is already a
+composition accumulator. Fold the affine-representable prefix into one
+`affine2d`, apply it in a single pass, and break the chain at the first
+non-affine op. The recorded steps are never rewritten, so a recipe stays
+inspectable and hand-editable; this is purely a resolve-time
+optimisation. Composition is exact rather than approximate: a
+user-supplied anchor is a translate–rotate–translate triple, itself
+affine, and the `(0, 0)` default is what keeps the fold independent of
+intermediate extents. Worth checking when it is implemented whether the
+image path resamples per transform — if it does, folding is *more
+faithful* as well as cheaper, which makes it a correctness fix for
+images rather than an optimisation.
+
+**Typing the crop region at the substrate boundary.** A crop step
+serializes its region as either `numeric(4)` (an AABB) or `character`
+(WKT). `.materialize_crop_region()` deserializes WKT into a `SpatVector`
+but returns the numeric unchanged, so every substrate normalizes it
+independently and the axis convention is implicit in several places at
+once. terra uses `(xmin, xmax, ymin, ymax)`; sf and most GIS tooling use
+`(xmin, ymin, xmax, ymax)`, so any sedona or duckdb-spatial path has to
+remember to reorder. The fix is to convert numeric to
+[`terra::ext()`](https://rspatial.github.io/terra/reference/ext.html) or
+a polygon inside `.materialize_crop_region()`, costing a few
+microseconds per resolve. Do it when a non-terra substrate needs the
+other ordering, or when someone hits an off-by-axis bug from misreading
+the 4-vector.
+
+## Where the code lives
+
+| file | contents |
+|----|----|
+| `R/classes-view.R` | `giottoView`, the step constructors and validators |
+| `R/classes-space.R` | `giottoSpace` (virtual), `perSampleSpace`, `combinedSpace` |
+| `R/methods-view.R` | the view recorder and accessors |
+| `R/methods-space.R` | the space recorder and the transform verbs |
+| `R/methods-recipe.R` | the shared access / append / export surface |
+| `R/classes-resolver.R`, `R/methods-resolver.R` | the resolution engine, [`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md), `.surviving_cell_ids()` |

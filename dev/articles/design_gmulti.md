@@ -1,0 +1,571 @@
+# Federation: giottoMulti design
+
+`giottoMulti` presents N child `giotto` objects as one analysable unit.
+This article is the contributor-facing record of how it does that and
+why the alternatives were rejected. `vignettes/articles/design.Rmd`
+places it in the wider architecture;
+`vignettes/articles/design_view_space.Rmd` covers the recipe subsystem,
+which is a sibling rather than a part of this one — `giottoView` and
+`giottoSpace` dispatch on `gAny` and work on a plain `giotto` too.
+
+The short version: non-spatial content is joint, spatial content is not,
+and which of the two a thing is gets decided by a single test stated
+below.
+
+## What it is for
+
+Multi-sample analysis needs a backbone without paying the cost of
+joining. Five concrete gaps motivated the class as it now stands, and it
+is worth naming them because four of the five are the same gap:
+
+1.  Joint slots silently flattened to one spatial unit and one feature
+    type, because nothing declared which child names federate upward.
+    That backslides on the multi-modality and multi-scale premise of the
+    suite.
+2.  The plotting dispatcher abused `space =` as a sample selector, and
+    actively rejected real defined-space names with a “not yet
+    supported” error. The parameter was doing the wrong job under the
+    wrong name.
+3.  GiottoVisuals reached into GiottoClass internals with `:::` to
+    project joint cell metadata into a scratch child before each panel —
+    a workaround for getters that were not sample-aware.
+4.  There was no home for content in a cross-sample frame.
+5.  There was no mechanism for per-child name reconciliation, so a
+    federation whose samples spell the same modality `"rna"`,
+    `"transcripts"` and `"gene_expression"` had to be renamed on disk.
+
+(1), (3), (4) and (5) all point at a missing federation layer; (2) is
+what happens when per-sample dispatch is attempted without one to lean
+on. Of the five, four are closed and (4) was **declined** — see *What
+does not live at the parent*.
+
+## `gAny`, not inheritance
+
+    gAny (virtual)
+    ├── giotto
+    └── giottoMulti
+
+`giottoMulti` does **not** inherit from `giotto`. Its per-dataset
+spatial slots are absent, not inherited-empty, and inheriting would let
+a spatial-domain method fall through to an empty slot and return a
+plausible-looking nothing. With a virtual base, an undefined method
+fails loudly through no-method dispatch, while shared-domain methods are
+written once. Accessors were promoted from `"giotto"` to `"gAny"` one at
+a time rather than wholesale, for the same reason.
+
+Two smaller choices that follow the same instinct:
+
+- **Children are held in a `list`, not an `environment`**, which keeps
+  value semantics. Disk-backed children get reference semantics from the
+  storage layer anyway; declining it at the container level removes a
+  class of surprise.
+- **Per-child defaults are derived live, not cached.** A cache drifts
+  the moment a child is mutated standalone.
+
+## The slots
+
+    objects  id_map  id_sig  mapping  groups
+    expression  expression_feat  cell_metadata  feat_metadata  cell_ID  feat_ID
+    spatial_enrichment  dimension_reduction  nn_network  spatial_network  multiomics
+    instructions  parameters  versions  misc  source  view  spaces
+
+| slot | role |
+|----|----|
+| `@objects` | named list of child `giotto` objects — the first-class sample axis |
+| `@id_map` | `list(cells, feats)`, each `data.table(object, local_id, global_id)`. The identity **registry**; never narrowed |
+| `@id_sig` | child length-signature; drives cache invalidation in `initialize()` |
+| `@mapping` | federation declaration for the indexing axes |
+| `@groups` | registered sample handles |
+| `@cell_ID` / `@feat_ID` | the **active narrowing**, nested by spat_unit / feat_type; `NULL` means unfiltered |
+| joint slots | `@expression`, `@cell_metadata`, `@feat_metadata`, `@dimension_reduction`, `@nn_network`, `@spatial_enrichment`, `@spatial_network` — cache *and* source of truth |
+| `@source` | one multi-level `gsource` for cross-sample artifacts; children keep their own |
+| `@view` / `@spaces` | named recipe slots, owned by the recipe subsystem |
+
+**Deliberately absent:** `@spatial_locs`, `@spatial_info`, `@feat_info`,
+`@images`, `@spatial_grid`, `@join_info`, `@offset_file`, `@h5_file`.
+All per-dataset, all on children; spatial-domain access is a per-sample
+fan-out. `@spatial_network` is the one spatial slot at the parent, and
+the section on the decomposition test says why it is the exception.
+
+`@source` resolution at init (`.gm_resolve_source()`) has one hard rule:
+all sourced children must share **one** source class. Mixing parquet-
+and BPCells-backed children breaks union and cbind dispatch downstream,
+so it errors rather than discovering that later. An explicit source must
+match that class, or is accepted as-is when no child has one; with no
+explicit source, the first sourced child’s is adopted.
+
+## Three declaration layers
+
+These are easy to confuse with one another, and each is confusable with
+the others in a different direction.
+
+| layer | declares | scope |
+|----|----|----|
+| `@mapping` | “this parent-level handle federates with these child-level handles” | the indexing axes — spat_unit, feat_type, values |
+| `@groups` | “this name refers to these samples” | sample membership, by enumeration |
+| `@spaces` | a coordinate frame | frame only |
+
+### `@mapping` — federation at the indexing axes
+
+``` r
+
+mg@mapping <- list(
+    spat_unit = list(
+        cell    = c(B191 = "cell", B215 = "cell", B651 = "cell"),
+        nucleus = c(B191 = "nucleus_v1", B215 = "nuc"),   # naming varies
+        tile    = c(B191 = "tile_100um")                  # one sample participates
+    ),
+    feat_type = list(
+        rna     = c(B191 = "rna", B215 = "transcripts"),
+        protein = c(B651 = "protein")
+    )
+)
+```
+
+Named lists keyed by the parent-level handle; each entry a per-sample
+named character vector giving the child-level name. Partial coverage is
+fine — a sample lacking the modality is simply absent from the vector.
+`.gm_discover_mapping()` auto-populates the symmetric trivial mapping at
+construction from children’s `@cell_ID` / `@feat_ID` keys, which covers
+most federations with no user intervention; user edits survive a bare
+re-init, and assigning `NULL` triggers fresh discovery.
+
+`.gm_resolve_axis()` turns a handle into participating samples plus each
+one’s child-level slot name, preferring `@mapping` and falling back to
+scanning child slots for undeclared handles, so legacy multis with a
+cleared mapping keep working. `.gm_resolve_participation()` composes two
+axis resolutions into the per-sample plan that the assembly helpers
+follow. Cell metadata assembly tags each row with its child name, so
+sample identity is an ordinary column available for grouping, splitting
+and colouring.
+
+**Why the implementation lift was small relative to the user-facing
+impact:** per-spat_unit cell_ID universes already existed at the parent
+level, under-used because the implicit federation assumed one spatial
+unit. `@mapping` is therefore a declaration of intent rather than a
+data-model change, and `sample::cell_id` namespacing is unaffected
+because separate universes cannot collide.
+
+Invalidation is **per-universe** — editing one `(spat_unit, feat_type)`
+pair drops only that pair’s joint state, which bounds the blast radius
+of any single mapping edit. Still open: when an existing entry’s
+per-sample names change, warn-and-drop dependent joint state, or block
+pending an explicit opt-in? Currently it drops.
+
+### `@groups` — a name for several samples
+
+``` r
+
+gmultiGroup(mg, "tumor_pair") <- c("B191", "B215")
+getCellMetadata(mg, samples = "tumor_pair")   # just works
+spatPlot2D(mg, samples = "tumor_pair")
+```
+
+A group name is usable anywhere a sample name is, so **no new parameter
+appears anywhere**. That is the whole design: only *resolution* is
+shared, so only the namespace is shared, and storage stays separate.
+
+Groups are not entries in `@objects`, because 64 references assume every
+entry there is a `giotto` — `initialize()` asserts it,
+[`names()`](https://giotto-suite.github.io/GiottoClass/dev/reference/names.md)
+and [`length()`](https://rdrr.io/r/base/length.html) would count groups
+as children, the id-map and mapping builders all iterate children, and
+[`show()`](https://giotto-suite.github.io/GiottoClass/dev/reference/show.md)
+sums cells and features.
+
+Resolution funnels through `.gm_resolve_samples()`, which recursively
+expands against `@groups` with a cycle guard, then resolves the
+collected names against `@objects`, reporting names that match neither.
+The funnel had to be built before the feature: `samples =` was
+previously validated against `names(@objects)` at five separate sites
+with five error strings, and expansion has to precede that check, so
+inserting it at one site would have left the other four rejecting valid
+group names.
+
+| decision | settled as |
+|----|----|
+| nesting | allowed (`all_tumor = c("pair_a", "pair_b")`), recursive with a cycle guard |
+| dedup | [`unique()`](https://rdrr.io/r/base/unique.html), first-appearance order — overlapping groups do not double-read a child |
+| `names(mg)` / `length(mg)` | remain the child list; groups via `gmultiGroups(mg)` |
+| stale members | do **not** reset on child removal, because that destroys user intent; validate at resolution and error naming the missing member. The one registry that deliberately does not follow the `@id_sig` reset rule |
+| value shape | named character vector; [`names()`](https://giotto-suite.github.io/GiottoClass/dev/reference/names.md) `NULL` means pure membership, named means per-child content handle — the same shape as a `@mapping` entry |
+| collisions | reject a group name colliding with a child on assignment, and a child name colliding with a group on `[[<-` / `names<-` |
+
+## Identity: registry versus narrowing
+
+This is the distinction most likely to be collapsed by someone reading
+quickly, and collapsing it has already caused one long-lived bug.
+
+`@id_map` namespaces cell and feature IDs across children into one
+global vocabulary — `data.table(object, local_id, global_id)`, with
+`global_id` defaulting to `paste(object, local_id, sep = "::")`.
+Features legitimately overlap across datasets, so a feature’s
+`global_id` often equals its `local_id`; the map still records which
+features exist where. `@id_sig` caches a child length-signature so
+`initialize()` rebuilds only on a difference, making a bare re-init cost
+one comparison over N children.
+
+**`@id_map` is the registry. It is never narrowed.** `@cell_ID` /
+`@feat_ID` are the active narrowing, nested by spat_unit / feat_type
+exactly as on a single `giotto`, with `NULL` meaning unfiltered. Keeping
+them separate is what lets a narrowing be widened or dropped without
+having lost the population.
+
+Rules that follow:
+
+- **Children are never mutated.** Narrowing lives at the parent only.
+  Besides child-immutability, this avoids violating
+  `unionParquetExprStore`’s “ops-clean substores” invariant, which
+  per-child `[`-subset state would break, and it keeps narrowing state
+  from scattering across N children.
+- **Unknown IDs are silently ignored**, intersected away, matching
+  `subsetGiotto` on a single giotto.
+- **Value semantics.** [`subset()`](https://rdrr.io/r/base/subset.html)
+  returns a new multi; the original is untouched.
+- **Structural change resets narrowing.** `initialize()` nulls both
+  slots when `@id_sig` differs, because they record survivors of a
+  filter over a *specific population*. The alternative — a new child
+  silently inheriting the parent’s narrowing — would report a filter
+  that child never went through.
+
+> **A retired bug, kept recorded because the shape recurs.** `@cell_ID`
+> was never written at all, because the `":all:"` keys were derived from
+> `names(@expression)` / `names(@cell_metadata)` — the joint slots,
+> which are a lazily-populated cache and empty on a fresh multi.
+> `su_keys` was `character(0)`, so the recording loop never ran. That is
+> the entire explanation for the long-standing “any edit to
+> `subset(giottoMulti)` silently no-ops” mystery: the readers were
+> correct and the writer never fired, so every reader-side experiment
+> looked broken. Keys now come from `.gm_narrowing_keys()`, with
+> `@mapping` as the authoritative universe and the joint-slot names
+> unioned in only as a legacy fallback.
+
+Two checks are still owed here. `filterGiotto` should record narrowing
+identically, since it takes the same `.subset_giotto` route, but only
+[`subset()`](https://rdrr.io/r/base/subset.html) and
+[`subsetGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/subsetGiotto.md)
+were exercised and `filterGiotto` is the path users hit. And
+`spatIDs(mg)` unions across spatial units when `spat_unit = NULL`, which
+with per-universe narrowing can over-report a cell filtered out of one
+universe but present in another.
+
+## Joint slots are cache *and* ground truth
+
+| trigger | behaviour |
+|----|----|
+| first access to a federated handle whose raw content is child-only | extract via `@mapping`, cbind/rbind into joint, store, slice and return |
+| derived content computed at parent scope | lives in the joint slot natively; no child round-trip ever |
+| subsequent access | joint slot only; children not consulted |
+
+All of the implications are intended: children are **frozen native
+contributions** rather than write targets; no getter call mutates a
+child; `addCellMetadata(mg, ...)` targets joint metadata only, and a
+child edit goes through `addCellMetadata(mg@objects[[s]], ...)` —
+friction on purpose; and a saved multi carries joint slots for whatever
+has been touched, with raw child content remaining the disk-only source
+for unreached federations.
+
+**The trap is that these slots are lazily populated.** They are empty on
+a fresh multi and stay empty until something explicitly writes one —
+notably
+[`getExpression()`](https://giotto-suite.github.io/GiottoClass/dev/reference/getExpression.md)
+returns an assembled result **without** caching it back. Any logic
+deriving keys or universes from `names(@expression)` silently sees
+nothing. That is what caused the narrowing bug above, and it is not
+merely a first-access window.
+
+Open: what signals eager materialization? Lazy is the default and
+[`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
+is the presumed trigger, but that is not formally the contract.
+
+## The access layer
+
+``` r
+
+getCellMetadata(mg, samples = "B191")
+getExpression(mg, samples = "B191", values = "raw")
+getExpression(mg, values = "B191::raw")
+getSpatialLocations(mg, samples = "B191")
+```
+
+`samples =` is the only selector on a getter. Setters keep `object =`,
+which is a single-valued write *target* rather than a selector
+(adr/0006) and never had a `samples` spelling. The `"sample::name"`
+shortcut works wherever a getter has a `name` or `values` argument; each
+entry parses independently, and a conflicting explicit `samples =`
+errors.
+
+Two choices worth keeping visible:
+
+- **The paired-vector API was dropped**
+  (`sample = c("A","B"), name = c("raw","filtered")`). The prefix syntax
+  covers every paired-vector case *and* the
+  uniform-handle-across-samples case, which paired vectors cannot
+  express without redundant repetition.
+- **`samples =` rather than always-prefix.** Getters without a `name`
+  argument have nowhere clean to put a prefix, and
+  `spat_unit = "B191::cell"` is wrong: a spatial unit should not carry
+  sample identity.
+
+This layer is what removed the `:::` reach. Per-panel slicing happens at
+the getter, so the scratch-child construction and the internal helper it
+called are both gone.
+
+Open: the output shape when `values = c(...)` mixes parent-level and
+sample-qualified entries — a list keyed by entry, or one combined
+object? Probably a list; combination is ill-defined in the heterogeneous
+case.
+
+### How the three selectors compose
+
+They are **additive**. Each narrows on top of the others; none overrides
+another.
+
+| knob | mechanism | selects |
+|----|----|----|
+| sample | `samples =` / legacy `object =` | which children are read |
+| view | `@cell_ID` / `@feat_ID` plus the resolved recipe | which cells and features survive |
+| space | `@spaces[[name]]` | which coordinate frame |
+
+A sample-scoped read returns that child’s content with the active
+narrowing on top. Children stay untouched: `mg[["a"]]` always returns
+the raw child, and that is the documented escape hatch.
+`.gm_narrow_child_outputs()` applies the allow-list to the assembled
+per-child list, translating globals back to local IDs by prefix, and
+returns the list untouched when no narrowing is active.
+
+**The feature axis does not yet compose with points.**
+`.gm_narrow_child_outputs()` is wired into `getSpatialLocations`,
+`getSpatialNetwork` and `getPolygonInfo` but not `getFeatureInfo`, and
+the per-subobject filter handles `spatLocsObj`, `spatialNetworkObj` and
+`giottoPolygon` but not `giottoPoints`. So `subset(mg, features = ...)`
+followed by a points read returns unnarrowed points. `getGiottoImage`
+correctly does not narrow — it has no cell axis.
+
+## Combined defaults
+
+A multi’s default `spat_unit` / `feat_type` is **combined across
+children**, not taken from one child’s.
+
+`@mapping` unions every child’s handles, so the axis map is *not* a set
+of synonyms. Taking `names(axis_map)[[1L]]` therefore let the first
+child’s convention stand for the whole federation and routed the others
+to a handle they may not carry. The rule instead: prefer a handle every
+current child participates in; else the sole declared handle, whose
+absences are declared skips rather than a disagreement; else error,
+naming the handles and who carries each.
+
+Do not assume `set_default_spat_unit(mg)` agrees with the same call on a
+child. The default is computed **on demand, not at init**, because the
+child population and the mapping both move and a cached default is one
+more thing to invalidate for no gain.
+
+This is a good illustration of a test-coverage failure mode: the
+existing paths worked only because typical use is homogeneous, which is
+also why the suite caught nothing. The regression test had to build a
+federation whose children carry *different* spatial units before the bug
+was reachable at all.
+
+## Carry-keys discipline
+
+Joint `@cell_metadata` row order and joint `@expression` column order
+come from independent assembly paths — `rbindlist` over children versus
+`unionParquetExprStore` stacking — so **positional alignment between
+them is not guaranteed**. A value produced against one and written back
+against the other mislabels rows.
+
+`addCellMetadata` / `addFeatMetadata` auto-detect a named vector or a
+table with a key column and do a key-based merge. With neither, a single
+`giotto` warns and falls back to positional cbind for backwards
+compatibility, and a `giottoMulti` **errors** — which makes every
+existing positional producer fail loudly on its first gmulti run rather
+than quietly mislabelling.
+
+Guards were then applied at each audited producer, all of them loud
+stops on ID mismatch, across `create_average_DT` / `_detection_DT`,
+`adjustGiottoMatrix`, `runDWLSDeconv`, `runGiottoHarmony`,
+`findScranMarkers`, `giottoToAnnData`, `giottoToSpatialExperiment`,
+`giottoToAnnDataZarr` and `cal_cell_niche_cluster_bin`.
+`findScranMarkers` is the clearest case: unaligned `groups` passed to
+`scran::findMarkers` silently *inverts* the DE result rather than
+erroring.
+
+A canonical cross-slot ordering was considered and **rejected as
+unnecessary** — with key discipline at the boundary, internal slot order
+is irrelevant to correctness.
+
+Lower-confidence sites not yet closed: `addHMRF_V2`‘s commented-out
+`by_column = TRUE` branch, `specificCellCellcommunicationScores`’
+permutation block, and SPARK’s `covariates` extraction.
+
+## What does not live at the parent
+
+Polygons drawn in a cross-sample frame belong to no child’s
+`@spatial_info`, and the multi has no spatial slot to hold them. This
+was gap (4) above, and it is **declined** for the current substrate
+schema.
+
+The slots were actually built — `@spatial_locs`, `@spatial_info`,
+`@feat_info`, `@images`, mirroring `@spatial_network` — and then
+removed, which is how the reasoning got sharp. Two things the attempt
+showed:
+
+**The decomposition test.** A parent-level slot earns its place only
+when the artifact *cannot* be split into per-sample pieces. A
+cross-sample edge cannot — its endpoints are in two samples and no
+per-sample representation of it exists. A location, a polygon, a point
+and a raster all can; each belongs to exactly one sample. So
+`@spatial_network` stays and the other four go.
+
+**What per-sample content costs at the parent.** Today a thing’s owning
+sample is *structural*: it is the child it lives in. Holding the same
+content at the parent makes ownership a `sample::` prefix on a string —
+a convention every consumer must remember, rather than a guarantee. The
+attempt needed a whole second ID-rewrite engine for exactly that reason,
+and `@feat_info` and `@images` ended up exempt from pruning, rewriting
+and invalidation alike. Operations that are currently structurally
+enforced would have become implicitly required.
+
+The atlas-annotation case — a region polygon spanning samples — is the
+strongest one and still fails, on a third defect the other two share:
+**joint spatial content records no frame.** An annotation is only
+meaningful relative to a layout, adr/0006’s frame recording is
+implemented for networks and not for a polygon set handed to a setter,
+and nothing could then tell whether a frame had already been applied.
+
+**Revisit when joint spatial content can record its frame.** Until then
+the four setters refuse and name the way through: edit the child, put it
+back with `mg[["<sample>"]] <- g`.
+
+### The one exception: joint `@spatial_network`
+
+Networks are at the parent for the reason the decomposition test gives —
+a Delaunay or kNN over combined-frame locations produces edges *between*
+samples, and no child’s slot can hold those, since each child knows only
+its own cell IDs. A secondary benefit is child-immutability:
+[`createSpatialNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialNetwork.md)
+was the lone analysis output writing into each child.
+
+The slot is nested `spat_unit -> name`, the **same shape as
+`giotto@spatial_network`**, rather than being keyed by child name or
+combined-space key. That alternative put two namespaces in one slot,
+where a sample could collide with a space. Since a frame-built artifact
+takes the frame as a name prefix (adr/0006), the name already says which
+frame and no second keying level is needed.
+
+`getSpatialNetwork(mg)` resolves **parent-first**: the joint slot when
+it holds what was asked for, the per-child fan-out otherwise. Every
+spatial getter now does this. `setSpatialNetwork(mg, x)` writes to the
+joint slot and has no way to reach a child.
+
+Building dispatches at `.create_spatial_network_from_param()`, where the
+param is already built and the gobject is still in hand, and which all
+three public doors already reached. A `combinedSpace` builds **one**
+network over its members via `.gm_fused_spatlocs()`, written to the
+joint slot with children untouched. On two overlapping sections that is
+9984 edges, 635 of them cross-sample — the ones the class exists for.
+
+**Child-immutability is not fully restored, and that is deliberate.**
+The per-sample build path still writes into each child, because a
+`perSampleSpace` job genuinely produces N artifacts and there is no
+joint object for them to be. That write is internal to network creation
+rather than reachable through a setter (adr/0006), and the decomposition
+test says it is correct rather than temporary: per-sample content
+belongs on the children.
+
+An earlier call-replay machinery (`.csn_forward` / `.csn_on_child` /
+`.csn_space_plan`) is gone. It existed to avoid hand-listing 19 formals
+to forward per child — a list that went stale the moment `radius`
+arrived upstream. A built param has no formals to forget.
+
+## Consumers
+
+**The GiottoVisuals dispatcher** renders a multi as one panel per
+sample, honouring view, space and sample selection. `.resolve_samples()`
+auto-injects the sample set from a defined space’s membership when
+`samples = NULL`, and errors on samples absent from `@objects` or
+outside the space’s participation set. The auto-injection convention
+lives there, consumer-side, so the recipe classes stay ignorant of who
+reads them.
+
+Cross-sample defined-space panels are now *expressible* —
+`space = "atlas"` derives its own samples — but rendering N samples into
+one shared viewport is cross-sample aggregation, below.
+
+**Per-panel sizing is still wrong.** `cowplot::plot_grid` gives every
+panel an equal grid cell regardless of the sample’s extent.
+`coord_fixed(1)` is right *within* each panel, so data aspect is
+preserved internally, but scale *across* panels is not — wide- and
+narrow-extent samples render at the same width, and `rel_widths` /
+`rel_heights` are per-row and per-column rather than per-cell. Prefer
+`patchwork::wrap_plots()`, which gives per-panel widths and heights
+including in an MxN layout; heterogeneous extents are the norm at atlas
+scale, so uniform cells are wrong by default. Until then `cow_rel_w` /
+`cow_rel_h` can be passed manually.
+
+**GiottoLens** is a separate repository, recorded here only where it
+constrains this design. It treats a single giotto as a multi with one
+child, so the viewer does not branch on input class. It is **not** a
+consumer of server-side spaces — per-sample affines are applied
+client-side via deck.gl `modelMatrix` with no tile reload. Views are
+pre-rendered R-side: the viewer registers a resolved cell-ID payload and
+semi-joins it into live queries, so the R-side resolver handles
+predicate-frame projection and the viewer stays frame-naive.
+
+## Open directions
+
+**`getSpatialLocations` unification.** Return one concatenated
+`spatLocsObj` with `sample::id` globals instead of a named list of
+per-child objects with local IDs. It would match joint `@cell_metadata`,
+`@expression` and `spatValues`, reinforce “joint output is ground truth”
+by keeping consumers off the per-child reach that previously caused an
+alignment and leak chain, and make the per-child narrowing filter
+redundant for spatial locations. The substrate is already `data.table`,
+so this is an `rbindlist` after the per-child fetch with each `cell_ID`
+rewritten to global form. The ripple is on the consumer side: every
+GiottoVisuals caller iterating the list by sample, and tests comparing
+`length(out)` (samples) against `nrow(out[])` (cells), which both flip.
+
+**Cross-sample aggregation.** The fan-out-then-reduce shape — computing
+*across* samples in a shared frame. Spaces can position samples relative
+to one another, but nothing computes across them, so the atlas use case
+is not fully deliverable. Frame this as a substrate-readiness gap rather
+than a design tradeoff: once cross-sample scans push down to the
+database substrate, atlas-scale aggregation is SQL-level — a group-by
+plus a spatial predicate over shared parquet — and the gobject-layer
+dispatch shape stops mattering for performance. The orthogonal-axes
+design sits on top of a shared substrate rather than competing with one,
+so the gap closes without the data model changing. Structurally
+different from the rest of this article; it needs its own design pass.
+
+**`federatedReadHandle` — designed, deliberately not implemented here.**
+A cross-sample read would return per-sample fragments plus a recipe for
+folding them, so the consumer decides when and whether to concatenate:
+for duckdb or sedonadb the fragments lower to a single SQL plan instead
+of per-substore materialization, while in-memory consumers concatenate
+at use time. It is the gobject-layer analogue of GiottoDisk’s
+`unionParquetGeomStore`. It was dropped from the port rather than
+carried, because it had **zero consumers** — a class with no caller is a
+maintenance cost and a false signal that a decision has been made.
+Re-add it with its first real consumer, which is most likely sedonadb
+lowering for view recipes.
+
+**A pointer class for cross-sample content aliases** — “these three
+children’s `cell` polygons are one logical layer” — is the long tail
+that `@mapping` does not cover, since `@mapping` declares federation at
+the *indexing* axes rather than at the content layer. It is subject to
+the same unresolved frame problem as the declined parent-level spatial
+slots, so it waits on the same prerequisite.
+
+**Save / load on a sourced multi** needs `snapshotSave` to gain a
+`(gDirSource, giottoMulti)` method. That is a GiottoDisk-side gap. Any
+new slot needs a round-trip test rather than an assumption — the S4
+prototype should cover objects saved before the slot existed, but this
+load path has needed explicit fixing before.
+
+Two smaller questions with no consumer yet: whether a group name may key
+a `@mapping` entry (leaning no — groups resolve at the sample axis only,
+and allowing it doubles the resolution paths inside federation), and how
+`joinGiottoObjects` relates to this class (they read as siblings rather
+than nested — a multi preserves separate coordinate spaces where a join
+merges into one giotto — but that is unconfirmed).
