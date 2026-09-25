@@ -18,8 +18,16 @@
   JPEG-2000 `.ome.tif` read through its VRT, one downsampled read of the whole
   image took ~2.2 s and now takes ~0.03 s. Displayed pixel values now come from
   the overview level, so they are averaged rather than exact.
-  `data.frame` output, used for intensity statistics, still samples exact
-  pixels with `"regular"`.
+- Creating or cropping a `giottoLargeImage` samples the intensity range the
+  same way, so opening a 10x JPEG-2000 `.ome.tif` no longer spends ~2 s on
+  it. The estimate comes from block-averaged overview pixels and so
+  under-reports outliers, so `max_intensity` comes out lower than before on
+  images that have overviews. `plot(<giottoLargeImage>)` derives its default
+  display range from the bit depth of `max_intensity`, so such an image can
+  plot brighter by default -- on the Atera breast DAPI the range drops from
+  0-16383 to 0-4095. Image layers in the ggplot-based spatial plots do not use
+  `max_intensity` and are unaffected. Images small enough for terra to know
+  their exact range, and images without overviews, are unaffected.
 - **`n_threads_build` is gone from `hnswKNN()`, `kNNNetworkParam()`,
   `sNNNetworkParam()` and `createNearestNetwork()`.** The HNSW index build now
   always runs on one thread, and that is no longer a choice. It was briefly an
