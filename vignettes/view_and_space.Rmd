@@ -205,7 +205,7 @@ mg <- createGiottoMulti(list(
 ))
 
 mg <- subset(mg, leiden_clus == 1, samples = "visium_a", view = "pair")
-names(getSpatialLocations(mg, view = "pair"))
+table(sub("::.*", "", getSpatialLocations(mg, view = "pair")[]$cell_ID))
 ```
 
 `samples =` takes group names as well as child names (see `?gmultiGroup`).

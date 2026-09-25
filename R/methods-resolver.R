@@ -376,10 +376,10 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # through, so `cell_ID` rides along as an attribute and survivors are read
 # off by ID rather than recovered positionally.
 #
-# giottoMulti: getSpatialLocations returns a per-child named list (spatial
-# locations live per-child, no joint slot). Scope the space to each child,
-# apply, promote each child's IDs to the joint vocabulary, then fold with
-# `rbind2()` -- a data.table rbind -- and convert ONCE at the end. Folding
+# giottoMulti: spatial locations live per-child, with no joint slot. Read
+# them per sample, scope the space to each child, apply, promote each
+# child's IDs to the joint vocabulary, then fold with `rbind2()` -- a
+# data.table rbind -- and convert ONCE at the end. Folding
 # first costs one terra allocation instead of one per child. Promote before
 # folding, or `.check_id_dups()` fires on IDs the children share.
 #' @keywords internal
@@ -411,12 +411,10 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # is cheaper than the alternative -- a local membership test, which is
 # exactly the shape of the five copied `samples =` checks stage 7 removed.
 #
-# The space is NOT handed to the getter, and cannot be: a gmulti's frames
-# are slotted on the PARENT, while the getter forwards `...` to each child,
-# so `getSpatialLocations(mg, space = "atlas")` resolves "atlas" against a
-# child that has no such frame and errors. Each child's chain is applied
-# here instead, which makes this the second path -- after `materialize()` --
-# that scopes a frame across a multi correctly.
+# The space is applied here per sample, through the coordinator this
+# resolver was handed, rather than by the getter. The getter also scopes a
+# frame per child now, but it resolves with the default coordinator, and
+# the fold has to happen after each sample's chain has run.
 #
 # Order is the content: the space applies per child (each sample has its own
 # chain, which cannot be expressed once they are one table), then IDs are
@@ -440,11 +438,15 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
         samples <- .gm_resolve_samples(gobject, samples,
             "gmulti fused spatlocs")
     }
-    args <- list(gobject, spat_unit = spat_unit, name = name,
-        output = "spatLocsObj")
-    if (is_multi) args$samples <- samples
-    sl <- tryCatch(do.call(getSpatialLocations, args),
-        error = function(e) NULL)
+    # A multi is read per sample, since each sample's frame chain has to run
+    # before the fold. The getter would hand back the fold already.
+    sl <- tryCatch(if (is_multi) {
+        .gm_spatlocs_by_sample(gobject, spat_unit = spat_unit, name = name,
+            samples = samples, output = "spatLocsObj")
+    } else {
+        getSpatialLocations(gobject, spat_unit = spat_unit, name = name,
+            output = "spatLocsObj")
+    }, error = function(e) NULL)
     if (is.null(sl)) return(NULL)
 
     if (is.list(sl) && !inherits(sl, "spatLocsObj")) {

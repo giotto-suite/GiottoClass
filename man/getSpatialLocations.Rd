@@ -25,6 +25,7 @@ getSpatialLocations(gobject, spat_unit = NULL, name = NULL, ...)
   gobject,
   spat_unit = NULL,
   name = NULL,
+  output = c("spatLocsObj", "data.table"),
   ...,
   samples = NULL,
   space = NULL,
@@ -70,6 +71,12 @@ data.table with coordinates or spatLocsObj depending on \code{output}
 }
 \description{
 Function to get a spatial location data.table
+}
+\details{
+On a \code{giottoMulti}, the samples' locations are returned as one object with
+\code{sample::cell_ID} IDs, the same vocabulary as joint cell metadata and
+expression, so they can be plotted or joined across samples directly. A
+sample's own object, with its local IDs, is \code{getSpatialLocations(mg[["a"]])}.
 }
 \examples{
 g <- GiottoData::loadGiottoMini("vizgen")
