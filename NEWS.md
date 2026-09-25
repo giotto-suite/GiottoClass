@@ -24,6 +24,14 @@
   nothing when read through a getter. Sample names expand groups, several
   sample steps intersect, and an unknown name is an error.
 
+- `getCellMetadata()`, `getExpression()` and `getFeatureMetadata()` on a
+  `giottoMulti` take `view =`, as they already did on a `giotto`. The view's
+  filter, crop and sample steps narrow the result whether it is assembled
+  from the children or read from a joint slot; feature metadata passes
+  through, since a view narrows cells. A view's sample step now also bounds
+  its cell set everywhere a view resolves, so joint dimension reductions and
+  spatial enrichments read through `view =` narrow by it too.
+
 - Downsampling an image for display -- plotting a `giottoAffineImage`,
   coercing an image to `magick` or `EBImage`, and
   `convertGiottoLargeImageToMG()` -- now uses

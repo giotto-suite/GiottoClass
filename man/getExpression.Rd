@@ -30,7 +30,8 @@ getExpression(gobject, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
   output = c("exprObj", "matrix"),
   set_defaults = TRUE,
   samples = NULL,
-  on_missing = c("error", "drop", "fill")
+  on_missing = c("error", "drop", "fill"),
+  view = NULL
 )
 }
 \arguments{

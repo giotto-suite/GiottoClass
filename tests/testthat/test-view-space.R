@@ -1056,6 +1056,53 @@ test_that("sample steps intersect, expand groups, and reject unknowns", {
     expect_error(getSpatialLocations(mg, view = "bad"), "unknown sample")
 })
 
+test_that("tabular getters on a multi honour a view's filter", {
+    mg <- .fixture_gmulti()
+    mg <- subset(mg, leiden_clus == "1", view = "c1")
+    keep <- unlist(lapply(getSpatialLocations(mg, view = "c1"),
+        function(sl) nrow(sl[])))
+    cm <- getCellMetadata(mg, output = "data.table", view = "c1")
+    expect_equal(nrow(cm), sum(keep))
+    expect_true(all(cm$leiden_clus == "1"))
+    expect_equal(ncol(getExpression(mg, output = "matrix", view = "c1")),
+        sum(keep))
+})
+
+test_that("tabular getters on a multi honour a view's sample step", {
+    mg <- .fixture_gmulti()
+    mg <- subset(mg, leiden_clus == "1", samples = "b", view = "b1")
+    cm <- getCellMetadata(mg, output = "data.table", view = "b1")
+    expect_identical(unique(cm$list_ID), "b")
+    expect_true(all(cm$leiden_clus == "1"))
+    expect_equal(ncol(getExpression(mg, output = "matrix", view = "b1")),
+        nrow(cm))
+    expect_error(getCellMetadata(mg, view = "b1", samples = "a"),
+        "excluded by the view's sample step")
+})
+
+test_that("getFeatureMetadata on a multi accepts a view without narrowing", {
+    mg <- .fixture_gmulti()
+    mg <- subset(mg, samples = "a", view = "only_a")
+    expect_identical(
+        getFeatureMetadata(mg, output = "data.table", view = "only_a"),
+        getFeatureMetadata(mg, output = "data.table"))
+    expect_error(getFeatureMetadata(mg, view = "nope"), "no view named")
+})
+
+test_that("joint slots read through gAny honour a view's sample step", {
+    mg <- .fixture_gmulti()
+    mg <- setExpression(mg, getExpression(mg))
+    ids <- spatIDs(mg)
+    d <- createDimObj(
+        coordinates = matrix(seq_len(length(ids) * 2), ncol = 2,
+            dimnames = list(ids, c("Dim.1", "Dim.2"))),
+        name = "pca", spat_unit = "cell", feat_type = "rna", method = "pca")
+    mg <- setDimReduction(mg, d)
+    mg <- subset(mg, samples = "a", view = "only_a")
+    got <- rownames(getDimReduction(mg, output = "matrix", view = "only_a"))
+    expect_setequal(got, spatIDs(mg, object = "a"))
+})
+
 test_that("eager subset(samples = ) slices the multi", {
     mg <- .fixture_gmulti()
     expect_named(subset(mg, samples = "b")@objects, "b")
