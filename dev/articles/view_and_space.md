@@ -753,6 +753,9 @@ per-child getter calls downstream reuse that cache.
 
 ## See also
 
+- [`vignette("giottoMulti", package = "GiottoClass")`](https://giotto-suite.github.io/GiottoClass/dev/articles/giottoMulti.md)
+  — working with several samples, including views and spaces on a
+  `giottoMulti`.
 - `vignettes/articles/design_view_space.Rmd` — why the subsystem is
   shaped this way, and what is deliberately left undone.
 - `vignettes/articles/design_gmulti.Rmd` — the multi-sample container
