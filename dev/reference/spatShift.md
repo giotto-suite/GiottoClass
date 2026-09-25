@@ -5,6 +5,12 @@ Shift the spatial locations of an object
 ## Usage
 
 ``` r
+# S4 method for class 'giottoMulti'
+spatShift(x, dx = 0, dy = 0, space = NULL, samples = NULL, ...)
+
+# S4 method for class 'giottoSpace'
+spatShift(x, dx = 0, dy = 0, samples = NULL, ...)
+
 # S4 method for class 'giotto'
 spatShift(
   x,
@@ -12,7 +18,8 @@ spatShift(
   dy = 0,
   spat_unit = ":all:",
   feat_type = ":all:",
-  images = ":all:"
+  images = ":all:",
+  space = NULL
 )
 
 # S4 method for class 'SpatExtent'
@@ -65,6 +72,10 @@ spatShift(x, dx = 0, dy = 0, ...)
 
   numeric. The shift on the y axis
 
+- ...:
+
+  additional params to pass to methods
+
 - spat_unit:
 
   character vector. spatial units to affect
@@ -84,10 +95,6 @@ spatShift(x, dx = 0, dy = 0, ...)
 - copy_obj:
 
   Default = TRUE
-
-- ...:
-
-  additional params to pass to methods
 
 - geom:
 

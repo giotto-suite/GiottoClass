@@ -18,6 +18,9 @@ setSpatialNetwork(
   initialize = TRUE,
   ...
 )
+
+# S4 method for class 'giottoMulti'
+setSpatialNetwork(gobject, x, spat_unit = NULL, name = NULL, ...)
 ```
 
 ## Arguments

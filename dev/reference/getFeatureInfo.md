@@ -13,7 +13,19 @@ getFeatureInfo(
   feat_type = NULL,
   return_giottoPoints = FALSE,
   set_defaults = TRUE,
-  simplify = TRUE
+  simplify = TRUE,
+  view = NULL,
+  space = NULL
+)
+
+# S4 method for class 'giottoMulti'
+getFeatureInfo(
+  gobject,
+  feat_type = NULL,
+  ...,
+  samples = NULL,
+  space = NULL,
+  view = NULL
 )
 ```
 
@@ -44,6 +56,21 @@ getFeatureInfo(
 
   logical. Whether or not to take object out of a list when there is a
   length of 1.
+
+- view:
+
+  optional character(1) name of a slotted view; applies any crop step to
+  the points via
+  [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md).
+  Points are not cell-keyed so subset predicates do not cascade here.
+
+- space:
+
+  (giottoMulti) name of a coordinate frame registered on the **multi**
+
+- samples:
+
+  (giottoMulti) children to read from. `NULL` = all children
 
 ## Value
 

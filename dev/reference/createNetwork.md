@@ -20,6 +20,9 @@ createNetwork(x, param, ...)
 # S4 method for class 'matrix,kNNNetworkParam'
 createNetwork(x, param, node_ids = NULL, verbose = NULL, backend = NULL, ...)
 
+# S4 method for class 'matrix,radiusNetworkParam'
+createNetwork(x, param, node_ids = NULL, verbose = NULL, backend = NULL, ...)
+
 # S4 method for class 'matrix,sNNNetworkParam'
 createNetwork(x, param, node_ids = NULL, verbose = NULL, backend = NULL, ...)
 
@@ -60,6 +63,9 @@ createNetwork(
   spat_loc_name = "raw",
   ...
 )
+
+# S4 method for class 'giotto,radiusNetworkParam'
+createNetwork(x, param, space = c("spatial", "expression"), ...)
 
 # S4 method for class 'giotto,delaunayNetworkParam'
 createNetwork(x, param, spat_unit = NULL, spat_loc_name = "raw", ...)
@@ -124,3 +130,12 @@ createNetwork(x, param, spat_unit = NULL, spat_loc_name = "raw", ...)
 A network. Concrete type depends on the Param's `output` slot and any
 supplied `backend`: `"data.table"` of edges, `igraph`, or a GiottoDisk
 `parquetEdgeStore`.
+
+## Details
+
+`radiusNetworkParam` defaults to `space = "spatial"` rather than
+`"expression"`. A radius is a distance with units, and for a radius
+graph those units are almost always the tissue's – "cells within 25 um".
+Reaching it through the general NN method would have silently measured
+`eps` in PCA units instead. Pass `space = "expression"` to get the
+PCA-space behaviour back.

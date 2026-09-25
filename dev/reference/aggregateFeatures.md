@@ -89,8 +89,7 @@ aggregateFeatures(
 - fun:
 
   character (default = "sum"). A function usable by
-  [`exactextractr::exact_extract()`](https://isciences.gitlab.io/exactextractr/reference/exact_extract.html)
-  to aggregate image intensity values.
+  `exactextractr::exact_extract()` to aggregate image intensity values.
 
 - return_gobject:
 
@@ -105,8 +104,8 @@ aggregateFeatures(
 
   Additional params to pass to the overlap calculation method. None
   implemented for point overlaps. For intensity overlaps, passes to
-  [`exactextractr::exact_extract()`](https://isciences.gitlab.io/exactextractr/reference/exact_extract.html)
-  and additionally the function requested with the `fun` param.
+  `exactextractr::exact_extract()` and additionally the function
+  requested with the `fun` param.
 
 ## Value
 

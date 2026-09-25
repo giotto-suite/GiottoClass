@@ -60,7 +60,7 @@ physical distances."><meta property="og:image" content="https://giotto-suite.git
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -99,7 +99,8 @@ physical distances.</p>
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">createSpatialDelaunayNetwork</span><span class="op">(</span></span>
 <span>  <span class="va">gobject</span>,</span>
-<span>  name <span class="op">=</span> <span class="st">"Delaunay_network"</span>,</span>
+<span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  default_name <span class="op">=</span> <span class="st">"Delaunay_network"</span>,</span>
 <span>  spat_unit <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  feat_type <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  spat_loc_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -114,6 +115,7 @@ physical distances.</p>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  return_gobject <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  output <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"spatialNetworkObj"</span>, <span class="st">"data.table"</span><span class="op">)</span>,</span>
+<span>  space <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -128,6 +130,13 @@ physical distances.</p>
 
 <dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>
 <dd><p>name for spatial network (default = 'delaunay_network')</p></dd>
+
+
+<dt id="arg-default-name">default_name<a class="anchor" aria-label="anchor" href="#arg-default-name"></a></dt>
+<dd><p>name to fall back on when <code>name</code> is <code>NULL</code>, before the
+coordinate frame is prefixed. Exists so that one composition site can
+serve every entry point while each keeps its own spelling; callers do not
+normally set it.</p></dd>
 
 
 <dt id="arg-spat-unit">spat_unit<a class="anchor" aria-label="anchor" href="#arg-spat-unit"></a></dt>
@@ -198,6 +207,18 @@ final triangulation from the output.</p></dd>
 <code>return_gobject = FALSE</code>. (default: 'spatialNetworkObj')</p></dd>
 
 
+<dt id="arg-space">space<a class="anchor" aria-label="anchor" href="#arg-space"></a></dt>
+<dd><p>(<code>giottoMulti</code> only) <code>character(1)</code>. Name of a coordinate
+frame recorded on the object, or <code>NULL</code> (default) for each sample's own
+native frame. The frame decides the job: every sample it covers gets a
+network built in that frame's coordinates, written into its own
+<code>@spatial_network</code> slot — so this mutates the wrapped children.</p>
+<p>This is <strong>not</strong> a sample selector. An artifact generator takes none,
+because once the rows are in a slot nothing downstream can tell which
+the selector admitted (see <code>adr/0006</code>). To build over a subset of
+samples, record a space over them, or subset with <code>mg[...]</code> first.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Other additional parameters</p></dd>
 
@@ -209,8 +230,26 @@ final triangulation from the output.</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Creates a spatial Delaunay network as explained
-in <code><a href="https://rdrr.io/pkg/geometry/man/delaunayn.html" class="external-link">delaunayn</a></code> (default), <code><a href="https://rdrr.io/pkg/deldir/man/deldir.html" class="external-link">deldir</a></code>,
-or <code><a href="https://rdrr.io/pkg/RTriangle/man/triangulate.html" class="external-link">triangulate</a></code>.</p>
+in <code>delaunayn</code> (default), <code><a href="https://rdrr.io/pkg/deldir/man/deldir.html" class="external-link">deldir</a></code>,
+or <code>triangulate</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="choosing-a-delaunay-backend">Choosing a Delaunay backend<a class="anchor" aria-label="anchor" href="#choosing-a-delaunay-backend"></a></h2>
+
+
+<p>All three backends compute the same exact triangulation – on 50,000 uniform
+points each returns the identical 149,978 edges – so the choice is purely
+one of implementation speed, and <code>deldir</code> is by a wide margin the slowest:</p><table class="table table"><tr><td>points</td><td><code>deldir</code></td><td><code>delaunayn_geometry</code></td></tr><tr><td>20,000</td><td>3.7 s</td><td>0.14 s</td></tr><tr><td>50,000</td><td>21.1 s</td><td>0.20 s</td></tr><tr><td>200,000</td><td>~363 s</td><td>0.94 s</td></tr></table><p><code>deldir</code> remains the default for backward compatibility, but
+<strong><code>delaunay_method = "delaunayn_geometry"</code> is strongly preferred above a few
+thousand points</strong>. It requires the <span class="pkg">geometry</span> package, and it is also the
+only backend that handles 3D.</p>
+<p>Two caveats. Qhull can struggle with exactly cocircular input – a
+grid-aligned platform such as Visium – in which case pass
+<code>options = "Qbb Qc Qz"</code>; a 10,000-point exact grid worked with the default
+<code>"Pp"</code> in testing, but the failure mode is degenerate input rather than
+size. And <code>deldir</code> peaks around 2.9 GB of memory at 200,000 points against
+<code>geometry</code>'s 0.24 GB, so on a large section it is the memory, not just the
+wait, that bites.</p>
     </div>
 
     <div class="section level2">

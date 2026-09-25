@@ -16,8 +16,7 @@ sNNNetworkParam(
   include_distance = TRUE,
   output = c("auto", "data.table", "igraph", "parquet"),
   engine = c("dbscan", "hnsw"),
-  ef = 200,
-  n_threads_build = 1L
+  ef = 200
 )
 ```
 
@@ -65,38 +64,3 @@ sNNNetworkParam(
   200 – the recall/speed dial. Higher values search more of the graph,
   moving the result closer to the exact `"dbscan"` answer at the cost of
   query time.
-
-- n_threads_build:
-
-  integer or `NULL`. `"hnsw"` only, ignored otherwise. Threads for the
-  index build, default `1`. A parallel build is not reproducible –
-  insertion order varies, so neighbours differ slightly between runs and
-  that propagates to clustering even with a fixed seed. `NULL` inherits
-  the search thread count and trades reproducibility for speed.
-
-## Slots
-
-- `k`:
-
-  integer. number of nearest neighbours used to compute sharing.
-
-- `top_shared`:
-
-  integer. keep at least this many edges per node.
-
-- `minimum_shared`:
-
-  integer. keep edges with at least this many shared neighbours.
-
-- `weight_fun`:
-
-  function. weight = `weight_fun(distance)`.
-
-- `include_weight,include_distance`:
-
-  logical. include columns.
-
-- `output`:
-
-  character. See
-  [`createNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createNetwork.md).

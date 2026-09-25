@@ -62,7 +62,7 @@ in the future with spatValues()."><meta property="og:image" content="https://gio
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -112,7 +112,9 @@ in the future with <code><a href="spatValues.html">spatValues()</a></code>.</p>
 <span>  ext <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  xlim <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ylim <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  remove_background_polygon <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  remove_background_polygon <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  view <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  space <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -166,6 +168,16 @@ to the geometries.</p></dd>
 sometimes produce extent-filling polygons when the original geometry is
 problematic or invalid. Set <code>TRUE</code> to remove these, based on whether a
 polygon fills up most of the x and y range.</p></dd>
+
+
+<dt id="arg-view-space">view, space<a class="anchor" aria-label="anchor" href="#arg-view-space"></a></dt>
+<dd><p><code>character</code>. Optional name of a view / space
+registered on <code>gobject</code>. When supplied, each constituent subobject is
+fetched with the view applied (predicate / crop / sample narrowing) and
+the space transforms composed, before being combined. Pass through to
+plot functions (<code>view = "tumor_focus"</code>, etc.) when the combined table
+should reflect a view-scoped subset. On a <code>giottoMulti</code> both resolve at
+the parent, so every child is returned narrowed and in the same frame.</p></dd>
 
 </dl></div>
     <div class="section level2">

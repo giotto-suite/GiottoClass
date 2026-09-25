@@ -25,6 +25,12 @@ within all `giotto` slots, and not always the exact set or ordering.
 # S4 method for class 'giottoBinPoints'
 featIDs(x, uniques = TRUE, ...)
 
+# S4 method for class 'giottoMulti'
+spatIDs(x, object = NULL, local = FALSE, spat_unit = NULL, ...)
+
+# S4 method for class 'giottoMulti'
+featIDs(x, object = NULL, local = FALSE, uniques = TRUE, feat_type = NULL, ...)
+
 # S4 method for class 'giotto'
 spatIDs(x, spat_unit = NULL, subset, negate = FALSE, quote = TRUE, ...)
 
@@ -35,6 +41,9 @@ spatIDs(x, ...)
 spatIDs(x, ...)
 
 # S4 method for class 'cellMetaObj'
+spatIDs(x, ...)
+
+# S4 method for class 'igraph'
 spatIDs(x, ...)
 
 # S4 method for class 'spatialNetworkObj'
@@ -93,6 +102,10 @@ featIDs(x, ...)
 
   (optional) specify which spatial unit
 
+- feat_type:
+
+  (optional) specify which feature type
+
 - subset:
 
   logical expression to find a subset of features.
@@ -121,10 +134,6 @@ featIDs(x, ...)
 - value:
 
   character. IDs to replace with
-
-- feat_type:
-
-  (optional) specify which feature type
 
 ## Value
 

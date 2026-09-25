@@ -60,7 +60,7 @@ and enrichment results from runSpatialEnrich."><meta property="og:image" content
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -103,7 +103,9 @@ and enrichment results from runSpatialEnrich.</p>
 <span>  feat_type <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  spat_loc_name <span class="op">=</span> <span class="st">"raw"</span>,</span>
 <span>  spat_enr_names <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  view <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  space <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -133,6 +135,13 @@ and enrichment results from runSpatialEnrich.</p>
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
 <dd><p>verbosity</p></dd>
+
+
+<dt id="arg-view-space">view, space<a class="anchor" aria-label="anchor" href="#arg-view-space"></a></dt>
+<dd><p><code>character</code>. Optional name of a view / space
+registered on <code>gobject</code>. The object is pre-narrowed once before any
+slot is read, so the returned table reflects the view-scoped subset in
+the frame <code>space</code> names.</p></dd>
 
 </dl></div>
     <div class="section level2">

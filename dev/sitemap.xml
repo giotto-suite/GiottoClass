@@ -1,5 +1,5 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
-<url><loc>https://giotto-suite.github.io/GiottoClass/dev/CLAUDE.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/AGENTS.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/LICENSE-text.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/LICENSE.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/articles/image_tools.html</loc></url>
@@ -41,8 +41,10 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/annotateSpatialNetwork.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/annotate_spatlocs_with_spatgrid_2D.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/annotate_spatlocs_with_spatgrid_3D.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/as-giottoMulti.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/as.character.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/as.data.table.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/as.igraph.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/as.list.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/as.matrix.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/as.points.html</loc></url>
@@ -74,6 +76,7 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/combineSpatialCellMetadataInfo.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/combineToMultiPolygon.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/combine_split_geoms.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/combinedSpace-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/compatible_spatial_network.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/convertGiottoLargeImageToMG.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/convert_mgImage_to_array_DT.html</loc></url>
@@ -87,6 +90,7 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoImage.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoLargeImage.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoLargeImageList.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoMulti.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoPoints.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoPolygon.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/createMetafeats.html</loc></url>
@@ -113,8 +117,10 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/create_spat_grid_obj.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/crop.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/cropGiottoLargeImage.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dataTableCoordinator-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/data_access_params.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/decomp_affine.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/defaultViewCoordinator.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/delaunayNetworkParam-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/density.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/density_giottoLargeImage.html</loc></url>
@@ -126,7 +132,6 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-abbrev_spatlocs.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-bitdepth.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-calculate_centroids_polygons.html</loc></url>
-<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-calculate_distance_and_weight.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-calculate_overlap_raster.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-check_cell_meta_obj.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-check_dim_obj.html</loc></url>
@@ -145,7 +150,6 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-do_gpoly.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-dt_to_spatvector_points.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-dt_to_spatvector_polygon.html</loc></url>
-<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-edge_coords_array.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-filter_network.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-find_grid_2d.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-find_grid_3d.html</loc></url>
@@ -208,23 +212,33 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/get_distance.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/get_img_minmax.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/get_multiomics.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/ghistory_records.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giotto-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoAffineImage-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoBinPoints-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoImage-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoLargeImage-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoMasterToSuite.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoMulti-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoPoints-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoPolygon-class.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-access.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-class.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToAnnData.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSeurat.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSeuratV4.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSeuratV5.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSpatialData.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSpatialExperiment.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView-access.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView-class.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_python.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_schema.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/gmultiGroup.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/gmultiMapping.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/headtail.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/hexVertices.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/hist.html</loc></url>
@@ -264,6 +278,8 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/list_spatial_networks_names.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/loadGiotto.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/makePseudoVisium.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/manifestDiff.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/mean_flex.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/miscData-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/my_arowMeans.html</loc></url>
@@ -274,7 +290,11 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/networkParam.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/nnDT_to_kNN.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/nnNetObj-class.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/nnToUwot.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory_ndjson.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest_json.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/objectlist_name_utils.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/overlapImagesToMatrix.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/overlapInfo-class.html</loc></url>
@@ -283,13 +303,16 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/overlapToMatrixMultiPoly.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/overlaps-generic.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/pDataDT.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/perSampleSpace-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/plot-generic.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/plotGiottoImage.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/polyStamp.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/polygon_to_raster.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/prepareIds.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/processData.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/processParam-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/r_spatial_conversions.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/radiusNetworkParam-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/rbind-generic.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/rbind2_giotto_polygon_hetero.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/rbind2_giotto_polygon_homo.html</loc></url>
@@ -311,6 +334,7 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/reconnect_giottoImage_MG.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/reconnect_giottoLargeImage.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/reconnect_image_object.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/recordGiottoStep.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/rectVertices.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/reduceData.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/reduceParam-class.html</loc></url>
@@ -323,11 +347,13 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/replace_dollar.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/rescale.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/rescalePolygons.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/row-plus-colnames-generic.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/rowMeans_flex.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/rowSums_flex.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/sNNNetworkParam-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/setCellMetadata.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/setDimReduction.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/setExpression.html</loc></url>
@@ -369,6 +395,7 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/showProcessingSteps.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/sliceGiotto.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/smoothGiottoPolygons.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/space-constructors.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatEnrObj-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatLocsObj-class.html</loc></url>
@@ -376,7 +403,6 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatRelate.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatValues.html</loc></url>
-<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spat_net_to_igraph.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatialExperimentToGiotto.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatialGridObj-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatialNetworkObj-class.html</loc></url>
@@ -388,6 +414,7 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/stitchFieldCoordinates.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/stitchGiottoLargeImage.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/stitchTileCoordinates.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/subset-giottoMulti.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/subsetGiotto.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/subsetGiottoLocs.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/subsetGiottoLocsMulti.html</loc></url>
@@ -411,6 +438,7 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/updateGiottoPointsObject.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/updateGiottoPolygonObject.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/update_giotto_params.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/viewCoordinator-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/wrap.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/writeGiottoLargeImage.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/zoom.html</loc></url>

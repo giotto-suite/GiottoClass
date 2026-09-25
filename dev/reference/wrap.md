@@ -4,6 +4,14 @@ Extension of wrap methods from terra for Giotto's terra-based S4
 objects. Allows pointer information to be packaged into memory so that
 it can be passed over a connection (e.g. nodes on a computer cluster)
 
+This pattern is no longer maintained and may be removed in a future
+release. Do not build on it. Use the by-reference path instead:
+[`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md)
+/
+[`loadGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/loadGiotto.md)
+for persistence, and a `gsource` backend to make data reachable from a
+worker process.
+
 ## Usage
 
 ``` r
@@ -49,6 +57,11 @@ wrapped giottoPolygon or giottoPoints
 - `vect(packedGiottoPoints)`: Unwrap giottoPolygon
 
 - `vect(packedGiotto)`: Unwrap giotto
+
+## See also
+
+[`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md),
+[`loadGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/loadGiotto.md)
 
 ## Examples
 

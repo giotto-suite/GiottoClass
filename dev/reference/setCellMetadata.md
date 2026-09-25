@@ -7,7 +7,7 @@ Function to set cell metadata into giotto object
 ``` r
 setCellMetadata(gobject, x, spat_unit = NULL, feat_type = NULL, ...)
 
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 setCellMetadata(
   gobject,
   x,

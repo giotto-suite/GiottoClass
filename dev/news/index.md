@@ -1,9 +1,602 @@
 # Changelog
 
+## GiottoClass 0.7.2
+
+### bug fixes
+
+- [`plot()`](https://giotto-suite.github.io/GiottoClass/dev/reference/plot-generic.md)
+  on a `spatialNetworkObj` failed with igraph’s “Invalid vertex names”
+  because it still indexed the coordinate columns the pre-0.6.0 edge
+  table carried. A network stores edges between named cells and no
+  geometry, so it now says that instead of guessing, and
+  `plot(<spatialNetworkObj>, <spatLocsObj>)` draws it against the
+  locations that supply the coordinates.
+
+### changes
+
+- **`n_threads_build` is gone from
+  [`hnswKNN()`](https://giotto-suite.github.io/GiottoClass/dev/reference/hnswKNN.md),
+  [`kNNNetworkParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/kNNNetworkParam-class.md),
+  [`sNNNetworkParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/sNNNetworkParam-class.md)
+  and
+  [`createNearestNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createNearestNetwork.md).**
+  The HNSW index build now always runs on one thread, and that is no
+  longer a choice. It was briefly an argument whose only non-default
+  value was the wrong one: a parallel build races on insertion order,
+  and no seed can pin it, because the interleaving is not drawn from an
+  RNG. On a 169,528-cell Atera section, two runs of an otherwise
+  identical script with a parallel build disagreed on how many cell
+  types there were – 34 against 33, ARI 0.7998 – while the serial build
+  gave bit-identical neighbour lists across five runs. Passing
+  `n_threads_build` still works and now warns, rather than being
+  absorbed by `...` in silence and leaving the caller believing they had
+  enabled something. `n_threads`, which controls the read-only search,
+  is unaffected and stays parallel.
+
+- **`createNearestNetwork(type = "sNN")` now keeps the kNN it was
+  derived from**, under `kNN.<dim_reduction_to_use>`, controlled by the
+  new `keep_knn` argument (default `TRUE`). An sNN is a transform of a
+  kNN and the kNN is the expensive half, but it was previously computed,
+  used once and dropped — so nothing else could share it, and anything
+  wanting the same neighbourhood (`runUMAP()`, in particular) had to
+  repeat an identical search. The search now runs once and both networks
+  are built from it, which is what makes an embedding and a partition
+  rest on one graph rather than on two that happen to agree.
+  `.net_dt_knn()` gained the `nn_network` short-circuit `.net_dt_snn()`
+  already had, and the validation both use is now shared.
+
+- **[`nnToUwot()`](https://giotto-suite.github.io/GiottoClass/dev/reference/nnToUwot.md)**,
+  converting a `kNN`/`NN` object from
+  [`hnswKNN()`](https://giotto-suite.github.io/GiottoClass/dev/reference/hnswKNN.md)
+  or [`dbscan::kNN()`](https://rdrr.io/pkg/dbscan/man/kNN.html) into the
+  `list(idx =, dist =)` that `uwot::umap()` and `uwot::umap2()` take as
+  `nn_method`. Two conventions have to be reconciled and uwot validates
+  neither, so getting either wrong corrupts the embedding silently
+  instead of erroring: uwot names the matrix `idx` where a `kNN` object
+  names it `id`, and uwot requires each observation to be its own first
+  neighbour – it drops column 1 when fitting the local connectivity
+  offset – where both search functions *remove* self-matches. Handing
+  their output over unchanged discards every observation’s true nearest
+  neighbour. The converter refuses input that already carries self, and
+  refuses unsorted distances.
+
+- **[`annotateSpatialNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/annotateSpatialNetwork.md)’s
+  two annotations are now independent, and both are optional.** A
+  network stores only edges, so anything about the cells an edge runs
+  between is attached rather than read back — and attaching a label and
+  attaching a position turn out to be one operation on two sources: take
+  a cell-keyed value, write it onto each end of the edge.
+
+  - `cluster_column` is optional (was required) and resolves through
+    \[spatValues()\], so a label may come from cell metadata, an
+    expression feature, an enrichment score or any other slot that
+    function searches. It was read straight out of cell metadata before.
+  - `coordinates` (default `TRUE`, as before) attaches `sdim[xyz]_begin`
+    / `_end`, read live from the spatial locations so a transform
+    already applied to them is carried along. `spat_loc_name` says which
+    locations to read; previously the default set was always used, which
+    could attach the wrong coordinates on an object holding more than
+    one.
+  - `...` passes through to
+    [`spatValues()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatValues.md).
+  - Callers that want labels and no geometry can now skip the merge —
+    seven of the eleven in-suite call sites never read the coordinates.
+    Callers that want geometry and no labels, chiefly plotting,
+    previously had no way to ask at all.
+
+- The coordinate join is an **inner** one, which is what narrowing means
+  for a network: an edge whose endpoint is absent from the locations has
+  no position and is dropped, so narrowing the locations narrows the
+  edges to the induced subgraph. Nodes are not the network’s to supply —
+  an edge table has no row for a cell with no edges — so a consumer
+  takes its node set from the locations. Stated in `adr/0004` and the
+  design article.
+
+### docs
+
+- `vignettes/articles/design.Rmd` arrives on this branch, and gains
+  summary sections on multi-sample federation and on the view / space
+  recipe layers.
+- **Two new contributor articles**, `design_gmulti.Rmd` and
+  `design_view_space.Rmd`, hold the design record for those two
+  subsystems: what was decided, what was tried and removed, and what is
+  deliberately left undone.
+- The seven port-scaffolding documents in `vignettes/articles/` are
+  retired. They were written to carry the gmulti / view-space port
+  rather than to be read afterwards; the durable argument is in the
+  three articles above, and status belongs to git.
+- `vignettes/view_and_space.Rmd` is corrected where the subsystem moved
+  underneath it: the recipe containers are classes holding plain steps,
+  recording a space produces a `perSampleSpace` and a `combinedSpace` is
+  declared, and a crop’s frame lives on its step.
+
+## GiottoClass 0.7.1
+
+### changes
+
+- **View and space recipes carry their own name**, through the same
+  `nameData` virtual class every other named subobject uses.
+  `giottoView` had no name at all and `giottoSpace` declared the slot
+  itself; both now inherit it, which is what puts recipes in the
+  [`as.list()`](https://rdrr.io/r/base/list.html) /
+  [`setGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  loop instead of beside it.
+- [`setGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  accepts a `giottoView` or a `giottoSpace` and places it under the name
+  it carries, the same way
+  [`setGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  places a `giottoImage`. A recipe with no name is refused rather than
+  given an invented key — a frame keyed by something nothing resolves
+  against is worse than an error. Name it with `objName(x) <-` or place
+  it directly with `giottoView(x, "<name>") <-`.
+- [`objName()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_schema.md)
+  / `objName<-()` work on both recipe kinds, inherited rather than
+  written.
+- `as.list(<giottoView>)` is now **name-keyed** —
+  `list("<name>" = list(steps = ...))` — matching the space export and
+  `@view` itself, so the export form states where a recipe belongs. The
+  flat `list(steps = ...)` form a hand-written recipe takes is still
+  accepted and arrives unnamed.
+- Placing the same recipe under two keys now yields two recipes
+  differing by name. The content round-trips unchanged; only the
+  identity follows the key.
+- **`+` composes any two recipes of a kind, and the result is always
+  unnamed.** It previously refused two differently-named spaces, and on
+  views it silently kept the left operand’s name. Both are gone:
+  composition says how to *build* a recipe, never where it belongs.
+  Carrying a name through would let `setGiotto(x, a + b)` overwrite `a`
+  — a destructive result from an operator that reads as constructive,
+  and silent, because the write succeeds. Deriving a name instead only
+  moves the problem, since a deterministic derivation overwrites itself
+  on a repeat and a random one litters the slot. Name the result where
+  you place it: `giottoSpace(x, "<name>") <- a + b`. Composing is
+  therefore safe to do freely; only placing can overwrite.
+
+No migration is needed: `@view` and `@spaces` have never appeared in a
+released version, so no stored object holds a recipe.
+
+## GiottoClass 0.7.0
+
+### new
+
+- **View and space recipes** — named records of *what* a narrowing or a
+  coordinate transform means, resolved on read rather than applied when
+  recorded, so one object can carry several competing narrowings and
+  frames at once. A view is a chain of `filter` / `crop` / `samples`
+  steps; a space is a chain of transform steps keyed by sample.
+
+- `giottoView` and `giottoSpace` classes. A view holds `@steps`; a space
+  holds `@spaces`, a collection of named frames keyed by sample. A
+  `crop` step records the `space` its region was read in, alongside
+  `region`, `relation` and `geom` — so a step states its whole question,
+  two views naming different frames compose, and one view may crop in
+  more than one frame. Access with `[` (class-preserving, so the result
+  is still editable) and `[[` (extracts the plain form); append with the
+  builder verbs or `+`; export with
+  [`as.list()`](https://rdrr.io/r/base/list.html). `sp[i, j]` resolves
+  the sample — named key, else the shared default, else an empty step
+  list — so a transform can be appended to a sample that does not exist
+  yet. The steps themselves stay plain tagged lists, which is what keeps
+  a recipe serializable.
+
+- `giotto` gains `@view` and `@spaces` slots. Objects saved by an
+  earlier version gain both on
+  [`loadGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/loadGiotto.md)
+  /
+  [`updateGiottoObject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/updateGiottoObject.md).
+
+- Recipes are built by **recording onto a name**, not by a constructor.
+  [`subset()`](https://rdrr.io/r/base/subset.html),
+  [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
+  and
+  [`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md)
+  gain `view =`, and the coordinate-frame verbs
+  ([`spin()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md),
+  [`spatShift()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.md),
+  [`affine()`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md),
+  [`flip()`](https://giotto-suite.github.io/GiottoClass/dev/reference/flip.md),
+  [`rescale()`](https://giotto-suite.github.io/GiottoClass/dev/reference/rescale.md))
+  gain `space =`. The first call naming a recipe creates it; later calls
+  with the same name append. Read them back with
+  [`giottoView()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView.md)
+  /
+  [`giottoViews()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView.md)
+  /
+  [`giottoSpace()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace.md)
+  /
+  [`giottoSpaces()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace.md);
+  the `<-` setters copy a recipe between objects or remove one, and
+  validate what they are handed. A recorded recipe survives
+  [`saveRDS()`](https://rdrr.io/r/base/readRDS.html) and reaches a
+  parallel worker: the subset predicate is captured unevaluated and
+  deparsed with its environment’s values substituted in, and a crop
+  region normalizes to WKT. `negate = TRUE` is folded into the recorded
+  predicate, so a step always states the question it will ask.
+
+- `samples =` on the `giottoMulti` transform methods scopes a recorded
+  transform to named children, which is how a cross-sample layout is
+  built. Omitting it records against every sample the space already
+  keys. A name that is not a child of the object is rejected when the
+  step is recorded, rather than creating a chain nothing resolves
+  against.
+
+- [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
+  gains `relation =` — the spatial predicate a crop step evaluates
+  (`intersects`, `disjoint`, `within`, `covered_by`, `touches`,
+  `contains`, `covers`, `overlaps`, `crosses`) — and
+  `geom = c("centroid", "poly")`, which declares what represents a cell
+  when the predicate is evaluated. Centroids are the conventional
+  approximation and remain the default; `geom = "poly"` tests the cell
+  polygon itself, and a cell straddling the region boundary is kept or
+  dropped accordingly. The four predicates that are always `FALSE`
+  against a point (`contains`, `covers`, `overlaps`, `crosses`) warn and
+  promote to `geom = "poly"`; the step records the *effective* value, so
+  a serialized recipe always states what it will do.
+
+- [`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
+  collapses a recipe into a real object: the recorded steps are applied
+  and the result no longer carries the view or space.
+
+- [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
+  resolves one subobject through an active view and space, so getters
+  return recipe-consistent content. The getters and the transform
+  generics thread `view =` / `space =` through to it.
+
+- [`spatRelate()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatRelate.md)
+  gains `SpatVector`, `character` (WKT), and `sf` methods on its `y`
+  side, so a `giottoSpatial` `x` can be narrowed against any of them
+  while keeping its carrier class. The `(giottoSpatial, SpatVector)`
+  method delegates to whoever owns the geometry, so a disk-backed
+  `@spatVector` dispatches to its own method and brings its own engines.
+  `engine =` is validated rather than silently ignored: in memory only
+  `NULL` / `"auto"` / `"terra"` are honoured, and naming a SQL engine
+  fails instead of quietly returning a terra answer.
+
+- [`spatRelate()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatRelate.md)
+  on points narrows by bounding box before calling terra, and answers
+  exactly from the bounding box alone when the region is an axis-aligned
+  rectangle. `disjoint` is computed as the complement of `intersects`,
+  which is both exact and the cheaper of the two.
+
+- `giottoMulti` class — container federating several `giotto` objects
+  into one analysable unit. Spatial information stays per-child;
+  non-spatial content is shared at the parent. Constructed with
+  [`createGiottoMulti()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoMulti.md).
+
+- `gAny` virtual class — dispatch tag shared by `giotto` and
+  `giottoMulti`, so shared-domain methods can be written once.
+  `giottoMulti` deliberately does not inherit from `giotto`, so a
+  spatial method with no `giottoMulti` signature fails loudly rather
+  than reading an absent slot.
+
+- [`spatIDs()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
+  and
+  [`featIDs()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
+  gain `giottoMulti` methods, returning globally namespaced
+  (`sample::id`) IDs from the parent’s identity registry. `local = TRUE`
+  returns child-level IDs and `object =` restricts to named children.
+
+- [`subset()`](https://rdrr.io/r/base/subset.html) method for
+  `giottoMulti` narrows the joint analysis view to a set of global cell
+  and/or feature IDs. Narrowing is recorded on `@cell_ID` / `@feat_ID`
+  and applied when shared-domain getters read a joint slot; the identity
+  registry and the children themselves are left untouched, so the
+  un-subset object remains the widen-back handle. A change to the child
+  population resets any recorded narrowing.
+
+- [`gmultiMapping()`](https://giotto-suite.github.io/GiottoClass/dev/reference/gmultiMapping.md)
+  / `gmultiMapping<-` — the `giottoMulti` federation declaration. Three
+  axes (`spat_unit`, `feat_type`, and `values` for expression names)
+  each map gmulti-level handles to per-sample child-level names. Every
+  entry keys every sample, with `NA_character_` as the deliberate-skip
+  sentinel; a keyed sample whose child cannot satisfy the entry errors
+  loudly at read time, naming the sample and the remedies. Mapping edits
+  invalidate joint content per affected universe, and expanding a
+  handle’s participation is blocked once its universe holds materialized
+  joint content — drop the content, then re-declare.
+
+- [`gmultiGroup()`](https://giotto-suite.github.io/GiottoClass/dev/reference/gmultiGroup.md)
+  / `gmultiGroup<-` /
+  [`gmultiGroups()`](https://giotto-suite.github.io/GiottoClass/dev/reference/gmultiGroup.md)
+  and the `@groups` slot — register a name that refers to several
+  samples at once. A group name is usable anywhere a sample name is
+  (`samples =`, `object =`, every getter), so registering one adds no
+  parameter to any signature. Groups may name other groups and resolve
+  recursively, deduplicated in first-appearance order. A group and a
+  child may not share a name; the clash is rejected at registration from
+  whichever side arrives second. Membership is resolved when a group is
+  *used*, so a group tracks the current child population — except on
+  `@spaces`, which keys step chains by sample and therefore expands at
+  record time. `@groups` is deliberately not pruned when a child is
+  removed; a group naming a departed child errors at use, naming both.
+
+- A `giottoMulti`’s default `spat_unit` / `feat_type` is now
+  **combined** across children rather than taken from the first declared
+  handle, which was the first child’s. `@mapping` unions every child’s
+  handles, so the axis map is not a set of synonyms: the default is a
+  handle every current child participates in, or the sole declared
+  handle, and children that genuinely disagree are an error naming the
+  handles and who carries each. Previously a heterogeneous federation
+  silently routed every sample to the first child’s convention. Naming a
+  handle explicitly is unaffected.
+
+- Shared-domain getters (`getExpression`, `getCellMetadata`,
+  `getFeatureMetadata`) gain `giottoMulti` methods: the joint slot is
+  read when populated, otherwise content is assembled from children per
+  the mapping, with `sample::id` global IDs. New args: `samples =`
+  slices to named samples (also reachable as a `"sample::name"` prefix
+  on `name =`), and `on_missing = c("error", "drop", "fill")` governs
+  children that cannot contribute and mismatched feature panels /
+  metadata columns — silent partial federations are gone. Assembled
+  objects carry the federation handles on their identity tags
+  (`spat_unit`, `feat_type`, `name`, `provenance`) and, for expression,
+  a participation stamp on `@misc`.
+
+- Spatial-domain accessors (`get/setSpatialLocations`,
+  `get/setSpatialNetwork`, `get/setPolygonInfo`, `get/setFeatureInfo`,
+  `get/setGiottoImage`) gain `giottoMulti` dispatch. **Getters resolve
+  parent-first**: multi-level content when the slot holds what was asked
+  for, otherwise a named per-child list, scoped by `samples =`, with any
+  active narrowing applied either way. Passing `samples =` is an
+  explicit request for per-child content and skips the parent level.
+
+- **Breaking: `giottoMulti` setters write at the multi level only.** The
+  `object =` write target is removed from all five, along with any way
+  to reach a child through a setter — passing `object =` or `samples =`
+  is refused by name rather than ignored. A `giottoMulti` is for
+  combined analysis, whose artifacts are single items pulled from the
+  parent; a per-child write would put a select-sample output in the same
+  slot namespace as an all-sample one with nothing recording which is
+  which. To change one sample, edit that child and put it back:
+  `mg[["<sample>"]] <- <child>`.
+
+- `@spatial_network` is the **only** multi-level spatial slot, and the
+  test is whether the artifact can be decomposed into per-sample pieces:
+  a cross-sample edge cannot, while a location, polygon, point or image
+  each belong to exactly one sample. So
+  [`setSpatialLocations()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setSpatialLocations.md),
+  [`setPolygonInfo()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setPolygonInfo.md),
+  [`setFeatureInfo()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setFeatureInfo.md)
+  and
+  [`setGiottoImage()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiottoImage.md)
+  on a `giottoMulti` refuse and point at the child. Holding per-sample
+  content at the parent would make its owning sample a `sample::` prefix
+  on a string rather than where the thing lives.
+
+- `giottoMulti` container surface: `as(g, "giottoMulti")`, `mg[i]` child
+  selection (joint slots and mapping pruned to survivors),
+  `mg[[name]] <-` child add/replace with mapping auto-seeding for the
+  new sample, `names(mg) <-` rename (rewrites `sample::id` keys across
+  joint slots and the mapping), and a
+  [`show()`](https://giotto-suite.github.io/GiottoClass/dev/reference/show.md)
+  method summarizing children, narrowing state, joint slots, and the
+  mapping.
+
+- [`combineMetadata()`](https://giotto-suite.github.io/GiottoClass/dev/reference/combineMetadata.md)
+  and
+  [`combineCellData()`](https://giotto-suite.github.io/GiottoClass/dev/reference/combineCellData.md)
+  accept a `giottoMulti`, returning named per-sample tables with
+  joint-only metadata columns merged in through the access layer.
+
+- `annotateGiotto(replace = FALSE)` merges into an existing annotation
+  column instead of replacing it: a row the new mapping resolves is
+  overwritten, a row it yields `NA` for keeps what it had. Annotation
+  can then be refined in passes rather than rebuilt in one vector.
+
+- [`addCellMetadata()`](https://giotto-suite.github.io/GiottoClass/dev/reference/addCellMetadata.md)
+  and
+  [`addFeatMetadata()`](https://giotto-suite.github.io/GiottoClass/dev/reference/addFeatMetadata.md)
+  refuse positional input on a `giottoMulti`. The case this is for is a
+  value computed through a view or from a subset of samples and then
+  written back: it describes a narrower population than the joint
+  metadata it lands in, so its row position lines up with nothing, and
+  the lengths can still agree — which is what made the misalignment
+  silent. Name it with cell / feature IDs, or pass a table carrying the
+  ID column, and the existing key-based merge aligns it. **Any caller
+  that hands one of these a bare vector now fails loudly on a multi**
+  rather than mis-assigning; this is deliberate, and such callers should
+  carry their IDs. A plain `giotto` is unchanged and keeps the
+  positional fallback with its warning.
+
+### bug fixes
+
+- **[`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
+  accepts `view = NULL`.** `view` and `space` are independent knobs, but
+  the generic only dispatched on `view = "character"`, so asking for a
+  frame without also naming a view failed on dispatch. Everything below
+  the dispatch already read a NULL view as “no narrowing”, so this lets
+  an existing request through rather than adding a code path.
+- **The `combine*` family no longer swallows `view` / `space` on a
+  `giottoMulti`.**
+  [`combineCellData()`](https://giotto-suite.github.io/GiottoClass/dev/reference/combineCellData.md)
+  declared both and forwarded neither to its per-child loop, so a view
+  or frame named on a multi was silently ignored — the wrong cells, or
+  the native frame, returned without an error to notice. These functions
+  are the layer plotting reads through, so the result was a plot quietly
+  drawn on the wrong data. Both now resolve at the parent before the
+  loop, which is the only place they can resolve: a view is keyed by
+  `sample::id` against joint metadata, and a `space` is a name the
+  parent owns that a child cannot look up.
+- [`combineMetadata()`](https://giotto-suite.github.io/GiottoClass/dev/reference/combineMetadata.md)
+  gained `view` / `space`. It had neither, and is the function the
+  majority of plotting paths call.
+- **[`combineFeatureOverlapData()`](https://giotto-suite.github.io/GiottoClass/dev/reference/combineFeatureOverlapData.md)
+  reads a disk-backed points carrier.** It reached for
+  [`.spatvector_to_dt()`](https://giotto-suite.github.io/GiottoClass/dev/reference/dot-spatvector_to_dt.md)
+  directly, which is only the in-memory half of
+  [`as.data.table()`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.data.table.md),
+  so it was the single site in the combine family that opted out of the
+  coercion seam — and the only thing standing between a backed object
+  and `spatInSituPlotPoints()`. It now converts through
+  `as.data.table(pts, geom = "XY")` and filters afterwards, since `$`
+  and logical `[` are carrier-specific spellings while a `data.table`
+  filter is not. **Output change:** the returned table no longer carries
+  terra’s `geom` / `part` / `hole` bookkeeping columns, which nothing
+  consumed; what remains is the shape
+  [`combineFeatureData()`](https://giotto-suite.github.io/GiottoClass/dev/reference/combineFeatureData.md)
+  already returned, so the two branches of `spatInSituPlotPoints()` now
+  agree.
+- **A `combinedSpace`’s membership is now closed in practice, not just
+  in documentation.** An unscoped (“broadcast”) step recorded onto one
+  is expanded to its members at record time, so a sample outside the
+  layout is no longer transformed as if it were in it. The member names
+  are written into the step, so the recipe states its own scope and
+  [`as.list()`](https://rdrr.io/r/base/list.html) round-trips it.
+  Recording an unscoped step onto a `combinedSpace` with no members is
+  an error — it would reach nobody. A `perSampleSpace` is unchanged: its
+  membership is open, and a broadcast reaching a sample that appears
+  nowhere in the recipe is what it means.
+- **Recording a transform onto an unused space name now creates a
+  `perSampleSpace`**, not a `combinedSpace`. A `combinedSpace` is
+  declaration-only:
+  `giottoSpace(mg, "atlas") <- combinedSpace(c("a", "b"))`. The kind
+  decides job size, and only the per-sample size round-trips — it writes
+  one artifact per child, which is the shape reading per child hands
+  back, whereas a combined job writes one artifact at the parent and
+  there is nowhere to put per-sample content back there. `samples =`
+  does not decide the kind either way: scoping says which samples move,
+  not whether they interact.
+- **The `":default:"` space sentinel is removed.** The native frame —
+  the one the data is already in — has no name: `space = NULL` is it. A
+  sentinel was a second spelling of a value R already has, and since a
+  transform recorded onto the native frame would stop it being native,
+  the name could only ever stand for an empty recipe.
+  `giottoSpace(g, ":default:")` now reports an unregistered space like
+  any other unknown name.
+- **A `combinedSpace` now builds one spatial network spanning its
+  samples**, written to the `giottoMulti`’s `@spatial_network` with the
+  children left untouched, instead of N independent per-sample networks
+  in a shared frame. Cross-sample edges — the reason a combined frame
+  exists — were never built before. A `perSampleSpace` still builds one
+  network per child.
+- [`createSpatialKNNnetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialKNNnetwork.md)
+  and
+  [`createSpatialDelaunayNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialDelaunayNetwork.md)
+  no longer fail with `incorrect number of dimensions` on a
+  `giottoMulti`.
+- **All three network entry points now record the coordinate frame in
+  the default name.**
+  [`createSpatialKNNnetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialKNNnetwork.md)
+  and
+  [`createSpatialDelaunayNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialDelaunayNetwork.md)
+  applied a frame without naming for it, so a framed build silently
+  overwrote the native one under the same key. A framed build is now
+  `scaled2x_knn_network` beside `knn_network`. Default names are
+  otherwise unchanged.
+- [`createSpatialNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialNetwork.md)
+  on a `giottoMulti` dropped `space =` on the way to each child, so a
+  per-sample frame build ran in the native frame. Each child is now
+  handed the frame narrowed to itself.
+- [`createSpatialKNNnetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialKNNnetwork.md)
+  and
+  [`createSpatialDelaunayNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialDelaunayNetwork.md)
+  gain `default_name =`, the fallback used when `name` is `NULL` before
+  the frame prefix is applied. Their `name` defaults change from a
+  literal to `NULL`; the resulting default names are unchanged.
+- **`view =` on a `giottoMulti` is evaluated at the parent and nowhere
+  else.** The spatial getters forwarded the view *name* to each child,
+  which looked it up in its own empty `@view` and failed with
+  `no view named`. A view resolves once on the multi — filters read
+  joint metadata, crops read fused coordinates, both keyed by
+  `sample::id` — to one global allow-list that narrows every child’s
+  output. Content with no cell axis (points, images) is cropped
+  geometrically at the parent, on content the child already returned in
+  the frame. A standalone `giotto` still resolves its own view
+  unchanged.
+- `space =` on a `giottoMulti` getter resolved the frame name against
+  each *child*, whose `@spaces` is empty, so reading in a frame the
+  multi plainly had failed with `'<name>' is not a registered space`.
+  The four spatial getters that take a frame now resolve it once on the
+  multi and hand each child the frame narrowed to itself. A public
+  `space =` takes a registered name, never a `giottoSpace` handle: an
+  object must own the frames it works in, or an artifact built in one
+  records a frame name that resolves against nothing. Register a
+  detached space first with `giottoSpace(x, "<name>") <- sp`.
+- [`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md)
+  now refuses an in-memory `giottoMulti` with a message saying why,
+  rather than failing on a missing slot. A multi needs a per-child terra
+  export pass and a loader that agrees on the layout; a multi with a
+  `@source` is unaffected and still goes to
+  `GiottoDisk::snapshotSave()`. See
+  [\#407](https://github.com/giotto-suite/Giotto/issues/407).
+- Narrowing a `giottoPolygon` or `giottoPoints` left `@unique_ID_cache`
+  holding the pre-narrowing IDs, so
+  [`spatIDs()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
+  /
+  [`featIDs()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
+  reported IDs the geometry no longer contained. Reachable through
+  [`getPolygonInfo()`](https://giotto-suite.github.io/GiottoClass/dev/reference/getPolygonInfo.md)
+  and
+  [`getFeatureInfo()`](https://giotto-suite.github.io/GiottoClass/dev/reference/getFeatureInfo.md)
+  on a narrowed `giottoMulti`, and through
+  [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
+  under an active view.
+- [`relate()`](https://giotto-suite.github.io/GiottoClass/dev/reference/relate.md)
+  on a `spatLocsObj` `x` errored with
+  `x = "data.table", y = "SpatVector"`. The
+  [`as.points()`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.points.md)
+  coercion was overwritten one line later, and the `y` branch guarded on
+  `x`.
+- [`annotateGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/annotateGiotto.md)
+  no longer aborts when a cluster value has no annotation. An `NA` in
+  the cluster column is a cell the clustering never placed rather than a
+  cluster without an annotation, which is normal wherever the metadata
+  population is wider than the analysis pool. Unmapped cluster values
+  and unused `annotation_vector` keys are now both reported and the
+  affected rows become `NA`, where an unmapped value previously
+  interrupted the call. The mapping is also a single vectorized lookup
+  rather than a per-row walk.
+
 ## GiottoClass 0.6.0
 
 ### new
 
+- [`radiusNetworkParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/radiusNetworkParam-class.md)
+  builds a fixed-radius spatial network: every pair of nodes within
+  `eps` is joined, so degree follows local density rather than being
+  fixed as it is for kNN. Backed by the exact
+  [`dbscan::frNN`](https://rdrr.io/pkg/dbscan/man/frNN.html).
+  `minimum_k` keeps a floor of nearest neighbours for nodes whose radius
+  is empty, which otherwise drop out of the network entirely. Previously
+  the only route to a distance-based network was kNN with a large `k`
+  plus a `maximum_distance` filter, which reproduces the same graph but
+  only once `k` reaches the largest neighbour count within the radius –
+  below that it truncates silently, and the `k` needed is not knowable
+  without computing it.
+- `createSpatialNetwork(method = "radius", radius = )` reaches
+  [`radiusNetworkParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/radiusNetworkParam-class.md)
+  from the spatial wrapper, which previously offered only `"Delaunay"`
+  and `"kNN"`.
+- [`objManifest()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest.md)
+  returns a machine-readable inventory of a `giotto` object: identity, a
+  summary block, and a slot-by-slot description nested as the object
+  nests it. Derived on demand, so it cannot go stale. `level = "full"`
+  adds content fingerprints.
+  [`objManifest_json()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest_json.md)
+  serializes it against the schema in
+  `inst/schema/giotto-manifest-0.1.0.json`.
+- [`manifestDiff()`](https://giotto-suite.github.io/GiottoClass/dev/reference/manifestDiff.md)
+  compares two manifests and reports what changed, as data and as one
+  sentence. Pure: manifests in, diff out. Use `level = "full"` on both
+  sides to see a step that overwrote content in place: re-running a
+  clustering or a normalization leaves every shape and name identical,
+  so only the fingerprints move.
+- `@parameters` entries now carry a structured record (`step_id`, `fn`,
+  `params`, `timestamp`, `seed`, `status`, `diff`) as an attribute; the
+  character entry every existing reader expects is unchanged. `params`
+  holds the deparsed argument expressions, so `1:30` is no longer
+  recorded as `1`. Read them with
+  [`ghistory_records()`](https://giotto-suite.github.io/GiottoClass/dev/reference/ghistory_records.md)
+  or
+  [`objHistory_ndjson()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory_ndjson.md).
+- [`recordGiottoStep()`](https://giotto-suite.github.io/GiottoClass/dev/reference/recordGiottoStep.md)
+  logs a failed call or a change made outside a logging function
+  (`status = "error"` / `"unattributed"`).
+- `giotto` objects carry a `uid` in `@versions`, minted at creation and
+  kept through copies and save/load.
+- [`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md)
+  writes `manifest.json` and `history.ndjson` beside the saved object.
+  Requires (Suggests); skipped when absent.
 - [`hnswKNN()`](https://giotto-suite.github.io/GiottoClass/dev/reference/hnswKNN.md)
   restored to GiottoClass, so `createNearestNetwork(engine = "hnsw")`
   works again. It had errored with
@@ -24,16 +617,14 @@
     a 158,662-cell Xenium sample at `k = 30`: `ef = 50` reproduced
     99.225% of the exact network’s undirected edges, `ef = 200`
     reproduced 99.995%, for 2.30s against 2.83s.
-  - `n_threads_build` (default `1`) makes the search reproducible. Only
-    the index build is nondeterministic – concurrent insertion makes the
-    graph depend on thread interleaving, while the search is read-only
-    and deterministic at any thread count. With a parallel build, two
-    runs of a seeded Leiden gave ARI 0.9368-0.9655; building on one
-    thread they are identical (ARI 1.000000). Costs 2.82s -\> 11.8s,
-    still 6.8x faster than the 79.85s exact
+  - The index build is always single-threaded and this is not
+    adjustable. Only the build is nondeterministic – concurrent
+    insertion makes the graph depend on thread interleaving, while the
+    search is read-only and deterministic at any thread count, so
+    `n_threads` stays parallel. Costs 2.82s -\> 11.8s, still 6.8x faster
+    than the 79.85s exact
     [`dbscan::kNN()`](https://rdrr.io/pkg/dbscan/man/kNN.html), with
-    accuracy unchanged (recall 0.999980). Set to `NULL` to inherit
-    `n_threads` and trade reproducibility for speed while exploring.
+    accuracy unchanged (recall 0.999980).
   - An `engine = "auto"` that selects by dataset size is planned; for
     now prefer `"dbscan"` on small data, where it is both exact and
     faster.
@@ -71,17 +662,126 @@
   matrix. Eager method on `(giottoSpatial, giottoSpatial)` wraps
   `relate() + subset`; the on-disk lazy form lives in GiottoDisk via
   methods on `parquetGeomBase`.
+- [`as.igraph()`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.igraph.md)
+  works on `spatialNetworkObj` and `nnNetObj`, registered on {igraph}’s
+  generic. `@network` holds the graph directly, so this is an accessor
+  rather than a construction and returns the slot unchanged. When the
+  slot is backed, the contents are handed to
+  [`as.igraph()`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.igraph.md)
+  again and dispatch finds the backend’s own method – {GiottoDisk}
+  registers one for `parquetEdgeStore`. This is how a backed network
+  should be read from here, rather than by naming a package GiottoClass
+  only Suggests.
+
+### performance
+
+- [`edge_distances()`](https://giotto-suite.github.io/GiottoClass/dev/reference/edge_distances.md)
+  is vectorized. It called
+  [`stats::dist()`](https://rdrr.io/r/stats/dist.html) once per edge,
+  through a `2 x d x E` array built with an extra
+  [`aperm()`](https://rdrr.io/r/base/aperm.html) copy; it now makes one
+  pass over the endpoint rows. Measured 556x faster at 600,000 edges.
+  All network backends funnel through it, so this is what dominated once
+  a fast triangulation was in use: Delaunay via `geometry` at 20,000
+  points went 0.47 s to 0.14 s. Results agree with the old
+  implementation to ~1e-16 rather than bit-exactly –
+  [`stats::dist()`](https://rdrr.io/r/stats/dist.html) and
+  `sqrt(rowSums(...))` accumulate in a different order – which is only
+  observable for an edge sitting exactly on a `maximum_distance` cutoff.
+  Non-euclidean metrics keep the general path.
+- kNN networks no longer recompute distances when `maximum_distance` is
+  set. [`dbscan::kNN`](https://rdrr.io/pkg/dbscan/man/kNN.html) already
+  returns them and the recompute went through the per-edge loop above,
+  so asking for a cutoff cost 11x: at 50,000 points a spatial kNN
+  network went 1.89 s with a cutoff against 0.17 s without. Both are now
+  ~0.19 s. Using the search’s own distances is also the self-consistent
+  choice – the cutoff now filters on whatever metric the search used.
+
+### bug fixes
+
+- `getSpatialNetwork(output = "networkDT")` and `output = "igraph"` now
+  work when the network is a GiottoDisk `parquetEdgeStore`, which is
+  what a backed project holds. Previously the store was handed straight
+  to
+  [`as.data.table()`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.data.table.md)
+  and the call failed with *cannot coerce class parquetEdgeStore*, so
+  every consumer of the edge table –
+  [`annotateSpatialNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/annotateSpatialNetwork.md),
+  and `cellProximityEnrichment()` built on top of it – was unusable on a
+  backed object. The `networkDT` form renames the store’s
+  `from_id`/`to_id` to the `from`/`to` that the rest of the suite
+  expects.
+- `getNearestNetwork(output = "data.table")` and `output = "igraph"`
+  gained the same store handling; both previously failed with *Must
+  provide a graph object* on a backed project. The two accessors now
+  share one reader so they cannot drift apart again.
+- [`createNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createNetwork.md)
+  on a `giotto` object with a `radiusNetworkParam` now measures `eps` in
+  spatial coordinates. It inherited the nearest-neighbour method, whose
+  default is `space = "expression"`, so a radius given in microns was
+  silently applied to PCA coordinates. Pass `space = "expression"` for
+  the old behaviour.
 
 ### changes
+
+- Network construction now reports when nodes are left with no edges: “N
+  of M node(s) have no edges and are omitted from the network”. Such a
+  node is not a vertex of the resulting graph, so it silently disappears
+  from every downstream result – proximity enrichment, motifs,
+  neighbourhood composition – and the analysed cell count quietly stops
+  matching the input. This is easy to cause by accident, since the
+  Delaunay default `maximum_distance = "auto"` trims long edges and on a
+  clustered section can strand a few hundred cells. Behaviour is
+  unchanged; it is now visible.
+
+### documentation
+
+- [`createSpatialDelaunayNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialDelaunayNetwork.md)
+  gained a *Choosing a Delaunay backend* section. All three backends
+  return the identical triangulation (the same 149,978 edges on 50,000
+  uniform points), but `deldir` – the default – is the slowest by orders
+  of magnitude: 21.1 s against `delaunayn_geometry`’s 0.20 s at 50,000
+  points, and ~363 s against 0.94 s at 200,000, where it also peaks at
+  2.9 GB against 0.24 GB. The default is unchanged; the recommendation
+  is now written down.
+
+### internal
+
+- `.calculate_distance_and_weight()` removed. It had no callers anywhere
+  in the suite and contained a `by = seq_len(nrow())` per-row
+  [`stats::dist()`](https://rdrr.io/r/stats/dist.html) loop –
+  unreachable, but a trap for whoever wired it up next.
+
+### changes
+
+- `.ome.tif` and other tifs GDAL cannot open directly are now read
+  through a GDAL VRT built over their JPEG-2000 tiles, so JPEG-2000
+  images load without python. This covers every 10x Xenium morphology
+  image, and Aperio SVS whole-slide images.
+  [`to_simple_tif()`](https://giotto-suite.github.io/GiottoClass/dev/reference/to_simple_tif.md)
+  is unchanged and remains the fallback for qptiff and other codecs.
+
+- [`tif_metadata()`](https://giotto-suite.github.io/GiottoClass/dev/reference/tif_metadata.md)
+  reads the XML from the `ImageDescription` tag in R. is only needed now
+  for formats that keep their metadata in private binary tags (lsm,
+  fluoview, nih, micromanager).
+
+- [`createGiottoPolygon()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoPolygon.md)
+  on a JPEG-2000 mask now takes the mask workflow. It previously fell
+  through to the vector-file workflow and failed there, because GDAL’s
+  missing-codec warning aborted the raster branch.
 
 - `h5_file` param in
   [`createGiottoObject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/create_giotto.md)
   is deprecated; use `backend` instead.
+
 - `overlapInfo` class exported as an extension point.
+
 - [`updateGiottoObject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/updateGiottoObject.md)
   now upgrades pre-0.6.0 objects to initialize the new `source` slot,
   and migrates `spatialNetworkObj` / `nnNetObj` to the new igraph-based
   storage (see breaking changes).
+
 - [`createNearestNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createNearestNetwork.md),
   [`createSpatialDelaunayNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialDelaunayNetwork.md),
   and
@@ -89,6 +789,42 @@
   are now thin wrappers over
   [`createNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createNetwork.md).
   Behavior is preserved.
+
+- [`spatIDs()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
+  gained an `igraph` method, and the `spatialNetworkObj` / `nnNetObj`
+  methods now forward to whatever `@network` holds rather than testing
+  its class. A backed network is reached by its own class registering a
+  [`spatIDs()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
+  method. Results are unchanged.
+
+- [`as.data.table()`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.data.table.md)
+  methods added for `spatialNetworkObj` and `nnNetObj`, returning the
+  edge table. Same re-dispatch shape as
+  [`as.igraph()`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.igraph.md).
+
+- `networkParam` objects are now list-backed like the other four param
+  families, so their parameters are reached with `$` and offer
+  autocomplete via
+  [`.DollarNames()`](https://rdrr.io/r/utils/rcompgen.html).
+  `kNNNetworkParam(k = 30)$k` works; previously `$` returned `NULL` for
+  every name, because these were the one family declaring typed slots
+  instead of using `@param`. The `@param` slot was consequently dead on
+  every network param and is now the storage.
+
+  - **Breaking:** `param@k` and friends no longer work – use `param$k`.
+    No slot other than `@param` remains on `kNNNetworkParam`,
+    `sNNNetworkParam` or `delaunayNetworkParam`.
+  - What the slot types used to catch is now caught by `checkmate` in
+    the constructors, and closer to the call site:
+    `kNNNetworkParam(k = "banana")` reports a failed assertion on `k`
+    rather than an invalid-object error. The types were never structural
+    – `dbscan` and the edge filter truncate doubles internally, so an
+    un-coerced `k` produced identical networks.
+  - [`.DollarNames()`](https://rdrr.io/r/utils/rcompgen.html) unions the
+    params a class takes with those actually set. Assigning `NULL` drops
+    an entry as it does in the other families, so the set alone would
+    hide any param left at a `NULL` default – kNN’s `maximum_distance`
+    is one, and it completes regardless.
 
 ### breaking changes
 
@@ -98,8 +834,7 @@
   - `nnNetObj`: `@igraph` → `@network`
   - [`updateGiottoObject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/updateGiottoObject.md)
     migrates serialized pre-0.6.0 objects. The same migration runs
-    on-load via [`initialize()`](https://rdrr.io/r/methods/new.html) so
-    legacy subobjects passed to setters
+    on-load via `initialize()` so legacy subobjects passed to setters
     ([`setSpatialNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setSpatialNetwork.md),
     [`setNearestNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setNearestNetwork.md))
     are upgraded transparently.
@@ -107,6 +842,18 @@
   `output` choices changed: `"networkDT_before_filter"` →
   `"unfiltered"`; new option `"igraph"` returns the underlying graph
   directly.
+- `spat_net_to_igraph()` removed. It was exported here but never called
+  here: its only callers were `Giotto::spatialSplitCluster()` and
+  `Giotto::identifyTMAcores()`, and its contract – undirect with
+  `mode = "each"`, strip edge attributes – served their clustering
+  helpers rather than any general coercion. It now lives in {Giotto} as
+  an internal. Use
+  [`as.igraph()`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.igraph.md)
+  for the graph a network subobject holds; it returns the slot
+  unchanged, matching `getSpatialNetwork(output = "igraph")`. Undirect
+  with
+  [`igraph::as_undirected()`](https://r.igraph.org/reference/as_directed.html)
+  if that is wanted.
 - Removed exported helpers `convert_to_full_spatial_network()` and
   `convert_to_reduced_spatial_network()`. The edge table is now an
   igraph; use `igraph::as_data_frame(net, what = "edges")` if a
@@ -133,15 +880,89 @@
 
 ### bug fixes
 
+- `createGiottoPolygon(make_valid = TRUE)` now has an effect on
+  `data.frame` input. The `data.frame` method declared `make_valid` but
+  never forwarded it, and `.evaluate_spatial_info()` ignored it on the
+  table branch, so the argument was accepted and dropped. Only file and
+  `SpatVector` input were ever made valid.
+
+- Making polygons valid no longer shifts the attribute table.
+  `makeValid()` drops geometries that GEOS repairs into lines, but
+  leaves their attribute rows in place, so every `poly_ID` after the
+  first dropped polygon named the wrong geometry. Affected
+  [`combineGeom()`](https://giotto-suite.github.io/GiottoClass/dev/reference/combine_split_geoms.md),
+  z-stack aggregation,
+  [`spatQuery()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatQuery.md)
+  and `createGiottoPolygon(make_valid = TRUE)`, which previously errored
+  instead. Degenerate polygons are now dropped with their attributes and
+  reported by `poly_ID`.
+
+- Polygons built from a `data.frame` now warn, naming the `poly_ID`s,
+  when a ring has too few vertices to close.
+
+- [`instructions()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
+  and `instructions<-()` no longer emit a deprecation warning on every
+  access. They were implemented on top of the deprecated
+  [`showGiottoInstructions()`](https://giotto-suite.github.io/GiottoClass/dev/reference/showGiottoInstructions.md)
+  /
+  [`readGiottoInstructions()`](https://giotto-suite.github.io/GiottoClass/dev/reference/readGiottoInstructions.md)
+  /
+  [`changeGiottoInstructions()`](https://giotto-suite.github.io/GiottoClass/dev/reference/changeGiottoInstructions.md)
+  /
+  [`replaceGiottoInstructions()`](https://giotto-suite.github.io/GiottoClass/dev/reference/replaceGiottoInstructions.md),
+  so each read or write raised the warning belonging to a function the
+  caller never used. The implementation now lives in internals; the four
+  deprecated functions remain exported and keep warning, but only for
+  code that calls them directly.
+
+- [`spatIDs()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
+  on an in-memory `spatialNetworkObj` returned `character(0)` for every
+  network. It read `@network` as the `from`/`to` table the slot held
+  before 0.6.0; `$` on an igraph is `NULL`, so a 855-edge network
+  reported zero nodes. The disk-backed branch was unaffected.
+
+- `spat_net_to_igraph()` failed with *please supply names for
+  attributes*, from the same cause, and took its only two callers with
+  it: `Giotto::spatialSplitCluster()` and `Giotto::identifyTMAcores()`
+  were unusable on any in-memory spatial network. The function has since
+  moved to {Giotto} (see breaking changes); both callers work again.
+
+- `tif_metadata(node =)` returns a one-row `data.frame` when exactly one
+  node matches, rather than transposing it into a single column.
+
 - [`create_average_DT()`](https://giotto-suite.github.io/GiottoClass/dev/reference/create_average_DT.md)
   now selects each group’s cells by `cell_ID` rather than by position.
   It fetches the expression matrix and the cell metadata independently,
   and nothing guarantees the two share a cell order. Where they
   diverged, cells were labelled with another cell’s group. **Results
   will change for affected objects**; they were wrong before.
+
+- [`createGiottoPolygonsFromMask()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoPolygon.md)
+  no longer loses polygons and `poly_ID`s when `mask_method = "single"`
+  is used on a mask that encodes its background as a value instead of
+  `NA`. Polygon parts are now indexed across mask values, so parts of
+  different values no longer collide.
+
+- [`loadGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/loadGiotto.md)
+  can read back a `giottoPolygon` or `giottoPoints` whose `SpatVector`
+  has no attribute columns, which previously failed with
+  `[names<-,SpatVector] incorrect number of names`.
+
+- [`createGiottoPolygon()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoPolygon.md)
+  and
+  [`createGiottoPolygonsFromDfr()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoPolygon.md)
+  no longer depend on the row order of their `data.frame` input.
+  Vertices are now grouped by `poly_ID` before the `SpatVector` is
+  built; input ordered by coordinate instead of by polygon previously
+  produced too many polygons, with the attributes – and so `poly_ID` –
+  dropped. Attributes that do not align with the geometries now raise an
+  error instead of being discarded silently.
+
 - fix “unused argument (ids = FALSE)” when subsetting a `giottoPolygon`
   object
+
 - skip 0-entry `giottoPoints` in subset paths
+
 - documentation fix in `methods-extract`
 
 ### enhancements
@@ -613,9 +1434,8 @@
 - python packages to install through pip is now settable in
   [`installGiottoEnvironment()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_python.md)
   [\#224](https://github.com/drieslab/GiottoClass/issues/224)
-- `giotto` [`initialize()`](https://rdrr.io/r/methods/new.html) and slot
-  checking behavior can be toggled now using `'giotto.init'` and
-  `'giotto.check_valid'` options.
+- `giotto` `initialize()` and slot checking behavior can be toggled now
+  using `'giotto.init'` and `'giotto.check_valid'` options.
   [\#946](https://github.com/drieslab/Giotto/issues/946) by rbutleriii
 - [`setGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
   now only initializes and performs checks once all items are added if a
@@ -788,7 +1608,7 @@
   for `giottoPoints`, `giottoPolygon`, `spatLocsObj`, `affine2d`
 - `affine2d` class for accumulating linear transforms to be used with
   [`affine()`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md)
-- [`initialize()`](https://rdrr.io/r/methods/new.html), `[`, `$`,
+- `initialize()`, `[`, `$`,
   [`show()`](https://giotto-suite.github.io/GiottoClass/dev/reference/show.md),
   [`plot()`](https://giotto-suite.github.io/GiottoClass/dev/reference/plot-generic.md),
   methods for `affine2d`
@@ -801,9 +1621,8 @@
   [`t()`](https://giotto-suite.github.io/GiottoClass/dev/reference/transpose.md)
   methods for `affine2d`
 - `giottoAffineImage` class for just-in-time affine transformed images
-- [`initialize()`](https://rdrr.io/r/methods/new.html), method for
-  `giottoLargeImage`
-- [`initialize()`](https://rdrr.io/r/methods/new.html),
+- `initialize()`, method for `giottoLargeImage`
+- `initialize()`,
   [`ext()`](https://giotto-suite.github.io/GiottoClass/dev/reference/ext.md),
   [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md),
   [`rescale()`](https://giotto-suite.github.io/GiottoClass/dev/reference/rescale.md),
@@ -819,8 +1638,7 @@
   [`t()`](https://giotto-suite.github.io/GiottoClass/dev/reference/transpose.md)
   methods for `giottoAffineImage` and `giottoLargeImage` (which converts
   to `giottoAffineImage`)
-- [`as()`](https://rdrr.io/r/methods/as.html) conversion from
-  `giottoLargeImage` to `giottoAffineImage`
+- `as()` conversion from `giottoLargeImage` to `giottoAffineImage`
 - `.get_centroid_xy()` internal for getting numeric centroid xy values
   of any object that responds to
   [`ext()`](https://giotto-suite.github.io/GiottoClass/dev/reference/ext.md)
@@ -865,8 +1683,7 @@
 
 ### new
 
-- [`as()`](https://rdrr.io/r/methods/as.html) conversion from
-  `giottoLargeImage` to `array`
+- `as()` conversion from `giottoLargeImage` to `array`
 - [`as.matrix()`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.matrix.md)
   method for
   [`spatLocsObj()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatLocsObj-class.md)
@@ -913,9 +1730,7 @@
   [`terra::rasterize()`](https://rspatial.github.io/terra/reference/rasterize.html)
   and
   [`terra::plot()`](https://rspatial.github.io/terra/reference/plot.html)
-  instead of
-  [`scattermore::scattermoreplot()`](https://rdrr.io/pkg/scattermore/man/scattermoreplot.html)
-  for `giottoPoints`
+  instead of `scattermore::scattermoreplot()` for `giottoPoints`
   [`plot()`](https://giotto-suite.github.io/GiottoClass/dev/reference/plot-generic.md)
   method
 - [`plot()`](https://giotto-suite.github.io/GiottoClass/dev/reference/plot-generic.md)

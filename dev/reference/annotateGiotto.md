@@ -12,7 +12,8 @@ annotateGiotto(
   feat_type = NULL,
   annotation_vector = NULL,
   cluster_column = NULL,
-  name = "cell_types"
+  name = "cell_types",
+  replace = TRUE
 )
 ```
 
@@ -43,6 +44,14 @@ annotateGiotto(
 
   new name for annotation column
 
+- replace:
+
+  logical. Only consulted when the target `name` column already exists.
+  `TRUE` (default) replaces it outright, so a row whose cluster value is
+  `NA` or unmapped becomes `NA`. `FALSE` merges: a row the new mapping
+  resolves is overwritten, a row it yields `NA` for keeps its existing
+  value, which is what makes iterative annotation refinement possible.
+
 ## Value
 
 `giotto` object
@@ -59,6 +68,13 @@ need to provide an annotation vector like this:
 
 - 3\. provide original cluster names to previous vector, e.g.
   names(cell_types) = c(2, 1, 3)
+
+`NA` values in `cluster_column` are tolerated and carry through to the
+new annotation column as `NA` – common on a `giottoMulti`, where joint
+`@cell_metadata` keeps the full population while the analysis pool is
+narrower. A cluster value with no entry in `annotation_vector` also
+becomes `NA`, and both it and any unused `annotation_vector` key are
+reported rather than raised.
 
 ## Examples
 

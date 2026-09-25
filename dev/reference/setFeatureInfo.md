@@ -16,6 +16,9 @@ setFeatureInfo(
   initialize = TRUE,
   ...
 )
+
+# S4 method for class 'giottoMulti'
+setFeatureInfo(gobject, x, feat_type = NULL, ...)
 ```
 
 ## Arguments

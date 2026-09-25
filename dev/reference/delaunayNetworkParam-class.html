@@ -62,7 +62,7 @@ graph is undirected — one edge per pair."><meta property="og:image" content="h
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -144,50 +144,11 @@ graph is <strong>undirected</strong> — one edge per pair.</p>
 
 
 <dt id="arg-options">options<a class="anchor" aria-label="anchor" href="#arg-options"></a></dt>
-<dd><p><em>geometry only.</em> passed to <code><a href="https://rdrr.io/pkg/geometry/man/delaunayn.html" class="external-link">geometry::delaunayn</a></code></p></dd>
+<dd><p><em>geometry only.</em> passed to <code>geometry::delaunayn</code></p></dd>
 
 
 <dt id="arg-y-j-s">Y, j, S<a class="anchor" aria-label="anchor" href="#arg-y-j-s"></a></dt>
-<dd><p><em>RTriangle only.</em> passed to <code><a href="https://rdrr.io/pkg/RTriangle/man/triangulate.html" class="external-link">RTriangle::triangulate</a></code></p></dd>
-
-</dl></div>
-    <div class="section level2">
-    <h2 id="slots">Slots<a class="anchor" aria-label="anchor" href="#slots"></a></h2>
-
-
-<dl><dt><code>method</code></dt>
-<dd><p>character. backend: <code>"deldir"</code>, <code>"RTriangle"</code>, or
-<code>"geometry"</code>.</p></dd>
-
-
-<dt><code>maximum_distance</code></dt>
-<dd><p>numeric, <code>"auto"</code>, or NULL.</p></dd>
-
-
-<dt><code>minimum_k</code></dt>
-<dd><p>integer. minimum neighbours per node when filtering.</p></dd>
-
-
-<dt><code>weight_fun</code></dt>
-<dd><p>function. weight = <code>weight_fun(distance)</code>.</p></dd>
-
-
-<dt><code>include_weight,include_distance</code></dt>
-<dd><p>logical. include columns.</p></dd>
-
-
-<dt><code>output</code></dt>
-<dd><p>character. See <code><a href="createNetwork.html">createNetwork()</a></code>.</p></dd>
-
-
-<dt><code>options</code></dt>
-<dd><p>character. <em>geometry only.</em> passed to <code><a href="https://rdrr.io/pkg/geometry/man/delaunayn.html" class="external-link">geometry::delaunayn</a></code>.</p></dd>
-
-
-<dt><code>Y,j</code></dt>
-<dd><p>logical; S numeric. <em>RTriangle only.</em> passed to
-<code><a href="https://rdrr.io/pkg/RTriangle/man/triangulate.html" class="external-link">RTriangle::triangulate</a></code>.</p></dd>
-
+<dd><p><em>RTriangle only.</em> passed to <code>RTriangle::triangulate</code></p></dd>
 
 </dl></div>
 

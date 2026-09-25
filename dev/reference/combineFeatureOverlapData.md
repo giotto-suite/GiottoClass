@@ -9,7 +9,9 @@ combineFeatureOverlapData(
   gobject,
   feat_type = "rna",
   sel_feats = NULL,
-  poly_info = "cell"
+  poly_info = "cell",
+  view = NULL,
+  space = NULL
 )
 ```
 
@@ -30,6 +32,18 @@ combineFeatureOverlapData(
 - poly_info:
 
   polygon information name
+
+- view, space:
+
+  optional
+  [giottoView](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView.md)
+  /
+  [giottoSpace](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace.md)
+  or the name of one slotted on `gobject`. Threaded through the
+  underlying getFeatureMetadata / getPolygonInfo / getFeatureInfo calls
+  — the returned table reflects the view-scoped subset. One resolver
+  pass is shared via `materialize(slots = ...)` so the predicate
+  evaluates once.
 
 ## Value
 

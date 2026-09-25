@@ -60,7 +60,7 @@ objects."><meta property="og:image" content="https://giotto-suite.github.io/Giot
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -171,6 +171,9 @@ objects.</p>
 <span><span class="fu">plot</span><span class="op">(</span><span class="va">x</span>, dims <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'spatialNetworkObj,missing'</span></span>
+<span><span class="fu">plot</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S4 method for class 'spatialNetworkObj,spatLocsObj'</span></span>
 <span><span class="fu">plot</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'affine2d,missing'</span></span>
@@ -413,7 +416,11 @@ through <code>...</code></p>
 ... param passes to <code><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></code></p></li>
 <li><p><code>plot(x = spatLocsObj, y = missing)</code>: Plot a spatLocsObj</p></li>
 <li><p><code>plot(x = dimObj, y = missing)</code>: Plot a dimObj</p></li>
-<li><p><code>plot(x = spatialNetworkObj, y = missing)</code>: Plot a spatialNetworkObj</p></li>
+<li><p><code>plot(x = spatialNetworkObj, y = missing)</code>: Plot a spatialNetworkObj. Errors: a network has no
+coordinates of its own, so pass the matching <code>spatLocsObj</code> as <code>y</code>.</p></li>
+<li><p><code>plot(x = spatialNetworkObj, y = spatLocsObj)</code>: Plot a spatialNetworkObj against the
+<code>spatLocsObj</code> that supplies its coordinates. Edges with an endpoint absent
+from <code>y</code> are not drawn.</p></li>
 <li><p><code>plot(x = affine2d, y = missing)</code>: Plot a affine2d. blue is start, red is end</p></li>
 </ul></div>
 

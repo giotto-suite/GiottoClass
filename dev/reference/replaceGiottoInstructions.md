@@ -1,7 +1,6 @@
-# deprecated
+# Replace giotto instructions
 
-Function to replace all instructions from giotto object. Does not call
-`initialize` on the giotto object
+Deprecated. Use `instructions(gobject) <- value` instead.
 
 ## Usage
 
@@ -17,23 +16,13 @@ replaceGiottoInstructions(gobject, instructions = NULL, init_gobject = TRUE)
 
 - instructions:
 
-  new instructions (e.g. result from createGiottoInstructions)
+  named list of all instructions, as produced by
+  [`createGiottoInstructions()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
 
 - init_gobject:
 
-  (boolean, default = TRUE) initialize gobject when returning
+  logical. Re-initialize the object before returning it (default `TRUE`)
 
 ## Value
 
-giotto object with replaces instructions
-
-## Examples
-
-``` r
-g <- GiottoData::loadGiottoMini("visium")
-
-replaceGiottoInstructions(
-    gobject = g,
-    instructions = createGiottoInstructions()
-)
-```
+giotto object with replaced instructions

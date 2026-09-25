@@ -46,6 +46,28 @@ crop(x, y, DT = TRUE, xmin = NULL, xmax = NULL, ymin = NULL, ymax = NULL, ...)
 
 # S4 method for class 'giottoPolygon,ANY'
 crop(x, y, DT = TRUE, xmin = NULL, xmax = NULL, ymin = NULL, ymax = NULL, ...)
+
+# S4 method for class 'giottoView,ANY'
+crop(
+  x,
+  y,
+  relation = "intersects",
+  geom = c("centroid", "poly"),
+  ...,
+  view = NULL,
+  space = NULL
+)
+
+# S4 method for class 'gAny,ANY'
+crop(
+  x,
+  y,
+  relation = "intersects",
+  geom = c("centroid", "poly"),
+  ...,
+  view = NULL,
+  space = NULL
+)
 ```
 
 ## Arguments
@@ -93,6 +115,41 @@ crop(x, y, DT = TRUE, xmin = NULL, xmax = NULL, ymin = NULL, ymax = NULL, ...)
 - xmin, xmax, ymin, ymax:
 
   only used if DT = TRUE. Set extent bounds independently
+
+- relation:
+
+  `character(1)`. Spatial predicate. A crop narrows the **cell set**, so
+  each cell is reduced to a geometry (see `geom`) and tested against the
+  region. One of `"intersects"` (default), `"disjoint"`, `"within"`,
+  `"covered_by"`, `"touches"`, `"contains"`, `"covers"`, `"overlaps"`,
+  `"crosses"`. The last four are always `FALSE` against a centroid, so
+  requesting one promotes `geom` to `"poly"` with a warning.
+
+- geom:
+
+  `character(1)`. What represents a cell when the predicate is
+  evaluated: `"centroid"` (default) uses the cell's `spatial_locs` row —
+  cheap, and the conventional choice, but a cell whose polygon straddles
+  the region boundary with its centroid outside is dropped. `"poly"`
+  uses the cell's actual polygon — exact, and requires a polygon source
+  on the object. The choice is recorded on the step, so a saved recipe
+  states which question it asks.
+
+- view:
+
+  `NULL` or `character(1)`. When supplied, records the crop as a step on
+  the named view, creating it if it does not exist yet, instead of
+  executing eagerly. Eager `crop()` on a `giotto` is not yet
+  implemented.
+
+- space:
+
+  `NULL` or `character(1)`. Name of a slotted space on `x`. Sets the
+  view's `space` reference — the coordinate frame in which the crop
+  region is interpreted at resolution time. First call sets it;
+  subsequent calls that try to rebind to a different name error. `NULL`
+  leaves the view in whatever frame it was already bound to (or the
+  gobject's native frame if unbound).
 
 ## Value
 

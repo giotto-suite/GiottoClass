@@ -88,7 +88,7 @@ ordering."><meta property="og:image" content="https://giotto-suite.github.io/Gio
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -114,7 +114,7 @@ ordering."><meta property="og:image" content="https://giotto-suite.github.io/Gio
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Spatial and feature IDs</h1>
-      <small class="dont-index">Source: <a href="https://github.com/giotto-suite/Giotto/blob/website/R/classes-binpoints.R" class="external-link"><code>R/classes-binpoints.R</code></a>, <a href="https://github.com/giotto-suite/Giotto/blob/website/R/methods-IDs.R" class="external-link"><code>R/methods-IDs.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/giotto-suite/Giotto/blob/website/R/classes-binpoints.R" class="external-link"><code>R/classes-binpoints.R</code></a>, <a href="https://github.com/giotto-suite/Giotto/blob/website/R/gmulti.R" class="external-link"><code>R/gmulti.R</code></a>, <a href="https://github.com/giotto-suite/Giotto/blob/website/R/methods-IDs.R" class="external-link"><code>R/methods-IDs.R</code></a></small>
       <div class="d-none name"><code>spatIDs-generic.Rd</code></div>
     </div>
 
@@ -142,6 +142,12 @@ ordering.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="co"># S4 method for class 'giottoBinPoints'</span></span>
 <span><span class="fu">featIDs</span><span class="op">(</span><span class="va">x</span>, uniques <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
+<span><span class="co"># S4 method for class 'giottoMulti'</span></span>
+<span><span class="fu">spatIDs</span><span class="op">(</span><span class="va">x</span>, object <span class="op">=</span> <span class="cn">NULL</span>, local <span class="op">=</span> <span class="cn">FALSE</span>, spat_unit <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S4 method for class 'giottoMulti'</span></span>
+<span><span class="fu">featIDs</span><span class="op">(</span><span class="va">x</span>, object <span class="op">=</span> <span class="cn">NULL</span>, local <span class="op">=</span> <span class="cn">FALSE</span>, uniques <span class="op">=</span> <span class="cn">TRUE</span>, feat_type <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
 <span><span class="co"># S4 method for class 'giotto'</span></span>
 <span><span class="fu">spatIDs</span><span class="op">(</span><span class="va">x</span>, spat_unit <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">subset</span>, negate <span class="op">=</span> <span class="cn">FALSE</span>, quote <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
@@ -152,6 +158,9 @@ ordering.</p>
 <span><span class="fu">spatIDs</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'cellMetaObj'</span></span>
+<span><span class="fu">spatIDs</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S4 method for class 'igraph'</span></span>
 <span><span class="fu">spatIDs</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'spatialNetworkObj'</span></span>
@@ -211,6 +220,10 @@ currently only pass to <code><a href="fDataDT.html">fDataDT()</a></code>.</p></d
 <dd><p>(optional) specify which spatial unit</p></dd>
 
 
+<dt id="arg-feat-type">feat_type<a class="anchor" aria-label="anchor" href="#arg-feat-type"></a></dt>
+<dd><p>(optional) specify which feature type</p></dd>
+
+
 <dt id="arg-subset">subset<a class="anchor" aria-label="anchor" href="#arg-subset"></a></dt>
 <dd><p>logical expression to find a subset of features.</p></dd>
 
@@ -237,10 +250,6 @@ interactively.</p></dd>
 
 <dt id="arg-value">value<a class="anchor" aria-label="anchor" href="#arg-value"></a></dt>
 <dd><p>character. IDs to replace with</p></dd>
-
-
-<dt id="arg-feat-type">feat_type<a class="anchor" aria-label="anchor" href="#arg-feat-type"></a></dt>
-<dd><p>(optional) specify which feature type</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -8,13 +8,13 @@ Get or set the names of the layers of a `giottoLargeImage`
 # S4 method for class 'giottoLargeImage'
 names(x)
 
-# S4 method for class 'giottoLargeImage'
+# S4 method for class 'giottoLargeImage,ANY'
 names(x) <- value
 
 # S4 method for class 'processParam'
 names(x)
 
-# S4 method for class 'processParam'
+# S4 method for class 'processParam,ANY'
 names(x) <- value
 
 # S4 method for class 'giottoPoints'

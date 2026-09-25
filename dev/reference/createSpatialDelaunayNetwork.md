@@ -8,7 +8,8 @@ distances.
 ``` r
 createSpatialDelaunayNetwork(
   gobject,
-  name = "Delaunay_network",
+  name = NULL,
+  default_name = "Delaunay_network",
   spat_unit = NULL,
   feat_type = NULL,
   spat_loc_name = NULL,
@@ -23,6 +24,7 @@ createSpatialDelaunayNetwork(
   verbose = TRUE,
   return_gobject = TRUE,
   output = c("spatialNetworkObj", "data.table"),
+  space = NULL,
   ...
 )
 ```
@@ -36,6 +38,13 @@ createSpatialDelaunayNetwork(
 - name:
 
   name for spatial network (default = 'delaunay_network')
+
+- default_name:
+
+  name to fall back on when `name` is `NULL`, before the coordinate
+  frame is prefixed. Exists so that one composition site can serve every
+  entry point while each keeps its own spelling; callers do not normally
+  set it.
 
 - spat_unit:
 
@@ -104,6 +113,19 @@ createSpatialDelaunayNetwork(
   character. Object type to return spatial network as when
   `return_gobject = FALSE`. (default: 'spatialNetworkObj')
 
+- space:
+
+  (`giottoMulti` only) `character(1)`. Name of a coordinate frame
+  recorded on the object, or `NULL` (default) for each sample's own
+  native frame. The frame decides the job: every sample it covers gets a
+  network built in that frame's coordinates, written into its own
+  `@spatial_network` slot — so this mutates the wrapped children.
+
+  This is **not** a sample selector. An artifact generator takes none,
+  because once the rows are in a slot nothing downstream can tell which
+  the selector admitted (see `adr/0006`). To build over a subset of
+  samples, record a space over them, or subset with `mg[...]` first.
+
 - ...:
 
   Other additional parameters
@@ -114,10 +136,36 @@ giotto object with updated spatial network slot
 
 ## Details
 
-Creates a spatial Delaunay network as explained in
-[`delaunayn`](https://rdrr.io/pkg/geometry/man/delaunayn.html)
+Creates a spatial Delaunay network as explained in `delaunayn`
 (default), [`deldir`](https://rdrr.io/pkg/deldir/man/deldir.html), or
-[`triangulate`](https://rdrr.io/pkg/RTriangle/man/triangulate.html).
+`triangulate`.
+
+## Choosing a Delaunay backend
+
+All three backends compute the same exact triangulation – on 50,000
+uniform points each returns the identical 149,978 edges – so the choice
+is purely one of implementation speed, and `deldir` is by a wide margin
+the slowest:
+
+|         |          |                      |
+|---------|----------|----------------------|
+| points  | `deldir` | `delaunayn_geometry` |
+| 20,000  | 3.7 s    | 0.14 s               |
+| 50,000  | 21.1 s   | 0.20 s               |
+| 200,000 | ~363 s   | 0.94 s               |
+
+`deldir` remains the default for backward compatibility, but
+**`delaunay_method = "delaunayn_geometry"` is strongly preferred above a
+few thousand points**. It requires the geometry package, and it is also
+the only backend that handles 3D.
+
+Two caveats. Qhull can struggle with exactly cocircular input – a
+grid-aligned platform such as Visium – in which case pass
+`options = "Qbb Qc Qz"`; a 10,000-point exact grid worked with the
+default `"Pp"` in testing, but the failure mode is degenerate input
+rather than size. And `deldir` peaks around 2.9 GB of memory at 200,000
+points against `geometry`'s 0.24 GB, so on a large section it is the
+memory, not just the wait, that bites.
 
 ## Examples
 

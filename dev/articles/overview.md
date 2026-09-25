@@ -557,7 +557,7 @@ sessionInfo()
 
     ## R version 4.6.1 (2026-06-24)
     ## Platform: x86_64-pc-linux-gnu
-    ## Running under: Ubuntu 24.04.4 LTS
+    ## Running under: Ubuntu 24.04.5 LTS
     ## 
     ## Matrix products: default
     ## BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
@@ -576,41 +576,24 @@ sessionInfo()
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] GiottoClass_0.6.0
+    ## [1] GiottoClass_0.7.2
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] rappdirs_0.3.4              sass_0.4.10                
-    ##  [3] generics_0.1.4              SparseArray_1.12.2         
-    ##  [5] gtools_3.9.5                lattice_0.22-9             
-    ##  [7] digest_0.6.39               magrittr_2.0.5             
-    ##  [9] evaluate_1.0.5              grid_4.6.1                 
-    ## [11] fastmap_1.2.0               jsonlite_2.0.0             
-    ## [13] Matrix_1.7-5                backports_1.5.1            
-    ## [15] GiottoData_0.2.16           SingleCellExperiment_1.34.0
-    ## [17] codetools_0.2-20            textshaping_1.0.5          
-    ## [19] jquerylib_0.1.4             abind_1.4-8                
-    ## [21] cli_3.6.6                   rlang_1.3.0                
-    ## [23] XVector_0.52.0              Biobase_2.72.0             
-    ## [25] withr_3.0.3                 cachem_1.1.0               
-    ## [27] DelayedArray_0.38.2         yaml_2.3.12                
-    ## [29] otel_0.2.0                  S4Arrays_1.12.0            
-    ## [31] tools_4.6.1                 GiottoUtils_0.2.5          
-    ## [33] checkmate_2.3.4             SpatialExperiment_1.22.0   
-    ## [35] SummarizedExperiment_1.42.0 BiocGenerics_0.58.1        
-    ## [37] reticulate_1.46.0           vctrs_0.7.3                
-    ## [39] png_0.1-9                   R6_2.6.1                   
-    ## [41] magick_2.9.1                matrixStats_1.5.0          
-    ## [43] stats4_4.6.1                lifecycle_1.0.5            
-    ## [45] Seqinfo_1.2.0               S4Vectors_0.50.2           
-    ## [47] fs_2.1.0                    htmlwidgets_1.6.4          
-    ## [49] IRanges_2.46.0              ragg_1.5.2                 
-    ## [51] pkgconfig_2.0.3             desc_1.4.3                 
-    ## [53] pillar_1.11.1               pkgdown_2.2.1              
-    ## [55] terra_1.9-46                bslib_0.12.0               
-    ## [57] glue_1.8.1                  data.table_1.18.6.1        
-    ## [59] Rcpp_1.1.2                  systemfonts_1.3.2          
-    ## [61] xfun_0.60                   GenomicRanges_1.64.0       
-    ## [63] MatrixGenerics_1.24.0       knitr_1.51                 
-    ## [65] rjson_0.2.23                igraph_2.3.3               
-    ## [67] htmltools_0.5.9             rmarkdown_2.31             
-    ## [69] compiler_4.6.1
+    ##  [1] Matrix_1.7-5        jsonlite_2.0.0      compiler_4.6.1     
+    ##  [4] gtools_3.9.5        Rcpp_1.1.2          jquerylib_0.1.4    
+    ##  [7] png_0.1-9           IRanges_2.46.0      systemfonts_1.3.2  
+    ## [10] textshaping_1.0.5   yaml_2.3.12         fastmap_1.2.0      
+    ## [13] reticulate_1.47.0   lattice_0.22-9      R6_2.6.1           
+    ## [16] XVector_0.52.0      generics_0.1.4      igraph_2.3.3       
+    ## [19] knitr_1.52          BiocGenerics_0.58.1 backports_1.5.1    
+    ## [22] checkmate_2.3.4     desc_1.4.3          pillar_1.11.1      
+    ## [25] bslib_0.12.0        GiottoUtils_0.2.6   rlang_1.3.0        
+    ## [28] cachem_1.1.0        terra_1.9-50        xfun_0.61          
+    ## [31] fs_2.1.0            sass_0.4.10         otel_0.2.0         
+    ## [34] cli_3.6.6           withr_3.0.3         pkgdown_2.2.1      
+    ## [37] magrittr_2.0.5      digest_0.6.39       grid_4.6.1         
+    ## [40] rappdirs_0.3.4      lifecycle_1.0.5     vctrs_0.7.3        
+    ## [43] S4Vectors_0.50.3    glue_1.8.1          evaluate_1.0.5     
+    ## [46] data.table_1.18.6.1 codetools_0.2-20    ragg_1.5.2         
+    ## [49] stats4_4.6.1        GiottoData_0.3.6    rmarkdown_2.32     
+    ## [52] pkgconfig_2.0.3     tools_4.6.1         htmltools_0.5.9

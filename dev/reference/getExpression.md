@@ -7,7 +7,7 @@ Function to get expression values from giotto object
 ``` r
 getExpression(gobject, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
 
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 getExpression(
   gobject,
   spat_unit = NULL,
@@ -15,7 +15,22 @@ getExpression(
   name = NULL,
   values = NULL,
   output = c("exprObj", "matrix"),
-  set_defaults = TRUE
+  set_defaults = TRUE,
+  view = NULL,
+  space = NULL
+)
+
+# S4 method for class 'giottoMulti'
+getExpression(
+  gobject,
+  spat_unit = NULL,
+  feat_type = NULL,
+  name = NULL,
+  values = NULL,
+  output = c("exprObj", "matrix"),
+  set_defaults = TRUE,
+  samples = NULL,
+  on_missing = c("error", "drop", "fill")
 )
 ```
 
@@ -57,6 +72,31 @@ getExpression(
 
   set default spat_unit and feat_type. Change to FALSE only when
   expression and spat_info are not expected to exist.
+
+- view:
+
+  optional character(1) name of a slotted view; when supplied, the
+  returned expression is narrowed to the cell set the view defines via
+  [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
+
+- space:
+
+  optional character(1) name of a slotted space; accepted for API
+  symmetry (no-op on expression — tabular)
+
+- samples:
+
+  (giottoMulti) character vector of sample names to slice the joint
+  result to; `NULL` (default) returns all participants
+
+- on_missing:
+
+  (giottoMulti) how assembly treats a keyed child that cannot produce
+  the requested content, and mismatched feature panels: `"error"`
+  (default — a partial federation cannot pass as a full one), `"drop"`
+  (drop the child / intersect panels, with a warning), or `"fill"`
+  (union panels with 0-fill; a fully-missing child is still dropped,
+  with a warning)
 
 ## Value
 

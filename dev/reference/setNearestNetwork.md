@@ -14,7 +14,7 @@ setNearestNetwork(
   ...
 )
 
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 setNearestNetwork(
   gobject,
   x,

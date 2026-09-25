@@ -12,7 +12,9 @@ combineMetadata(
   feat_type = NULL,
   spat_loc_name = "raw",
   spat_enr_names = NULL,
-  verbose = TRUE
+  verbose = TRUE,
+  view = NULL,
+  space = NULL
 )
 ```
 
@@ -41,6 +43,13 @@ combineMetadata(
 - verbose:
 
   verbosity
+
+- view, space:
+
+  `character`. Optional name of a view / space registered on `gobject`.
+  The object is pre-narrowed once before any slot is read, so the
+  returned table reflects the view-scoped subset in the frame `space`
+  names.
 
 ## Value
 

@@ -62,7 +62,7 @@ will always be affected. The feature type to subset can be specified."><meta pro
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -112,6 +112,17 @@ will always be affected. The feature type to subset can be specified.</p>
 <span><span class="co"># S4 method for class 'giotto,missing,missing,missing'</span></span>
 <span><span class="va">x</span><span class="op">[</span><span class="va">i</span>, <span class="va">j</span>, <span class="va">...</span>, drop <span class="op">=</span> <span class="cn">TRUE</span><span class="op">]</span></span>
 <span></span>
+<span><span class="co"># S4 method for class 'giottoView'</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  <span class="va">subset</span>,</span>
+<span>  spat_unit <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  feat_type <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  negate <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  quote <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span>
+<span></span>
 <span><span class="co"># S4 method for class 'giotto'</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
@@ -122,6 +133,7 @@ will always be affected. The feature type to subset can be specified.</p>
 <span>  feat_type <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  negate <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  quote <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  view <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -147,15 +159,6 @@ subset param</p></dd>
 <dd><p>Logical expression evaluated in expression values</p></dd>
 
 
-<dt id="arg-feat-ids-i">feat_ids, i<a class="anchor" aria-label="anchor" href="#arg-feat-ids-i"></a></dt>
-<dd><p>character vector. Feature IDs to subset the object for.</p></dd>
-
-
-<dt id="arg-cell-ids-j">cell_ids, j<a class="anchor" aria-label="anchor" href="#arg-cell-ids-j"></a></dt>
-<dd><p>character vector. Cell/spatial IDs to subset the object
-for.</p></dd>
-
-
 <dt id="arg-spat-unit">spat_unit<a class="anchor" aria-label="anchor" href="#arg-spat-unit"></a></dt>
 <dd><p>character. Controls which spatial unit to pull subsetting
 information from when using <code>cell_ids</code>/<code>j</code> and <code>subset</code> params. However,
@@ -177,6 +180,15 @@ are selected</p></dd>
 <code><a href="https://rdrr.io/r/base/substitute.html" class="external-link">substitute()</a></code>. Set this to <code>FALSE</code> when calling from a function, although
 that may not be recommended since NSE output can be unexpected when not used
 interactively.</p></dd>
+
+
+<dt id="arg-feat-ids-i">feat_ids, i<a class="anchor" aria-label="anchor" href="#arg-feat-ids-i"></a></dt>
+<dd><p>character vector. Feature IDs to subset the object for.</p></dd>
+
+
+<dt id="arg-cell-ids-j">cell_ids, j<a class="anchor" aria-label="anchor" href="#arg-cell-ids-j"></a></dt>
+<dd><p>character vector. Cell/spatial IDs to subset the object
+for.</p></dd>
 
 </dl></div>
     <div class="section level2">

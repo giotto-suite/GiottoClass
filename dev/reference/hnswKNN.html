@@ -6,20 +6,20 @@ network construction.
 HNSW is approximate: recall is high but not guaranteed to be 1.0. Use
 dbscan::kNN() when exactness matters, or on small data where the exact
 search is both faster and exact.
-Repeated calls are reproducible by default. The index build is the only
+Repeated calls are reproducible. The index build is the only
 nondeterministic phase – concurrent insertion makes the graph depend on
-thread interleaving – so n_threads_build defaults to 1. Searching is
-unaffected and stays parallel."><meta property="og:description" content="Find the k nearest neighbors of every row of x using an HNSW index
+thread interleaving – so it always runs on one thread and this cannot be
+changed. Searching is unaffected and stays parallel over n_threads."><meta property="og:description" content="Find the k nearest neighbors of every row of x using an HNSW index
 (Hierarchical Navigable Small World), returning the same structure as
 dbscan::kNN() so the two are interchangeable as the search step of
 network construction.
 HNSW is approximate: recall is high but not guaranteed to be 1.0. Use
 dbscan::kNN() when exactness matters, or on small data where the exact
 search is both faster and exact.
-Repeated calls are reproducible by default. The index build is the only
+Repeated calls are reproducible. The index build is the only
 nondeterministic phase – concurrent insertion makes the graph depend on
-thread interleaving – so n_threads_build defaults to 1. Searching is
-unaffected and stays parallel."><meta property="og:image" content="https://giotto-suite.github.io/GiottoClass/logo.png"><meta name="robots" content="noindex"></head><body>
+thread interleaving – so it always runs on one thread and this cannot be
+changed. Searching is unaffected and stays parallel over n_threads."><meta property="og:image" content="https://giotto-suite.github.io/GiottoClass/logo.png"><meta name="robots" content="noindex"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
     <!--
   Banner shown ONLY on the development site
@@ -78,7 +78,7 @@ unaffected and stays parallel."><meta property="og:image" content="https://giott
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -116,10 +116,10 @@ network construction.</p>
 <p>HNSW is <em>approximate</em>: recall is high but not guaranteed to be 1.0. Use
 <code><a href="https://rdrr.io/pkg/dbscan/man/kNN.html" class="external-link">dbscan::kNN()</a></code> when exactness matters, or on small data where the exact
 search is both faster and exact.</p>
-<p>Repeated calls are reproducible by default. The index build is the only
+<p>Repeated calls are reproducible. The index build is the only
 nondeterministic phase – concurrent insertion makes the graph depend on
-thread interleaving – so <code>n_threads_build</code> defaults to <code>1</code>. Searching is
-unaffected and stays parallel.</p>
+thread interleaving – so it always runs on one thread and this cannot be
+changed. Searching is unaffected and stays parallel over <code>n_threads</code>.</p>
     </div>
 
     <div class="section level2">
@@ -132,7 +132,6 @@ unaffected and stays parallel.</p>
 <span>  ef_construction <span class="op">=</span> <span class="fl">200L</span>,</span>
 <span>  ef <span class="op">=</span> <span class="fl">200L</span>,</span>
 <span>  n_threads <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  n_threads_build <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -178,17 +177,8 @@ reproduced 99.995%, for 2.30s against 2.83s.</p></dd>
 <dt id="arg-n-threads">n_threads<a class="anchor" aria-label="anchor" href="#arg-n-threads"></a></dt>
 <dd><p>integer. Threads for the <strong>search</strong>. Defaults to
 <code><a href="https://giotto-suite.github.io/GiottoUtils/reference/determine_cores.html" class="external-link">GiottoUtils::determine_cores()</a></code>. The search is deterministic at any
-thread count, so this can be left parallel.</p></dd>
-
-
-<dt id="arg-n-threads-build">n_threads_build<a class="anchor" aria-label="anchor" href="#arg-n-threads-build"></a></dt>
-<dd><p>integer or <code>NULL</code>. Threads for the index <strong>build</strong>,
-default <code>1</code>. A multithreaded build is not reproducible: insertion order
-varies, so the graph and hence the neighbours differ slightly between
-runs, which propagates to clustering even with a fixed seed. Building on
-one thread makes repeated calls bit-identical. Set to <code>NULL</code> to inherit
-<code>n_threads</code> and trade reproducibility for speed while exploring –
-measured at 11.8s against 2.82s on 158,662 cells.</p></dd>
+thread count, so this can be left parallel. The index <strong>build</strong> is not
+threaded and is not configurable; see Details.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

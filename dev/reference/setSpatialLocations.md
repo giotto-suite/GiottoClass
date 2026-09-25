@@ -18,6 +18,9 @@ setSpatialLocations(
   initialize = TRUE,
   ...
 )
+
+# S4 method for class 'giottoMulti'
+setSpatialLocations(gobject, x, spat_unit = NULL, name = NULL, ...)
 ```
 
 ## Arguments

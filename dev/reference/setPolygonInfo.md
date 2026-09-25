@@ -17,6 +17,9 @@ setPolygonInfo(
   initialize = TRUE,
   ...
 )
+
+# S4 method for class 'giottoMulti'
+setPolygonInfo(gobject, x, name = NULL, ...)
 ```
 
 ## Arguments

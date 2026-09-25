@@ -1,4 +1,4 @@
-# Create spatial network
+# Create spatial centroid connectivity network
 
 Create a spatial network based on cell centroids. These networks are
 often used when determining cell-cell connectivities and spatial
@@ -16,7 +16,7 @@ createSpatialNetwork(
   feat_type = NULL,
   spat_loc_name = NULL,
   dimensions = "all",
-  method = c("Delaunay", "kNN"),
+  method = c("Delaunay", "kNN", "radius"),
   delaunay_method = c("deldir", "delaunayn_geometry", "RTriangle"),
   maximum_distance_delaunay = "auto",
   options = "Pp",
@@ -27,9 +27,11 @@ createSpatialNetwork(
   knn_method = "dbscan",
   k = 4,
   maximum_distance_knn = NULL,
+  radius = NULL,
   verbose = FALSE,
   return_gobject = TRUE,
   output = c("spatialNetworkObj", "data.table"),
+  space = NULL,
   ...
 )
 ```
@@ -62,11 +64,19 @@ createSpatialNetwork(
 
 - method:
 
-  which method to use to create a spatial network. (default = Delaunay)
+  which method to use to create a spatial network. One of `"Delaunay"`
+  (default), `"kNN"`, or `"radius"`. `"radius"` connects every pair of
+  cells closer together than `radius`, so unlike kNN it gives dense
+  regions more neighbours than sparse ones.
 
 - delaunay_method:
 
-  method to use to generate Delaunay network
+  method to use to generate Delaunay network. All three give the
+  identical triangulation; `"delaunayn_geometry"` is far faster above a
+  few thousand points (0.94 s vs ~363 s at 200,000) and is the only one
+  that handles 3D. `"deldir"` remains the default for backward
+  compatibility. See the *Choosing a Delaunay backend* section of
+  [`createSpatialDelaunayNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialDelaunayNetwork.md).
 
 - maximum_distance_delaunay:
 
@@ -113,6 +123,12 @@ createSpatialNetwork(
 
   distance cutoff for nearest neighbors to consider for kNN network
 
+- radius:
+
+  (radius) distance cutoff, in the units of the spatial locations. Every
+  pair of cells within this distance of each other is connected.
+  Required when `method = "radius"`.
+
 - verbose:
 
   be verbose
@@ -125,6 +141,19 @@ createSpatialNetwork(
 
   character. Object type to return spatial network as when
   `return_gobject = FALSE`. (default: 'spatialNetworkObj')
+
+- space:
+
+  (`giottoMulti` only) `character(1)`. Name of a coordinate frame
+  recorded on the object, or `NULL` (default) for each sample's own
+  native frame. The frame decides the job: every sample it covers gets a
+  network built in that frame's coordinates, written into its own
+  `@spatial_network` slot — so this mutates the wrapped children.
+
+  This is **not** a sample selector. An artifact generator takes none,
+  because once the rows are in a slot nothing downstream can tell which
+  the selector admitted (see `adr/0006`). To build over a subset of
+  samples, record a space over them, or subset with `mg[...]` first.
 
 - ...:
 

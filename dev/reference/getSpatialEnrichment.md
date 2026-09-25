@@ -13,7 +13,7 @@ getSpatialEnrichment(
   ...
 )
 
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 getSpatialEnrichment(
   gobject,
   spat_unit = NULL,
@@ -21,7 +21,9 @@ getSpatialEnrichment(
   name = "DWLS",
   output = c("spatEnrObj", "data.table"),
   copy_obj = TRUE,
-  set_defaults = TRUE
+  set_defaults = TRUE,
+  view = NULL,
+  space = NULL
 )
 ```
 
@@ -60,6 +62,16 @@ getSpatialEnrichment(
 
   set default spat_unit and feat_type. Change to FALSE only when
   expression and spat_info are not expected to exist.
+
+- view:
+
+  optional character(1) name of a slotted view; narrows enrichment rows
+  by surviving cell set via
+  [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
+
+- space:
+
+  optional character(1) (no-op; accepted for API symmetry)
 
 ## Value
 

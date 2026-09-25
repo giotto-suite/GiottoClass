@@ -7,14 +7,28 @@ Get feature metadata from giotto object
 ``` r
 getFeatureMetadata(gobject, spat_unit = NULL, feat_type = NULL, ...)
 
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 getFeatureMetadata(
   gobject,
   spat_unit = NULL,
   feat_type = NULL,
   output = c("featMetaObj", "data.table"),
   copy_obj = TRUE,
-  set_defaults = TRUE
+  set_defaults = TRUE,
+  view = NULL,
+  space = NULL
+)
+
+# S4 method for class 'giottoMulti'
+getFeatureMetadata(
+  gobject,
+  spat_unit = NULL,
+  feat_type = NULL,
+  output = c("featMetaObj", "data.table"),
+  copy_obj = TRUE,
+  set_defaults = TRUE,
+  samples = NULL,
+  on_missing = c("error", "drop", "fill")
 )
 ```
 
@@ -48,6 +62,27 @@ getFeatureMetadata(
 
   set default spat_unit and feat_type. Change to FALSE only when
   expression and spat_info are not expected to exist.
+
+- view:
+
+  optional character(1) name of a slotted view
+
+- space:
+
+  optional character(1) name of a slotted space (accepted for API
+  symmetry; feature metadata is feat-keyed so view/space are typically
+  no-ops here)
+
+- samples:
+
+  (giottoMulti) accepted for API symmetry; feature IDs are not
+  sample-namespaced, so this only validates the names
+
+- on_missing:
+
+  (giottoMulti) how assembly treats a keyed child that cannot produce
+  the requested content, and mismatched column sets: `"error"`
+  (default), `"drop"` (intersect), or `"fill"` (union / NA)
 
 ## Value
 

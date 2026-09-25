@@ -16,7 +16,20 @@ getSpatialLocations(
   copy_obj = TRUE,
   verbose = TRUE,
   set_defaults = TRUE,
-  simplify = TRUE
+  simplify = TRUE,
+  view = NULL,
+  space = NULL
+)
+
+# S4 method for class 'giottoMulti'
+getSpatialLocations(
+  gobject,
+  spat_unit = NULL,
+  name = NULL,
+  ...,
+  samples = NULL,
+  space = NULL,
+  view = NULL
 )
 ```
 
@@ -61,6 +74,21 @@ getSpatialLocations(
 
   logical. Whether or not to take object out of a list when there is a
   length of 1.
+
+- view:
+
+  optional character(1) name of a slotted view; when supplied, returned
+  spatial locations are narrowed via
+  [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
+
+- space:
+
+  (giottoMulti) name of a coordinate frame registered on the **multi**.
+  Each child is handed the frame narrowed to itself
+
+- samples:
+
+  (giottoMulti) children to read from. `NULL` = all children
 
 ## Value
 

@@ -58,7 +58,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -94,7 +94,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.create_terra_spatraster</span><span class="op">(</span><span class="va">image_path</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.create_terra_spatraster</span><span class="op">(</span><span class="va">image_path</span>, page <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -104,6 +104,11 @@
 <dl><dt id="arg-image-path">image_path<a class="anchor" aria-label="anchor" href="#arg-image-path"></a></dt>
 <dd><p>existing full filepath to image to be loaded as a terra
 spatRaster</p></dd>
+
+
+<dt id="arg-page">page<a class="anchor" aria-label="anchor" href="#arg-page"></a></dt>
+<dd><p>integer. 1-based page (IFD) to read from a multi-page tif.
+Only consulted for formats that need the JPEG-2000 VRT route.</p></dd>
 
 </dl></div>
     <div class="section level2">

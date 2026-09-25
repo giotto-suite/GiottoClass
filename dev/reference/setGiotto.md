@@ -46,6 +46,12 @@ setGiotto(gobject, x, ...)
 
 # S4 method for class 'giotto,giottoImage'
 setGiotto(gobject, x, ...)
+
+# S4 method for class 'gAny,giottoView'
+setGiotto(gobject, x, ...)
+
+# S4 method for class 'gAny,giottoSpace'
+setGiotto(gobject, x, ...)
 ```
 
 ## Arguments

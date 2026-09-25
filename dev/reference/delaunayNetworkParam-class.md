@@ -50,47 +50,8 @@ delaunayNetworkParam(
 
 - options:
 
-  *geometry only.* passed to
-  [`geometry::delaunayn`](https://rdrr.io/pkg/geometry/man/delaunayn.html)
+  *geometry only.* passed to `geometry::delaunayn`
 
 - Y, j, S:
 
-  *RTriangle only.* passed to
-  [`RTriangle::triangulate`](https://rdrr.io/pkg/RTriangle/man/triangulate.html)
-
-## Slots
-
-- `method`:
-
-  character. backend: `"deldir"`, `"RTriangle"`, or `"geometry"`.
-
-- `maximum_distance`:
-
-  numeric, `"auto"`, or NULL.
-
-- `minimum_k`:
-
-  integer. minimum neighbours per node when filtering.
-
-- `weight_fun`:
-
-  function. weight = `weight_fun(distance)`.
-
-- `include_weight,include_distance`:
-
-  logical. include columns.
-
-- `output`:
-
-  character. See
-  [`createNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createNetwork.md).
-
-- `options`:
-
-  character. *geometry only.* passed to
-  [`geometry::delaunayn`](https://rdrr.io/pkg/geometry/man/delaunayn.html).
-
-- `Y,j`:
-
-  logical; S numeric. *RTriangle only.* passed to
-  [`RTriangle::triangulate`](https://rdrr.io/pkg/RTriangle/man/triangulate.html).
+  *RTriangle only.* passed to `RTriangle::triangulate`

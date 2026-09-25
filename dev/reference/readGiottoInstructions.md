@@ -1,6 +1,8 @@
-# deprecated
+# Read a giotto instruction
 
-Retrieves the instruction associated with the provided parameter
+Deprecated. Use
+[`instructions()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
+instead.
 
 ## Usage
 
@@ -12,7 +14,7 @@ readGiottoInstructions(giotto_instructions, param = NULL, default)
 
 - giotto_instructions:
 
-  giotto object or result from createGiottoInstructions()
+  giotto object or a `giottoInstructions` list
 
 - param:
 
@@ -20,17 +22,9 @@ readGiottoInstructions(giotto_instructions, param = NULL, default)
 
 - default:
 
-  default object to return if parameter to retrieve does not exist
+  value to return when `param` is absent. When missing, an absent
+  `param` is an error.
 
 ## Value
 
-specific parameter
-
-## Examples
-
-``` r
-readGiottoInstructions(
-    giotto_instructions = createGiottoInstructions(),
-    param = "show_plot"
-)
-```
+the value of the requested instruction param

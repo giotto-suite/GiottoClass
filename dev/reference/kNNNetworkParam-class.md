@@ -21,8 +21,7 @@ kNNNetworkParam(
   include_distance = TRUE,
   output = c("auto", "data.table", "igraph", "parquet"),
   engine = c("dbscan", "hnsw"),
-  ef = 200,
-  n_threads_build = 1L
+  ef = 200
 )
 ```
 
@@ -74,43 +73,3 @@ kNNNetworkParam(
   200 – the recall/speed dial. Higher values search more of the graph,
   moving the result closer to the exact `"dbscan"` answer at the cost of
   query time.
-
-- n_threads_build:
-
-  integer or `NULL`. `"hnsw"` only, ignored otherwise. Threads for the
-  index build, default `1`. A parallel build is not reproducible –
-  insertion order varies, so neighbours differ slightly between runs and
-  that propagates to clustering even with a fixed seed. `NULL` inherits
-  the search thread count and trades reproducibility for speed.
-
-## Slots
-
-- `k`:
-
-  integer. number of nearest neighbours per node.
-
-- `filter`:
-
-  logical. apply `minimum_k`/`maximum_distance` post-filter.
-
-- `maximum_distance`:
-
-  numeric or NULL. drop edges longer than this.
-
-- `minimum_k`:
-
-  integer. minimum neighbours per node when filtering.
-
-- `weight_fun`:
-
-  function. weight = `weight_fun(distance)`.
-
-- `include_weight,include_distance`:
-
-  logical. include columns.
-
-- `output`:
-
-  character. one of `"auto"`, `"data.table"`, `"igraph"`, `"parquet"`.
-  See
-  [`createNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createNetwork.md).

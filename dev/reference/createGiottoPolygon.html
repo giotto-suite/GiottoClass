@@ -72,7 +72,7 @@ methods based on what kind of data the file was."><meta property="og:image" cont
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -220,8 +220,8 @@ polygon (default: TRUE)</p></dd>
 
 <dt id="arg-make-valid">make_valid<a class="anchor" aria-label="anchor" href="#arg-make-valid"></a></dt>
 <dd><p>logical. (default <code>FALSE</code>) Whether to run
-<code><a href="https://rspatial.github.io/terra/reference/is.valid.html" class="external-link">terra::makeValid()</a></code> on the geometries. Setting this to <code>TRUE</code> may cause
-read-in polygon attribute information to become out of sync.</p></dd>
+<code><a href="https://rspatial.github.io/terra/reference/is.valid.html" class="external-link">terra::makeValid()</a></code> on the geometries. Polygons that cannot be repaired
+into a polygon are dropped along with their attributes.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>

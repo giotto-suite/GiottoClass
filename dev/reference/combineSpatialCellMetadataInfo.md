@@ -5,7 +5,13 @@ Combine cell metadata with spatial cell information (e.g. polygon)
 ## Usage
 
 ``` r
-combineSpatialCellMetadataInfo(gobject, spat_unit = NULL, feat_type = NULL)
+combineSpatialCellMetadataInfo(
+  gobject,
+  spat_unit = NULL,
+  feat_type = NULL,
+  view = NULL,
+  space = NULL
+)
 ```
 
 ## Arguments
@@ -21,6 +27,16 @@ combineSpatialCellMetadataInfo(gobject, spat_unit = NULL, feat_type = NULL)
 - feat_type:
 
   feature type(s)
+
+- view, space:
+
+  optional
+  [giottoView](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView.md)
+  /
+  [giottoSpace](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace.md)
+  or the name of one slotted on `gobject`. Threaded through to the
+  underlying `getPolygonInfo` and `getCellMetadata` calls so the
+  returned table reflects the view-scoped subset.
 
 ## Value
 

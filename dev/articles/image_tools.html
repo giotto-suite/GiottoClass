@@ -79,7 +79,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -188,34 +188,32 @@ the bitdepth based on the estimated maximum value detected. This mapping
 may not always be optimal.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://giotto-suite.github.io/GiottoClass/">GiottoClass</a></span><span class="op">)</span></span>
-<span><span class="va">gimg</span> <span class="op">&lt;-</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://giotto-suite.github.io/GiottoData/reference/loadSubObjectMini.html" class="external-link">loadSubObjectMini</a></span><span class="op">(</span><span class="st">"giottoLargeImage"</span>, idx <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Warning: [rast] unknown extent</span></span></code></pre>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">gimg</span> <span class="op">&lt;-</span> <span class="fu">GiottoClass</span><span class="fu">:::</span><span class="fu">.update_giotto_image</span><span class="op">(</span><span class="va">gimg</span><span class="op">)</span> <span class="co"># update older images that are missing slots</span></span>
+<span><span class="va">gimg</span> <span class="op">&lt;-</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://giotto-suite.github.io/GiottoData/reference/loadSubObjectMini.html" class="external-link">loadSubObjectMini</a></span><span class="op">(</span><span class="st">"giottoLargeImage"</span>, idx <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">gimg</span> <span class="op">&lt;-</span> <span class="fu">GiottoClass</span><span class="fu">:::</span><span class="fu">.update_giotto_image</span><span class="op">(</span><span class="va">gimg</span><span class="op">)</span> <span class="co"># update older images that are missing slots</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/plot-generic.html">plot</a></span><span class="op">(</span><span class="va">gimg</span><span class="op">)</span></span></code></pre></div>
 <p><img src="image_tools_files/figure-html/unnamed-chunk-1-1.png" class="r-plt" alt="" width="700"></p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/distGiottoImage.html">distGiottoImage</a></span><span class="op">(</span>giottoLargeImage <span class="op">=</span> <span class="va">gimg</span><span class="op">)</span></span></code></pre></div>
 <p><img src="image_tools_files/figure-html/unnamed-chunk-1-2.png" class="r-plt" alt="" width="700"></p>
 <p>Since there are few values beyond 70, try setting
 <code>max_window</code> to 70 in so that the color mapping better
 represents the available information.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gimg</span><span class="op">@</span><span class="va">max_window</span> <span class="op">&lt;-</span> <span class="fl">70</span></span>
 <span><span class="fu"><a href="../reference/plot-generic.html">plot</a></span><span class="op">(</span><span class="va">gimg</span><span class="op">)</span></span></code></pre></div>
 <p><img src="image_tools_files/figure-html/unnamed-chunk-2-1.png" class="r-plt" alt="" width="700"></p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># plot(gimg, max_intensity = 150) # can be used without setting the slot</span></span></code></pre></div>
 <p>The colormap to use for an image can also be edited. The default for
 a greyscale image is a monochrome black to white. Other color scales can
 be supplied. For monochrome colorscales:
 <code><a href="https://giotto-suite.github.io/GiottoUtils/reference/getMonochromeColors.html" class="external-link">getMonochromeColors()</a></code></p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gimg</span><span class="op">@</span><span class="va">colors</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://giotto-suite.github.io/GiottoUtils/reference/getMonochromeColors.html" class="external-link">getMonochromeColors</a></span><span class="op">(</span><span class="st">"green"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/plot-generic.html">plot</a></span><span class="op">(</span><span class="va">gimg</span><span class="op">)</span></span></code></pre></div>
 <p><img src="image_tools_files/figure-html/unnamed-chunk-3-1.png" class="r-plt" alt="" width="700"></p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">viridis_colors</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/grDevices/palettes.html" class="external-link">hcl.colors</a></span><span class="op">(</span><span class="fl">256</span>, palette <span class="op">=</span> <span class="st">"viridis"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/plot-generic.html">plot</a></span><span class="op">(</span><span class="va">gimg</span>, col <span class="op">=</span> <span class="va">viridis_colors</span><span class="op">)</span> <span class="co"># can be used without setting the slot</span></span></code></pre></div>
 <p><img src="image_tools_files/figure-html/unnamed-chunk-3-2.png" class="r-plt" alt="" width="700"></p>
@@ -227,11 +225,11 @@ be supplied. For monochrome colorscales:
 </li>
 <li>make <em>ggplot</em>-based plotting also obey these settings</li>
 </ul>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## R version 4.6.1 (2026-06-24)</span></span>
 <span><span class="co">## Platform: x86_64-pc-linux-gnu</span></span>
-<span><span class="co">## Running under: Ubuntu 24.04.4 LTS</span></span>
+<span><span class="co">## Running under: Ubuntu 24.04.5 LTS</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## Matrix products: default</span></span>
 <span><span class="co">## BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 </span></span>
@@ -250,39 +248,24 @@ be supplied. For monochrome colorscales:
 <span><span class="co">## [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## other attached packages:</span></span>
-<span><span class="co">## [1] GiottoClass_0.6.0</span></span>
+<span><span class="co">## [1] GiottoClass_0.7.2</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## loaded via a namespace (and not attached):</span></span>
-<span><span class="co">##  [1] sass_0.4.10                 generics_0.1.4             </span></span>
-<span><span class="co">##  [3] SparseArray_1.12.2          gtools_3.9.5               </span></span>
-<span><span class="co">##  [5] lattice_0.22-9              digest_0.6.39              </span></span>
-<span><span class="co">##  [7] magrittr_2.0.5              evaluate_1.0.5             </span></span>
-<span><span class="co">##  [9] grid_4.6.1                  fastmap_1.2.0              </span></span>
-<span><span class="co">## [11] jsonlite_2.0.0              Matrix_1.7-5               </span></span>
-<span><span class="co">## [13] backports_1.5.1             GiottoData_0.2.16          </span></span>
-<span><span class="co">## [15] SingleCellExperiment_1.34.0 codetools_0.2-20           </span></span>
-<span><span class="co">## [17] textshaping_1.0.5           jquerylib_0.1.4            </span></span>
-<span><span class="co">## [19] abind_1.4-8                 cli_3.6.6                  </span></span>
-<span><span class="co">## [21] rlang_1.3.0                 XVector_0.52.0             </span></span>
-<span><span class="co">## [23] Biobase_2.72.0              cachem_1.1.0               </span></span>
-<span><span class="co">## [25] DelayedArray_0.38.2         yaml_2.3.12                </span></span>
-<span><span class="co">## [27] otel_0.2.0                  S4Arrays_1.12.0            </span></span>
-<span><span class="co">## [29] tools_4.6.1                 GiottoUtils_0.2.5          </span></span>
-<span><span class="co">## [31] checkmate_2.3.4             SpatialExperiment_1.22.0   </span></span>
-<span><span class="co">## [33] SummarizedExperiment_1.42.0 BiocGenerics_0.58.1        </span></span>
-<span><span class="co">## [35] R6_2.6.1                    magick_2.9.1               </span></span>
-<span><span class="co">## [37] matrixStats_1.5.0           stats4_4.6.1               </span></span>
-<span><span class="co">## [39] lifecycle_1.0.5             Seqinfo_1.2.0              </span></span>
-<span><span class="co">## [41] S4Vectors_0.50.2            fs_2.1.0                   </span></span>
-<span><span class="co">## [43] htmlwidgets_1.6.4           IRanges_2.46.0             </span></span>
-<span><span class="co">## [45] ragg_1.5.2                  desc_1.4.3                 </span></span>
-<span><span class="co">## [47] pkgdown_2.2.1               terra_1.9-46               </span></span>
-<span><span class="co">## [49] bslib_0.12.0                data.table_1.18.6.1        </span></span>
-<span><span class="co">## [51] Rcpp_1.1.2                  systemfonts_1.3.2          </span></span>
-<span><span class="co">## [53] xfun_0.60                   GenomicRanges_1.64.0       </span></span>
-<span><span class="co">## [55] MatrixGenerics_1.24.0       knitr_1.51                 </span></span>
-<span><span class="co">## [57] rjson_0.2.23                htmltools_0.5.9            </span></span>
-<span><span class="co">## [59] rmarkdown_2.31              compiler_4.6.1</span></span></code></pre>
+<span><span class="co">##  [1] Matrix_1.7-5        jsonlite_2.0.0      compiler_4.6.1     </span></span>
+<span><span class="co">##  [4] gtools_3.9.5        Rcpp_1.1.2          jquerylib_0.1.4    </span></span>
+<span><span class="co">##  [7] IRanges_2.46.0      systemfonts_1.3.2   textshaping_1.0.5  </span></span>
+<span><span class="co">## [10] yaml_2.3.12         fastmap_1.2.0       lattice_0.22-9     </span></span>
+<span><span class="co">## [13] R6_2.6.1            XVector_0.52.0      generics_0.1.4     </span></span>
+<span><span class="co">## [16] knitr_1.52          BiocGenerics_0.58.1 backports_1.5.1    </span></span>
+<span><span class="co">## [19] checkmate_2.3.4     desc_1.4.3          bslib_0.12.0       </span></span>
+<span><span class="co">## [22] GiottoUtils_0.2.6   rlang_1.3.0         cachem_1.1.0       </span></span>
+<span><span class="co">## [25] terra_1.9-50        xfun_0.61           fs_2.1.0           </span></span>
+<span><span class="co">## [28] sass_0.4.10         otel_0.2.0          cli_3.6.6          </span></span>
+<span><span class="co">## [31] pkgdown_2.2.1       magrittr_2.0.5      digest_0.6.39      </span></span>
+<span><span class="co">## [34] grid_4.6.1          lifecycle_1.0.5     S4Vectors_0.50.3   </span></span>
+<span><span class="co">## [37] evaluate_1.0.5      data.table_1.18.6.1 codetools_0.2-20   </span></span>
+<span><span class="co">## [40] ragg_1.5.2          stats4_4.6.1        GiottoData_0.3.6   </span></span>
+<span><span class="co">## [43] rmarkdown_2.32      tools_4.6.1         htmltools_0.5.9</span></span></code></pre>
 </div>
 </div>
 </div>

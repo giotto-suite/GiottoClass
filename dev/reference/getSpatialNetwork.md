@@ -18,6 +18,16 @@ getSpatialNetwork(
   verbose = TRUE,
   simplify = TRUE
 )
+
+# S4 method for class 'giottoMulti'
+getSpatialNetwork(
+  gobject,
+  spat_unit = NULL,
+  name = NULL,
+  ...,
+  samples = NULL,
+  view = NULL
+)
 ```
 
 ## Arguments
@@ -60,6 +70,10 @@ getSpatialNetwork(
 
   logical. Whether or not to take object out of a list when there is a
   length of 1.
+
+- samples:
+
+  (giottoMulti) children to read from. `NULL` = all children
 
 ## Value
 

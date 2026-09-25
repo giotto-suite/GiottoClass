@@ -28,6 +28,9 @@ shear(x, fx = 0, fy = 0, x0, y0, ...)
 
 # S4 method for class 'affine2d'
 shear(x, fx = 0, fy = 0, x0, y0, ...)
+
+# S4 method for class 'giottoSpace'
+shear(x, fx = 0, fy = 0, x0, y0, samples = NULL, ...)
 ```
 
 ## Arguments

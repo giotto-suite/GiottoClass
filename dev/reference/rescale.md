@@ -15,7 +15,8 @@ rescale(
   y0,
   spat_unit = ":all:",
   feat_type = ":all:",
-  images = ":all:"
+  images = ":all:",
+  space = NULL
 )
 
 # S4 method for class 'spatLocsObj'
@@ -50,6 +51,12 @@ rescale(x, fx = 1, fy = fx, x0, y0)
 
 # S4 method for class 'affine2d'
 rescale(x, fx = 1, fy = fx, x0, y0)
+
+# S4 method for class 'giottoMulti'
+rescale(x, fx = 1, fy = fx, x0, y0, space = NULL, samples = NULL, ...)
+
+# S4 method for class 'giottoSpace'
+rescale(x, fx = 1, fy = fx, x0, y0, samples = NULL, ...)
 ```
 
 ## Arguments

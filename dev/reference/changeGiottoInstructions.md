@@ -1,8 +1,6 @@
-# deprecated
+# Change giotto instructions
 
-Function to change one or more instructions from giotto object. If more
-than one item is supplied to `params` and `new_values`, use a vector of
-values. Does not call `initialize` on the giotto object
+Deprecated. Use `instructions(gobject, param) <- value` instead.
 
 ## Usage
 
@@ -28,27 +26,18 @@ changeGiottoInstructions(
 
 - new_values:
 
-  new value(s) for parameter(s)
+  new value(s) for `params`
 
 - return_gobject:
 
-  (boolean, default = TRUE) return giotto object
+  logical. Return the giotto object (default `TRUE`) rather than the
+  instructions list alone.
 
 - init_gobject:
 
-  (boolean, default = TRUE) initialize gobject if returning
+  logical. Re-initialize the object when returning it (default `TRUE`)
 
 ## Value
 
-giotto object with one or more changed instructions
-
-## Examples
-
-``` r
-g <- GiottoData::loadGiottoMini("visium")
-
-changeGiottoInstructions(
-    gobject = g, params = "save_plot",
-    new_values = TRUE
-)
-```
+giotto object with changed instructions, or the instructions list when
+`return_gobject = FALSE`

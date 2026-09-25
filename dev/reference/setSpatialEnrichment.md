@@ -14,7 +14,7 @@ setSpatialEnrichment(
   ...
 )
 
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 setSpatialEnrichment(
   gobject,
   x,

@@ -60,7 +60,7 @@ Currently only works for 2D transforms."><meta property="og:image" content="http
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -86,7 +86,7 @@ Currently only works for 2D transforms."><meta property="og:image" content="http
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Affine transformations</h1>
-      <small class="dont-index">Source: <a href="https://github.com/giotto-suite/Giotto/blob/website/R/methods-affine.R" class="external-link"><code>R/methods-affine.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/giotto-suite/Giotto/blob/website/R/methods-affine.R" class="external-link"><code>R/methods-affine.R</code></a>, <a href="https://github.com/giotto-suite/Giotto/blob/website/R/methods-space.R" class="external-link"><code>R/methods-space.R</code></a></small>
       <div class="d-none name"><code>affine.Rd</code></div>
     </div>
 
@@ -105,6 +105,7 @@ Currently only works for 2D transforms.</p>
 <span>  spat_unit <span class="op">=</span> <span class="st">":all:"</span>,</span>
 <span>  feat_type <span class="op">=</span> <span class="st">":all:"</span>,</span>
 <span>  images <span class="op">=</span> <span class="st">":all:"</span>,</span>
+<span>  space <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -136,7 +137,13 @@ Currently only works for 2D transforms.</p>
 <span><span class="fu">affine</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, inv <span class="op">=</span> <span class="cn">FALSE</span>, pre_multiply <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'affine2d,matrix'</span></span>
-<span><span class="fu">affine</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, inv <span class="op">=</span> <span class="cn">FALSE</span>, pre_multiply <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">affine</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, inv <span class="op">=</span> <span class="cn">FALSE</span>, pre_multiply <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S4 method for class 'giottoMulti,ANY'</span></span>
+<span><span class="fu">affine</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, inv <span class="op">=</span> <span class="cn">FALSE</span>, space <span class="op">=</span> <span class="cn">NULL</span>, samples <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S4 method for class 'giottoSpace,ANY'</span></span>
+<span><span class="fu">affine</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, inv <span class="op">=</span> <span class="cn">FALSE</span>, samples <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">

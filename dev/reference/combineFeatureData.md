@@ -9,7 +9,9 @@ combineFeatureData(
   gobject,
   feat_type = NULL,
   spat_unit = NULL,
-  sel_feats = NULL
+  sel_feats = NULL,
+  view = NULL,
+  space = NULL
 )
 ```
 
@@ -30,6 +32,16 @@ combineFeatureData(
 - sel_feats:
 
   selected features (default: NULL or no selection)
+
+- view, space:
+
+  optional
+  [giottoView](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView.md)
+  /
+  [giottoSpace](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace.md)
+  or the name of one slotted on `gobject`. Threaded through to
+  `getFeatureInfo` and `getFeatureMetadata` so feature-level view
+  projections are applied before assembly.
 
 ## Value
 

@@ -34,6 +34,9 @@ x$name <- value
 
 # S4 method for class 'reduceParam'
 x$name <- value
+
+# S4 method for class 'networkParam'
+x$name <- value
 ```
 
 ## Arguments
@@ -76,6 +79,8 @@ Set values by param name into `analyzeParam` inheriting objects
 Set values by param name into `filterParam` inheriting objects
 
 Set values by param name into `reduceParam` inheriting objects
+
+Set values by param name into `networkParam` inheriting objects
 
 ## See also
 

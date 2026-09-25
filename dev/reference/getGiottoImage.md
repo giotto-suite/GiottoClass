@@ -8,7 +8,17 @@ Get giotto one or more image objects from gobject
 getGiottoImage(gobject, name = NULL, ...)
 
 # S4 method for class 'giotto'
-getGiottoImage(gobject, name = NULL)
+getGiottoImage(gobject, name = NULL, view = NULL, space = NULL)
+
+# S4 method for class 'giottoMulti'
+getGiottoImage(
+  gobject,
+  name = NULL,
+  ...,
+  samples = NULL,
+  space = NULL,
+  view = NULL
+)
 ```
 
 ## Arguments
@@ -22,6 +32,14 @@ getGiottoImage(gobject, name = NULL)
   character vector. Names giotto image object(s)
   [`showGiottoImageNames`](https://giotto-suite.github.io/GiottoClass/dev/reference/showGiottoImageNames.md)
   to get
+
+- space:
+
+  (giottoMulti) name of a coordinate frame registered on the **multi**
+
+- samples:
+
+  (giottoMulti) children to read from. `NULL` = all children
 
 ## Value
 

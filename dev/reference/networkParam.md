@@ -11,14 +11,14 @@ directly.
 ## Usage
 
 ``` r
-networkParam(type = c("kNN", "sNN", "delaunay"), ...)
+networkParam(type = c("kNN", "sNN", "delaunay", "radius"), ...)
 ```
 
 ## Arguments
 
 - type:
 
-  one of `"kNN"`, `"sNN"`, `"delaunay"`
+  one of `"kNN"`, `"sNN"`, `"delaunay"`, `"radius"`
 
 - ...:
 

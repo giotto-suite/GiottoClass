@@ -14,6 +14,7 @@ affine(
   spat_unit = ":all:",
   feat_type = ":all:",
   images = ":all:",
+  space = NULL,
   ...
 )
 
@@ -46,6 +47,12 @@ affine(x, y, inv = FALSE, pre_multiply = FALSE, ...)
 
 # S4 method for class 'affine2d,matrix'
 affine(x, y, inv = FALSE, pre_multiply = FALSE, ...)
+
+# S4 method for class 'giottoMulti,ANY'
+affine(x, y, inv = FALSE, space = NULL, samples = NULL, ...)
+
+# S4 method for class 'giottoSpace,ANY'
+affine(x, y, inv = FALSE, samples = NULL, ...)
 ```
 
 ## Arguments

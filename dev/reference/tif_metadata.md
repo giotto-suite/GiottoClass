@@ -1,9 +1,11 @@
 # Read Metadata of a Specialized tif
 
-Use the python package tifffile to get the the XML metadata of a .tif
-file. The R package {xml2} is then used to work with it to retrieve
-specific nodes in the xml data and extract data (JPEG2000, multi-file
-pyramids).
+Read the XML metadata of a .tif file and pull specific nodes out of it.
+The XML is taken from the `ImageDescription` tag, which needs no image
+decoding, so OME-TIFF and qptiff are handled without python. The R
+package {xml2} is used to query the document. Formats that keep their
+metadata in private binary tags instead (lsm, fluoview, nih,
+micromanager) still fall back to the python package tifffile.
 
 ## Usage
 

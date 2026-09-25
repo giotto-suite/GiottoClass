@@ -81,6 +81,9 @@ plot(x, dims = c(1, 2), ...)
 # S4 method for class 'spatialNetworkObj,missing'
 plot(x, y, ...)
 
+# S4 method for class 'spatialNetworkObj,spatLocsObj'
+plot(x, y, ...)
+
 # S4 method for class 'affine2d,missing'
 plot(x, y, ...)
 ```
@@ -399,7 +402,13 @@ available through `...`
 
 - `plot(x = dimObj, y = missing)`: Plot a dimObj
 
-- `plot(x = spatialNetworkObj, y = missing)`: Plot a spatialNetworkObj
+- `plot(x = spatialNetworkObj, y = missing)`: Plot a spatialNetworkObj.
+  Errors: a network has no coordinates of its own, so pass the matching
+  `spatLocsObj` as `y`.
+
+- `plot(x = spatialNetworkObj, y = spatLocsObj)`: Plot a
+  spatialNetworkObj against the `spatLocsObj` that supplies its
+  coordinates. Edges with an endpoint absent from `y` are not drawn.
 
 - `plot(x = affine2d, y = missing)`: Plot a affine2d. blue is start, red
   is end

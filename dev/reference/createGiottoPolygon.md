@@ -116,8 +116,8 @@ createGiottoPolygonsFromGeoJSON(
 
   logical. (default `FALSE`) Whether to run
   [`terra::makeValid()`](https://rspatial.github.io/terra/reference/is.valid.html)
-  on the geometries. Setting this to `TRUE` may cause read-in polygon
-  attribute information to become out of sync.
+  on the geometries. Polygons that cannot be repaired into a polygon are
+  dropped along with their attributes.
 
 - verbose:
 

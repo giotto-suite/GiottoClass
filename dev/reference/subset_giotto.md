@@ -22,6 +22,17 @@ x[i, j, ..., drop = TRUE]
 # S4 method for class 'giotto,missing,missing,missing'
 x[i, j, ..., drop = TRUE]
 
+# S4 method for class 'giottoView'
+subset(
+  x,
+  subset,
+  spat_unit = NULL,
+  feat_type = NULL,
+  negate = FALSE,
+  quote = TRUE,
+  ...
+)
+
 # S4 method for class 'giotto'
 subset(
   x,
@@ -32,6 +43,7 @@ subset(
   feat_type = NULL,
   negate = FALSE,
   quote = TRUE,
+  view = NULL,
   ...
 )
 ```
@@ -53,14 +65,6 @@ subset(
 - subset:
 
   Logical expression evaluated in expression values
-
-- feat_ids, i:
-
-  character vector. Feature IDs to subset the object for.
-
-- cell_ids, j:
-
-  character vector. Cell/spatial IDs to subset the object for.
 
 - spat_unit:
 
@@ -84,6 +88,14 @@ subset(
   `FALSE` when calling from a function, although that may not be
   recommended since NSE output can be unexpected when not used
   interactively.
+
+- feat_ids, i:
+
+  character vector. Feature IDs to subset the object for.
+
+- cell_ids, j:
+
+  character vector. Cell/spatial IDs to subset the object for.
 
 ## Value
 

@@ -8,6 +8,21 @@ relation matrix – the "filter form" complement to
 ## Usage
 
 ``` r
+# S4 method for class 'SpatVector,SpatVector'
+spatRelate(x, y, relation = "intersects", engine = NULL, ...)
+
+# S4 method for class 'spatLocsObj,SpatVector'
+spatRelate(x, y, relation = "intersects", engine = NULL, ...)
+
+# S4 method for class 'giottoSpatial,SpatVector'
+spatRelate(x, y, relation = "intersects", engine = NULL, ...)
+
+# S4 method for class 'giottoSpatial,character'
+spatRelate(x, y, relation = "intersects", ...)
+
+# S4 method for class 'giottoSpatial,sf'
+spatRelate(x, y, relation = "intersects", ...)
+
 # S4 method for class 'giottoSpatial,giottoSpatial'
 spatRelate(x, y, relation = "intersects", ...)
 ```
@@ -29,6 +44,12 @@ spatRelate(x, y, relation = "intersects", ...)
   `character`. Spatial predicate. One of `"intersects"`, `"touches"`,
   `"crosses"`, `"overlaps"`, `"within"`, `"contains"`, `"covers"`,
   `"covered_by"`, `"disjoint"`. Default `"intersects"`.
+
+- engine:
+
+  `character` or `NULL`. Predicate engine. In-memory objects support
+  only `"terra"` (the default when `NULL`); backed stores in GiottoDisk
+  additionally offer `"sedona"` and `"duckdb"`.
 
 - ...:
 

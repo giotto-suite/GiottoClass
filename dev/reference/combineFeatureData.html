@@ -58,7 +58,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -98,7 +98,9 @@
 <span>  <span class="va">gobject</span>,</span>
 <span>  feat_type <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  spat_unit <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  sel_feats <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  sel_feats <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  view <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  space <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -120,6 +122,13 @@
 
 <dt id="arg-sel-feats">sel_feats<a class="anchor" aria-label="anchor" href="#arg-sel-feats"></a></dt>
 <dd><p>selected features (default: NULL or no selection)</p></dd>
+
+
+<dt id="arg-view-space">view, space<a class="anchor" aria-label="anchor" href="#arg-view-space"></a></dt>
+<dd><p>optional <a href="giottoView.html">giottoView</a> / <a href="giottoSpace.html">giottoSpace</a> or
+the name of one slotted on <code>gobject</code>. Threaded through to
+<code>getFeatureInfo</code> and <code>getFeatureMetadata</code> so feature-level view
+projections are applied before assembly.</p></dd>
 
 </dl></div>
     <div class="section level2">

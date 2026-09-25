@@ -60,7 +60,7 @@ existing metadata column (usually clustering labels)"><meta property="og:image" 
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -103,7 +103,8 @@ existing metadata column (usually clustering labels)</p>
 <span>  feat_type <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  annotation_vector <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  cluster_column <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  name <span class="op">=</span> <span class="st">"cell_types"</span></span>
+<span>  name <span class="op">=</span> <span class="st">"cell_types"</span>,</span>
+<span>  replace <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -136,6 +137,15 @@ values based on.</p></dd>
 <dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>
 <dd><p>new name for annotation column</p></dd>
 
+
+<dt id="arg-replace">replace<a class="anchor" aria-label="anchor" href="#arg-replace"></a></dt>
+<dd><p>logical. Only consulted when the target <code>name</code> column
+already exists. <code>TRUE</code> (default) replaces it outright, so a row whose
+cluster value is <code>NA</code> or unmapped becomes <code>NA</code>. <code>FALSE</code> merges: a row the
+new mapping resolves is overwritten, a row it yields <code>NA</code> for keeps its
+existing value, which is what makes iterative annotation refinement
+possible.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -149,7 +159,13 @@ and you need to provide an annotation vector like this:</p><ul><li><p>1. identif
 cell_types =  c('T-cell', 'B-cell', 'Stromal')</p></li>
 <li><p>3. provide original cluster names to previous vector,
 e.g. names(cell_types) = c(2, 1, 3)</p></li>
-</ul></div>
+</ul><p><code>NA</code> values in <code>cluster_column</code> are tolerated and carry through to the
+new annotation column as <code>NA</code> – common on a <code>giottoMulti</code>, where joint
+<code>@cell_metadata</code> keeps the full population while the analysis pool is
+narrower. A cluster value with no entry in <code>annotation_vector</code> also
+becomes <code>NA</code>, and both it and any unused <code>annotation_vector</code> key are
+reported rather than raised.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

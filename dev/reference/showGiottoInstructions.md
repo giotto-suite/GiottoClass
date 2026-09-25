@@ -1,6 +1,8 @@
-# deprecated
+# Show giotto instructions
 
-Function to display all instructions from giotto object
+Deprecated. Use
+[`instructions()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
+instead.
 
 ## Usage
 
@@ -16,12 +18,4 @@ showGiottoInstructions(gobject)
 
 ## Value
 
-named vector with giotto instructions
-
-## Examples
-
-``` r
-g <- GiottoData::loadGiottoMini("visium")
-
-showGiottoInstructions(g)
-```
+named list of giotto instructions

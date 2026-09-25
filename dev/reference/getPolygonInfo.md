@@ -15,8 +15,20 @@ getPolygonInfo(
   return_giottoPolygon = FALSE,
   verbose = TRUE,
   simplify = TRUE,
+  view = NULL,
+  space = NULL,
   ...,
   polygon_name = deprecated()
+)
+
+# S4 method for class 'giottoMulti'
+getPolygonInfo(
+  gobject,
+  name = NULL,
+  ...,
+  samples = NULL,
+  space = NULL,
+  view = NULL
 )
 ```
 
@@ -48,9 +60,23 @@ getPolygonInfo(
   logical. Whether or not to take object out of a list when there is a
   length of 1.
 
+- view:
+
+  optional character(1) name of a slotted view; when supplied, returned
+  polygons are narrowed by surviving cell set via
+  [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
+
+- space:
+
+  (giottoMulti) name of a coordinate frame registered on the **multi**
+
 - polygon_name:
 
   deprecated. Use `name`
+
+- samples:
+
+  (giottoMulti) children to read from. `NULL` = all children
 
 ## Value
 

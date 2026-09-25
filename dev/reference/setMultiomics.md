@@ -7,7 +7,7 @@ Set a multiomics integration result in a Giotto object
 ``` r
 setMultiomics(gobject, x, spat_unit = NULL, feat_type = NULL, ...)
 
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 setMultiomics(
   gobject,
   x,

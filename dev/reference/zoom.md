@@ -9,6 +9,9 @@ drawing, no pre-existing plot is needed.
 ## Usage
 
 ``` r
+# S4 method for class 'giottoSpace'
+zoom(x, f = 1, samples = NULL, ...)
+
 # S4 method for class 'giottoLargeImage'
 zoom(x, e = terra::draw(), ...)
 
@@ -25,14 +28,14 @@ zoom(x, e = terra::draw(), ...)
 
   giotto image, giottoPolygon, or giottoPoints object
 
-- e:
-
-  SpatExtent
-
 - ...:
 
   additional parameters to pass to
   [`plot()`](https://giotto-suite.github.io/GiottoClass/dev/reference/plot-generic.md)
+
+- e:
+
+  SpatExtent
 
 ## Value
 

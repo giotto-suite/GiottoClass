@@ -10,10 +10,10 @@ HNSW is *approximate*: recall is high but not guaranteed to be 1.0. Use
 exactness matters, or on small data where the exact search is both
 faster and exact.
 
-Repeated calls are reproducible by default. The index build is the only
+Repeated calls are reproducible. The index build is the only
 nondeterministic phase – concurrent insertion makes the graph depend on
-thread interleaving – so `n_threads_build` defaults to `1`. Searching is
-unaffected and stays parallel.
+thread interleaving – so it always runs on one thread and this cannot be
+changed. Searching is unaffected and stays parallel over `n_threads`.
 
 ## Usage
 
@@ -26,7 +26,6 @@ hnswKNN(
   ef_construction = 200L,
   ef = 200L,
   n_threads = NULL,
-  n_threads_build = 1L,
   ...
 )
 ```
@@ -74,17 +73,8 @@ hnswKNN(
   integer. Threads for the **search**. Defaults to
   [`GiottoUtils::determine_cores()`](https://giotto-suite.github.io/GiottoUtils/reference/determine_cores.html).
   The search is deterministic at any thread count, so this can be left
-  parallel.
-
-- n_threads_build:
-
-  integer or `NULL`. Threads for the index **build**, default `1`. A
-  multithreaded build is not reproducible: insertion order varies, so
-  the graph and hence the neighbours differ slightly between runs, which
-  propagates to clustering even with a fixed seed. Building on one
-  thread makes repeated calls bit-identical. Set to `NULL` to inherit
-  `n_threads` and trade reproducibility for speed while exploring –
-  measured at 11.8s against 2.82s on 158,662 cells.
+  parallel. The index **build** is not threaded and is not configurable;
+  see Details.
 
 - ...:
 

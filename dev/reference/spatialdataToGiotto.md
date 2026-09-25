@@ -81,5 +81,5 @@ Giotto object
 Function in beta. Converts a structured SpatialData file into a Giotto
 object. The returned Giotto Object will take default insructions with
 the exception of the python path, which may be customized. See
-[`changeGiottoInstructions`](https://giotto-suite.github.io/GiottoClass/dev/reference/changeGiottoInstructions.md)
+[`instructions`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
 to modify instructions after creation.

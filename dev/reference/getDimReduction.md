@@ -7,7 +7,7 @@ Function to get a dimension reduction object
 ``` r
 getDimReduction(gobject, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
 
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 getDimReduction(
   gobject,
   spat_unit = NULL,
@@ -16,7 +16,9 @@ getDimReduction(
   reduction = c("cells", "feats"),
   reduction_method = NULL,
   output = c("dimObj", "matrix"),
-  set_defaults = TRUE
+  set_defaults = TRUE,
+  view = NULL,
+  space = NULL
 )
 ```
 
@@ -59,6 +61,17 @@ getDimReduction(
 
   set default spat_unit and feat_type. Change to FALSE only when
   expression and spat_info are not expected to exist.
+
+- view:
+
+  optional character(1) name of a slotted view; narrows returned cells
+  via
+  [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
+
+- space:
+
+  optional character(1) (no-op on dim reductions; accepted for API
+  symmetry)
 
 ## Value
 

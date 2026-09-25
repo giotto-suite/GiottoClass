@@ -58,7 +58,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -111,7 +111,7 @@
 <span>  top_shared <span class="op">=</span> <span class="fl">3</span>,</span>
 <span>  engine <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dbscan"</span>, <span class="st">"hnsw"</span><span class="op">)</span>,</span>
 <span>  ef <span class="op">=</span> <span class="fl">200</span>,</span>
-<span>  n_threads_build <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  keep_knn <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -196,13 +196,14 @@ graph, moving the result closer to the exact <code>"dbscan"</code> answer at the
 of query time.</p></dd>
 
 
-<dt id="arg-n-threads-build">n_threads_build<a class="anchor" aria-label="anchor" href="#arg-n-threads-build"></a></dt>
-<dd><p>integer or <code>NULL</code>. <code>"hnsw"</code> only, ignored otherwise.
-Threads for the index build, default <code>1</code>. A parallel build is not
-reproducible – insertion order varies, so neighbours differ slightly
-between runs and that propagates to clustering even with a fixed seed.
-<code>NULL</code> inherits the search thread count and trades reproducibility for
-speed.</p></dd>
+<dt id="arg-keep-knn">keep_knn<a class="anchor" aria-label="anchor" href="#arg-keep-knn"></a></dt>
+<dd><p>logical. For <code>type = "sNN"</code>, also store the kNN the sNN
+was built from, under <code>kNN.&lt;dim_reduction_to_use&gt;</code>. Default <code>TRUE</code>. An
+sNN is a transform of a kNN and the kNN is the expensive half; keeping it
+costs one more edge table and lets anything else that needs the same
+neighbourhood – <code>runUMAP()</code>, in particular – use that graph instead of
+repeating an identical search. Only applies to the dimension-reduction
+path.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>

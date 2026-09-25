@@ -145,6 +145,8 @@ Set (and replace) Giotto-native data objects in a Giotto Object
   [`setGiotto(`*`<giotto>`*`,`*`<spatialNetworkObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
   [`setGiotto(`*`<giotto>`*`,`*`<giottoLargeImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
   [`setGiotto(`*`<giotto>`*`,`*`<giottoImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<giottoView>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<giottoSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
   : Set giotto subobjects into giotto object
 - [`setCellMetadata()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setCellMetadata.md)
   : Set cell metadata
@@ -530,6 +532,10 @@ GiottoClass defined classes
 - [`cellMetaObj-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/cellMetaObj-class.md)
   [`cellMetaObj`](https://giotto-suite.github.io/GiottoClass/dev/reference/cellMetaObj-class.md)
   : S4 cellMetaObj
+- [`combinedSpace-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/combinedSpace-class.md)
+  : Class for a frame shared by named samples
+- [`dataTableCoordinator()`](https://giotto-suite.github.io/GiottoClass/dev/reference/dataTableCoordinator-class.md)
+  : dataTableCoordinator
 - [`delaunayNetworkParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/delaunayNetworkParam-class.md)
   : delaunayNetworkParam — Delaunay Network Param
 - [`dimObj-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/dimObj-class.md)
@@ -560,12 +566,19 @@ GiottoClass defined classes
 - [`giottoLargeImage-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoLargeImage-class.md)
   [`giottoLargeImage`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoLargeImage-class.md)
   : S4 giottoLargeImage Class
+- [`giottoMulti-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoMulti-class.md)
+  [`giottoMulti`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoMulti-class.md)
+  : S4 giottoMulti
 - [`giottoPoints-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoPoints-class.md)
   [`giottoPoints`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoPoints-class.md)
   : S4 giotto points Class
 - [`giottoPolygon-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoPolygon-class.md)
   [`giottoPolygon`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoPolygon-class.md)
   : S4 giotto polygon Class
+- [`giottoSpace-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-class.md)
+  : Class for coordinate-frame recipes
+- [`giottoView-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView-class.md)
+  : Class for subset / narrowing recipes
 - [`kNNNetworkParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/kNNNetworkParam-class.md)
   : kNNNetworkParam — k-Nearest-Neighbour Network Param
 - [`labelProportionsParam-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/labelProportionsParam-class.md)
@@ -584,9 +597,13 @@ GiottoClass defined classes
   [`` `[`( ``*`<overlapPointDT>`*`,`*`<missing>`*`,`*`<gIndex>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/overlapPointDT-class.md)
   [`` `[`( ``*`<overlapPointDT>`*`,`*`<gIndex>`*`,`*`<gIndex>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/overlapPointDT-class.md)
   : Polygon and Point Relationships
+- [`perSampleSpace-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/perSampleSpace-class.md)
+  : Class for a frame applied to each sample independently
 - [`processParam-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/processParam-class.md)
   [`processParam`](https://giotto-suite.github.io/GiottoClass/dev/reference/processParam-class.md)
   : Parameter Classes for Data Processing Operations
+- [`radiusNetworkParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/radiusNetworkParam-class.md)
+  : Fixed-radius network parameters
 - [`reduceParam-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/reduceParam-class.md)
   [`reduceParam`](https://giotto-suite.github.io/GiottoClass/dev/reference/reduceParam-class.md)
   : Parameter Classes for Data Reduction Operations
@@ -604,6 +621,8 @@ GiottoClass defined classes
 - [`terraVectData-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/terraVectData-class.md)
   [`terraVectData`](https://giotto-suite.github.io/GiottoClass/dev/reference/terraVectData-class.md)
   : Basic class for terra SpatVector-based objects
+- [`viewCoordinator-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/viewCoordinator-class.md)
+  : viewCoordinator virtual class
 
 ## Networks
 
@@ -614,7 +633,7 @@ Network creation and tools
 - [`edge_distances()`](https://giotto-suite.github.io/GiottoClass/dev/reference/edge_distances.md)
   : Calculate network edge euclidean distances
 - [`createSpatialNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialNetwork.md)
-  : Create spatial network
+  : Create spatial centroid connectivity network
 - [`createSpatialDelaunayNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialDelaunayNetwork.md)
   : Create a spatial Delaunay network
 - [`createSpatialFeaturesKNNnetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialFeaturesKNNnetwork.md)
@@ -623,8 +642,6 @@ Network creation and tools
   : createSpatialKNNnetwork
 - [`createSpatialWeightMatrix()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialWeightMatrix.md)
   : Create a spatial weight matrix
-- [`spat_net_to_igraph()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spat_net_to_igraph.md)
-  : Convert spatialNetworkObj to igraph
 - [`createNearestNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createNearestNetwork.md)
   : createNearestNetwork
 - [`addNetworkLayout()`](https://giotto-suite.github.io/GiottoClass/dev/reference/addNetworkLayout.md)
@@ -674,6 +691,8 @@ Spatial manipulation and terra-based functions
   [`flip(`*`<SpatExtent>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/flip.md)
   [`flip(`*`<giottoAffineImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/flip.md)
   [`flip(`*`<affine2d>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/flip.md)
+  [`flip(`*`<giottoMulti>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/flip.md)
+  [`flip(`*`<giottoSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/flip.md)
   : Flip an object
 - [`crop(`*`<giottoBinPoints>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
   [`crop(`*`<giottoLargeImage>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
@@ -681,6 +700,8 @@ Spatial manipulation and terra-based functions
   [`crop(`*`<spatLocsObj>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
   [`crop(`*`<giottoPoints>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
   [`crop(`*`<giottoPolygon>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
+  [`crop(`*`<giottoView>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
+  [`crop(`*`<gAny>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
   : Crop to a spatial subset
 - [`t(`*`<giotto>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/transpose.md)
   [`t(`*`<spatLocsObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/transpose.md)
@@ -690,7 +711,9 @@ Spatial manipulation and terra-based functions
   [`t(`*`<giottoAffineImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/transpose.md)
   [`t(`*`<affine2d>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/transpose.md)
   : Transpose
-- [`spin(`*`<giotto>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md)
+- [`spin(`*`<giottoMulti>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md)
+  [`spin(`*`<giottoSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md)
+  [`spin(`*`<giotto>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md)
   [`spin(`*`<giottoPolygon>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md)
   [`spin(`*`<giottoPoints>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md)
   [`spin(`*`<spatLocsObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md)
@@ -699,7 +722,9 @@ Spatial manipulation and terra-based functions
   [`spin(`*`<giottoAffineImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md)
   [`spin(`*`<affine2d>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md)
   : Spin an object
-- [`spatShift(`*`<giotto>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.md)
+- [`spatShift(`*`<giottoMulti>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.md)
+  [`spatShift(`*`<giottoSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.md)
+  [`spatShift(`*`<giotto>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.md)
   [`spatShift(`*`<SpatExtent>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.md)
   [`spatShift(`*`<spatLocsObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.md)
   [`spatShift(`*`<data.frame>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.md)
@@ -719,6 +744,8 @@ Spatial manipulation and terra-based functions
   [`rescale(`*`<giottoLargeImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/rescale.md)
   [`rescale(`*`<giottoAffineImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/rescale.md)
   [`rescale(`*`<affine2d>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/rescale.md)
+  [`rescale(`*`<giottoMulti>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/rescale.md)
+  [`rescale(`*`<giottoSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/rescale.md)
   : Rescale an object
 - [`shear(`*`<spatLocsObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/shear.md)
   [`shear(`*`<SpatVector>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/shear.md)
@@ -727,6 +754,7 @@ Spatial manipulation and terra-based functions
   [`shear(`*`<giottoLargeImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/shear.md)
   [`shear(`*`<giottoAffineImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/shear.md)
   [`shear(`*`<affine2d>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/shear.md)
+  [`shear(`*`<giottoSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/shear.md)
   : Apply a shear tranform
 - [`affine(`*`<giotto>`*`,`*`<matrix>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md)
   [`affine(`*`<missing>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md)
@@ -739,6 +767,8 @@ Spatial manipulation and terra-based functions
   [`affine(`*`<giottoLargeImage>`*`,`*`<matrix>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md)
   [`affine(`*`<giottoAffineImage>`*`,`*`<matrix>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md)
   [`affine(`*`<affine2d>`*`,`*`<matrix>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md)
+  [`affine(`*`<giottoMulti>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md)
+  [`affine(`*`<giottoSpace>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md)
   : Affine transformations
 - [`hull(`*`<spatLocsObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/hull.md)
   [`hull(`*`<giottoSpatial>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/hull.md)
@@ -797,6 +827,7 @@ Standard generics for Giotto exported classes
   [`plot(`*`<spatLocsObj>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/plot-generic.md)
   [`plot(`*`<dimObj>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/plot-generic.md)
   [`plot(`*`<spatialNetworkObj>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/plot-generic.md)
+  [`plot(`*`<spatialNetworkObj>`*`,`*`<spatLocsObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/plot-generic.md)
   [`plot(`*`<affine2d>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/plot-generic.md)
   : Preview a Giotto spatial object
 
@@ -868,6 +899,7 @@ Standard generics for Giotto exported classes
   [`` `[`( ``*`<giotto>`*`,`*`<missing>`*`,`*`<gIndex>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/subset_giotto.md)
   [`` `[`( ``*`<giotto>`*`,`*`<gIndex>`*`,`*`<gIndex>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/subset_giotto.md)
   [`` `[`( ``*`<giotto>`*`,`*`<missing>`*`,`*`<missing>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/subset_giotto.md)
+  [`subset(`*`<giottoView>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/subset_giotto.md)
   [`subset(`*`<giotto>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/subset_giotto.md)
   :
 
@@ -892,6 +924,7 @@ Standard generics for Giotto exported classes
   [`` `$`( ``*`<analyzeParam>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/subset_dollar.md)
   [`` `$`( ``*`<filterParam>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/subset_dollar.md)
   [`` `$`( ``*`<reduceParam>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/subset_dollar.md)
+  [`` `$`( ``*`<networkParam>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/subset_dollar.md)
   :
 
   Subset part of an object with `$`
@@ -906,6 +939,7 @@ Standard generics for Giotto exported classes
   [`` `$<-`( ``*`<analyzeParam>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/replace_dollar.md)
   [`` `$<-`( ``*`<filterParam>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/replace_dollar.md)
   [`` `$<-`( ``*`<reduceParam>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/replace_dollar.md)
+  [`` `$<-`( ``*`<networkParam>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/replace_dollar.md)
   :
 
   Replace part of an object with `$<-`
@@ -1019,10 +1053,13 @@ Hierarchical tagging generics for Giotto exported classes
   [`` `prov<-`( ``*`<provData>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_schema.md)
   : Giotto schema
 - [`featIDs(`*`<giottoBinPoints>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
+  [`spatIDs(`*`<giottoMulti>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
+  [`featIDs(`*`<giottoMulti>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
   [`spatIDs(`*`<giotto>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
   [`spatIDs(`*`<exprObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
   [`spatIDs(`*`<spatLocsObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
   [`spatIDs(`*`<cellMetaObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
+  [`spatIDs(`*`<igraph>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
   [`spatIDs(`*`<spatialNetworkObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
   [`spatIDs(`*`<dimObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
   [`spatIDs(`*`<giottoPolygon>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatIDs-generic.md)
@@ -1066,6 +1103,8 @@ As coercion functions
   [`as.data.table(`*`<giottoPoints>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.data.table.md)
   [`as.data.frame(`*`<overlapPointDT>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.data.table.md)
   [`as.data.frame(`*`<overlapIntensityDT>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.data.table.md)
+  [`as.data.table(`*`<spatialNetworkObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.data.table.md)
+  [`as.data.table(`*`<nnNetObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.data.table.md)
   : Coerce to data.table
 - [`as.matrix(`*`<spatLocsObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.matrix.md)
   [`as.matrix(`*`<overlapPointDT>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.matrix.md)
@@ -1246,8 +1285,102 @@ present in the released version.
   : Construct a labelProportionsParam
 - [`hnswKNN()`](https://giotto-suite.github.io/GiottoClass/dev/reference/hnswKNN.md)
   : Approximate k-nearest neighbors via HNSW
-- [`spatRelate(`*`<giottoSpatial>`*`,`*`<giottoSpatial>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatRelate.md)
+- [`spatRelate(`*`<SpatVector>`*`,`*`<SpatVector>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatRelate.md)
+  [`spatRelate(`*`<spatLocsObj>`*`,`*`<SpatVector>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatRelate.md)
+  [`spatRelate(`*`<giottoSpatial>`*`,`*`<SpatVector>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatRelate.md)
+  [`spatRelate(`*`<giottoSpatial>`*`,`*`<character>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatRelate.md)
+  [`spatRelate(`*`<giottoSpatial>`*`,`*`<sf>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatRelate.md)
+  [`spatRelate(`*`<giottoSpatial>`*`,`*`<giottoSpatial>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatRelate.md)
   : Spatial relationship as a filter
 - [`subset(`*`<giottoPolygon>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/subset_terravectdata.md)
   [`subset(`*`<giottoPoints>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/subset_terravectdata.md)
   : Subset terraVectData subobjects
+- [`as.igraph(`*`<spatialNetworkObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.igraph.md)
+  [`as.igraph(`*`<nnNetObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.igraph.md)
+  : Coerce to igraph
+- [`nnToUwot()`](https://giotto-suite.github.io/GiottoClass/dev/reference/nnToUwot.md)
+  : Convert a kNN object to uwot's precomputed-neighbor format
+
+### Multi-sample (giottoMulti)
+
+- [`createGiottoMulti()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoMulti.md)
+  : Create a giottoMulti object
+
+- [`as-giottoMulti`](https://giotto-suite.github.io/GiottoClass/dev/reference/as-giottoMulti.md)
+  [`as,giotto,giottoMulti-method`](https://giotto-suite.github.io/GiottoClass/dev/reference/as-giottoMulti.md)
+  :
+
+  Wrap a single `giotto` as a one-child `giottoMulti`.
+
+- [`subset(`*`<giottoMulti>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/subset-giottoMulti.md)
+  : Subset a giottoMulti
+
+- [`gmultiGroup()`](https://giotto-suite.github.io/GiottoClass/dev/reference/gmultiGroup.md)
+  [`` `gmultiGroup<-`() ``](https://giotto-suite.github.io/GiottoClass/dev/reference/gmultiGroup.md)
+  [`gmultiGroups()`](https://giotto-suite.github.io/GiottoClass/dev/reference/gmultiGroup.md)
+  : gmulti sample group accessor
+
+- [`gmultiMapping()`](https://giotto-suite.github.io/GiottoClass/dev/reference/gmultiMapping.md)
+  [`` `gmultiMapping<-`() ``](https://giotto-suite.github.io/GiottoClass/dev/reference/gmultiMapping.md)
+  : gmulti federation mapping accessor
+
+- [`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md)
+  : Select samples within a gmulti-scoped view
+
+### Views and spaces
+
+- [`giottoView()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView.md)
+  [`` `giottoView<-`() ``](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView.md)
+  [`giottoViews()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView.md)
+  : Slotted views on a giotto object
+- [`` `[`( ``*`<giottoView>`*`,`*`<ANY>`*`,`*`<ANY>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView-access.md)
+  [`` `[[`( ``*`<giottoView>`*`,`*`<ANY>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView-access.md)
+  [`` `[[<-`( ``*`<giottoView>`*`,`*`<ANY>`*`,`*`<ANY>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView-access.md)
+  [`length(`*`<giottoView>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView-access.md)
+  [`names(`*`<giottoView>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView-access.md)
+  [`as.list(`*`<giottoView>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView-access.md)
+  [`` `+`( ``*`<giottoView>`*`,`*`<giottoView>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView-access.md)
+  [`show(`*`<giottoView>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView-access.md)
+  : Access a view recipe
+- [`giottoSpace()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace.md)
+  [`` `giottoSpace<-`() ``](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace.md)
+  [`giottoSpaces()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace.md)
+  : Slotted spaces on a giotto object
+- [`` `[`( ``*`<giottoSpace>`*`,`*`<ANY>`*`,`*`<ANY>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-access.md)
+  [`` `[[`( ``*`<giottoSpace>`*`,`*`<ANY>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-access.md)
+  [`length(`*`<giottoSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-access.md)
+  [`names(`*`<giottoSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-access.md)
+  [`as.list(`*`<combinedSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-access.md)
+  [`as.list(`*`<perSampleSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-access.md)
+  [`` `+`( ``*`<combinedSpace>`*`,`*`<combinedSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-access.md)
+  [`` `+`( ``*`<perSampleSpace>`*`,`*`<perSampleSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-access.md)
+  [`` `+`( ``*`<giottoSpace>`*`,`*`<giottoSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-access.md)
+  [`show(`*`<combinedSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-access.md)
+  [`show(`*`<perSampleSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace-access.md)
+  : Access a coordinate-frame recipe
+- [`combinedSpace()`](https://giotto-suite.github.io/GiottoClass/dev/reference/space-constructors.md)
+  [`perSampleSpace()`](https://giotto-suite.github.io/GiottoClass/dev/reference/space-constructors.md)
+  : Build a coordinate frame directly
+- [`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
+  : materialize a giottoView into a new gobject
+- [`defaultViewCoordinator()`](https://giotto-suite.github.io/GiottoClass/dev/reference/defaultViewCoordinator.md)
+  : defaultViewCoordinator
+- [`prepareIds()`](https://giotto-suite.github.io/GiottoClass/dev/reference/prepareIds.md)
+  : prepareIds
+- [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
+  : resolveSubobject
+
+### History and manifests
+
+- [`ghistory_records()`](https://giotto-suite.github.io/GiottoClass/dev/reference/ghistory_records.md)
+  : Structured giotto object history
+- [`recordGiottoStep()`](https://giotto-suite.github.io/GiottoClass/dev/reference/recordGiottoStep.md)
+  : Record a giotto object history step
+- [`objHistory_ndjson()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory_ndjson.md)
+  : Giotto object history as NDJSON
+- [`objManifest(`*`<giotto>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest.md)
+  : Giotto object manifest
+- [`objManifest_json()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest_json.md)
+  : Giotto object manifest as JSON
+- [`manifestDiff()`](https://giotto-suite.github.io/GiottoClass/dev/reference/manifestDiff.md)
+  : Diff two giotto manifests

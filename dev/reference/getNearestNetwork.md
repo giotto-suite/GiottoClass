@@ -13,7 +13,7 @@ getNearestNetwork(
   ...
 )
 
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 getNearestNetwork(
   gobject,
   spat_unit = NULL,

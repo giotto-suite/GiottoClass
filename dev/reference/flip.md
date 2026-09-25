@@ -14,6 +14,7 @@ flip(
   y0 = 0,
   spat_unit = ":all:",
   feat_type = ":all:",
+  space = NULL,
   ...
 )
 
@@ -37,6 +38,20 @@ flip(x, direction = "vertical", x0 = 0, y0 = 0)
 
 # S4 method for class 'affine2d'
 flip(x, direction = "vertical", x0 = 0, y0 = 0)
+
+# S4 method for class 'giottoMulti'
+flip(
+  x,
+  direction = "vertical",
+  x0 = 0,
+  y0 = 0,
+  space = NULL,
+  samples = NULL,
+  ...
+)
+
+# S4 method for class 'giottoSpace'
+flip(x, direction = "vertical", x0 = 0, y0 = 0, samples = NULL, ...)
 ```
 
 ## Arguments

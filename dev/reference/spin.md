@@ -5,8 +5,22 @@ Spin (rotate) an object spatially (usually limited to xy rotations)
 ## Usage
 
 ``` r
+# S4 method for class 'giottoMulti'
+spin(x, angle, x0 = NULL, y0 = NULL, space = NULL, samples = NULL, ...)
+
+# S4 method for class 'giottoSpace'
+spin(x, angle, x0 = NULL, y0 = NULL, samples = NULL, ...)
+
 # S4 method for class 'giotto'
-spin(x, angle, x0 = NULL, y0 = NULL, spat_unit = ":all:", feat_type = ":all:")
+spin(
+  x,
+  angle,
+  x0 = NULL,
+  y0 = NULL,
+  spat_unit = ":all:",
+  feat_type = ":all:",
+  space = NULL
+)
 
 # S4 method for class 'giottoPolygon'
 spin(x, angle, x0 = NULL, y0 = NULL)
@@ -69,6 +83,10 @@ spin(x, angle = NULL, x0 = NULL, y0 = NULL)
   numeric. y-coordinate of the center of rotation. Defaults to center y
   val if not given.
 
+- ...:
+
+  additional params to pass
+
 - spat_unit:
 
   character vector. spatial units to affect
@@ -100,10 +118,6 @@ spin(x, angle = NULL, x0 = NULL, y0 = NULL)
 
   character. Named vector of colnames of x, y, (z) coordinate columns.
   Default is `c("sdimx", "sdimy", "sdimz")`
-
-- ...:
-
-  additional params to pass
 
 ## Value
 

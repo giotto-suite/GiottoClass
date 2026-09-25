@@ -29,6 +29,12 @@ as.data.frame(x, ...)
 
 # S3 method for class 'overlapIntensityDT'
 as.data.frame(x, ...)
+
+# S3 method for class 'spatialNetworkObj'
+as.data.table(x, ...)
+
+# S3 method for class 'nnNetObj'
+as.data.table(x, ...)
 ```
 
 ## Arguments

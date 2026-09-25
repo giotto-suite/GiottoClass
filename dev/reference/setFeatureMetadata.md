@@ -7,7 +7,7 @@ Function to set feature metadata into giotto object
 ``` r
 setFeatureMetadata(gobject, x, spat_unit = NULL, feat_type = NULL, ...)
 
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 setFeatureMetadata(
   gobject,
   x,

@@ -66,7 +66,7 @@ slot it checks, see details."><meta property="og:image" content="https://giotto-
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -118,6 +118,9 @@ slot it checks, see details.</p>
 <span>  dim_reduction_to_use <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  dim_reduction_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  svkey <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  view <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  space <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  samples <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  debug <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
@@ -188,6 +191,15 @@ to use</p></dd>
 <dt id="arg-svkey">svkey<a class="anchor" aria-label="anchor" href="#arg-svkey"></a></dt>
 <dd><p>use a <code>svkey</code>. Other params will be ignored. This is just
 syntactic sugar for <code>svkey@get(gobject)</code></p></dd>
+
+
+<dt id="arg-samples">samples<a class="anchor" aria-label="anchor" href="#arg-samples"></a></dt>
+<dd><p>character. (giottoMulti only) optional vector of sample
+names to narrow the joint output to. Joint slots (<code>@expression</code>,
+<code>@cell_metadata</code>) honor this directly; per-child-only slots (spatial
+locations, polygon info) remain inaccessible from <code>spatValues(mg, ...)</code>
+regardless — use the joint-level slots as the ground truth and avoid
+reaching into <code>mg[[sample]]</code> for per-child content.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>

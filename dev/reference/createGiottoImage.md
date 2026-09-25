@@ -116,12 +116,9 @@ a giottoImage object
 ## Details
 
 image_transformations: transformation options from magick library
-\[**flip_x_axis**\] flip x-axis
-([`image_flop`](https://docs.ropensci.org/magick/reference/transform.html))
-\[**flip_y_axis**\] flip y-axis
-([`image_flip`](https://docs.ropensci.org/magick/reference/transform.html))
-Example: image_transformations = c(flip_x_axis, flip_y_axis); first flip
-x-axis and then y-axis
+\[**flip_x_axis**\] flip x-axis (`image_flop`) \[**flip_y_axis**\] flip
+y-axis (`image_flip`) Example: image_transformations = c(flip_x_axis,
+flip_y_axis); first flip x-axis and then y-axis
 
 ## Examples
 

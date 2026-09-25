@@ -37,6 +37,9 @@ x$name
 
 # S4 method for class 'reduceParam'
 x$name
+
+# S4 method for class 'networkParam'
+x$name
 ```
 
 ## Arguments
@@ -79,6 +82,8 @@ Select param from `analyzeParam` inheriting objects
 Select param from `filterParam` inheriting objects
 
 Select param from `reduceParam` inheriting objects
+
+Select param from `networkParam` inheriting objects
 
 ## See also
 

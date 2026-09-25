@@ -62,7 +62,7 @@ so the resulting graph is undirected — one edge per pair."><meta property="og:
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -109,8 +109,7 @@ so the resulting graph is <strong>undirected</strong> — one edge per pair.</p>
 <span>  include_distance <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  output <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"data.table"</span>, <span class="st">"igraph"</span>, <span class="st">"parquet"</span><span class="op">)</span>,</span>
 <span>  engine <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dbscan"</span>, <span class="st">"hnsw"</span><span class="op">)</span>,</span>
-<span>  ef <span class="op">=</span> <span class="fl">200</span>,</span>
-<span>  n_threads_build <span class="op">=</span> <span class="fl">1L</span></span>
+<span>  ef <span class="op">=</span> <span class="fl">200</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -158,45 +157,6 @@ network's undirected edges in 11.8s against 79.9s. Requires
 default 200 – the recall/speed dial. Higher values search more of the
 graph, moving the result closer to the exact <code>"dbscan"</code> answer at the cost
 of query time.</p></dd>
-
-
-<dt id="arg-n-threads-build">n_threads_build<a class="anchor" aria-label="anchor" href="#arg-n-threads-build"></a></dt>
-<dd><p>integer or <code>NULL</code>. <code>"hnsw"</code> only, ignored otherwise.
-Threads for the index build, default <code>1</code>. A parallel build is not
-reproducible – insertion order varies, so neighbours differ slightly
-between runs and that propagates to clustering even with a fixed seed.
-<code>NULL</code> inherits the search thread count and trades reproducibility for
-speed.</p></dd>
-
-</dl></div>
-    <div class="section level2">
-    <h2 id="slots">Slots<a class="anchor" aria-label="anchor" href="#slots"></a></h2>
-
-
-<dl><dt><code>k</code></dt>
-<dd><p>integer. number of nearest neighbours used to compute sharing.</p></dd>
-
-
-<dt><code>top_shared</code></dt>
-<dd><p>integer. keep at least this many edges per node.</p></dd>
-
-
-<dt><code>minimum_shared</code></dt>
-<dd><p>integer. keep edges with at least this many shared
-neighbours.</p></dd>
-
-
-<dt><code>weight_fun</code></dt>
-<dd><p>function. weight = <code>weight_fun(distance)</code>.</p></dd>
-
-
-<dt><code>include_weight,include_distance</code></dt>
-<dd><p>logical. include columns.</p></dd>
-
-
-<dt><code>output</code></dt>
-<dd><p>character. See <code><a href="createNetwork.html">createNetwork()</a></code>.</p></dd>
-
 
 </dl></div>
 

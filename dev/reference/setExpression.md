@@ -7,7 +7,7 @@ Function to set expression values for `giotto` object.
 ``` r
 setExpression(gobject, x, spat_unit = NULL, feat_type = NULL, name = NULL, ...)
 
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 setExpression(
   gobject,
   x,

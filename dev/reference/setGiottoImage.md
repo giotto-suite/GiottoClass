@@ -17,6 +17,9 @@ setGiottoImage(
   ...,
   image = deprecated()
 )
+
+# S4 method for class 'giottoMulti'
+setGiottoImage(gobject, x, name = NULL, ...)
 ```
 
 ## Arguments

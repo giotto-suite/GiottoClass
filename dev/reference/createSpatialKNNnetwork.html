@@ -58,7 +58,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -101,13 +101,15 @@
 <span>  feat_type <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  spat_loc_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  dimensions <span class="op">=</span> <span class="st">"all"</span>,</span>
-<span>  name <span class="op">=</span> <span class="st">"knn_network"</span>,</span>
+<span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  default_name <span class="op">=</span> <span class="st">"knn_network"</span>,</span>
 <span>  k <span class="op">=</span> <span class="fl">4</span>,</span>
 <span>  maximum_distance <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  minimum_k <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  return_gobject <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  output <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"spatialNetworkObj"</span>, <span class="st">"data.table"</span><span class="op">)</span>,</span>
+<span>  space <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -144,6 +146,13 @@
 <dd><p>name for spatial network (default = 'spatial_network')</p></dd>
 
 
+<dt id="arg-default-name">default_name<a class="anchor" aria-label="anchor" href="#arg-default-name"></a></dt>
+<dd><p>name to fall back on when <code>name</code> is <code>NULL</code>, before the
+coordinate frame is prefixed. Exists so that one composition site can
+serve every entry point while each keeps its own spelling; callers do not
+normally set it.</p></dd>
+
+
 <dt id="arg-k">k<a class="anchor" aria-label="anchor" href="#arg-k"></a></dt>
 <dd><p>number of nearest neighbors based on physical distance</p></dd>
 
@@ -170,6 +179,18 @@ for kNN network</p></dd>
 <code>return_gobject = FALSE</code>. (default: 'spatialNetworkObj')</p></dd>
 
 
+<dt id="arg-space">space<a class="anchor" aria-label="anchor" href="#arg-space"></a></dt>
+<dd><p>(<code>giottoMulti</code> only) <code>character(1)</code>. Name of a coordinate
+frame recorded on the object, or <code>NULL</code> (default) for each sample's own
+native frame. The frame decides the job: every sample it covers gets a
+network built in that frame's coordinates, written into its own
+<code>@spatial_network</code> slot — so this mutates the wrapped children.</p>
+<p>This is <strong>not</strong> a sample selector. An artifact generator takes none,
+because once the rows are in a slot nothing downstream can tell which
+the selector admitted (see <code>adr/0006</code>). To build over a subset of
+samples, record a space over them, or subset with <code>mg[...]</code> first.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>additional arguments to the selected method function</p></dd>
 
@@ -181,8 +202,12 @@ for kNN network</p></dd>
 Alternatively you can provide a character vector that specififies the
 spatial dimensions to use, e.g. c("sdimx', "sdimy")
 or a numerical vector, e.g. 2:3</p>
-<p><strong>maximum_distance: </strong> to create a network based on maximum distance
-only, you also need to set k to a very high value, e.g. k = 100</p>
+<p><strong>maximum_distance: </strong> this is a post-filter on the k neighbours the
+search already found, not a constraint on the search itself. To build a
+network on distance alone, prefer <code><a href="radiusNetworkParam-class.html">radiusNetworkParam()</a></code>, which searches
+only within the radius; the older advice of setting <code>k</code> very high (e.g.
+<code>k = 100</code>) and filtering still works, but it finds a hundred neighbours per
+cell in order to discard most of them.</p>
     </div>
 
     <div class="section level2">
