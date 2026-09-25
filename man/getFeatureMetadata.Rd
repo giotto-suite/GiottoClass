@@ -27,7 +27,8 @@ getFeatureMetadata(gobject, spat_unit = NULL, feat_type = NULL, ...)
   copy_obj = TRUE,
   set_defaults = TRUE,
   samples = NULL,
-  on_missing = c("error", "drop", "fill")
+  on_missing = c("error", "drop", "fill"),
+  view = NULL
 )
 }
 \arguments{

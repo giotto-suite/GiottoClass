@@ -2715,7 +2715,7 @@ setMethod("getExpression", "giottoMulti",
     function(gobject, spat_unit = NULL, feat_type = NULL, name = NULL,
              values = NULL, output = c("exprObj", "matrix"),
              set_defaults = TRUE, samples = NULL,
-             on_missing = c("error", "drop", "fill")) {
+             on_missing = c("error", "drop", "fill"), view = NULL) {
         output <- match.arg(output, choices = c("exprObj", "matrix"))
         on_missing <- match.arg(on_missing)
 
@@ -2757,6 +2757,10 @@ setMethod("getExpression", "giottoMulti",
         # participant list and would see a group name as a non-participant.
         samples <- .gm_resolve_samples(gobject, samples,
             "gmulti getExpression")
+        # A view resolves once at the parent into globals; its sample step
+        # also narrows the sample scope.
+        vw <- .gm_resolve_view_arg(gobject, view)
+        samples <- .gm_view_samples(gobject, samples, vw)
 
         # Capture before default resolution so the assembly path can tell
         # user-supplied from defaulted (children may have different
@@ -2810,7 +2814,7 @@ setMethod("getExpression", "giottoMulti",
             # @feat_ID when filterGiotto / subsetGiotto narrow without
             # cascading through the joint cache. Cheap re-filter keeps
             # the slot honest.
-            e <- .gm_apply_view(e, gobject)
+            e <- .gm_apply_view(e, gobject, cells = vw$cells)
             e <- .gm_slice_to_samples(e, samples, gobject)
             if (output == "matrix") return(e[])
             return(e)
@@ -2841,7 +2845,7 @@ setMethod("getExpression", "giottoMulti",
             }
         }
 
-        e <- .gm_apply_view(e, gobject)
+        e <- .gm_apply_view(e, gobject, cells = vw$cells)
         e <- .gm_slice_to_samples(e, samples, gobject)
         if (output == "matrix") return(e[])
         e
@@ -2862,9 +2866,12 @@ setMethod("getCellMetadata", "giottoMulti", function(gobject,
     copy_obj = TRUE,
     set_defaults = TRUE,
     samples = NULL,
-    on_missing = c("error", "drop", "fill")) {
+    on_missing = c("error", "drop", "fill"),
+    view = NULL) {
     output <- match.arg(output, choices = c("cellMetaObj", "data.table"))
     on_missing <- match.arg(on_missing)
+    vw <- .gm_resolve_view_arg(gobject, view)
+    samples <- .gm_view_samples(gobject, samples, vw)
     nospec_unit <- is.null(spat_unit)
     nospec_feat <- is.null(feat_type)
     if (isTRUE(set_defaults)) {
@@ -2893,7 +2900,7 @@ setMethod("getCellMetadata", "giottoMulti", function(gobject,
             spat_unit = spat_unit, feat_type = feat_type,
             output = "cellMetaObj", copy_obj = copy_obj,
             set_defaults = FALSE)
-        cm <- .gm_apply_view(cm, gobject)
+        cm <- .gm_apply_view(cm, gobject, cells = vw$cells)
         cm <- .gm_slice_to_samples(cm, samples, gobject)
         if (output == "data.table") return(cm[])
         return(cm)
@@ -2905,7 +2912,7 @@ setMethod("getCellMetadata", "giottoMulti", function(gobject,
         spat_unit = if (nospec_unit) NULL else spat_unit,
         feat_type = if (nospec_feat) NULL else feat_type,
         on_missing = on_missing)
-    cm <- .gm_apply_view(cm, gobject)
+    cm <- .gm_apply_view(cm, gobject, cells = vw$cells)
     cm <- .gm_slice_to_samples(cm, samples, gobject)
     if (output == "data.table") return(cm[])
     cm
@@ -2925,7 +2932,8 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
     copy_obj = TRUE,
     set_defaults = TRUE,
     samples = NULL,
-    on_missing = c("error", "drop", "fill")) {
+    on_missing = c("error", "drop", "fill"),
+    view = NULL) {
     output <- match.arg(output, choices = c("featMetaObj", "data.table"))
     on_missing <- match.arg(on_missing)
     nospec_unit <- is.null(spat_unit)
@@ -2947,6 +2955,10 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
     # still resolves, so a typo or a stale group errors as loudly here as
     # anywhere the argument does something.
     .gm_resolve_samples(gobject, samples, "gmulti getFeatureMetadata")
+    # Same for `view = `: feature metadata is feat-keyed, so a view (which
+    # narrows cells) passes it through, as it does on a giotto. Resolving it
+    # still validates the name and the sample scope.
+    .gm_view_samples(gobject, samples, .gm_resolve_view_arg(gobject, view))
     joint <- if (!is.null(spat_unit) && !is.null(feat_type)) {
         gobject@feat_metadata[[spat_unit]][[feat_type]]
     } else {
@@ -3154,39 +3166,41 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
     checkmate::assert_string(view, .var.name = "view")
     v <- giottoView(gobject, view)
     co <- coordinator %null% .default_view_coordinator(gobject)
-    cells <- .surviving_cell_ids(gobject, v, co)
-    sel <- .resolve_sample_select(gobject, v)
-    # Fold the sample step into the cell set as well, so content that is
-    # already in globals (the joint spatial network) narrows by it too.
-    if (!(length(sel) == 1L && is.na(sel))) {
-        in_sel <- spatIDs(gobject, object = sel)
-        cells <- if (is.null(cells)) in_sel else intersect(cells, in_sel)
-    }
-    list(obj = v, cells = cells, samples = sel)
+    # `cells` already reflects the view's sample step; `samples` is kept as
+    # well so per-child reads can skip excluded children outright.
+    list(obj = v, cells = .surviving_cell_ids(gobject, v, co),
+        samples = .resolve_sample_select(gobject, v))
 }
 
-#' Children a per-child read visits: the call's `samples =`, narrowed by the
-#' view's sample step when it has one.
+#' The sample scope of a read: the call's `samples =`, narrowed by the view's
+#' sample step when it has one. `NULL` means every sample.
 #'
-#' The view's selection is a structural cut -- excluded children are never
-#' read -- rather than an ID filter that visits every child and returns an
-#' empty result for most. Asking for a sample the view excludes is an error,
-#' not a silent drop, since the two arguments then disagree about scope.
+#' Asking for a sample the view excludes is an error, not a silent drop,
+#' since the two arguments then disagree about scope.
+#' @noRd
+.gm_view_samples <- function(gobject, samples, vw) {
+    sel <- vw$samples
+    if (is.null(sel) || (length(sel) == 1L && is.na(sel))) return(samples)
+    if (is.null(samples)) return(sel)
+    asked <- .gm_resolve_objects(gobject, samples)
+    bad <- setdiff(asked, sel)
+    if (length(bad) > 0L) {
+        stop(sprintf(paste0("[gmulti] sample(s) %s excluded by the ",
+            "view's sample step. The view keeps: %s"),
+            paste(sprintf("'%s'", bad), collapse = ", "),
+            paste(sel, collapse = ", ")), call. = FALSE)
+    }
+    asked
+}
+
+#' Children a per-child read visits. The view's selection is a structural
+#' cut -- excluded children are never read -- rather than an ID filter that
+#' visits every child and returns an empty result for most.
 #' @noRd
 .gm_read_objects <- function(gobject, samples, vw) {
-    objs <- .gm_resolve_objects(gobject, samples)
-    sel <- vw$samples
-    if (is.null(sel) || (length(sel) == 1L && is.na(sel))) return(objs)
-    if (!is.null(samples)) {
-        bad <- setdiff(objs, sel)
-        if (length(bad) > 0L) {
-            stop(sprintf(paste0("[gmulti] sample(s) %s excluded by the ",
-                "view's sample step. The view keeps: %s"),
-                paste(sprintf("'%s'", bad), collapse = ", "),
-                paste(sel, collapse = ", ")), call. = FALSE)
-        }
-    }
-    objs[objs %in% sel]
+    objs <- .gm_resolve_objects(gobject, .gm_view_samples(gobject, samples,
+        vw))
+    objs
 }
 
 #' Narrow a resolved space to one child.

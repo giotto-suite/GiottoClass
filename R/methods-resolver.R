@@ -542,10 +542,21 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 
     filter_steps <- .view_steps_of(view, "filter")
     crop_steps   <- .view_steps_of(view, "crop")
+    # On a multi, a sample step bounds the cell set too, so every path that
+    # resolves a view -- per-child getters, joint slots, the gAny fall-through
+    # -- agrees on it. A child being resolved on its own is a plain giotto
+    # and has no samples to select, so the step is a no-op there.
+    sel <- if (inherits(gobject, "giottoMulti")) {
+        .resolve_sample_select(gobject, view)
+    } else NA
 
-    if (length(filter_steps) == 0L && length(crop_steps) == 0L) return(NULL)
+    no_sel <- length(sel) == 1L && is.na(sel)
+    if (length(filter_steps) == 0L && length(crop_steps) == 0L && no_sel) {
+        return(NULL)
+    }
 
-    surviving <- spatIDs(gobject)
+    surviving <- if (no_sel) spatIDs(gobject) else
+        spatIDs(gobject, object = sel)
     for (step in filter_steps) {
         keep <- .eval_view_filter(step, gobject)
         surviving <- intersect(surviving, keep)
