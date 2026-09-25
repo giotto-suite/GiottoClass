@@ -411,9 +411,8 @@
 - python packages to install through pip is now settable in
   [`installGiottoEnvironment()`](https://giotto-suite.github.io/GiottoClass/reference/giotto_python.md)
   [\#224](https://github.com/drieslab/GiottoClass/issues/224)
-- `giotto` [`initialize()`](https://rdrr.io/r/methods/new.html) and slot
-  checking behavior can be toggled now using `'giotto.init'` and
-  `'giotto.check_valid'` options.
+- `giotto` `initialize()` and slot checking behavior can be toggled now
+  using `'giotto.init'` and `'giotto.check_valid'` options.
   [\#946](https://github.com/drieslab/Giotto/issues/946) by rbutleriii
 - [`setGiotto()`](https://giotto-suite.github.io/GiottoClass/reference/setGiotto.md)
   now only initializes and performs checks once all items are added if a
@@ -586,7 +585,7 @@
   for `giottoPoints`, `giottoPolygon`, `spatLocsObj`, `affine2d`
 - `affine2d` class for accumulating linear transforms to be used with
   [`affine()`](https://giotto-suite.github.io/GiottoClass/reference/affine.md)
-- [`initialize()`](https://rdrr.io/r/methods/new.html), `[`, `$`,
+- `initialize()`, `[`, `$`,
   [`show()`](https://giotto-suite.github.io/GiottoClass/reference/show.md),
   [`plot()`](https://giotto-suite.github.io/GiottoClass/reference/plot-generic.md),
   methods for `affine2d`
@@ -599,9 +598,8 @@
   [`t()`](https://giotto-suite.github.io/GiottoClass/reference/transpose.md)
   methods for `affine2d`
 - `giottoAffineImage` class for just-in-time affine transformed images
-- [`initialize()`](https://rdrr.io/r/methods/new.html), method for
-  `giottoLargeImage`
-- [`initialize()`](https://rdrr.io/r/methods/new.html),
+- `initialize()`, method for `giottoLargeImage`
+- `initialize()`,
   [`ext()`](https://giotto-suite.github.io/GiottoClass/reference/ext.md),
   [`crop()`](https://giotto-suite.github.io/GiottoClass/reference/crop.md),
   [`rescale()`](https://giotto-suite.github.io/GiottoClass/reference/rescale.md),
@@ -617,8 +615,7 @@
   [`t()`](https://giotto-suite.github.io/GiottoClass/reference/transpose.md)
   methods for `giottoAffineImage` and `giottoLargeImage` (which converts
   to `giottoAffineImage`)
-- [`as()`](https://rdrr.io/r/methods/as.html) conversion from
-  `giottoLargeImage` to `giottoAffineImage`
+- `as()` conversion from `giottoLargeImage` to `giottoAffineImage`
 - `.get_centroid_xy()` internal for getting numeric centroid xy values
   of any object that responds to
   [`ext()`](https://giotto-suite.github.io/GiottoClass/reference/ext.md)
@@ -663,8 +660,7 @@
 
 ### new
 
-- [`as()`](https://rdrr.io/r/methods/as.html) conversion from
-  `giottoLargeImage` to `array`
+- `as()` conversion from `giottoLargeImage` to `array`
 - [`as.matrix()`](https://giotto-suite.github.io/GiottoClass/reference/as.matrix.md)
   method for
   [`spatLocsObj()`](https://giotto-suite.github.io/GiottoClass/reference/spatLocsObj-class.md)
@@ -711,9 +707,7 @@
   [`terra::rasterize()`](https://rspatial.github.io/terra/reference/rasterize.html)
   and
   [`terra::plot()`](https://rspatial.github.io/terra/reference/plot.html)
-  instead of
-  [`scattermore::scattermoreplot()`](https://rdrr.io/pkg/scattermore/man/scattermoreplot.html)
-  for `giottoPoints`
+  instead of `scattermore::scattermoreplot()` for `giottoPoints`
   [`plot()`](https://giotto-suite.github.io/GiottoClass/reference/plot-generic.md)
   method
 - [`plot()`](https://giotto-suite.github.io/GiottoClass/reference/plot-generic.md)

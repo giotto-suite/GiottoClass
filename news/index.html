@@ -344,7 +344,7 @@
 <ul><li>python packages to install through pip is now settable in <code><a href="../reference/giotto_python.html">installGiottoEnvironment()</a></code> <a href="https://github.com/drieslab/GiottoClass/issues/224" class="external-link">#224</a>
 </li>
 <li>
-<code>giotto</code> <code><a href="https://rdrr.io/r/methods/new.html" class="external-link">initialize()</a></code> and slot checking behavior can be toggled now using <code>'giotto.init'</code> and <code>'giotto.check_valid'</code> options. <a href="https://github.com/drieslab/Giotto/issues/946" class="external-link">#946</a> by rbutleriii</li>
+<code>giotto</code> <code>initialize()</code> and slot checking behavior can be toggled now using <code>'giotto.init'</code> and <code>'giotto.check_valid'</code> options. <a href="https://github.com/drieslab/Giotto/issues/946" class="external-link">#946</a> by rbutleriii</li>
 <li>
 <code><a href="../reference/setGiotto.html">setGiotto()</a></code> now only initializes and performs checks once all items are added if a <code>list</code> input is provided.</li>
 <li>
@@ -486,7 +486,7 @@
 <code>affine2d</code> class for accumulating linear transforms to be used with <code><a href="../reference/affine.html">affine()</a></code>
 </li>
 <li>
-<code><a href="https://rdrr.io/r/methods/new.html" class="external-link">initialize()</a></code>, <code>[</code>, <code>$</code>, <code><a href="../reference/show.html">show()</a></code>, <code><a href="../reference/plot-generic.html">plot()</a></code>, methods for <code>affine2d</code>
+<code>initialize()</code>, <code>[</code>, <code>$</code>, <code><a href="../reference/show.html">show()</a></code>, <code><a href="../reference/plot-generic.html">plot()</a></code>, methods for <code>affine2d</code>
 </li>
 <li>
 <code><a href="../reference/spin.html">spin()</a></code>, <code>rescale</code>, <code><a href="../reference/spatShift.html">spatShift()</a></code>, <code><a href="../reference/affine.html">affine()</a></code>, <code><a href="../reference/flip.html">flip()</a></code>, <code><a href="../reference/shear.html">shear()</a></code> <code><a href="../reference/transpose.html">t()</a></code> methods for <code>affine2d</code>
@@ -494,10 +494,10 @@
 <li>
 <code>giottoAffineImage</code> class for just-in-time affine transformed images</li>
 <li>
-<code><a href="https://rdrr.io/r/methods/new.html" class="external-link">initialize()</a></code>, method for <code>giottoLargeImage</code>
+<code>initialize()</code>, method for <code>giottoLargeImage</code>
 </li>
 <li>
-<code><a href="https://rdrr.io/r/methods/new.html" class="external-link">initialize()</a></code>, <code><a href="../reference/ext.html">ext()</a></code>, <code><a href="../reference/crop.html">crop()</a></code>, <code><a href="../reference/rescale.html">rescale()</a></code>, <code><a href="../reference/spatShift.html">spatShift()</a></code>, <code><a href="../reference/plot-generic.html">plot()</a></code>, methods for <code>giottoAffineImage</code>
+<code>initialize()</code>, <code><a href="../reference/ext.html">ext()</a></code>, <code><a href="../reference/crop.html">crop()</a></code>, <code><a href="../reference/rescale.html">rescale()</a></code>, <code><a href="../reference/spatShift.html">spatShift()</a></code>, <code><a href="../reference/plot-generic.html">plot()</a></code>, methods for <code>giottoAffineImage</code>
 </li>
 <li>
 <code><a href="../reference/rescale.html">rescale()</a></code> method for <code>giottoImage</code>
@@ -505,7 +505,7 @@
 <li>
 <code><a href="../reference/spin.html">spin()</a></code>, <code><a href="../reference/shear.html">shear()</a></code>, <code><a href="../reference/affine.html">affine()</a></code>, <code><a href="../reference/flip.html">flip()</a></code>, <code><a href="../reference/transpose.html">t()</a></code> methods for <code>giottoAffineImage</code> and <code>giottoLargeImage</code> (which converts to <code>giottoAffineImage</code>)</li>
 <li>
-<code><a href="https://rdrr.io/r/methods/as.html" class="external-link">as()</a></code> conversion from <code>giottoLargeImage</code> to <code>giottoAffineImage</code>
+<code>as()</code> conversion from <code>giottoLargeImage</code> to <code>giottoAffineImage</code>
 </li>
 <li>
 <code>.get_centroid_xy()</code> internal for getting numeric centroid xy values of any object that responds to <code><a href="../reference/ext.html">ext()</a></code>
@@ -540,7 +540,7 @@
 <div class="section level3">
 <h3 id="new-0-3-1">new<a class="anchor" aria-label="anchor" href="#new-0-3-1"></a></h3>
 <ul><li>
-<code><a href="https://rdrr.io/r/methods/as.html" class="external-link">as()</a></code> conversion from <code>giottoLargeImage</code> to <code>array</code>
+<code>as()</code> conversion from <code>giottoLargeImage</code> to <code>array</code>
 </li>
 <li>
 <code><a href="../reference/as.matrix.html">as.matrix()</a></code> method for <code><a href="../reference/spatLocsObj-class.html">spatLocsObj()</a></code>
@@ -569,7 +569,7 @@
 </ul></div>
 <div class="section level3">
 <h3 id="enhancements-0-3-0">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-3-0"></a></h3>
-<ul><li>use faster <code><a href="https://rspatial.github.io/terra/reference/rasterize.html" class="external-link">terra::rasterize()</a></code> and <code><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">terra::plot()</a></code> instead of <code><a href="https://rdrr.io/pkg/scattermore/man/scattermoreplot.html" class="external-link">scattermore::scattermoreplot()</a></code> for <code>giottoPoints</code> <code><a href="../reference/plot-generic.html">plot()</a></code> method</li>
+<ul><li>use faster <code><a href="https://rspatial.github.io/terra/reference/rasterize.html" class="external-link">terra::rasterize()</a></code> and <code><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">terra::plot()</a></code> instead of <code>scattermore::scattermoreplot()</code> for <code>giottoPoints</code> <code><a href="../reference/plot-generic.html">plot()</a></code> method</li>
 <li>
 <code><a href="../reference/plot-generic.html">plot()</a></code> <code>giottoPoints</code> method now plots density when <code>dens = TRUE</code>
 </li>

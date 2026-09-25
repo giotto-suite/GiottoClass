@@ -72,38 +72,17 @@
 <span class="r-msg co"><span class="r-pr">#&gt;</span>  python version : 3.12</span>
 <span class="r-in"><span><span class="va">g_image</span> <span class="op">&lt;-</span> <span class="fu"><a href="getGiottoImage.html">getGiottoImage</a></span><span class="op">(</span><span class="va">g</span>, name <span class="op">=</span> <span class="st">"image"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">mgimg</span> <span class="op">&lt;-</span> <span class="fu">as</span><span class="op">(</span><span class="va">g_image</span>, <span class="st">"giottoImage"</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> package 'magick' is not yet installed</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span>  To install:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> install.packages(c("magick"))</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">a</span> <span class="op">&lt;-</span> <span class="fu">convert_mgImage_to_array_DT</span><span class="op">(</span><span class="va">mgimg</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'mgimg' not found</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/force.html" class="external-link">force</a></span><span class="op">(</span><span class="va">a</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Key: &lt;x, y&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>            x     y       c.1       c.2       c.3     4     RGB</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        &lt;int&gt; &lt;int&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;num&gt;  &lt;char&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     1:     1     1 0.5098039 0.5215686 0.5019608     1 #828580</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     2:     1     2 0.5098039 0.5176471 0.5019608     1 #828480</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     3:     1     3 0.5098039 0.5176471 0.5019608     1 #828480</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     4:     1     4 0.5098039 0.5176471 0.4980392     1 #82847F</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     5:     1     5 0.5098039 0.5176471 0.4980392     1 #82847F</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    ---                                                        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 41792:   172   239 0.3803922 0.3058824 0.4313725     1 #614E6E</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 41793:   172   240 0.4313725 0.3372549 0.4509804     1 #6E5673</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 41794:   172   241 0.4196078 0.3215686 0.4392157     1 #6B5270</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 41795:   172   242 0.4470588 0.3215686 0.4549020     1 #725274</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 41796:   172   243 0.4392157 0.2941176 0.4470588     1 #704B72</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'a' not found</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/force.html" class="external-link">force</a></span><span class="op">(</span><span class="va">a</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Key: &lt;x, y&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>            x     y       c.1       c.2       c.3     4     RGB</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        &lt;int&gt; &lt;int&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;num&gt;  &lt;char&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     1:     1     1 0.5098039 0.5215686 0.5019608     1 #828580</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     2:     1     2 0.5098039 0.5176471 0.5019608     1 #828480</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     3:     1     3 0.5098039 0.5176471 0.5019608     1 #828480</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     4:     1     4 0.5098039 0.5176471 0.4980392     1 #82847F</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     5:     1     5 0.5098039 0.5176471 0.4980392     1 #82847F</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    ---                                                        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 41792:   172   239 0.3803922 0.3058824 0.4313725     1 #614E6E</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 41793:   172   240 0.4313725 0.3372549 0.4509804     1 #6E5673</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 41794:   172   241 0.4196078 0.3215686 0.4392157     1 #6B5270</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 41795:   172   242 0.4470588 0.3215686 0.4549020     1 #725274</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 41796:   172   243 0.4392157 0.2941176 0.4470588     1 #704B72</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'a' not found</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

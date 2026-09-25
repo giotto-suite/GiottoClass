@@ -135,7 +135,7 @@ on the mesh boundary. Default is TRUE</p></li>
 the final triangulation from the output. Default is TRUE</p></li>
 <li><p>[<strong><code>S</code></strong>] (<em>RTriangle</em>) Specifies the maximum number of added Steiner
 points. Default is 0</p></li>
-<li><p>[<strong><code>options</code></strong>] (<em>geometry</em>) default is "Pp". See <a href="https://rdrr.io/pkg/geometry/man/delaunayn.html" class="external-link">geometry::delaunayn</a></p></li>
+<li><p>[<strong><code>options</code></strong>] (<em>geometry</em>) default is "Pp". See geometry::delaunayn</p></li>
 <li><p>[<strong><code>weight_fun</code></strong>] function to calculate weights based on distance if
 <code>include_weight = TRUE</code>. Default is \(weight = 1 / (1 + distance)\) for
 <code>"kNN"</code> and <code>"sNN"</code> types and \(weight = 1 / distance\) for <code>delaunay</code>
@@ -158,6 +158,10 @@ networks</p></li>
 <span class="r-in"><span>    as.igraph <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
 <span class="r-in"><span>    node_ids <span class="op">=</span> <span class="va">sl</span><span class="op">$</span><span class="va">cell_ID</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> package 'geometry' is not yet installed</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span>  To install:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> install.packages(c("geometry"))</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Delaunay via RTriangle::triangulate()</span></span></span>
 <span class="r-in"><span><span class="va">del_rt</span> <span class="op">&lt;-</span> <span class="fu">createNetwork</span><span class="op">(</span></span></span>
@@ -169,6 +173,10 @@ networks</p></li>
 <span class="r-in"><span>    as.igraph <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
 <span class="r-in"><span>    node_ids <span class="op">=</span> <span class="va">sl</span><span class="op">$</span><span class="va">cell_ID</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> package 'RTriangle' is not yet installed</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span>  To install:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> install.packages(c("RTriangle"))</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Delaunay via deldir::deldir()</span></span></span>
 <span class="r-in"><span><span class="va">del_dd</span> <span class="op">&lt;-</span> <span class="fu">createNetwork</span><span class="op">(</span></span></span>

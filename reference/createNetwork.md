@@ -102,7 +102,7 @@ which network types and/or methods the params are specific to.
   Steiner points. Default is 0
 
 - \[**`options`**\] (*geometry*) default is "Pp". See
-  [geometry::delaunayn](https://rdrr.io/pkg/geometry/man/delaunayn.html)
+  geometry::delaunayn
 
 - \[**`weight_fun`**\] function to calculate weights based on distance
   if `include_weight = TRUE`. Default is \\weight = 1 / (1 + distance)\\
@@ -125,6 +125,10 @@ del_geom <- createNetwork(
     as.igraph = FALSE,
     node_ids = sl$cell_ID
 )
+#> Error: package 'geometry' is not yet installed
+#> 
+#>  To install:
+#> install.packages(c("geometry"))
 
 # Delaunay via RTriangle::triangulate()
 del_rt <- createNetwork(
@@ -136,6 +140,10 @@ del_rt <- createNetwork(
     as.igraph = FALSE,
     node_ids = sl$cell_ID
 )
+#> Error: package 'RTriangle' is not yet installed
+#> 
+#>  To install:
+#> install.packages(c("RTriangle"))
 
 # Delaunay via deldir::deldir()
 del_dd <- createNetwork(

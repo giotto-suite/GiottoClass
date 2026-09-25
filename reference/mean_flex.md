@@ -28,5 +28,5 @@ numeric
 m <- matrix(rnorm(100), nrow = 10)
 
 mean_flex(m)
-#> [1] -0.1381851
+#> [1] -0.1502939
 ```

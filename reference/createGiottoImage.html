@@ -162,8 +162,8 @@ spatial anchors when doing adjustments</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>image_transformations: transformation options from magick library
-[<strong>flip_x_axis</strong>] flip x-axis (<code><a href="https://docs.ropensci.org/magick/reference/transform.html" class="external-link">image_flop</a></code>)
-[<strong>flip_y_axis</strong>] flip y-axis (<code><a href="https://docs.ropensci.org/magick/reference/transform.html" class="external-link">image_flip</a></code>)
+[<strong>flip_x_axis</strong>] flip x-axis (<code>image_flop</code>)
+[<strong>flip_y_axis</strong>] flip y-axis (<code>image_flip</code>)
 Example: image_transformations = c(flip_x_axis, flip_y_axis); first flip
 x-axis and then y-axis</p>
     </div>
@@ -175,38 +175,9 @@ x-axis and then y-axis</p>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu">createGiottoImage</span><span class="op">(</span>mg_object <span class="op">=</span> <span class="va">image_test</span><span class="op">)</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>gobject or spatial locations are not provided </span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> Arbitrary values will be given </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> An object of class ' giottoImage ' with name  image </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Min and max values are: </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Max on x-axis:  10 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Min on x-axis:  0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Max on y-axis:  10 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Min on y-axis:  0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Boundary adjustment are: </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Max adjustment on x-axis:  0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Min adjustment on x-axis:  0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Max adjustment on y-axis:  0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Min adjustment on y-axis:  0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Boundaries are: </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Image x-axis max boundary:  10 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Image x-axis min boundary:  0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Image y-axis max boundary:  10 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Image y-axis min boundary:  0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Scale factor: </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> x y </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Resolution: </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> x y </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  File Path: </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/home/runner/work/_temp/Library/GiottoClass/extdata/toy_intensity.tif"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Error in loadNamespace(x) : there is no package called ‘magick’</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in createGiottoImage(mg_object = image_test):</span> Error in loadNamespace(x) : there is no package called ‘magick’</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span>  can not be read by magick::image_read() </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

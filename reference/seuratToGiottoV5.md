@@ -71,37 +71,13 @@ g <- GiottoData::loadGiottoMini("visium")
 #>  active environment : '/usr/bin/python3'
 #>  python version : 3.12
 s <- giottoToSeuratV5(g, tech = "Visium")
-#> Meta data updated for assay: rna
-#> Warning: Keys should be one or more alphanumeric characters followed by an underscore, setting key from custom_pca_ to custompca_
-#> Warning: Keys should be one or more alphanumeric characters followed by an underscore, setting key from custom_umap_ to customumap_
+#> Error: package 'Seurat' is not yet installed
+#> 
+#>  To install:
+#> install.packages(c("Seurat"))
 seuratToGiottoV5(s, spatial_assay = "rna")
-#> python already initialized in this session
-#>  active environment : '/usr/bin/python3'
-#>  python version : 3.12
-#> Warning: [createExprObj] param 'expression_matrix_class' is deprecated
-#> Warning: 
-#> List item [1]: Not possible to
-#>  read dimObj. Returning without modifications
-#> Warning: 
-#> List item [2]: Not possible to
-#>  read dimObj. Returning without modifications
-#> > normalized already exists and will be replaced with new values
-#> Warning: Item 2 has 624 rows but longest item has 634; recycled with remainder.
-#> An object of class giotto 
-#> >Active spat_unit:  cell 
-#> >Active feat_type:  rna 
-#> dimensions    : 634, 624 (features, cells)
-#> [SUBCELLULAR INFO]
-#> [AGGREGATE INFO]
-#> expression -----------------------
-#>   [cell][rna] raw normalized
-#> spatial locations ----------------
-#>   [cell] raw
-#> dim reduction --------------------
-#>   [cell][rna] pca umap
-#> attached images ------------------
-#> images      : alignment image 
+#> Error: package 'Seurat' is not yet installed
 #> 
-#> 
-#> Use objHistory() to see steps and params used
+#>  To install:
+#> install.packages(c("Seurat"))
 ```

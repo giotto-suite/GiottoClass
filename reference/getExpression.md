@@ -81,5 +81,25 @@ g <- GiottoData::loadGiottoMini("visium")
 #>  python version : 3.12
 
 getExpression(g)
-#> Error in UseMethod("getExpression"): no applicable method for 'getExpression' applied to an object of class "giotto"
+#> An object of class exprObj : "raw"
+#> spat_unit : "cell"
+#> feat_type : "rna"
+#> provenance: cell 
+#> 
+#> contains:
+#> 634 x 624 sparse Matrix of class "dgCMatrix"
+#>                                         
+#> Gna12  1 2 1 1 9 1 3 5 3 . . 10 7 ......
+#> Ccnd2  . 1 1 . . 1 . 1 1 . .  . 3 ......
+#> Btbd17 . 1 1 1 . . 2 . . . .  . . ......
+#> 
+#>  ........suppressing 611 columns and 628 rows 
+#>                                               
+#> Gm19935       . 1 . . . . . . . . 1 . . ......
+#> 9630013A20Rik . . . . . . . . . . 1 . . ......
+#> 2900040C04Rik 1 . . . . . . . . 1 . . . ......
+#> 
+#>  First four colnames:
+#>  AAAGGGATGTAGCAAG-1 AAATGGCATGTCTTGT-1
+#>  AAATGGTCAATGTGCC-1 AAATTAACGGGTAGCT-1 
 ```

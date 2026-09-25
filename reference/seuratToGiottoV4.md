@@ -58,30 +58,11 @@ stored in it.
 ``` r
 m_expression <- Matrix::Matrix(rnorm(100), nrow = 10, sparse = TRUE)
 s <- Seurat::CreateSeuratObject(counts = m_expression)
+#> Error in loadNamespace(x): there is no package called ‘Seurat’
 
 seuratToGiottoV5(s, spatial_assay = "RNA")
-#> Warning: Layer ‘data’ is empty
-#> Warning: Layer ‘data’ is empty
-#> Warning: Layer ‘scale.data’ is empty
-#> Warning: Layer ‘scale.data’ is empty
-#> Images for RNA assay not found in the data.
-#>                         Skipping image processing.
-#> python already initialized in this session
-#>  active environment : '/usr/bin/python3'
-#>  python version : 3.12
-#> Warning: [createExprObj] param 'expression_matrix_class' is deprecated
-#> > normalized already exists and will be replaced with new values
-#> An object of class giotto 
-#> >Active spat_unit:  cell 
-#> >Active feat_type:  rna 
-#> dimensions    : 10, 10 (features, cells)
-#> [SUBCELLULAR INFO]
-#> [AGGREGATE INFO]
-#> expression -----------------------
-#>   [cell][rna] raw normalized
-#> spatial locations ----------------
-#>   [cell] raw
+#> Error: package 'Seurat' is not yet installed
 #> 
-#> 
-#> Use objHistory() to see steps and params used
+#>  To install:
+#> install.packages(c("Seurat"))
 ```

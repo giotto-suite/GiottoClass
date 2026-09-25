@@ -138,7 +138,7 @@ sessionInfo()
 
     ## R version 4.6.1 (2026-06-24)
     ## Platform: x86_64-pc-linux-gnu
-    ## Running under: Ubuntu 24.04.4 LTS
+    ## Running under: Ubuntu 24.04.5 LTS
     ## 
     ## Matrix products: default
     ## BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
@@ -160,33 +160,18 @@ sessionInfo()
     ## [1] GiottoClass_0.5.1
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] sass_0.4.10                 generics_0.1.4             
-    ##  [3] SparseArray_1.12.2          gtools_3.9.5               
-    ##  [5] lattice_0.22-9              digest_0.6.39              
-    ##  [7] magrittr_2.0.5              evaluate_1.0.5             
-    ##  [9] grid_4.6.1                  fastmap_1.2.0              
-    ## [11] jsonlite_2.0.0              Matrix_1.7-5               
-    ## [13] backports_1.5.1             GiottoData_0.2.16          
-    ## [15] SingleCellExperiment_1.34.0 codetools_0.2-20           
-    ## [17] textshaping_1.0.5           jquerylib_0.1.4            
-    ## [19] abind_1.4-8                 cli_3.6.6                  
-    ## [21] rlang_1.3.0                 XVector_0.52.0             
-    ## [23] Biobase_2.72.0              cachem_1.1.0               
-    ## [25] DelayedArray_0.38.2         yaml_2.3.12                
-    ## [27] otel_0.2.0                  S4Arrays_1.12.0            
-    ## [29] tools_4.6.1                 GiottoUtils_0.2.5          
-    ## [31] checkmate_2.3.4             SpatialExperiment_1.22.0   
-    ## [33] SummarizedExperiment_1.42.0 BiocGenerics_0.58.1        
-    ## [35] R6_2.6.1                    magick_2.9.1               
-    ## [37] matrixStats_1.5.0           stats4_4.6.1               
-    ## [39] lifecycle_1.0.5             Seqinfo_1.2.0              
-    ## [41] S4Vectors_0.50.1            fs_2.1.0                   
-    ## [43] htmlwidgets_1.6.4           IRanges_2.46.0             
-    ## [45] ragg_1.5.2                  desc_1.4.3                 
-    ## [47] pkgdown_2.2.1               terra_1.9-46               
-    ## [49] bslib_0.12.0                data.table_1.18.6.1        
-    ## [51] Rcpp_1.1.2                  systemfonts_1.3.2          
-    ## [53] xfun_0.60                   GenomicRanges_1.64.0       
-    ## [55] MatrixGenerics_1.24.0       knitr_1.51                 
-    ## [57] rjson_0.2.23                htmltools_0.5.9            
-    ## [59] rmarkdown_2.31              compiler_4.6.1
+    ##  [1] Matrix_1.7-5        jsonlite_2.0.0      compiler_4.6.1     
+    ##  [4] gtools_3.9.5        Rcpp_1.1.2          jquerylib_0.1.4    
+    ##  [7] IRanges_2.46.0      systemfonts_1.3.2   textshaping_1.0.5  
+    ## [10] yaml_2.3.12         fastmap_1.2.0       lattice_0.22-9     
+    ## [13] R6_2.6.1            XVector_0.52.0      generics_0.1.4     
+    ## [16] knitr_1.52          BiocGenerics_0.58.1 backports_1.5.1    
+    ## [19] checkmate_2.3.4     desc_1.4.3          bslib_0.12.0       
+    ## [22] GiottoUtils_0.2.6   rlang_1.3.0         cachem_1.1.0       
+    ## [25] terra_1.9-50        xfun_0.61           fs_2.1.0           
+    ## [28] sass_0.4.10         otel_0.2.0          cli_3.6.6          
+    ## [31] pkgdown_2.2.1       magrittr_2.0.5      digest_0.6.39      
+    ## [34] grid_4.6.1          lifecycle_1.0.5     S4Vectors_0.50.3   
+    ## [37] evaluate_1.0.5      data.table_1.18.6.1 codetools_0.2-20   
+    ## [40] ragg_1.5.2          stats4_4.6.1        GiottoData_0.3.6   
+    ## [43] rmarkdown_2.32      tools_4.6.1         htmltools_0.5.9

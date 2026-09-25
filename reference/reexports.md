@@ -17,5 +17,8 @@ character vector of hexadecimal distinct colors
 
 ``` r
 getDistinctColors(n = 5)
-#> [1] "#377EB8" "#4DAF4A" "#A65628" "#BC80BD" "#FFED6F"
+#> Error: package 'RColorBrewer' is not yet installed
+#> 
+#>  To install:
+#> install.packages(c("RColorBrewer"))
 ```

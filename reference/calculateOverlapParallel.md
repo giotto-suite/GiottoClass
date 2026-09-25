@@ -75,38 +75,8 @@ g <- GiottoData::loadGiottoMini("vizgen")
 #>  python version : 3.12
 
 calculateOverlapParallel(g, spatial_info = "z1")
-#> Warning: Your code is running sequentially. For better performance, consider using a
-#>  parallel plan like:
-#>  future::plan(future::multisession)
+#> Error: package 'future' is not yet installed
 #> 
-#>  To silence this warning, set options("giotto.warn_sequential" = FALSE)
-#> An object of class giotto 
-#> >Active spat_unit:  z0 
-#> >Active feat_type:  rna 
-#> dimensions    : 337, 498 (features, cells)
-#> [SUBCELLULAR INFO]
-#> polygons      : z0 z1 aggregate 
-#> features      : rna 
-#> [AGGREGATE INFO]
-#> expression -----------------------
-#>   [z0][rna] raw
-#>   [z1][rna] raw
-#>   [aggregate][rna] raw normalized scaled pearson
-#> spatial locations ----------------
-#>   [z0] raw
-#>   [z1] raw
-#>   [aggregate] raw
-#> spatial networks -----------------
-#>   [aggregate] Delaunay_network kNN_network
-#> spatial enrichments --------------
-#>   [aggregate][rna] cluster_metagene
-#> dim reduction --------------------
-#>   [aggregate][rna] pca umap tsne
-#> nearest neighbor networks --------
-#>   [aggregate][rna] sNN.pca
-#> attached images ------------------
-#> images      : 4 items...
-#> 
-#> 
-#> Use objHistory() to see steps and params used
+#>  To install:
+#> install.packages(c("future"))
 ```

@@ -110,10 +110,8 @@ g_image <- convertGiottoLargeImageToMG(g,
     largeImage_name = "image",
     return_gobject = FALSE
 )
+#> Error in loadNamespace(x): there is no package called ‘magick’
 
 updateGiottoImageMG(g, giottoImage = g_image)
-#> giottoImage argument is given and will take priority
-#> 
-#>  return_gobject set to FALSE
-#> Error in updateGiottoImageMG(g, giottoImage = g_image): object 'g_image' not found
+#> Error: object 'g_image' not found
 ```

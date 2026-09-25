@@ -35,10 +35,11 @@ g <- GiottoData::loadGiottoMini("visium")
 #>  python version : 3.12
 g_image <- getGiottoImage(g, name = "image")
 mgimg <- as(g_image, "giottoImage")
+#> Error: package 'magick' is not yet installed
+#> 
+#>  To install:
+#> install.packages(c("magick"))
 
 estimateImageBg(mgimg)
-
-#> Most abundant pixel colors:
-#> 276 261 159 155 132 103 100 79 73 69 67 66 64 55 48 43 43 43 43 39 39 39 36 36
-#>  36 35 35 34 34 33 33 33 33 32 32 31 31 31 31 31 31 30 30 30 30 30 30 30 30 30
+#> Error: object 'mgimg' not found
 ```

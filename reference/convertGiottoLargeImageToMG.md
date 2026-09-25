@@ -107,29 +107,5 @@ g <- GiottoData::loadGiottoMini("visium")
 #>  python version : 3.12
 
 convertGiottoLargeImageToMG(g, largeImage_name = "image")
-#> image has already been used, will be overwritten
-#> An object of class giotto 
-#> >Active spat_unit:  cell 
-#> >Active feat_type:  rna 
-#> dimensions    : 634, 624 (features, cells)
-#> [SUBCELLULAR INFO]
-#> polygons      : cell 
-#> [AGGREGATE INFO]
-#> expression -----------------------
-#>   [cell][rna] raw normalized scaled
-#> spatial locations ----------------
-#>   [cell] raw
-#> spatial networks -----------------
-#>   [cell] Delaunay_network spatial_network
-#> spatial enrichments --------------
-#>   [cell][rna] cluster_metagene DWLS
-#> dim reduction --------------------
-#>   [cell][rna] pca custom_pca umap custom_umap tsne
-#> nearest neighbor networks --------
-#>   [cell][rna] sNN.pca custom_NN
-#> attached images ------------------
-#> images      : alignment image 
-#> 
-#> 
-#> Use objHistory() to see steps and params used
+#> Error in loadNamespace(x): there is no package called ‘magick’
 ```

@@ -449,7 +449,8 @@ plot(gpoints, raster_size = 80, force_size = TRUE)
 
 # plot specific feature(s)
 plot(gpoints, feats = featIDs(gpoints)[seq_len(4)])
-
+#> Error: scattermore must be installed for plotting mode 
+#>         'raster' = TRUE. To install: install.packages('scattermore')
 
 # ----- vector plotting ----- #
 # non-rasterized plotting (slower, but higher quality)

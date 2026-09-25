@@ -55,13 +55,8 @@ g <- GiottoData::loadGiottoMini("visium")
 #>  active environment : '/usr/bin/python3'
 #>  python version : 3.12
 giottoToSeuratV5(g, tech = "Visium")
-#> Meta data updated for assay: rna
-#> Warning: Keys should be one or more alphanumeric characters followed by an underscore, setting key from custom_pca_ to custompca_
-#> Warning: Keys should be one or more alphanumeric characters followed by an underscore, setting key from custom_umap_ to customumap_
-#> An object of class Seurat 
-#> 634 features across 624 samples within 1 assay 
-#> Active assay: rna (634 features, 0 variable features)
-#>  3 layers present: counts, data, scale.data
-#>  6 dimensional reductions calculated: pca, custom_pca, umap, custom_umap, tsne, spatial
-#>  2 images present: alignment, image
+#> Error: package 'Seurat' is not yet installed
+#> 
+#>  To install:
+#> install.packages(c("Seurat"))
 ```

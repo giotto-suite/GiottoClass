@@ -116,12 +116,9 @@ a giottoImage object
 ## Details
 
 image_transformations: transformation options from magick library
-\[**flip_x_axis**\] flip x-axis
-([`image_flop`](https://docs.ropensci.org/magick/reference/transform.html))
-\[**flip_y_axis**\] flip y-axis
-([`image_flip`](https://docs.ropensci.org/magick/reference/transform.html))
-Example: image_transformations = c(flip_x_axis, flip_y_axis); first flip
-x-axis and then y-axis
+\[**flip_x_axis**\] flip x-axis (`image_flop`) \[**flip_y_axis**\] flip
+y-axis (`image_flip`) Example: image_transformations = c(flip_x_axis,
+flip_y_axis); first flip x-axis and then y-axis
 
 ## Examples
 
@@ -131,36 +128,7 @@ image_test <- system.file("extdata/toy_intensity.tif",
 )
 
 createGiottoImage(mg_object = image_test)
-#> Warning: gobject or spatial locations are not provided 
-#> Arbitrary values will be given 
-#> An object of class ' giottoImage ' with name  image 
-#>  
-#> Min and max values are: 
-#>  Max on x-axis:  10 
-#>  Min on x-axis:  0 
-#>  Max on y-axis:  10 
-#>  Min on y-axis:  0 
-#>  
-#> Boundary adjustment are: 
-#>  Max adjustment on x-axis:  0 
-#>  Min adjustment on x-axis:  0 
-#>  Max adjustment on y-axis:  0 
-#>  Min adjustment on y-axis:  0 
-#>  
-#> Boundaries are: 
-#>  Image x-axis max boundary:  10 
-#>  Image x-axis min boundary:  0 
-#>  Image y-axis max boundary:  10 
-#>  Image y-axis min boundary:  0 
-#>  
-#> Scale factor: 
-#> x y 
-#> 1 1 
-#> 
-#>  Resolution: 
-#> x y 
-#> 1 1 
-#> 
-#>  File Path: 
-#> [1] "/home/runner/work/_temp/Library/GiottoClass/extdata/toy_intensity.tif"
+#> Error in loadNamespace(x) : there is no package called ‘magick’
+#> Error in createGiottoImage(mg_object = image_test): Error in loadNamespace(x) : there is no package called ‘magick’
+#>  can not be read by magick::image_read() 
 ```

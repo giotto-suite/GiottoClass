@@ -36,18 +36,11 @@ g <- GiottoData::loadGiottoMini("visium")
 #>  python version : 3.12
 g_image <- getGiottoImage(g, name = "image")
 mgimg <- as(g_image, "giottoImage")
+#> Error: package 'magick' is not yet installed
+#> 
+#>  To install:
+#> install.packages(c("magick"))
 
 get_img_minmax(slot(mgimg, "mg_object"))
-#> $img_xmax
-#> [1] 243
-#> 
-#> $img_xmin
-#> [1] 0
-#> 
-#> $img_ymax
-#> [1] 0
-#> 
-#> $img_ymin
-#> [1] -172
-#> 
+#> Error in loadNamespace(x): there is no package called ‘magick’
 ```

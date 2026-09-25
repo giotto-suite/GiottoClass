@@ -36,8 +36,7 @@ g <- GiottoData::loadGiottoMini("visium")
 #>  python version : 3.12
 spat_net <- getSpatialNetwork(g, output = "networkDT")
 expr_m <- getExpression(g)
-#> Error in UseMethod("getExpression"): no applicable method for 'getExpression' applied to an object of class "giotto"
 
 compatible_spatial_network(spat_net, expr_m)
-#> Error in h(simpleError(msg, call)): error in evaluating the argument 'x' in selecting a method for function 'colnames': object 'expr_m' not found
+#> [1] TRUE
 ```

@@ -114,10 +114,9 @@ giotto object with updated spatial network slot
 
 ## Details
 
-Creates a spatial Delaunay network as explained in
-[`delaunayn`](https://rdrr.io/pkg/geometry/man/delaunayn.html)
+Creates a spatial Delaunay network as explained in `delaunayn`
 (default), [`deldir`](https://rdrr.io/pkg/deldir/man/deldir.html), or
-[`triangulate`](https://rdrr.io/pkg/RTriangle/man/triangulate.html).
+`triangulate`.
 
 ## Examples
 

@@ -80,17 +80,17 @@ createExprObj(m)
 #> contains:
 #> 10 x 10 sparse Matrix of class "dgCMatrix"
 #>                          
-#> feat1 . 1 2 3 3 . . . 1 1
-#> feat2 2 . 2 1 . 1 1 1 3 1
-#> feat3 1 1 . 1 2 2 1 1 2 .
-#> feat4 1 2 . 1 . 1 1 2 1 .
+#> feat1 . 1 2 2 . . 1 1 1 1
+#> feat2 1 3 . 1 . . 4 1 1 2
+#> feat3 . 1 2 3 3 . . . 1 1
+#> feat4 2 . 2 1 . 1 1 1 3 1
 #> 
 #>  ........suppressing 2 rows 
 #>                           
-#> feat7  2 1 . 2 . 1 1 1 . 3
-#> feat8  2 1 . . . . 1 1 1 .
-#> feat9  1 2 2 . . 1 1 1 1 1
-#> feat10 3 . 1 . . 4 1 1 2 2
+#> feat7  2 2 1 1 2 2 2 3 1 .
+#> feat8  3 2 . 2 1 1 1 1 1 1
+#> feat9  2 1 . 2 . 1 1 1 . 3
+#> feat10 2 1 . . . . 1 1 1 .
 #> 
 #>  First four colnames:
 #>  cell1 cell2 cell3 cell4 

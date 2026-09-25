@@ -62,12 +62,5 @@ spatialGridObj
 x <- GiottoData::loadSubObjectMini("spatialGridObj")
 
 create_spat_grid_obj(name = "test", gridDT = x)
-#> An object of class spatialGridObj : "test"
-#> Contains annotations for spatial unit: "cell" and feature type: "rna"
-#> Contains spatial grid defined for:
-#>    5 intervals from x range: 6400.82 to 6900.82 
-#>    5 intervals from y range: -5173.441 to -4673.441
-#> 
-#> Contains spatial grid generated with: NA 
-#> 
+#> Error in validObject(.Object): invalid class “spatialGridObj” object: invalid object for slot "gridDT" in class "spatialGridObj": got class "spatialGridObj", should be or extend class "nullOrDatatable"
 ```
