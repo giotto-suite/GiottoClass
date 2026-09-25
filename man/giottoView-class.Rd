@@ -13,8 +13,9 @@ A \code{giottoView} is a deferred, read-only NARROWING of a \link[=giotto-class]
 current state each time it is consumed, rather than a snapshot.
 
 Access it with \code{[} (class-preserving, so the result stays editable) and
-\code{[[} (extracts a step). Append to it with the builder verbs \code{\link[=subset]{subset()}},
-\code{\link[=crop]{crop()}}, and \code{\link[=selectSamples]{selectSamples()}}, or compose two with \code{+}. Export the
+\code{[[} (extracts a step). Append to it with the builder verbs \code{\link[=subset]{subset()}}
+(a filter step, or a sample step with \verb{samples =}) and \code{\link[=crop]{crop()}}, or
+compose two with \code{+}. Export the
 plain nested form with \code{\link[=as.list]{as.list()}}.
 }
 \section{Slots}{

@@ -152,8 +152,8 @@ test_that("materialize with polygon crop narrows by region", {
     expect_equal(nrow(pDataDT(g2)), expected)
 })
 
-test_that("selectSamples() records a samples step", {
-    g <- selectSamples(giotto(), "a", "b", view = "v")
+test_that("subset(samples = ) records a samples step", {
+    g <- subset(giotto(), samples = c("a", "b"), view = "v")
     steps <- giottoView(g, "v")@steps
     expect_length(steps, 1L)
     expect_identical(steps[[1L]]$type, "samples")
@@ -164,7 +164,7 @@ test_that("steps append in call order onto one name", {
     g <- giotto()
     g <- subset(g, x > 0, view = "v")
     g <- crop(g, c(0, 100, 0, 100), view = "v")
-    g <- selectSamples(g, "a", view = "v")
+    g <- subset(g, samples = "a", view = "v")
     steps <- giottoView(g, "v")@steps
     expect_length(steps, 3L)
     expect_identical(vapply(steps, function(s) s$type, character(1L)),
@@ -1012,11 +1012,58 @@ test_that("resolving for a sample with nothing scoped to it is empty", {
     expect_length(s[[NA_character_]], 1L)
 })
 
-test_that("materialize on giottoMulti narrows children via selectSamples", {
+test_that("materialize on giottoMulti narrows children via a sample step", {
     mg <- .fixture_gmulti()
-    mg <- selectSamples(mg, "a", view = "only_a")
+    mg <- subset(mg, samples = "a", view = "only_a")
     out <- materialize(mg, "only_a")
     expect_identical(names(out@objects), "a")
+})
+
+test_that("spatial getters honour a view's sample step", {
+    mg <- .fixture_gmulti()
+    mg <- subset(mg, samples = "a", view = "only_a")
+    expect_named(getSpatialLocations(mg, view = "only_a"), "a")
+    expect_named(getPolygonInfo(mg, view = "only_a"), "a")
+})
+
+test_that("a sample step and a filter record in one call, samples first", {
+    mg <- .fixture_gmulti()
+    mg <- subset(mg, leiden_clus == "1", samples = "b", view = "b1")
+    expect_identical(
+        vapply(giottoView(mg, "b1")@steps, function(s) s$type, ""),
+        c("samples", "filter"))
+    sl <- getSpatialLocations(mg, view = "b1")
+    expect_named(sl, "b")
+    expect_lt(nrow(sl$b[]), length(spatIDs(mg, object = "b")))
+})
+
+test_that("getter samples = must sit inside the view's sample step", {
+    mg <- .fixture_gmulti()
+    mg <- subset(mg, samples = "a", view = "only_a")
+    expect_named(getSpatialLocations(mg, view = "only_a", samples = "a"), "a")
+    expect_error(getSpatialLocations(mg, view = "only_a", samples = "b"),
+        "excluded by the view's sample step")
+})
+
+test_that("sample steps intersect, expand groups, and reject unknowns", {
+    mg <- .fixture_gmulti()
+    gmultiGroup(mg, "both") <- c("a", "b")
+    mg <- subset(mg, samples = "both", view = "v")
+    expect_named(getSpatialLocations(mg, view = "v"), c("a", "b"))
+    mg <- subset(mg, samples = "b", view = "v")
+    expect_named(getSpatialLocations(mg, view = "v"), "b")
+    mg <- subset(mg, samples = "nope", view = "bad")
+    expect_error(getSpatialLocations(mg, view = "bad"), "unknown sample")
+})
+
+test_that("eager subset(samples = ) slices the multi", {
+    mg <- .fixture_gmulti()
+    expect_named(subset(mg, samples = "b")@objects, "b")
+    ids <- spatIDs(mg, object = "b")[1:2]
+    expect_setequal(spatIDs(subset(mg, samples = "b", cells = ids)), ids)
+    expect_error(subset(.fixture_giotto(), samples = "a"),
+        "narrows the children of a giottoMulti")
+    expect_error(subset(mg, view = "v"), "`subset` or `samples` is required")
 })
 
 test_that("materialize on giottoMulti applies view per-child", {
@@ -1089,7 +1136,7 @@ test_that("materialize on giottoMulti narrows joint shared slots", {
 
 test_that("materialize via slotted view name dispatches on multi", {
     mg <- .fixture_gmulti()
-    mg <- selectSamples(mg, "a", view = "x")
+    mg <- subset(mg, samples = "a", view = "x")
     out <- materialize(mg, "x")
     expect_identical(names(out@objects), "a")
 })
@@ -1106,7 +1153,7 @@ test_that("steps and recipes are plain tagged lists, not S4", {
     g <- giotto()
     g <- subset(g, cluster == "A", view = "v")
     g <- crop(g, c(0, 10, 0, 10), view = "v")
-    g <- selectSamples(g, "a", view = "v")
+    g <- subset(g, samples = "a", view = "v")
     v <- giottoView(g, "v")
     # Q7 put the guarantees on the STEPS: no closure, no external
     # pointer. The container is a class; that changes nothing here.
@@ -1526,7 +1573,7 @@ test_that("a mistyped sample name is rejected at record time", {
     g <- giotto()
     g <- subset(g, cluster == "A", view = "v")
     g <- crop(g, c(0, 10, 0, 10), relation = "within", view = "v")
-    g <- selectSamples(g, "a", "b", view = "v")
+    g <- subset(g, samples = c("a", "b"), view = "v")
     giottoView(g, "v")
 }
 
@@ -1681,9 +1728,9 @@ test_that("builder verbs on a recipe record what the gobject route records", {
     direct <- crop(new("giottoView"), c(0, 10, 0, 10), relation = "within")
     expect_identical(giottoView(g, "v")@steps, direct@steps)
 
-    g2 <- selectSamples(giotto(), "a", "b", view = "v")
+    g2 <- subset(giotto(), samples = c("a", "b"), view = "v")
     expect_identical(giottoView(g2, "v")@steps,
-        selectSamples(new("giottoView"), "a", "b")@steps)
+        subset(new("giottoView"), samples = c("a", "b"))@steps)
 
     g3 <- spin(giotto(), 30, space = "s")
     direct_sp <- spin(perSampleSpace(name = "s"), 30)

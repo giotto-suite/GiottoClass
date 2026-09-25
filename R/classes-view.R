@@ -18,7 +18,7 @@
 # Shape — views are built through the gobject, by name:
 #   g <- subset(g, cluster == "A", view = "tumor_focus")
 #   g <- crop(g, c(0, 100, 0, 100), view = "tumor_focus", space = "atlas")
-#   g <- selectSamples(mg, "a", "b", view = "tumor_focus")   # gmulti only
+#   g <- subset(mg, samples = c("a", "b"), view = "tumor_focus")   # gmulti only
 #
 # `.record_view_on_gobject()` creates the named view on first use and
 # appends on later calls, so there is no separate construction step.
@@ -240,6 +240,30 @@
 
 #' Construct a sample-select step (giottoMulti only).
 #' @noRd
+# Whether a `subset()` call supplied a predicate. S4 wraps these methods in
+# `.local`, so an absent `subset` reaches the method as either the bare
+# symbol or the empty symbol depending on the call path, and binding the
+# empty symbol to a variable makes every later read of it an error. So test
+# the substitute() result in place, without assigning it first.
+.subset_has_predicate <- function(expr) {
+    !(identical(expr, quote(subset)) || identical(expr, quote(expr = )))
+}
+
+# One `subset()` call can record a sample step, a filter step, or both.
+# The sample step goes first: it is resolved before the others anyway, and
+# recording it first keeps the recipe reading in the order it runs.
+.view_record_subset <- function(v, pred = NULL, samples = NULL,
+    negate = FALSE, scope_args = list()) {
+    if (!is.null(samples)) {
+        v <- .view_record_step(v, .view_step_samples(samples))
+    }
+    if (!is.null(pred)) {
+        v <- .view_record_filter(v, pred, negate = negate,
+            scope_args = scope_args)
+    }
+    v
+}
+
 .view_step_samples <- function(samples) {
     checkmate::assert_character(samples, min.len = 1L, any.missing = FALSE,
         .var.name = "samples")
@@ -330,8 +354,9 @@
 #' current state each time it is consumed, rather than a snapshot.
 #'
 #' Access it with `[` (class-preserving, so the result stays editable) and
-#' `[[` (extracts a step). Append to it with the builder verbs [subset()],
-#' [crop()], and [selectSamples()], or compose two with `+`. Export the
+#' `[[` (extracts a step). Append to it with the builder verbs [subset()]
+#' (a filter step, or a sample step with `samples =`) and [crop()], or
+#' compose two with `+`. Export the
 #' plain nested form with [as.list()].
 #'
 #' @slot steps `list` of recorded steps, in order. Each step is a tagged

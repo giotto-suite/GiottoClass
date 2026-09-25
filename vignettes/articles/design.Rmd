@@ -354,7 +354,7 @@ generator whether its transforms or its filters were the meaningful part, and
 made "view" mean both selection and positioning in the same vocabulary.
 
 **There is no constructor; a recipe is created by recording.** The first
-`subset()` / `crop()` / `selectSamples()` call naming a view creates it, and a
+`subset()` / `crop()` call naming a view creates it, and a
 transform verb naming a space does the same; later calls with that name append.
 Eager behaviour is unchanged — `spin(g, 30)` still spins the object — and the
 presence of `space =` is what switches from acting to recording. Consequently

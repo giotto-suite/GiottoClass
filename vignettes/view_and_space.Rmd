@@ -25,7 +25,7 @@ without mutating the underlying data.
 | Records | filter / crop / sample-selection steps | coordinate-frame transforms (spin, affine, flip, ...) |
 | Effect on accessors | narrows which cells survive | reframes spatial geometry of survivors |
 | Use case | "show me cluster 3 inside this region" | "rotate sample B by 45° and shift to land next to sample A" |
-| Built by | `subset()` / `crop()` / `selectSamples()` with `view = "name"` | a transform verb with `space = "name"` |
+| Built by | `subset()` / `crop()` with `view = "name"` | a transform verb with `space = "name"` |
 | Stored as | a `giottoView` under `gobject@view$name` | a `giottoSpace` under `gobject@spaces$name` |
 
 Both are created by *recording* onto a name: there is no constructor and no
@@ -193,9 +193,10 @@ referent (the slotted space `"name"`), different operation per verb.
 
 ### Sample selection (giottoMulti only)
 
-When the view will be applied to a `giottoMulti`, `selectSamples()` records
+When the view will be applied to a `giottoMulti`, `subset(samples = )` records
 which children participate. The step is resolved first, before any filter
-or crop steps:
+or crop steps, and the excluded children are never read. One call can record
+both a sample step and a filter:
 
 ```{r}
 mg <- createGiottoMulti(list(
@@ -203,9 +204,13 @@ mg <- createGiottoMulti(list(
     visium_b = GiottoData::loadGiottoMini("visium", verbose = FALSE)
 ))
 
-mg <- selectSamples(mg, "visium_a", "visium_b", view = "pair")
-mg <- subset(mg, leiden_clus == 1, view = "pair")
+mg <- subset(mg, leiden_clus == 1, samples = "visium_a", view = "pair")
+names(getSpatialLocations(mg, view = "pair"))
 ```
+
+`samples =` takes group names as well as child names (see `?gmultiGroup`).
+Without `view = `, `subset(mg, samples = )` slices the multi immediately,
+like `mg[samples]`.
 
 ## Recording a space
 
@@ -478,7 +483,7 @@ spatial accessor like
 
 On a `giottoMulti`, views and spaces carry sample scope:
 
-* `selectSamples(mg, "a", "b", view = )` picks which children participate.
+* `subset(mg, samples = c("a", "b"), view = )` picks which children participate.
 * `samples = ` on a transform defines per-child coordinate frames for
   cross-sample layouts.
 
@@ -486,8 +491,8 @@ Together they build a "place these samples together, filtered to cluster 3"
 recipe without touching the underlying data:
 
 ```{r}
-mg <- selectSamples(mg, "visium_a", "visium_b", view = "cluster3")
-mg <- subset(mg, leiden_clus == 3, view = "cluster3")
+mg <- subset(mg, leiden_clus == 3, samples = c("visium_a", "visium_b"),
+    view = "cluster3")
 
 # visium_a stays put; visium_b moves next to it
 mg <- spatShift(mg, dx = 8000, dy = 0, space = "side_by_side",
