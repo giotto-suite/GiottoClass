@@ -34,16 +34,12 @@ g <- GiottoData::loadSubObjectMini("giottoPolygon")
 
 overlaps(g)
 #> $rna
-#> class       : SpatVector
-#> geometry    : points
-#> dimensions  : 32071, 4  (geometries, attributes)
-#> extent      : 6400.441, 6900.032, -5149.827, -4699.984  (xmin, xmax, ymin, ymax)
-#> coord. ref. : 
-#> names       :                   poly_ID feat_ID feat_ID_uniq stack
-#> type        :                     <chr>   <chr>        <int> <int>
-#> values      : 323754550002953984063006~  Selplg           87     1
-#>               323754550002953984063006~   Fgfr3          122     1
-#>               323754550002953984063006~    Gfap          138     1
-#>               ...
+#> <overlapPointDT>
+#> spat_unit : "aggregate"
+#> feat_type : "rna"
+#> provenance: aggregate 
+#> * polygons : 462
+#> * features : 32071
+#> * relations: 32071
 #> 
 ```

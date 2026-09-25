@@ -501,7 +501,7 @@ sessionInfo()
     ##  [7] digest_0.6.39        magrittr_2.0.5       evaluate_1.0.5      
     ## [10] grid_4.6.1           fastmap_1.2.0        jsonlite_2.0.0      
     ## [13] Matrix_1.7-5         e1071_1.7-17         backports_1.5.1     
-    ## [16] DBI_1.3.0            GiottoData_0.3.6     codetools_0.2-20    
+    ## [16] DBI_1.3.0            GiottoData_0.3.7     codetools_0.2-20    
     ## [19] textshaping_1.0.5    jquerylib_0.1.4      cli_3.6.6           
     ## [22] rlang_1.3.0          units_1.0-1          XVector_0.52.0      
     ## [25] cachem_1.1.0         yaml_2.3.12          otel_0.2.0          
