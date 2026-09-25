@@ -55,7 +55,8 @@ calculateOverlapPolygonImages(
 
 - ...:
 
-  additional params to `exact_extract`
+  additional params to
+  [`exact_extract`](https://isciences.gitlab.io/exactextractr/reference/exact_extract.html)
 
 ## Value
 

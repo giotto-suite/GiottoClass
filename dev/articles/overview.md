@@ -595,5 +595,5 @@ sessionInfo()
     ## [40] rappdirs_0.3.4      lifecycle_1.0.5     vctrs_0.7.3        
     ## [43] S4Vectors_0.50.3    glue_1.8.1          evaluate_1.0.5     
     ## [46] data.table_1.18.6.1 codetools_0.2-20    ragg_1.5.2         
-    ## [49] stats4_4.6.1        GiottoData_0.3.6    rmarkdown_2.32     
+    ## [49] stats4_4.6.1        GiottoData_0.3.7    rmarkdown_2.32     
     ## [52] pkgconfig_2.0.3     tools_4.6.1         htmltools_0.5.9

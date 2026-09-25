@@ -12,6 +12,13 @@
   `plot(<spatialNetworkObj>, <spatLocsObj>)` draws it against the
   locations that supply the coordinates.
 
+- `gpoly[ids]` and `subset(gpoly, cell_ids = )` errored with “argument
+  is of length zero” on a `giottoPolygon` carrying overlaps, because the
+  [`subset()`](https://rdrr.io/r/base/subset.html) method passes
+  `feat_type = NULL` and the `":all:"` check did not allow for it. With
+  no `feat_type`, a polygon subset keeps every overlap for the kept
+  polygons, as `[` did before the method existed.
+
 ### changes
 
 - Downsampling an image for display – plotting a `giottoAffineImage`,

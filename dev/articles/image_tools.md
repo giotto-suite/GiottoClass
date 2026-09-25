@@ -167,5 +167,5 @@ sessionInfo()
     ## [31] pkgdown_2.2.1       magrittr_2.0.5      digest_0.6.39      
     ## [34] grid_4.6.1          lifecycle_1.0.5     S4Vectors_0.50.3   
     ## [37] evaluate_1.0.5      data.table_1.18.6.1 codetools_0.2-20   
-    ## [40] ragg_1.5.2          stats4_4.6.1        GiottoData_0.3.6   
+    ## [40] ragg_1.5.2          stats4_4.6.1        GiottoData_0.3.7   
     ## [43] rmarkdown_2.32      tools_4.6.1         htmltools_0.5.9
