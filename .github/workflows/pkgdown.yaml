@@ -27,7 +27,7 @@ jobs:
     with:
       mode: release
       dependencies: '"hard"'
-      # spatial_geometries.Rmd needs these Suggests; the dev build excludes it.
+      # spatial_geometries.Rmd needs these Suggests
       extra-packages: "any::pkgdown, bioc::BiocStyle, any::rprojroot, any::exactextractr, any::sf, any::sp, any::stars, local::."
       # vignettes need GiottoData (Suggests). Pinned without dependencies: its
       # bare giotto-suite/GiottoClass Remote would otherwise replace this build.

@@ -30,23 +30,3 @@ echo "pre-build: spliced gsource reference entries ($(grep -c 'New on the gsourc
 # cannot find. Drop the entry for dev only.
 sed -i.bak '/^ *- spat_net_to_igraph$/d' _pkgdown.yml && rm -f _pkgdown.yml.bak
 echo "pre-build: dropped spat_net_to_igraph (removed on gsource)"
-
-# 2. spatial_geometries.Rmd does not survive gsource. Its subsetting chunk fails in
-#     [ -> subset(x, cell_ids = i) -> .subset_giotto_polygon_object()
-# which returns a zero-length object, so plot() has nothing to draw. The same
-# vignette renders fine against the released 0.5.1, and R/subset.R was rewritten
-# on gsource -- a package behaviour change, not a documentation problem.
-#
-# Remove this block once polygon subsetting by cell ID is settled.
-rm -f vignettes/spatial_geometries.Rmd
-
-# Drop its navbar entry too, or the menu links to a page that will not exist.
-# One-line delay so the `- text:` line above the href goes with it. Uses a
-# `have` flag rather than testing prev for emptiness, which would silently
-# swallow every blank line in the file.
-awk '{ if ($0 ~ /articles\/spatial_geometries\.html/) { have=0; next }
-       if (have) print prev
-       prev=$0; have=1 }
-     END { if (have) print prev }' _pkgdown.yml > _pkgdown.tmp
-mv _pkgdown.tmp _pkgdown.yml
-echo "pre-build: excluded spatial_geometries.Rmd (gsource subsetting change)"
