@@ -39,6 +39,8 @@ echo "pre-build: dropped spat_net_to_igraph (removed on gsource)"
 git checkout HEAD -- vignettes/
 awk '{ print }
      /href: articles\/image_tools\.html/ {
+       print "      - text: Multi-sample (giottoMulti)"
+       print "        href: articles/giottoMulti.html"
        print "      - text: View and Space"
        print "        href: articles/view_and_space.html"
        print "      - text: Object Manifest"
