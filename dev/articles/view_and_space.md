@@ -11,7 +11,7 @@ accessors see without mutating the underlying data.
 | Records | filter / crop / sample-selection steps | coordinate-frame transforms (spin, affine, flip, …) |
 | Effect on accessors | narrows which cells survive | reframes spatial geometry of survivors |
 | Use case | “show me cluster 3 inside this region” | “rotate sample B by 45° and shift to land next to sample A” |
-| Built by | [`subset()`](https://rdrr.io/r/base/subset.html) / [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md) / [`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md) with `view = "name"` | a transform verb with `space = "name"` |
+| Built by | [`subset()`](https://rdrr.io/r/base/subset.html) / [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md) with `view = "name"` | a transform verb with `space = "name"` |
 | Stored as | a `giottoView` under `gobject@view$name` | a `giottoSpace` under `gobject@spaces$name` |
 
 Both are created by *recording* onto a name: there is no constructor and
@@ -37,9 +37,8 @@ any frame; the same space can be applied to any cell subset.
   rescale composed in order. Sample-keyed so different children of a
   `giottoMulti` can carry different transforms.
 - **Both:** apply the view first to pick which cells, then the space to
-  decide where to draw them.
-  [`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
-  (or the `view=` / `space=` args on getters) accepts both.
+  decide where to draw them. The `view=` / `space=` args on getters
+  accept both.
 
 ## Recording a view
 
@@ -193,15 +192,48 @@ separate concern from any output frame the consumer might request:
 
 ``` r
 
+# A frame to draw the region in (see "Recording a space" below)
+g <- spin(g, angle = 45, space = "rotate")
+
 # Crop region drawn in "rotate" coords; the frame is recorded on the step.
-g <- crop(g, ext(3000, 4000, -3000, -2000), view = "test", space = "rotate")
+g <- crop(g, terra::ext(0, 1000, -6500, -5500), view = "test", space = "rotate")
 
 # Default: predicate uses "rotate" frame to decide cells, output stays
 # in NATIVE frame.
 getSpatialLocations(g, view = "test")            # native coords, narrowed
+#> An object of class spatLocsObj : "raw"
+#> spat_unit : "cell"
+#> provenance: cell 
+#> dimensions: 60 3 
+#> preview   :
+#>    sdimx sdimy            cell_ID
+#>    <int> <int>             <char>
+#> 1:  4445 -3526 AAGTAGAAGACCGGGT-1
+#> 2:  4445 -4005 AATGACTGTCAGCCGG-1
+#> 3:  5064 -4125 ACACAAAGACGGGTGG-1
+#> 
+#> ranges:
+#>      sdimx sdimy
+#> [1,]  3964 -4484
+#> [2,]  5202 -3287
 
 # Explicit: predicate uses "rotate" frame, output also in "rotate" frame.
 getSpatialLocations(g, view = "test", space = "rotate")  # rotated coords
+#> An object of class spatLocsObj : "raw"
+#> spat_unit : "cell"
+#> provenance: cell 
+#> dimensions: 60 3 
+#> preview   :
+#>       sdimx     sdimy            cell_ID
+#>       <num>     <num>             <char>
+#> 1: 649.8311 -5636.348 AAGTAGAAGACCGGGT-1
+#> 2: 311.1270 -5975.052 AATGACTGTCAGCCGG-1
+#> 3: 663.9733 -6497.604 ACACAAAGACGGGTGG-1
+#> 
+#> ranges:
+#>           sdimx     sdimy
+#> [1,]   8.485281 -6497.604
+#> [2,] 977.221572 -5503.412
 ```
 
 The two arguments are independent:
@@ -227,16 +259,55 @@ referent (the slotted space `"name"`), different operation per verb.
 
 ### Sample selection (giottoMulti only)
 
-When the view will be applied to a `giottoMulti`,
-[`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md)
+When the view will be applied to a `giottoMulti`, `subset(samples = )`
 records which children participate. The step is resolved first, before
-any filter or crop steps:
+any filter or crop steps, and the excluded children are never read. One
+call can record both a sample step and a filter:
 
 ``` r
 
-mg <- selectSamples(mg, "visium_a", "visium_b", view = "pair")
-mg <- subset(mg, leiden_clus == 1, view = "pair")
+mg <- createGiottoMulti(list(
+    visium_a = GiottoData::loadGiottoMini("visium", verbose = FALSE),
+    visium_b = GiottoData::loadGiottoMini("visium", verbose = FALSE)
+))
+#> > " Delaunay_network " already exists and will be replaced with new
+#>  spatial network
+#> Setting spatial network [cell] Delaunay_network
+#> > " spatial_network " already exists and will be replaced with new
+#>  spatial network
+#> Setting spatial network [cell] spatial_network
+#> > 'sNN.pca' already exists and will be replaced with
+#>  new nearest neighbor network
+#> Setting nearest neighbor network [cell][rna] sNN.pca
+#> > 'custom_NN' already exists and will be replaced with
+#>  new nearest neighbor network
+#> Setting nearest neighbor network [cell][rna] custom_NN
+#> > " Delaunay_network " already exists and will be replaced with new
+#>  spatial network
+#> Setting spatial network [cell] Delaunay_network
+#> > " spatial_network " already exists and will be replaced with new
+#>  spatial network
+#> Setting spatial network [cell] spatial_network
+#> > 'sNN.pca' already exists and will be replaced with
+#>  new nearest neighbor network
+#> Setting nearest neighbor network [cell][rna] sNN.pca
+#> > 'custom_NN' already exists and will be replaced with
+#>  new nearest neighbor network
+#> Setting nearest neighbor network [cell][rna] custom_NN
+#> python already initialized in this session
+#>  active environment : '/usr/bin/python3'
+#>  python version : 3.12
+
+mg <- subset(mg, leiden_clus == 1, samples = "visium_a", view = "pair")
+names(getSpatialLocations(mg, view = "pair"))
+#> Getting values from [cell][rna] cell metadata
+#> [1] "visium_a"
 ```
+
+`samples =` takes group names as well as child names (see
+[`?gmultiGroup`](https://giotto-suite.github.io/GiottoClass/dev/reference/gmultiGroup.md)).
+Without `view =`, `subset(mg, samples = )` slices the multi immediately,
+like `mg[samples]`.
 
 ## Recording a space
 
@@ -377,7 +448,7 @@ error rather than a silent fallback to the centroid answer:
 
 # no @spatial_info on this object
 g_nopoly <- crop(g_nopoly, box, geom = "poly", view = "p")
-materialize(g_nopoly, "p")
+getCellMetadata(g_nopoly, view = "p")
 #> Error: [crop] geom = "poly" was requested (relation 'intersects'), but
 #> this object has no polygon source to evaluate it on.
 #> Either add polygons (`setPolygonInfo()`) or use geom = "centroid".
@@ -407,7 +478,7 @@ giottoView(g, "cluster1")          # read one back
 #>   [1] filter  leiden_clus == 1
 giottoViews(g)                     # list the names
 #> [1] "cluster1"      "multi"         "not_c1"        "box"          
-#> [5] "roi"           "contains_demo"
+#> [5] "roi"           "stripe1"       "test"          "contains_demo"
 ```
 
 The setter’s remaining job is moving a recipe between objects, or
@@ -415,6 +486,20 @@ dropping one. It validates what it is handed, since the recipe is a
 plain list that nothing else type-checks:
 
 ``` r
+
+g2 <- GiottoData::loadGiottoMini("visium", verbose = FALSE)
+#> > " Delaunay_network " already exists and will be replaced with new
+#>  spatial network
+#> Setting spatial network [cell] Delaunay_network
+#> > " spatial_network " already exists and will be replaced with new
+#>  spatial network
+#> Setting spatial network [cell] spatial_network
+#> > 'sNN.pca' already exists and will be replaced with
+#>  new nearest neighbor network
+#> Setting nearest neighbor network [cell][rna] sNN.pca
+#> > 'custom_NN' already exists and will be replaced with
+#>  new nearest neighbor network
+#> Setting nearest neighbor network [cell][rna] custom_NN
 
 giottoView(g2, "cluster1") <- giottoView(g, "cluster1")   # copy across
 giottoView(g, "cluster1") <- NULL                          # remove
@@ -439,23 +524,11 @@ call:
 
 ``` r
 
-g <- GiottoData::loadGiottoMini("visium", verbose = FALSE)
-#> > " Delaunay_network " already exists and will be replaced with new
-#>  spatial network
-#> Setting spatial network [cell] Delaunay_network
-#> > " spatial_network " already exists and will be replaced with new
-#>  spatial network
-#> Setting spatial network [cell] spatial_network
-#> > 'sNN.pca' already exists and will be replaced with
-#>  new nearest neighbor network
-#> Setting nearest neighbor network [cell][rna] sNN.pca
-#> > 'custom_NN' already exists and will be replaced with
-#>  new nearest neighbor network
-#> Setting nearest neighbor network [cell][rna] custom_NN
 g <- subset(g, leiden_clus == 1, view = "cluster1_only")
 
 giottoViews(g)
-#> [1] "cluster1_only"
+#> [1] "multi"         "not_c1"        "box"           "roi"          
+#> [5] "stripe1"       "test"          "contains_demo" "cluster1_only"
 giottoView(g, "cluster1_only")
 #> An object of class giottoView
 #> steps : 1 
@@ -476,11 +549,53 @@ that is useful, so a recipe can be narrowed and handed on:
 v <- giottoView(g, "stripe1")
 
 length(v)          # how many steps
+#> [1] 2
 v[[2]]             # the second step, as a plain list
+#> $type
+#> [1] "filter"
+#> 
+#> $predicate
+#> [1] "total_expr > 1"
+#> 
+#> $scope_args
+#> named list()
 v[1:2]             # a giottoView of the first two steps
+#> An object of class giottoView
+#> steps : 2 
+#>   [1] crop    within on poly
+#>   [2] filter  total_expr > 1
 v[2, "space"]      # one attribute of one step: the frame its region was drawn in
+#> NULL
 
 as.list(v)         # the plain nested form, which the setter reads back
+#> $stripe1
+#> $stripe1$steps
+#> $stripe1$steps[[1]]
+#> $stripe1$steps[[1]]$type
+#> [1] "crop"
+#> 
+#> $stripe1$steps[[1]]$region
+#> [1] "POLYGON ((6500 -4500, 7100 -4400, 6900 -4000, 6500 -4200, 6500 -4500))"
+#> 
+#> $stripe1$steps[[1]]$relation
+#> [1] "within"
+#> 
+#> $stripe1$steps[[1]]$geom
+#> [1] "poly"
+#> 
+#> $stripe1$steps[[1]]$space
+#> [1] NA
+#> 
+#> 
+#> $stripe1$steps[[2]]
+#> $stripe1$steps[[2]]$type
+#> [1] "filter"
+#> 
+#> $stripe1$steps[[2]]$predicate
+#> [1] "total_expr > 1"
+#> 
+#> $stripe1$steps[[2]]$scope_args
+#> named list()
 ```
 
 A space indexes on one axis at a time — `sp["visium_a"]` narrows to a
@@ -515,51 +630,6 @@ The view is named, not passed inline — see [`view =` and `space =` take
 a name, not a recipe](#view---and-space---take-a-name-not-a-recipe)
 above.
 
-### Via `materialize()`
-
-`materialize(g, view, space)` applies the recipe across all relevant
-slots at once, returning a narrowed gobject. Useful when several
-downstream calls need the same narrowing:
-
-``` r
-
-g_narrow <- materialize(g, "cluster1_only")
-#> Getting values from [cell][rna] cell metadata
-g_narrow
-#> An object of class giotto 
-#> >Active spat_unit:  cell 
-#> >Active feat_type:  rna 
-#> dimensions    : 634, 624 (features, cells)
-#> [SUBCELLULAR INFO]
-#> polygons      : cell 
-#> [AGGREGATE INFO]
-#> expression -----------------------
-#>   [cell][rna] raw normalized scaled
-#> spatial locations ----------------
-#>   [cell] raw
-#> spatial networks -----------------
-#>   [cell] Delaunay_network spatial_network
-#> spatial enrichments --------------
-#>   [cell][rna] cluster_metagene DWLS
-#> dim reduction --------------------
-#>   [cell][rna] pca custom_pca umap custom_umap tsne
-#> nearest neighbor networks --------
-#>   [cell][rna] sNN.pca custom_NN
-#> attached images ------------------
-#> images      : alignment image 
-#> 
-#> 
-#> Use objHistory() to see steps and params used
-
-# Subsequent accessors see the narrowed view automatically
-length(spatIDs(g_narrow))
-#> [1] 624
-```
-
-The `slots =` argument scopes which slots to narrow — handy when only a
-subset of data is needed (e.g. plot functions narrow only the slots they
-read).
-
 ### Combining view and space
 
 The view runs first to pick cell survivors, then the space transforms
@@ -568,7 +638,23 @@ the spatial geometry of those survivors:
 ``` r
 
 g <- spatShift(g, dx = 100, dy = 0, space = "layout")
-g_out <- materialize(g, view = "cluster1_only", space = "layout")
+getSpatialLocations(g, view = "cluster1_only", space = "layout")
+#> Getting values from [cell][rna] cell metadata
+#> An object of class spatLocsObj : "raw"
+#> spat_unit : "cell"
+#> provenance: cell 
+#> dimensions: 162 3 
+#> preview   :
+#>    sdimx sdimy            cell_ID
+#>    <num> <num>             <char>
+#> 1:  5577 -4125 AAAGGGATGTAGCAAG-1
+#> 2:  3995 -3047 AACCCAGAGACGGAGA-1
+#> 3:  4545 -3526 AAGTAGAAGACCGGGT-1
+#> 
+#> ranges:
+#>      sdimx sdimy
+#> [1,]  3169 -5202
+#> [2,]  6403 -3047
 ```
 
 For plain `getCellMetadata` / `spatValues` calls, `space` is accepted
@@ -581,7 +667,7 @@ spatial accessor like
 
 On a `giottoMulti`, views and spaces carry sample scope:
 
-- `selectSamples(mg, "a", "b", view = )` picks which children
+- `subset(mg, samples = c("a", "b"), view = )` picks which children
   participate.
 - `samples =` on a transform defines per-child coordinate frames for
   cross-sample layouts.
@@ -591,14 +677,49 @@ Together they build a “place these samples together, filtered to cluster
 
 ``` r
 
-mg <- selectSamples(mg, "visium_a", "visium_b", view = "cluster3")
-mg <- subset(mg, leiden_clus == 3, view = "cluster3")
+mg <- subset(mg, leiden_clus == 3, samples = c("visium_a", "visium_b"),
+    view = "cluster3")
 
 # visium_a stays put; visium_b moves next to it
 mg <- spatShift(mg, dx = 8000, dy = 0, space = "side_by_side",
     samples = "visium_b")
 
-mg_out <- materialize(mg, view = "cluster3", space = "side_by_side")
+getSpatialLocations(mg, view = "cluster3", space = "side_by_side")
+#> Getting values from [cell][rna] cell metadata
+#> $visium_a
+#> An object of class spatLocsObj : "raw"
+#> spat_unit : "cell"
+#> provenance: cell 
+#> dimensions: 108 3 
+#> preview   :
+#>    sdimx sdimy            cell_ID
+#>    <int> <int>             <char>
+#> 1:  5684 -4005 AACGCGGTCTCCAGCC-1
+#> 2:  3964 -4125 AACGTCAGACTAGTGG-1
+#> 3:  3826 -4125 AAGGCGCGTAAAGCTT-1
+#> 
+#> ranges:
+#>      sdimx sdimy
+#> [1,]  3069 -5083
+#> [2,]  6096 -3167
+#> 
+#> 
+#> $visium_b
+#> An object of class spatLocsObj : "raw"
+#> spat_unit : "cell"
+#> provenance: cell 
+#> dimensions: 108 3 
+#> preview   :
+#>    sdimx sdimy            cell_ID
+#>    <num> <num>             <char>
+#> 1: 13684 -4005 AACGCGGTCTCCAGCC-1
+#> 2: 11964 -4125 AACGTCAGACTAGTGG-1
+#> 3: 11826 -4125 AAGGCGCGTAAAGCTT-1
+#> 
+#> ranges:
+#>      sdimx sdimy
+#> [1,] 11069 -5083
+#> [2,] 14096 -3167
 ```
 
 The view’s surviving cell IDs are computed once across the gmulti;
@@ -607,11 +728,8 @@ per-child getter calls downstream reuse that cache.
 ## Design notes
 
 - **Recipes, not state.** *Resolving* a view doesn’t mutate the gobject
-  —
-  [`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
-  returns a new gobject, or you pass the name to a getter per-call.
-  Recording a step is the one write, and it touches only the recipe,
-  never the data.
+  — you pass the name to a getter per-call. Recording a step is the one
+  write, and it touches only the recipe, never the data.
 - **Plain steps in a class.** The recipe object is S4 — it is the handle
   `[`, the builder verbs and
   [`as.list()`](https://rdrr.io/r/base/list.html) act on — but every
@@ -639,8 +757,6 @@ per-child getter calls downstream reuse that cache.
   shaped this way, and what is deliberately left undone.
 - `vignettes/articles/design_gmulti.Rmd` — the multi-sample container
   that view and space integrate with most deeply.
-- [`?materialize`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
-  — the full resolver entry point.
 - [`?giottoView`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView.md)
   — slotted view accessors.
 - [`?giottoSpace`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace.md)

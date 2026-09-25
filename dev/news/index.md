@@ -21,6 +21,28 @@
 
 ### changes
 
+- `selectSamples()` is removed. A view’s sample step is recorded with
+  `subset(mg, samples = , view = )`, which can record a filter in the
+  same call, and `subset(mg, samples = )` without `view =` slices the
+  multi. The spatial getters on a `giottoMulti` now honour a sample
+  step: before, only
+  [`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
+  did, so a view holding just a sample selection narrowed nothing when
+  read through a getter. Sample names expand groups, several sample
+  steps intersect, and an unknown name is an error.
+
+- [`getCellMetadata()`](https://giotto-suite.github.io/GiottoClass/dev/reference/getCellMetadata.md),
+  [`getExpression()`](https://giotto-suite.github.io/GiottoClass/dev/reference/getExpression.md)
+  and
+  [`getFeatureMetadata()`](https://giotto-suite.github.io/GiottoClass/dev/reference/getFeatureMetadata.md)
+  on a `giottoMulti` take `view =`, as they already did on a `giotto`.
+  The view’s filter, crop and sample steps narrow the result whether it
+  is assembled from the children or read from a joint slot; feature
+  metadata passes through, since a view narrows cells. A view’s sample
+  step now also bounds its cell set everywhere a view resolves, so joint
+  dimension reductions and spatial enrichments read through `view =`
+  narrow by it too.
+
 - Downsampling an image for display – plotting a `giottoAffineImage`,
   coercing an image to `magick` or `EBImage`, and
   [`convertGiottoLargeImageToMG()`](https://giotto-suite.github.io/GiottoClass/dev/reference/convertGiottoLargeImageToMG.md)
@@ -29,8 +51,19 @@
   them: on a 10x JPEG-2000 `.ome.tif` read through its VRT, one
   downsampled read of the whole image took ~2.2 s and now takes ~0.03 s.
   Displayed pixel values now come from the overview level, so they are
-  averaged rather than exact. `data.frame` output, used for intensity
-  statistics, still samples exact pixels with `"regular"`.
+  averaged rather than exact.
+
+- Creating or cropping a `giottoLargeImage` samples the intensity range
+  the same way, so opening a 10x JPEG-2000 `.ome.tif` no longer spends
+  ~2 s on it. The estimate comes from block-averaged overview pixels and
+  so under-reports outliers, so `max_intensity` comes out lower than
+  before on images that have overviews. `plot(<giottoLargeImage>)`
+  derives its default display range from the bit depth of
+  `max_intensity`, so such an image can plot brighter by default – on
+  the Atera breast DAPI the range drops from 0-16383 to 0-4095. Image
+  layers in the ggplot-based spatial plots do not use `max_intensity`
+  and are unaffected. Images small enough for terra to know their exact
+  range, and images without overviews, are unaffected.
 
 - **`n_threads_build` is gone from
   [`hnswKNN()`](https://giotto-suite.github.io/GiottoClass/dev/reference/hnswKNN.md),
@@ -204,11 +237,11 @@ released version, so no stored object holds a recipe.
   [`updateGiottoObject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/updateGiottoObject.md).
 
 - Recipes are built by **recording onto a name**, not by a constructor.
-  [`subset()`](https://rdrr.io/r/base/subset.html),
+  [`subset()`](https://rdrr.io/r/base/subset.html) and
   [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
-  and
-  [`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md)
-  gain `view =`, and the coordinate-frame verbs
+  gain `view =` (with `samples =`,
+  [`subset()`](https://rdrr.io/r/base/subset.html) records a sample step
+  on a `giottoMulti` view), and the coordinate-frame verbs
   ([`spin()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md),
   [`spatShift()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.md),
   [`affine()`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md),

@@ -9,10 +9,9 @@ time it is consumed, rather than a snapshot.
 
 Access it with `[` (class-preserving, so the result stays editable) and
 `[[` (extracts a step). Append to it with the builder verbs
-[`subset()`](https://rdrr.io/r/base/subset.html),
+[`subset()`](https://rdrr.io/r/base/subset.html) (a filter step, or a
+sample step with `samples =`) and
 [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md),
-and
-[`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md),
 or compose two with `+`. Export the plain nested form with
 [`as.list()`](https://rdrr.io/r/base/list.html).
 

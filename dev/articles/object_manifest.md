@@ -21,7 +21,7 @@ activeSpatUnit(g) <- "aggregate"
 
 objManifest(g)
 #> <gmanifest> schema 0.1.0
-#>   uid: g-20260925162340-3cf45860424a
+#>   uid: g-20260925194434-3dfc4b5e4a60
 #>   spat_units: aggregate, z0, z1 | feat_types: rna
 #>   cell_ID: 3
 #>   cell_metadata: 3
@@ -172,7 +172,7 @@ str(tail(ghistory_records(g), 1)[[1]], max.level = 1)
 #>  $ step_id  : chr "19_subset"
 #>  $ fn       : chr "subsetGiotto"
 #>  $ params   :List of 12
-#>  $ timestamp: chr "2026-09-25T16:23:42Z"
+#>  $ timestamp: chr "2026-09-25T19:44:36Z"
 #>  $ seed     :List of 2
 #>  $ status   : chr "ok"
 #>  $ error    : NULL

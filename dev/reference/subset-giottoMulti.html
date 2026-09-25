@@ -128,6 +128,7 @@ untouched and acts as the "widen back" handle.</p>
 <span>  cells <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  features <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  negate <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  samples <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  view <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -162,10 +163,16 @@ no cell-level filter.</p></dd>
 predicate, matching <code>subset(&lt;giotto&gt;)</code>.</p></dd>
 
 
+<dt id="arg-samples">samples<a class="anchor" aria-label="anchor" href="#arg-samples"></a></dt>
+<dd><p><code>NULL</code> or <code>character</code>. Children (or group names) to keep.
+Eagerly, this is <code>x[samples]</code>. With <code>view = </code>, it records a sample step
+on the view instead, resolved before the view's other steps.</p></dd>
+
+
 <dt id="arg-view">view<a class="anchor" aria-label="anchor" href="#arg-view"></a></dt>
 <dd><p><code>NULL</code> or <code>character(1)</code>. When supplied, records the
-predicate as a filter step on the named view (created if new) instead
-of narrowing eagerly.</p></dd>
+predicate as a filter step and/or <code>samples</code> as a sample step on the
+named view (created if new) instead of narrowing eagerly.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -184,7 +191,9 @@ registry) is left untouched — it records identity, not selection.</p>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">mg</span>, cells <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a::c1"</span>, <span class="st">"a::c2"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">mg</span>, samples <span class="op">=</span> <span class="st">"a"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">mg</span>, <span class="va">leiden_clus</span> <span class="op">==</span> <span class="fl">1</span>, view <span class="op">=</span> <span class="st">"cluster1"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">mg</span>, samples <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span><span class="op">)</span>, view <span class="op">=</span> <span class="st">"pair"</span><span class="op">)</span></span>
 <span><span class="op">}</span> <span class="co"># }</span></span></code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

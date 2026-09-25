@@ -22,6 +22,7 @@ subset(
   cells = NULL,
   features = NULL,
   negate = FALSE,
+  samples = NULL,
   view = NULL,
   ...
 )
@@ -54,11 +55,17 @@ subset(
   logical. Invert the predicate. Folded into the recorded predicate,
   matching `subset(<giotto>)`.
 
+- samples:
+
+  `NULL` or `character`. Children (or group names) to keep. Eagerly,
+  this is `x[samples]`. With `view = `, it records a sample step on the
+  view instead, resolved before the view's other steps.
+
 - view:
 
   `NULL` or `character(1)`. When supplied, records the predicate as a
-  filter step on the named view (created if new) instead of narrowing
-  eagerly.
+  filter step and/or `samples` as a sample step on the named view
+  (created if new) instead of narrowing eagerly.
 
 - ...:
 
@@ -77,6 +84,8 @@ left untouched — it records identity, not selection.
 ``` r
 if (FALSE) { # \dontrun{
 subset(mg, cells = c("a::c1", "a::c2"))
+subset(mg, samples = "a")
 subset(mg, leiden_clus == 1, view = "cluster1")
+subset(mg, samples = c("a", "b"), view = "pair")
 } # }
 ```

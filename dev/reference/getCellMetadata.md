@@ -28,7 +28,8 @@ getCellMetadata(
   copy_obj = TRUE,
   set_defaults = TRUE,
   samples = NULL,
-  on_missing = c("error", "drop", "fill")
+  on_missing = c("error", "drop", "fill"),
+  view = NULL
 )
 ```
 

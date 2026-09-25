@@ -164,8 +164,8 @@ subsequent accessors see without mutating the underlying data.</p>
 <tr class="even">
 <td>Built by</td>
 <td>
-<code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code> / <code><a href="../reference/crop.html">crop()</a></code> /
-<code><a href="../reference/selectSamples.html">selectSamples()</a></code> with <code>view = "name"</code>
+<code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code> / <code><a href="../reference/crop.html">crop()</a></code> with
+<code>view = "name"</code>
 </td>
 <td>a transform verb with <code>space = "name"</code>
 </td>
@@ -209,9 +209,8 @@ different children of a <code>giottoMulti</code> can carry different
 transforms.</li>
 <li>
 <strong>Both:</strong> apply the view first to pick which cells,
-then the space to decide where to draw them. <code><a href="../reference/materialize.html">materialize()</a></code>
-(or the <code>view=</code> / <code>space=</code> args on getters)
-accepts both.</li>
+then the space to decide where to draw them. The <code>view=</code> /
+<code>space=</code> args on getters accept both.</li>
 </ul>
 </div>
 <div class="section level2">
@@ -331,15 +330,48 @@ drawn in</strong>. It is recorded on that crop step, beside the region
 it describes, so a view may crop in one frame and then another. This is
 a separate concern from any output frame the consumer might request:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Crop region drawn in "rotate" coords; the frame is recorded on the step.</span></span>
-<span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/crop.html">crop</a></span><span class="op">(</span><span class="va">g</span>, <span class="fu"><a href="../reference/ext.html">ext</a></span><span class="op">(</span><span class="fl">3000</span>, <span class="fl">4000</span>, <span class="op">-</span><span class="fl">3000</span>, <span class="op">-</span><span class="fl">2000</span><span class="op">)</span>, view <span class="op">=</span> <span class="st">"test"</span>, space <span class="op">=</span> <span class="st">"rotate"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># A frame to draw the region in (see "Recording a space" below)</span></span>
+<span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spin.html">spin</a></span><span class="op">(</span><span class="va">g</span>, angle <span class="op">=</span> <span class="fl">45</span>, space <span class="op">=</span> <span class="st">"rotate"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Crop region drawn in "rotate" coords; the frame is recorded on the step.</span></span>
+<span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/crop.html">crop</a></span><span class="op">(</span><span class="va">g</span>, <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/ext.html" class="external-link">ext</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1000</span>, <span class="op">-</span><span class="fl">6500</span>, <span class="op">-</span><span class="fl">5500</span><span class="op">)</span>, view <span class="op">=</span> <span class="st">"test"</span>, space <span class="op">=</span> <span class="st">"rotate"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Default: predicate uses "rotate" frame to decide cells, output stays</span></span>
 <span><span class="co"># in NATIVE frame.</span></span>
 <span><span class="fu"><a href="../reference/getSpatialLocations.html">getSpatialLocations</a></span><span class="op">(</span><span class="va">g</span>, view <span class="op">=</span> <span class="st">"test"</span><span class="op">)</span>            <span class="co"># native coords, narrowed</span></span>
+<span><span class="co">#&gt; An object of class spatLocsObj : "raw"</span></span>
+<span><span class="co">#&gt; spat_unit : "cell"</span></span>
+<span><span class="co">#&gt; provenance: cell </span></span>
+<span><span class="co">#&gt; dimensions: 60 3 </span></span>
+<span><span class="co">#&gt; preview   :</span></span>
+<span><span class="co">#&gt;    sdimx sdimy            cell_ID</span></span>
+<span><span class="co">#&gt;    &lt;int&gt; &lt;int&gt;             &lt;char&gt;</span></span>
+<span><span class="co">#&gt; 1:  4445 -3526 AAGTAGAAGACCGGGT-1</span></span>
+<span><span class="co">#&gt; 2:  4445 -4005 AATGACTGTCAGCCGG-1</span></span>
+<span><span class="co">#&gt; 3:  5064 -4125 ACACAAAGACGGGTGG-1</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ranges:</span></span>
+<span><span class="co">#&gt;      sdimx sdimy</span></span>
+<span><span class="co">#&gt; [1,]  3964 -4484</span></span>
+<span><span class="co">#&gt; [2,]  5202 -3287</span></span>
 <span></span>
 <span><span class="co"># Explicit: predicate uses "rotate" frame, output also in "rotate" frame.</span></span>
-<span><span class="fu"><a href="../reference/getSpatialLocations.html">getSpatialLocations</a></span><span class="op">(</span><span class="va">g</span>, view <span class="op">=</span> <span class="st">"test"</span>, space <span class="op">=</span> <span class="st">"rotate"</span><span class="op">)</span>  <span class="co"># rotated coords</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/getSpatialLocations.html">getSpatialLocations</a></span><span class="op">(</span><span class="va">g</span>, view <span class="op">=</span> <span class="st">"test"</span>, space <span class="op">=</span> <span class="st">"rotate"</span><span class="op">)</span>  <span class="co"># rotated coords</span></span>
+<span><span class="co">#&gt; An object of class spatLocsObj : "raw"</span></span>
+<span><span class="co">#&gt; spat_unit : "cell"</span></span>
+<span><span class="co">#&gt; provenance: cell </span></span>
+<span><span class="co">#&gt; dimensions: 60 3 </span></span>
+<span><span class="co">#&gt; preview   :</span></span>
+<span><span class="co">#&gt;       sdimx     sdimy            cell_ID</span></span>
+<span><span class="co">#&gt;       &lt;num&gt;     &lt;num&gt;             &lt;char&gt;</span></span>
+<span><span class="co">#&gt; 1: 649.8311 -5636.348 AAGTAGAAGACCGGGT-1</span></span>
+<span><span class="co">#&gt; 2: 311.1270 -5975.052 AATGACTGTCAGCCGG-1</span></span>
+<span><span class="co">#&gt; 3: 663.9733 -6497.604 ACACAAAGACGGGTGG-1</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ranges:</span></span>
+<span><span class="co">#&gt;           sdimx     sdimy</span></span>
+<span><span class="co">#&gt; [1,]   8.485281 -6497.604</span></span>
+<span><span class="co">#&gt; [2,] 977.221572 -5503.412</span></span></code></pre></div>
 <p>The two arguments are independent:</p>
 <table class="table">
 <colgroup>
@@ -383,11 +415,51 @@ slotted space <code>"name"</code>), different operation per verb.</p>
 <h3 id="sample-selection-giottomulti-only">Sample selection (giottoMulti only)<a class="anchor" aria-label="anchor" href="#sample-selection-giottomulti-only"></a>
 </h3>
 <p>When the view will be applied to a <code>giottoMulti</code>,
-<code><a href="../reference/selectSamples.html">selectSamples()</a></code> records which children participate. The
-step is resolved first, before any filter or crop steps:</p>
+<code>subset(samples = )</code> records which children participate. The
+step is resolved first, before any filter or crop steps, and the
+excluded children are never read. One call can record both a sample step
+and a filter:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/selectSamples.html">selectSamples</a></span><span class="op">(</span><span class="va">mg</span>, <span class="st">"visium_a"</span>, <span class="st">"visium_b"</span>, view <span class="op">=</span> <span class="st">"pair"</span><span class="op">)</span></span>
-<span><span class="va">mg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">mg</span>, <span class="va">leiden_clus</span> <span class="op">==</span> <span class="fl">1</span>, view <span class="op">=</span> <span class="st">"pair"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">mg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/createGiottoMulti.html">createGiottoMulti</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    visium_a <span class="op">=</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://giotto-suite.github.io/GiottoData/reference/loadGiottoMini.html" class="external-link">loadGiottoMini</a></span><span class="op">(</span><span class="st">"visium"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>    visium_b <span class="op">=</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://giotto-suite.github.io/GiottoData/reference/loadGiottoMini.html" class="external-link">loadGiottoMini</a></span><span class="op">(</span><span class="st">"visium"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; &gt; " Delaunay_network " already exists and will be replaced with new</span></span>
+<span><span class="co">#&gt;  spatial network</span></span>
+<span><span class="co">#&gt; Setting spatial network [cell] Delaunay_network</span></span>
+<span><span class="co">#&gt; &gt; " spatial_network " already exists and will be replaced with new</span></span>
+<span><span class="co">#&gt;  spatial network</span></span>
+<span><span class="co">#&gt; Setting spatial network [cell] spatial_network</span></span>
+<span><span class="co">#&gt; &gt; 'sNN.pca' already exists and will be replaced with</span></span>
+<span><span class="co">#&gt;  new nearest neighbor network</span></span>
+<span><span class="co">#&gt; Setting nearest neighbor network [cell][rna] sNN.pca</span></span>
+<span><span class="co">#&gt; &gt; 'custom_NN' already exists and will be replaced with</span></span>
+<span><span class="co">#&gt;  new nearest neighbor network</span></span>
+<span><span class="co">#&gt; Setting nearest neighbor network [cell][rna] custom_NN</span></span>
+<span><span class="co">#&gt; &gt; " Delaunay_network " already exists and will be replaced with new</span></span>
+<span><span class="co">#&gt;  spatial network</span></span>
+<span><span class="co">#&gt; Setting spatial network [cell] Delaunay_network</span></span>
+<span><span class="co">#&gt; &gt; " spatial_network " already exists and will be replaced with new</span></span>
+<span><span class="co">#&gt;  spatial network</span></span>
+<span><span class="co">#&gt; Setting spatial network [cell] spatial_network</span></span>
+<span><span class="co">#&gt; &gt; 'sNN.pca' already exists and will be replaced with</span></span>
+<span><span class="co">#&gt;  new nearest neighbor network</span></span>
+<span><span class="co">#&gt; Setting nearest neighbor network [cell][rna] sNN.pca</span></span>
+<span><span class="co">#&gt; &gt; 'custom_NN' already exists and will be replaced with</span></span>
+<span><span class="co">#&gt;  new nearest neighbor network</span></span>
+<span><span class="co">#&gt; Setting nearest neighbor network [cell][rna] custom_NN</span></span>
+<span><span class="co">#&gt; python already initialized in this session</span></span>
+<span><span class="co">#&gt;  active environment : '/usr/bin/python3'</span></span>
+<span><span class="co">#&gt;  python version : 3.12</span></span>
+<span></span>
+<span><span class="va">mg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">mg</span>, <span class="va">leiden_clus</span> <span class="op">==</span> <span class="fl">1</span>, samples <span class="op">=</span> <span class="st">"visium_a"</span>, view <span class="op">=</span> <span class="st">"pair"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/names.html">names</a></span><span class="op">(</span><span class="fu"><a href="../reference/getSpatialLocations.html">getSpatialLocations</a></span><span class="op">(</span><span class="va">mg</span>, view <span class="op">=</span> <span class="st">"pair"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Getting values from [cell][rna] cell metadata</span></span>
+<span><span class="co">#&gt; [1] "visium_a"</span></span></code></pre></div>
+<p><code>samples =</code> takes group names as well as child names (see
+<code><a href="../reference/gmultiGroup.html">?gmultiGroup</a></code>). Without <code>view =</code>,
+<code>subset(mg, samples = )</code> slices the multi immediately, like
+<code>mg[samples]</code>.</p>
 </div>
 </div>
 <div class="section level2">
@@ -530,7 +602,7 @@ answer:</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># no @spatial_info on this object</span></span>
 <span><span class="va">g_nopoly</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/crop.html">crop</a></span><span class="op">(</span><span class="va">g_nopoly</span>, <span class="va">box</span>, geom <span class="op">=</span> <span class="st">"poly"</span>, view <span class="op">=</span> <span class="st">"p"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/materialize.html">materialize</a></span><span class="op">(</span><span class="va">g_nopoly</span>, <span class="st">"p"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/getCellMetadata.html">getCellMetadata</a></span><span class="op">(</span><span class="va">g_nopoly</span>, view <span class="op">=</span> <span class="st">"p"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Error: [crop] geom = "poly" was requested (relation 'intersects'), but</span></span>
 <span><span class="co">#&gt; this object has no polygon source to evaluate it on.</span></span>
 <span><span class="co">#&gt; Either add polygons (`setPolygonInfo()`) or use geom = "centroid".</span></span></code></pre></div>
@@ -559,12 +631,26 @@ not to build:</p>
 <span><span class="co">#&gt;   [1] filter  leiden_clus == 1</span></span>
 <span><span class="fu"><a href="../reference/giottoView.html">giottoViews</a></span><span class="op">(</span><span class="va">g</span><span class="op">)</span>                     <span class="co"># list the names</span></span>
 <span><span class="co">#&gt; [1] "cluster1"      "multi"         "not_c1"        "box"          </span></span>
-<span><span class="co">#&gt; [5] "roi"           "contains_demo"</span></span></code></pre></div>
+<span><span class="co">#&gt; [5] "roi"           "stripe1"       "test"          "contains_demo"</span></span></code></pre></div>
 <p>The setter’s remaining job is moving a recipe between objects, or
 dropping one. It validates what it is handed, since the recipe is a
 plain list that nothing else type-checks:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/giottoView.html">giottoView</a></span><span class="op">(</span><span class="va">g2</span>, <span class="st">"cluster1"</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/giottoView.html">giottoView</a></span><span class="op">(</span><span class="va">g</span>, <span class="st">"cluster1"</span><span class="op">)</span>   <span class="co"># copy across</span></span>
+<code class="sourceCode R"><span><span class="va">g2</span> <span class="op">&lt;-</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://giotto-suite.github.io/GiottoData/reference/loadGiottoMini.html" class="external-link">loadGiottoMini</a></span><span class="op">(</span><span class="st">"visium"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="co">#&gt; &gt; " Delaunay_network " already exists and will be replaced with new</span></span>
+<span><span class="co">#&gt;  spatial network</span></span>
+<span><span class="co">#&gt; Setting spatial network [cell] Delaunay_network</span></span>
+<span><span class="co">#&gt; &gt; " spatial_network " already exists and will be replaced with new</span></span>
+<span><span class="co">#&gt;  spatial network</span></span>
+<span><span class="co">#&gt; Setting spatial network [cell] spatial_network</span></span>
+<span><span class="co">#&gt; &gt; 'sNN.pca' already exists and will be replaced with</span></span>
+<span><span class="co">#&gt;  new nearest neighbor network</span></span>
+<span><span class="co">#&gt; Setting nearest neighbor network [cell][rna] sNN.pca</span></span>
+<span><span class="co">#&gt; &gt; 'custom_NN' already exists and will be replaced with</span></span>
+<span><span class="co">#&gt;  new nearest neighbor network</span></span>
+<span><span class="co">#&gt; Setting nearest neighbor network [cell][rna] custom_NN</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/giottoView.html">giottoView</a></span><span class="op">(</span><span class="va">g2</span>, <span class="st">"cluster1"</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/giottoView.html">giottoView</a></span><span class="op">(</span><span class="va">g</span>, <span class="st">"cluster1"</span><span class="op">)</span>   <span class="co"># copy across</span></span>
 <span><span class="fu"><a href="../reference/giottoView.html">giottoView</a></span><span class="op">(</span><span class="va">g</span>, <span class="st">"cluster1"</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="cn">NULL</span>                          <span class="co"># remove</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="why-the-same-verbs">Why the same verbs<a class="anchor" aria-label="anchor" href="#why-the-same-verbs"></a>
@@ -585,23 +671,11 @@ it through <code><a href="../reference/saveGiotto.html">saveGiotto()</a></code> 
 Downstream code refers to it by string, so nothing needs rebuilding per
 call:</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu">GiottoData</span><span class="fu">::</span><span class="fu"><a href="https://giotto-suite.github.io/GiottoData/reference/loadGiottoMini.html" class="external-link">loadGiottoMini</a></span><span class="op">(</span><span class="st">"visium"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; &gt; " Delaunay_network " already exists and will be replaced with new</span></span>
-<span><span class="co">#&gt;  spatial network</span></span>
-<span><span class="co">#&gt; Setting spatial network [cell] Delaunay_network</span></span>
-<span><span class="co">#&gt; &gt; " spatial_network " already exists and will be replaced with new</span></span>
-<span><span class="co">#&gt;  spatial network</span></span>
-<span><span class="co">#&gt; Setting spatial network [cell] spatial_network</span></span>
-<span><span class="co">#&gt; &gt; 'sNN.pca' already exists and will be replaced with</span></span>
-<span><span class="co">#&gt;  new nearest neighbor network</span></span>
-<span><span class="co">#&gt; Setting nearest neighbor network [cell][rna] sNN.pca</span></span>
-<span><span class="co">#&gt; &gt; 'custom_NN' already exists and will be replaced with</span></span>
-<span><span class="co">#&gt;  new nearest neighbor network</span></span>
-<span><span class="co">#&gt; Setting nearest neighbor network [cell][rna] custom_NN</span></span>
-<span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">g</span>, <span class="va">leiden_clus</span> <span class="op">==</span> <span class="fl">1</span>, view <span class="op">=</span> <span class="st">"cluster1_only"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">g</span>, <span class="va">leiden_clus</span> <span class="op">==</span> <span class="fl">1</span>, view <span class="op">=</span> <span class="st">"cluster1_only"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/giottoView.html">giottoViews</a></span><span class="op">(</span><span class="va">g</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "cluster1_only"</span></span>
+<span><span class="co">#&gt; [1] "multi"         "not_c1"        "box"           "roi"          </span></span>
+<span><span class="co">#&gt; [5] "stripe1"       "test"          "contains_demo" "cluster1_only"</span></span>
 <span><span class="fu"><a href="../reference/giottoView.html">giottoView</a></span><span class="op">(</span><span class="va">g</span>, <span class="st">"cluster1_only"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; An object of class giottoView</span></span>
 <span><span class="co">#&gt; steps : 1 </span></span>
@@ -619,11 +693,53 @@ that is useful, so a recipe can be narrowed and handed on:</p>
 <code class="sourceCode R"><span><span class="va">v</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/giottoView.html">giottoView</a></span><span class="op">(</span><span class="va">g</span>, <span class="st">"stripe1"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span>          <span class="co"># how many steps</span></span>
+<span><span class="co">#&gt; [1] 2</span></span>
 <span><span class="va">v</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span>             <span class="co"># the second step, as a plain list</span></span>
+<span><span class="co">#&gt; $type</span></span>
+<span><span class="co">#&gt; [1] "filter"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $predicate</span></span>
+<span><span class="co">#&gt; [1] "total_expr &gt; 1"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $scope_args</span></span>
+<span><span class="co">#&gt; named list()</span></span>
 <span><span class="va">v</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span>             <span class="co"># a giottoView of the first two steps</span></span>
+<span><span class="co">#&gt; An object of class giottoView</span></span>
+<span><span class="co">#&gt; steps : 2 </span></span>
+<span><span class="co">#&gt;   [1] crop    within on poly</span></span>
+<span><span class="co">#&gt;   [2] filter  total_expr &gt; 1</span></span>
 <span><span class="va">v</span><span class="op">[</span><span class="fl">2</span>, <span class="st">"space"</span><span class="op">]</span>      <span class="co"># one attribute of one step: the frame its region was drawn in</span></span>
+<span><span class="co">#&gt; NULL</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">as.list</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span>         <span class="co"># the plain nested form, which the setter reads back</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">as.list</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span>         <span class="co"># the plain nested form, which the setter reads back</span></span>
+<span><span class="co">#&gt; $stripe1</span></span>
+<span><span class="co">#&gt; $stripe1$steps</span></span>
+<span><span class="co">#&gt; $stripe1$steps[[1]]</span></span>
+<span><span class="co">#&gt; $stripe1$steps[[1]]$type</span></span>
+<span><span class="co">#&gt; [1] "crop"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $stripe1$steps[[1]]$region</span></span>
+<span><span class="co">#&gt; [1] "POLYGON ((6500 -4500, 7100 -4400, 6900 -4000, 6500 -4200, 6500 -4500))"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $stripe1$steps[[1]]$relation</span></span>
+<span><span class="co">#&gt; [1] "within"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $stripe1$steps[[1]]$geom</span></span>
+<span><span class="co">#&gt; [1] "poly"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $stripe1$steps[[1]]$space</span></span>
+<span><span class="co">#&gt; [1] NA</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $stripe1$steps[[2]]</span></span>
+<span><span class="co">#&gt; $stripe1$steps[[2]]$type</span></span>
+<span><span class="co">#&gt; [1] "filter"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $stripe1$steps[[2]]$predicate</span></span>
+<span><span class="co">#&gt; [1] "total_expr &gt; 1"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $stripe1$steps[[2]]$scope_args</span></span>
+<span><span class="co">#&gt; named list()</span></span></code></pre></div>
 <p>A space indexes on one axis at a time — <code>sp["visium_a"]</code>
 narrows to a sample, <code>sp[[1]]</code> takes a step. <code>+</code>
 merges two recipes that are already scoped, so it concatenates step
@@ -653,57 +769,53 @@ back:</p>
 <span><span class="co">#&gt; [1] 162</span></span></code></pre></div>
 <p>The view is named, not passed inline — see <a href="#view---and-space---take-a-name-not-a-recipe"><code>view =</code>
 and <code>space =</code> take a name, not a recipe</a> above.</p>
-</div>
-<div class="section level3">
-<h3 id="via-materialize">Via <code>materialize()</code><a class="anchor" aria-label="anchor" href="#via-materialize"></a>
-</h3>
-<p><code>materialize(g, view, space)</code> applies the recipe across
-all relevant slots at once, returning a narrowed gobject. Useful when
-several downstream calls need the same narrowing:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">g_narrow</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/materialize.html">materialize</a></span><span class="op">(</span><span class="va">g</span>, <span class="st">"cluster1_only"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Getting values from [cell][rna] cell metadata</span></span>
-<span><span class="va">g_narrow</span></span>
-<span><span class="co">#&gt; An object of class giotto </span></span>
-<span><span class="co">#&gt; &gt;Active spat_unit:  cell </span></span>
-<span><span class="co">#&gt; &gt;Active feat_type:  rna </span></span>
-<span><span class="co">#&gt; dimensions    : 634, 624 (features, cells)</span></span>
-<span><span class="co">#&gt; [SUBCELLULAR INFO]</span></span>
-<span><span class="co">#&gt; polygons      : cell </span></span>
-<span><span class="co">#&gt; [AGGREGATE INFO]</span></span>
-<span><span class="co">#&gt; expression -----------------------</span></span>
-<span><span class="co">#&gt;   [cell][rna] raw normalized scaled</span></span>
-<span><span class="co">#&gt; spatial locations ----------------</span></span>
-<span><span class="co">#&gt;   [cell] raw</span></span>
-<span><span class="co">#&gt; spatial networks -----------------</span></span>
-<span><span class="co">#&gt;   [cell] Delaunay_network spatial_network</span></span>
-<span><span class="co">#&gt; spatial enrichments --------------</span></span>
-<span><span class="co">#&gt;   [cell][rna] cluster_metagene DWLS</span></span>
-<span><span class="co">#&gt; dim reduction --------------------</span></span>
-<span><span class="co">#&gt;   [cell][rna] pca custom_pca umap custom_umap tsne</span></span>
-<span><span class="co">#&gt; nearest neighbor networks --------</span></span>
-<span><span class="co">#&gt;   [cell][rna] sNN.pca custom_NN</span></span>
-<span><span class="co">#&gt; attached images ------------------</span></span>
-<span><span class="co">#&gt; images      : alignment image </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Use objHistory() to see steps and params used</span></span>
-<span></span>
-<span><span class="co"># Subsequent accessors see the narrowed view automatically</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="../reference/spatIDs-generic.html">spatIDs</a></span><span class="op">(</span><span class="va">g_narrow</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 624</span></span></code></pre></div>
-<p>The <code>slots =</code> argument scopes which slots to narrow —
-handy when only a subset of data is needed (e.g. plot functions narrow
-only the slots they read).</p>
+<!-- materialize() is hidden until it is replaced by resolve()
+
+### Via `materialize()`
+
+`materialize(g, view, space)` applies the recipe across all relevant
+slots at once, returning a narrowed gobject. Useful when several
+downstream calls need the same narrowing:
+
+
+``` r
+g_narrow <- materialize(g, "cluster1_only")
+g_narrow
+
+# Subsequent accessors see the narrowed view automatically
+length(spatIDs(g_narrow))
+```
+
+The `slots = ` argument scopes which slots to narrow — handy when only a
+subset of data is needed (e.g. plot functions narrow only the slots they
+read).
+
+-->
 </div>
 <div class="section level3">
 <h3 id="combining-view-and-space">Combining view and space<a class="anchor" aria-label="anchor" href="#combining-view-and-space"></a>
 </h3>
 <p>The view runs first to pick cell survivors, then the space transforms
 the spatial geometry of those survivors:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spatShift.html">spatShift</a></span><span class="op">(</span><span class="va">g</span>, dx <span class="op">=</span> <span class="fl">100</span>, dy <span class="op">=</span> <span class="fl">0</span>, space <span class="op">=</span> <span class="st">"layout"</span><span class="op">)</span></span>
-<span><span class="va">g_out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/materialize.html">materialize</a></span><span class="op">(</span><span class="va">g</span>, view <span class="op">=</span> <span class="st">"cluster1_only"</span>, space <span class="op">=</span> <span class="st">"layout"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/getSpatialLocations.html">getSpatialLocations</a></span><span class="op">(</span><span class="va">g</span>, view <span class="op">=</span> <span class="st">"cluster1_only"</span>, space <span class="op">=</span> <span class="st">"layout"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Getting values from [cell][rna] cell metadata</span></span>
+<span><span class="co">#&gt; An object of class spatLocsObj : "raw"</span></span>
+<span><span class="co">#&gt; spat_unit : "cell"</span></span>
+<span><span class="co">#&gt; provenance: cell </span></span>
+<span><span class="co">#&gt; dimensions: 162 3 </span></span>
+<span><span class="co">#&gt; preview   :</span></span>
+<span><span class="co">#&gt;    sdimx sdimy            cell_ID</span></span>
+<span><span class="co">#&gt;    &lt;num&gt; &lt;num&gt;             &lt;char&gt;</span></span>
+<span><span class="co">#&gt; 1:  5577 -4125 AAAGGGATGTAGCAAG-1</span></span>
+<span><span class="co">#&gt; 2:  3995 -3047 AACCCAGAGACGGAGA-1</span></span>
+<span><span class="co">#&gt; 3:  4545 -3526 AAGTAGAAGACCGGGT-1</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ranges:</span></span>
+<span><span class="co">#&gt;      sdimx sdimy</span></span>
+<span><span class="co">#&gt; [1,]  3169 -5202</span></span>
+<span><span class="co">#&gt; [2,]  6403 -3047</span></span></code></pre></div>
 <p>For plain <code>getCellMetadata</code> / <code>spatValues</code>
 calls, <code>space</code> is accepted for API symmetry but is a no-op on
 tabular subobjects — only <code>cell_ID</code> survival is affected. To
@@ -718,7 +830,7 @@ get transformed coordinates, route through a spatial accessor like
 scope:</p>
 <ul>
 <li>
-<code>selectSamples(mg, "a", "b", view = )</code> picks which
+<code>subset(mg, samples = c("a", "b"), view = )</code> picks which
 children participate.</li>
 <li>
 <code>samples =</code> on a transform defines per-child coordinate
@@ -726,15 +838,50 @@ frames for cross-sample layouts.</li>
 </ul>
 <p>Together they build a “place these samples together, filtered to
 cluster 3” recipe without touching the underlying data:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/selectSamples.html">selectSamples</a></span><span class="op">(</span><span class="va">mg</span>, <span class="st">"visium_a"</span>, <span class="st">"visium_b"</span>, view <span class="op">=</span> <span class="st">"cluster3"</span><span class="op">)</span></span>
-<span><span class="va">mg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">mg</span>, <span class="va">leiden_clus</span> <span class="op">==</span> <span class="fl">3</span>, view <span class="op">=</span> <span class="st">"cluster3"</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">mg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">mg</span>, <span class="va">leiden_clus</span> <span class="op">==</span> <span class="fl">3</span>, samples <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"visium_a"</span>, <span class="st">"visium_b"</span><span class="op">)</span>,</span>
+<span>    view <span class="op">=</span> <span class="st">"cluster3"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># visium_a stays put; visium_b moves next to it</span></span>
 <span><span class="va">mg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spatShift.html">spatShift</a></span><span class="op">(</span><span class="va">mg</span>, dx <span class="op">=</span> <span class="fl">8000</span>, dy <span class="op">=</span> <span class="fl">0</span>, space <span class="op">=</span> <span class="st">"side_by_side"</span>,</span>
 <span>    samples <span class="op">=</span> <span class="st">"visium_b"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">mg_out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/materialize.html">materialize</a></span><span class="op">(</span><span class="va">mg</span>, view <span class="op">=</span> <span class="st">"cluster3"</span>, space <span class="op">=</span> <span class="st">"side_by_side"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/getSpatialLocations.html">getSpatialLocations</a></span><span class="op">(</span><span class="va">mg</span>, view <span class="op">=</span> <span class="st">"cluster3"</span>, space <span class="op">=</span> <span class="st">"side_by_side"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Getting values from [cell][rna] cell metadata</span></span>
+<span><span class="co">#&gt; $visium_a</span></span>
+<span><span class="co">#&gt; An object of class spatLocsObj : "raw"</span></span>
+<span><span class="co">#&gt; spat_unit : "cell"</span></span>
+<span><span class="co">#&gt; provenance: cell </span></span>
+<span><span class="co">#&gt; dimensions: 108 3 </span></span>
+<span><span class="co">#&gt; preview   :</span></span>
+<span><span class="co">#&gt;    sdimx sdimy            cell_ID</span></span>
+<span><span class="co">#&gt;    &lt;int&gt; &lt;int&gt;             &lt;char&gt;</span></span>
+<span><span class="co">#&gt; 1:  5684 -4005 AACGCGGTCTCCAGCC-1</span></span>
+<span><span class="co">#&gt; 2:  3964 -4125 AACGTCAGACTAGTGG-1</span></span>
+<span><span class="co">#&gt; 3:  3826 -4125 AAGGCGCGTAAAGCTT-1</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ranges:</span></span>
+<span><span class="co">#&gt;      sdimx sdimy</span></span>
+<span><span class="co">#&gt; [1,]  3069 -5083</span></span>
+<span><span class="co">#&gt; [2,]  6096 -3167</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $visium_b</span></span>
+<span><span class="co">#&gt; An object of class spatLocsObj : "raw"</span></span>
+<span><span class="co">#&gt; spat_unit : "cell"</span></span>
+<span><span class="co">#&gt; provenance: cell </span></span>
+<span><span class="co">#&gt; dimensions: 108 3 </span></span>
+<span><span class="co">#&gt; preview   :</span></span>
+<span><span class="co">#&gt;    sdimx sdimy            cell_ID</span></span>
+<span><span class="co">#&gt;    &lt;num&gt; &lt;num&gt;             &lt;char&gt;</span></span>
+<span><span class="co">#&gt; 1: 13684 -4005 AACGCGGTCTCCAGCC-1</span></span>
+<span><span class="co">#&gt; 2: 11964 -4125 AACGTCAGACTAGTGG-1</span></span>
+<span><span class="co">#&gt; 3: 11826 -4125 AAGGCGCGTAAAGCTT-1</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ranges:</span></span>
+<span><span class="co">#&gt;      sdimx sdimy</span></span>
+<span><span class="co">#&gt; [1,] 11069 -5083</span></span>
+<span><span class="co">#&gt; [2,] 14096 -3167</span></span></code></pre></div>
 <p>The view’s surviving cell IDs are computed once across the gmulti;
 per-child getter calls downstream reuse that cache.</p>
 </div>
@@ -744,9 +891,9 @@ per-child getter calls downstream reuse that cache.</p>
 <ul>
 <li>
 <strong>Recipes, not state.</strong> <em>Resolving</em> a view
-doesn’t mutate the gobject — <code><a href="../reference/materialize.html">materialize()</a></code> returns a new
-gobject, or you pass the name to a getter per-call. Recording a step is
-the one write, and it touches only the recipe, never the data.</li>
+doesn’t mutate the gobject — you pass the name to a getter per-call.
+Recording a step is the one write, and it touches only the recipe, never
+the data.</li>
 <li>
 <strong>Plain steps in a class.</strong> The recipe object is S4 —
 it is the handle <code>[</code>, the builder verbs and
@@ -782,8 +929,6 @@ subsystem is shaped this way, and what is deliberately left undone.</li>
 <li>
 <code>vignettes/articles/design_gmulti.Rmd</code> — the multi-sample
 container that view and space integrate with most deeply.</li>
-<li>
-<code><a href="../reference/materialize.html">?materialize</a></code> — the full resolver entry point.</li>
 <li>
 <code><a href="../reference/giottoView.html">?giottoView</a></code> — slotted view accessors.</li>
 <li>

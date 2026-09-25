@@ -3,14 +3,16 @@
 giottoMulti object: a recipe, re-resolved against the object's
 current state each time it is consumed, rather than a snapshot.
 Access it with [ (class-preserving, so the result stays editable) and
-[[ (extracts a step). Append to it with the builder verbs subset(),
-crop(), and selectSamples(), or compose two with +. Export the
+[[ (extracts a step). Append to it with the builder verbs subset()
+(a filter step, or a sample step with samples =) and crop(), or
+compose two with +. Export the
 plain nested form with as.list()."><meta property="og:description" content="A giottoView is a deferred, read-only NARROWING of a giotto or
 giottoMulti object: a recipe, re-resolved against the object's
 current state each time it is consumed, rather than a snapshot.
 Access it with [ (class-preserving, so the result stays editable) and
-[[ (extracts a step). Append to it with the builder verbs subset(),
-crop(), and selectSamples(), or compose two with +. Export the
+[[ (extracts a step). Append to it with the builder verbs subset()
+(a filter step, or a sample step with samples =) and crop(), or
+compose two with +. Export the
 plain nested form with as.list()."><meta property="og:image" content="https://giotto-suite.github.io/GiottoClass/logo.png"><meta name="robots" content="noindex"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
     <!--
@@ -108,8 +110,9 @@ plain nested form with as.list()."><meta property="og:image" content="https://gi
 <a href="giottoMulti-class.html">giottoMulti</a> object: a recipe, re-resolved against the object's
 current state each time it is consumed, rather than a snapshot.</p>
 <p>Access it with <code>[</code> (class-preserving, so the result stays editable) and
-<code>[[</code> (extracts a step). Append to it with the builder verbs <code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code>,
-<code><a href="crop.html">crop()</a></code>, and <code><a href="selectSamples.html">selectSamples()</a></code>, or compose two with <code>+</code>. Export the
+<code>[[</code> (extracts a step). Append to it with the builder verbs <code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code>
+(a filter step, or a sample step with <code>samples =</code>) and <code><a href="crop.html">crop()</a></code>, or
+compose two with <code>+</code>. Export the
 plain nested form with <code><a href="https://rdrr.io/r/base/list.html" class="external-link">as.list()</a></code>.</p>
     </div>
 

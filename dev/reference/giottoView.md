@@ -78,7 +78,7 @@ the view, an updated gobject, or a character vector of view names
 
 ``` r
 g <- giotto()
-g <- selectSamples(g, "s1", "s2", view = "demo")
+g <- subset(g, samples = c("s1", "s2"), view = "demo")
 giottoViews(g)
 giottoView(g, "demo")
 ```

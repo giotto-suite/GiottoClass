@@ -138,8 +138,8 @@ subsystem in the wider architecture.</p>
 <p>The subsystem dispatches on <code>gAny</code>, so it works on a plain
 <code>giotto</code> as well as a <code>giottoMulti</code>. It is
 <strong>not</strong> part of gmulti, and the places where the two meet —
-<code>selectSamples</code>, sample-scoped transforms, parent-only
-evaluation — are called out below rather than assumed.</p>
+sample steps, sample-scoped transforms, parent-only evaluation — are
+called out below rather than assumed.</p>
 <p>Two labels recur in the code comments and are worth resolving once.
 <strong>Q7</strong> and <strong>Q8</strong> were numbered design
 questions from the port that produced this subsystem; their conclusions
@@ -190,9 +190,8 @@ multi-modal microscopy pushes for it.</p>
 <h2 id="recorded-not-constructed">Recorded, not constructed<a class="anchor" aria-label="anchor" href="#recorded-not-constructed"></a>
 </h2>
 <p>There is no constructor. The first <code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code> /
-<code><a href="../reference/crop.html">crop()</a></code> / <code><a href="../reference/selectSamples.html">selectSamples()</a></code> call naming a view
-creates it; likewise a transform verb naming a space. Later calls with
-the same name append.</p>
+<code><a href="../reference/crop.html">crop()</a></code> call naming a view creates it; likewise a transform
+verb naming a space. Later calls with the same name append.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">g</span>, <span class="va">leiden_clus</span> <span class="op">==</span> <span class="fl">1</span>, view <span class="op">=</span> <span class="st">"cluster1"</span><span class="op">)</span>   <span class="co"># creates, records a filter</span></span>
 <span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/crop.html">crop</a></span><span class="op">(</span><span class="va">g</span>, <span class="va">roi</span>, view <span class="op">=</span> <span class="st">"cluster1"</span>, space <span class="op">=</span> <span class="st">"atlas"</span><span class="op">)</span> <span class="co"># appends a crop</span></span>
@@ -288,8 +287,8 @@ a step · <code>length</code> / <code>names</code>
 <tr class="even">
 <td><strong>append</strong></td>
 <td>
-<code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code> · <code><a href="../reference/crop.html">crop()</a></code> ·
-<code><a href="../reference/selectSamples.html">selectSamples()</a></code> · <code>+</code>
+<code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code> (filter, or <code>samples =</code>) ·
+<code><a href="../reference/crop.html">crop()</a></code> · <code>+</code>
 </td>
 <td>
 <code><a href="../reference/spin.html">spin()</a></code> · <code><a href="../reference/spatShift.html">spatShift()</a></code> ·
@@ -664,7 +663,9 @@ not one:</p>
 </tr>
 <tr class="even">
 <td>recorded</td>
-<td>a <code><a href="../reference/selectSamples.html">selectSamples()</a></code> view step</td>
+<td>a view sample step, via
+<code>subset(samples = , view = )</code>
+</td>
 <td>part of a named, reused recipe</td>
 </tr>
 <tr class="odd">
@@ -677,12 +678,20 @@ not one:</p>
 <p><code>samples</code> is a verb at the call site; views and spaces are
 nouns users build, name and reference repeatedly. Forcing
 <code>samples</code> into the noun vocabulary would mean inventing
-synthetic slotted recipes for trivial selections, or making users write
-<code>view = selectSamples(...)</code> every time. The precedent is
-<code>subset(g, predicate)</code>, which sugars over a filter step for
-the same ergonomic reason. <code>@groups</code> completes the reasoning
-rather than contradicting it: it names the case where a selection is
-reused often enough to deserve a noun.</p>
+synthetic slotted recipes for trivial selections. The recorded form is
+spelled <code>subset(samples = , view = )</code> rather than a verb of
+its own, following <code>subset(g, predicate)</code>, which sugars over
+a filter step for the same ergonomic reason. <code>@groups</code>
+completes the reasoning rather than contradicting it: it names the case
+where a selection is reused often enough to deserve a noun.</p>
+<p>A sample step is a structural cut, not a cell filter: a getter
+reading through the view never visits an excluded child. A
+<code>list_ID</code> predicate expresses the same selection as a filter,
+but it evaluates against every child. Several sample steps on one view
+intersect, like every other step kind. A call-site
+<code>samples =</code> must sit inside the view’s selection; one that
+names an excluded child is an error rather than a silent drop, because
+the two arguments then disagree about scope.</p>
 </div>
 <div class="section level2">
 <h2 id="threading-through-the-ordinary-generics">Threading through the ordinary generics<a class="anchor" aria-label="anchor" href="#threading-through-the-ordinary-generics"></a>

@@ -395,8 +395,6 @@ the same vocabulary.
 **There is no constructor; a recipe is created by recording.** The first
 [`subset()`](https://rdrr.io/r/base/subset.html) /
 [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
-/
-[`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md)
 call naming a view creates it, and a transform verb naming a space does
 the same; later calls with that name append. Eager behaviour is
 unchanged — `spin(g, 30)` still spins the object — and the presence of

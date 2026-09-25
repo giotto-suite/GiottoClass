@@ -10,8 +10,8 @@ subsystem in the wider architecture.
 
 The subsystem dispatches on `gAny`, so it works on a plain `giotto` as
 well as a `giottoMulti`. It is **not** part of gmulti, and the places
-where the two meet — `selectSamples`, sample-scoped transforms,
-parent-only evaluation — are called out below rather than assumed.
+where the two meet — sample steps, sample-scoped transforms, parent-only
+evaluation — are called out below rather than assumed.
 
 Two labels recur in the code comments and are worth resolving once.
 **Q7** and **Q8** were numbered design questions from the port that
@@ -57,8 +57,6 @@ can be extended later if multi-modal microscopy pushes for it.
 There is no constructor. The first
 [`subset()`](https://rdrr.io/r/base/subset.html) /
 [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
-/
-[`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md)
 call naming a view creates it; likewise a transform verb naming a space.
 Later calls with the same name append.
 
@@ -135,7 +133,7 @@ can legitimately write directly.
 |  | view | space |
 |----|----|----|
 | **access** | `v[i]` steps `i`, class-preserving · `v[[i]]` the step · `v[i, j]` one attribute (`v[2, "space"]` is the frame) · `length` / `names` | `sp[i]` narrows to a sample · `sp[[i]]` takes a step · `length` / `names` |
-| **append** | [`subset()`](https://rdrr.io/r/base/subset.html) · [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md) · [`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md) · `+` | [`spin()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md) · [`spatShift()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.md) · [`affine()`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md) · [`flip()`](https://giotto-suite.github.io/GiottoClass/dev/reference/flip.md) · [`rescale()`](https://giotto-suite.github.io/GiottoClass/dev/reference/rescale.md) · [`shear()`](https://giotto-suite.github.io/GiottoClass/dev/reference/shear.md) · [`zoom()`](https://giotto-suite.github.io/GiottoClass/dev/reference/zoom.md) · `+` |
+| **append** | [`subset()`](https://rdrr.io/r/base/subset.html) (filter, or `samples =`) · [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md) · `+` | [`spin()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spin.md) · [`spatShift()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatShift.md) · [`affine()`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md) · [`flip()`](https://giotto-suite.github.io/GiottoClass/dev/reference/flip.md) · [`rescale()`](https://giotto-suite.github.io/GiottoClass/dev/reference/rescale.md) · [`shear()`](https://giotto-suite.github.io/GiottoClass/dev/reference/shear.md) · [`zoom()`](https://giotto-suite.github.io/GiottoClass/dev/reference/zoom.md) · `+` |
 | **export** | [`as.list()`](https://rdrr.io/r/base/list.html) | [`as.list()`](https://rdrr.io/r/base/list.html) |
 
 `sp[[NA]]` resolves through the sole-name rule, which is what lets a
@@ -416,17 +414,25 @@ one:
 | form | mechanism | when |
 |----|----|----|
 | ad hoc | `samples =` at the call site | “show me these samples now” |
-| recorded | a [`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md) view step | part of a named, reused recipe |
+| recorded | a view sample step, via `subset(samples = , view = )` | part of a named, reused recipe |
 | registered | a `@groups` entry | a selection that has stopped being ad hoc |
 
 `samples` is a verb at the call site; views and spaces are nouns users
 build, name and reference repeatedly. Forcing `samples` into the noun
 vocabulary would mean inventing synthetic slotted recipes for trivial
-selections, or making users write `view = selectSamples(...)` every
-time. The precedent is `subset(g, predicate)`, which sugars over a
-filter step for the same ergonomic reason. `@groups` completes the
-reasoning rather than contradicting it: it names the case where a
-selection is reused often enough to deserve a noun.
+selections. The recorded form is spelled `subset(samples = , view = )`
+rather than a verb of its own, following `subset(g, predicate)`, which
+sugars over a filter step for the same ergonomic reason. `@groups`
+completes the reasoning rather than contradicting it: it names the case
+where a selection is reused often enough to deserve a noun.
+
+A sample step is a structural cut, not a cell filter: a getter reading
+through the view never visits an excluded child. A `list_ID` predicate
+expresses the same selection as a filter, but it evaluates against every
+child. Several sample steps on one view intersect, like every other step
+kind. A call-site `samples =` must sit inside the view’s selection; one
+that names an excluded child is an error rather than a silent drop,
+because the two arguments then disagree about scope.
 
 ## Threading through the ordinary generics
 

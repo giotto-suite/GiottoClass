@@ -30,6 +30,7 @@ subset(
   feat_type = NULL,
   negate = FALSE,
   quote = TRUE,
+  samples = NULL,
   ...
 )
 
@@ -43,6 +44,7 @@ subset(
   feat_type = NULL,
   negate = FALSE,
   quote = TRUE,
+  samples = NULL,
   view = NULL,
   ...
 )
@@ -88,6 +90,13 @@ subset(
   `FALSE` when calling from a function, although that may not be
   recommended since NSE output can be unexpected when not used
   interactively.
+
+- samples:
+
+  `character`. Children (or group names) of a `giottoMulti` to keep,
+  recorded as a sample step on the view. Only valid together with
+  `view = ` on a `giotto`, or on a `giottoView` directly: a `giotto` has
+  one sample, so there is nothing to narrow eagerly.
 
 - feat_ids, i:
 

@@ -564,16 +564,15 @@ meaningful part, and made “view” mean both selection and positioning in
 the same vocabulary.</p>
 <p><strong>There is no constructor; a recipe is created by
 recording.</strong> The first <code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code> /
-<code><a href="../reference/crop.html">crop()</a></code> / <code><a href="../reference/selectSamples.html">selectSamples()</a></code> call naming a view
-creates it, and a transform verb naming a space does the same; later
-calls with that name append. Eager behaviour is unchanged —
-<code>spin(g, 30)</code> still spins the object — and the presence of
-<code>space =</code> is what switches from acting to recording.
-Consequently <code>view =</code> and <code>space =</code> on a public
-function take a <strong>name</strong>, never a handle: a detached recipe
-on a generator writes a frame name that resolves against nothing, and on
-a reader returns content in a frame the object cannot name
-(adr/0006).</p>
+<code><a href="../reference/crop.html">crop()</a></code> call naming a view creates it, and a transform verb
+naming a space does the same; later calls with that name append. Eager
+behaviour is unchanged — <code>spin(g, 30)</code> still spins the object
+— and the presence of <code>space =</code> is what switches from acting
+to recording. Consequently <code>view =</code> and <code>space =</code>
+on a public function take a <strong>name</strong>, never a handle: a
+detached recipe on a generator writes a frame name that resolves against
+nothing, and on a reader returns content in a frame the object cannot
+name (adr/0006).</p>
 <p><strong>The steps are plain tagged lists; the containers are
 classes.</strong> That division is where the serialization guarantee
 lives — a step carries no closure and no external pointer, so a

@@ -1344,9 +1344,6 @@ present in the released version.
   [`` `gmultiMapping<-`() ``](https://giotto-suite.github.io/GiottoClass/dev/reference/gmultiMapping.md)
   : gmulti federation mapping accessor
 
-- [`selectSamples()`](https://giotto-suite.github.io/GiottoClass/dev/reference/selectSamples.md)
-  : Select samples within a gmulti-scoped view
-
 ### Views and spaces
 
 - [`giottoView()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView.md)
