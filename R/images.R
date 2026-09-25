@@ -769,6 +769,11 @@ reconnect_giottoImage_MG <- function(
         # if desired output is not data.frame, all other outputs require raster
         argslist$as.raster <- TRUE
         argslist$as.df <- FALSE
+        # image outputs are for display: "display" lets GDAL read from
+        # overviews when present. "regular" ignores them and costs ~2s per
+        # call on a JPEG-2000 VRT. data.frame stays "regular" so intensity
+        # statistics come from exact pixels.
+        argslist$method <- "display"
     }
 
     res <- do.call(terra::spatSample, args = argslist)
@@ -1313,7 +1318,7 @@ convertGiottoLargeImageToMG <- function(gobject = NULL,
     rastSample <- terra::spatSample(raster_object,
         size = resample_size, # Defines the rough maximum of pixels allowed
         # when resampling
-        method = "regular",
+        method = "display", # reads overviews when present
         as.raster = TRUE
     )
 
