@@ -1932,6 +1932,10 @@ setMethod("subset", signature("giottoPoints"), function(x,
 #' `substitute()`. Set this to `FALSE` when calling from a function, although
 #' that may not be recommended since NSE output can be unexpected when not used
 #' interactively.
+#' @param samples `character`. Children (or group names) of a `giottoMulti`
+#' to keep, recorded as a sample step on the view. Only valid together with
+#' `view = ` on a `giotto`, or on a `giottoView` directly: a `giotto` has one
+#' sample, so there is nothing to narrow eagerly.
 #' @param \dots additional params to pass to `spatValues` used with the
 #' subset param
 #' @export
@@ -1942,19 +1946,29 @@ setMethod("subset", signature("giottoView"), function(
         feat_type = NULL,
         negate = FALSE,
         quote = TRUE,
+        samples = NULL,
         ...) {
+    pred <- NULL
     if (quote) {
         # captured here, so free vars are substituted from the caller's
         # frame and the recipe serializes. `quote = FALSE` means the
         # predicate arrives already finished -- running the substitution
         # again would re-evaluate it in the wrong frame.
-        pred <- substitute(subset)
-        pred <- .eager_substitute_env(pred,
-            .find_predicate_env(pred, parent.frame()))
+        has_pred <- .subset_has_predicate(substitute(subset))
+        if (has_pred) {
+            pred <- substitute(subset)
+            pred <- .eager_substitute_env(pred,
+                .find_predicate_env(pred, parent.frame()))
+        }
     } else {
-        pred <- subset
+        has_pred <- !missing(subset)
+        pred <- if (has_pred) subset
     }
-    .view_record_filter(x, pred, negate = negate,
+    if (!has_pred && is.null(samples)) {
+        stop("[subset] a view step needs `subset` (a predicate) or ",
+            "`samples`.", call. = FALSE)
+    }
+    .view_record_subset(x, pred = pred, samples = samples, negate = negate,
         scope_args = list(spat_unit = spat_unit, feat_type = feat_type,
                           ...))
 })
@@ -1970,6 +1984,7 @@ setMethod("subset", signature("giotto"), function(
         feat_type = NULL,
         negate = FALSE,
         quote = TRUE,
+        samples = NULL,
         view = NULL,
         ...) {
     # Indirect-usage path: `view = "<name>"` records the subset as a recipe
@@ -1981,15 +1996,36 @@ setMethod("subset", signature("giotto"), function(
         # that can see the user's free variables. Everything downstream of
         # that (negation, step construction, validation) is the
         # `giottoView` method, so a step has one construction path.
-        pred <- if (quote) substitute(subset) else subset
-        pred <- .eager_substitute_env(pred,
-            .find_predicate_env(pred, parent.frame()))
+        pred <- NULL
+        if (quote) {
+            has_pred <- .subset_has_predicate(substitute(subset))
+            if (has_pred) pred <- substitute(subset)
+        } else {
+            has_pred <- !missing(subset)
+            if (has_pred) pred <- subset
+        }
+        if (!has_pred && is.null(samples)) {
+            stop("[subset] a view step needs `subset` (a predicate) or ",
+                "`samples`.", call. = FALSE)
+        }
+        if (has_pred) {
+            pred <- .eager_substitute_env(pred,
+                .find_predicate_env(pred, parent.frame()))
+        }
         scope_args <- list(spat_unit = spat_unit, feat_type = feat_type,
             ...)
         return(.record_view_on_gobject(x, view, function(v) {
-            .view_record_filter(v, pred, negate = negate,
-                scope_args = scope_args)
+            .view_record_subset(v, pred = pred, samples = samples,
+                negate = negate, scope_args = scope_args)
         }))
+    }
+    # A sample selection only means something against a giottoMulti. A view
+    # carrying one is still recordable here (it may be copied onto a multi),
+    # but there is nothing to narrow eagerly.
+    if (!is.null(samples)) {
+        stop("[subset] `samples =` narrows the children of a giottoMulti; ",
+            "a giotto has only one. To record a sample step for later use ",
+            "on a multi, pass `view = `.", call. = FALSE)
     }
 
     spat_unit <- set_default_spat_unit(

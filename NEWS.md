@@ -16,6 +16,14 @@
 
 ## changes
 
+- `selectSamples()` is removed. A view's sample step is recorded with
+  `subset(mg, samples = , view = )`, which can record a filter in the same
+  call, and `subset(mg, samples = )` without `view =` slices the multi. The
+  spatial getters on a `giottoMulti` now honour a sample step: before, only
+  `materialize()` did, so a view holding just a sample selection narrowed
+  nothing when read through a getter. Sample names expand groups, several
+  sample steps intersect, and an unknown name is an error.
+
 - Downsampling an image for display -- plotting a `giottoAffineImage`,
   coercing an image to `magick` or `EBImage`, and
   `convertGiottoLargeImageToMG()` -- now uses
@@ -172,7 +180,8 @@ released version, so no stored object holds a recipe.
 - `giotto` gains `@view` and `@spaces` slots. Objects saved by an earlier
   version gain both on `loadGiotto()` / `updateGiottoObject()`.
 - Recipes are built by **recording onto a name**, not by a constructor.
-  `subset()`, `crop()` and `selectSamples()` gain `view =`, and the
+  `subset()` and `crop()` gain `view =` (with `samples =`, `subset()`
+  records a sample step on a `giottoMulti` view), and the
   coordinate-frame verbs (`spin()`, `spatShift()`, `affine()`, `flip()`,
   `rescale()`) gain `space =`. The first call naming a recipe creates it;
   later calls with the same name append. Read them back with `giottoView()`

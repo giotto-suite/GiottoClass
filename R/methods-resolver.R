@@ -111,8 +111,9 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 
 # Resolve the samples step into the set of children participating. For a
 # plain giotto, sample selection is a no-op (returns NA to signal "no
-# multi-scope"); for giottoMulti, returns the intersection of selected names
-# with available children.
+# multi-scope"); for giottoMulti, returns the selected children. Names go
+# through the same resolver as `samples =` on a getter, so a group name
+# expands at use time and an unknown name is an error rather than dropped.
 #' @keywords internal
 #' @noRd
 .resolve_sample_select <- function(gobject, view) {
@@ -120,18 +121,16 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     if (length(ss_steps) == 0L) return(NA)
     if (!inherits(gobject, "giottoMulti")) {
         warning(call. = FALSE,
-            "selectSamples step ignored: parent is not a giottoMulti")
+            "view sample step ignored: parent is not a giottoMulti")
         return(NA)
     }
-    sel <- unique(unlist(lapply(ss_steps, function(s) s$samples)))
-    avail <- names(gobject@objects)
-    bad <- setdiff(sel, avail)
-    if (length(bad) > 0L) {
-        warning(call. = FALSE, sprintf(
-            "selectSamples: missing children ignored (%s)",
-            paste(bad, collapse = ", ")))
+    # several sample steps intersect, like every other step kind
+    sel <- NULL
+    for (s in ss_steps) {
+        r <- .gm_resolve_samples(gobject, s$samples, site = "view samples")
+        sel <- if (is.null(sel)) r else intersect(sel, r)
     }
-    intersect(sel, avail)
+    sel
 }
 
 # Free-var names in `predicate` that name data columns — these are what

@@ -61,7 +61,7 @@ Views are subset/narrowing recipes; for coordinate-frame recipes see
 }
 \examples{
 g <- giotto()
-g <- selectSamples(g, "s1", "s2", view = "demo")
+g <- subset(g, samples = c("s1", "s2"), view = "demo")
 giottoViews(g)
 giottoView(g, "demo")
 }

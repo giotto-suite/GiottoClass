@@ -26,6 +26,7 @@
   feat_type = NULL,
   negate = FALSE,
   quote = TRUE,
+  samples = NULL,
   ...
 )
 
@@ -38,6 +39,7 @@
   feat_type = NULL,
   negate = FALSE,
   quote = TRUE,
+  samples = NULL,
   view = NULL,
   ...
 )
@@ -66,6 +68,11 @@ are selected}
 \code{substitute()}. Set this to \code{FALSE} when calling from a function, although
 that may not be recommended since NSE output can be unexpected when not used
 interactively.}
+
+\item{samples}{\code{character}. Children (or group names) of a \code{giottoMulti}
+to keep, recorded as a sample step on the view. Only valid together with
+\verb{view = } on a \code{giotto}, or on a \code{giottoView} directly: a \code{giotto} has one
+sample, so there is nothing to narrow eagerly.}
 
 \item{feat_ids, i}{character vector. Feature IDs to subset the object for.}
 

@@ -10,6 +10,7 @@
   cells = NULL,
   features = NULL,
   negate = FALSE,
+  samples = NULL,
   view = NULL,
   ...
 )
@@ -30,9 +31,13 @@ no cell-level filter.}
 \item{negate}{logical. Invert the predicate. Folded into the recorded
 predicate, matching \verb{subset(<giotto>)}.}
 
+\item{samples}{\code{NULL} or \code{character}. Children (or group names) to keep.
+Eagerly, this is \code{x[samples]}. With \verb{view = }, it records a sample step
+on the view instead, resolved before the view's other steps.}
+
 \item{view}{\code{NULL} or \code{character(1)}. When supplied, records the
-predicate as a filter step on the named view (created if new) instead
-of narrowing eagerly.}
+predicate as a filter step and/or \code{samples} as a sample step on the
+named view (created if new) instead of narrowing eagerly.}
 
 \item{...}{additional scope args forwarded to \code{spatValues()} when a
 recorded filter step resolves}
@@ -58,6 +63,8 @@ untouched and acts as the "widen back" handle.
 \examples{
 \dontrun{
 subset(mg, cells = c("a::c1", "a::c2"))
+subset(mg, samples = "a")
 subset(mg, leiden_clus == 1, view = "cluster1")
+subset(mg, samples = c("a", "b"), view = "pair")
 }
 }

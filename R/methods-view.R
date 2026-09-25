@@ -13,8 +13,8 @@ NULL
 # There is no view-receiver surface: every op reaches a view through the
 # gobject method that takes `view = `, which records the step onto the named
 # slot (decision Q8). The recording verbs live with their generics —
-# `subset()` in `methods-extract.R`, `crop()` in `methods-crop.R`,
-# `selectSamples()` below.
+# `subset()` in `methods-extract.R` (filter steps, and sample steps via
+# `samples =`), `crop()` in `methods-crop.R`.
 # =============================================================================
 
 
@@ -209,51 +209,6 @@ NULL
 
 
 
-# selectSamples() — gmulti-only sample selector ####
-
-#' @title Select samples within a gmulti-scoped view
-#' @name selectSamples
-#' @description
-#' Record a sample-selection step on a named view that will be consumed
-#' against a [giottoMulti-class]. Picks which children participate in
-#' resolution. The step is resolved FIRST, before any other step. Warns at
-#' resolution time if the parent is not a `giottoMulti`.
-#'
-#' @param x a `giotto` / `giottoMulti` object, or a [giottoView-class]
-#' @param ... `character` child names (or a single `character` vector)
-#' @param view `character(1)`. Name of the view to record onto; created if
-#'   it does not exist yet. Not used when `x` is already a `giottoView`.
-#' @returns `x`, with the sample-select step recorded on the named view
-#' @examples
-#' g <- giotto()
-#' g <- selectSamples(g, "sample1", "sample2", view = "pair")
-#' giottoViews(g)
-#'
-#' # or directly on the recipe
-#' selectSamples(giottoView(g, "pair"), "sample3")
-#' @export
-setGeneric("selectSamples",
-    function(x, ..., view) standardGeneric("selectSamples"))
-
-#' @rdname selectSamples
-#' @export
-setMethod("selectSamples", signature(x = "giottoView"),
-    function(x, ..., view) {
-        samples <- unlist(list(...), use.names = FALSE)
-        .view_record_step(x, .view_step_samples(samples))
-    }
-)
-
-#' @rdname selectSamples
-#' @export
-setMethod("selectSamples", signature(x = "gAny"),
-    function(x, ..., view) {
-        .record_view_on_gobject(x, view,
-            function(v) selectSamples(v, ...))
-    }
-)
-
-
 # Accessors ####
 
 #' @title Slotted views on a giotto object
@@ -284,7 +239,7 @@ setMethod("selectSamples", signature(x = "gAny"),
 #' @returns the view, an updated gobject, or a character vector of view names
 #' @examples
 #' g <- giotto()
-#' g <- selectSamples(g, "s1", "s2", view = "demo")
+#' g <- subset(g, samples = c("s1", "s2"), view = "demo")
 #' giottoViews(g)
 #' giottoView(g, "demo")
 NULL

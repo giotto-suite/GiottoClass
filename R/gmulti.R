@@ -607,9 +607,12 @@ setMethod("show", "giottoMulti", function(object) {
 #'   `NULL` = no feature-level filter.
 #' @param negate logical. Invert the predicate. Folded into the recorded
 #'   predicate, matching `subset(<giotto>)`.
+#' @param samples `NULL` or `character`. Children (or group names) to keep.
+#'   Eagerly, this is `x[samples]`. With `view = `, it records a sample step
+#'   on the view instead, resolved before the view's other steps.
 #' @param view `NULL` or `character(1)`. When supplied, records the
-#'   predicate as a filter step on the named view (created if new) instead
-#'   of narrowing eagerly.
+#'   predicate as a filter step and/or `samples` as a sample step on the
+#'   named view (created if new) instead of narrowing eagerly.
 #' @param ... additional scope args forwarded to `spatValues()` when a
 #'   recorded filter step resolves
 #' @returns a `giottoMulti` with `@cell_ID` / `@feat_ID` narrowed and
@@ -618,12 +621,14 @@ setMethod("show", "giottoMulti", function(object) {
 #' @examples
 #' \dontrun{
 #' subset(mg, cells = c("a::c1", "a::c2"))
+#' subset(mg, samples = "a")
 #' subset(mg, leiden_clus == 1, view = "cluster1")
+#' subset(mg, samples = c("a", "b"), view = "pair")
 #' }
 #' @export
 setMethod("subset", "giottoMulti",
     function(x, subset, cells = NULL, features = NULL, negate = FALSE,
-             view = NULL, ...) {
+             samples = NULL, view = NULL, ...) {
         # Recording path, mirroring subset(<giotto>). Q8 removed the recipe
         # builders, so this is now the only way to put a filter step on a
         # gmulti view. `subset` sits ahead of `cells` / `features` because
@@ -635,19 +640,29 @@ setMethod("subset", "giottoMulti",
             # `...` into S4's `.local` wrapper, which evaluates the
             # predicate in the caller's frame and fails on the first column
             # name. An absent `subset` deparses to the bare symbol.
-            pred <- substitute(subset)
-            if (identical(pred, quote(subset))) {
-                stop("`view = ` records a predicate, so `subset` is ",
-                    "required. To narrow by ID instead, drop `view` and ",
-                    "pass `cells = ` / `features = `.", call. = FALSE)
+            has_pred <- .subset_has_predicate(substitute(subset))
+            if (!has_pred && is.null(samples)) {
+                stop("`view = ` records a predicate or a sample selection, ",
+                    "so `subset` or `samples` is required. To narrow by ID ",
+                    "instead, drop `view` and pass `cells = ` / ",
+                    "`features = `.", call. = FALSE)
             }
-            pred <- .eager_substitute_env(pred,
-                .find_predicate_env(pred, parent.frame()))
+            pred <- NULL
+            if (has_pred) {
+                pred <- substitute(subset)
+                pred <- .eager_substitute_env(pred,
+                    .find_predicate_env(pred, parent.frame()))
+            }
             scope_args <- list(...)
             return(.record_view_on_gobject(x, view, function(v) {
-                .view_record_filter(v, pred, negate = negate,
+                .view_record_subset(v, pred = pred,
+                    samples = samples, negate = negate,
                     scope_args = scope_args)
             }))
+        }
+        if (!is.null(samples)) {
+            x <- x[.gm_resolve_samples(x, samples, site = "subset")]
+            if (is.null(cells) && is.null(features)) return(x)
         }
         subsetGiotto(
             gobject = x,
@@ -3139,7 +3154,39 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
     checkmate::assert_string(view, .var.name = "view")
     v <- giottoView(gobject, view)
     co <- coordinator %null% .default_view_coordinator(gobject)
-    list(obj = v, cells = .surviving_cell_ids(gobject, v, co))
+    cells <- .surviving_cell_ids(gobject, v, co)
+    sel <- .resolve_sample_select(gobject, v)
+    # Fold the sample step into the cell set as well, so content that is
+    # already in globals (the joint spatial network) narrows by it too.
+    if (!(length(sel) == 1L && is.na(sel))) {
+        in_sel <- spatIDs(gobject, object = sel)
+        cells <- if (is.null(cells)) in_sel else intersect(cells, in_sel)
+    }
+    list(obj = v, cells = cells, samples = sel)
+}
+
+#' Children a per-child read visits: the call's `samples =`, narrowed by the
+#' view's sample step when it has one.
+#'
+#' The view's selection is a structural cut -- excluded children are never
+#' read -- rather than an ID filter that visits every child and returns an
+#' empty result for most. Asking for a sample the view excludes is an error,
+#' not a silent drop, since the two arguments then disagree about scope.
+#' @noRd
+.gm_read_objects <- function(gobject, samples, vw) {
+    objs <- .gm_resolve_objects(gobject, samples)
+    sel <- vw$samples
+    if (is.null(sel) || (length(sel) == 1L && is.na(sel))) return(objs)
+    if (!is.null(samples)) {
+        bad <- setdiff(objs, sel)
+        if (length(bad) > 0L) {
+            stop(sprintf(paste0("[gmulti] sample(s) %s excluded by the ",
+                "view's sample step. The view keeps: %s"),
+                paste(sprintf("'%s'", bad), collapse = ", "),
+                paste(sel, collapse = ", ")), call. = FALSE)
+        }
+    }
+    objs[objs %in% sel]
 }
 
 #' Narrow a resolved space to one child.
@@ -3231,7 +3278,7 @@ setMethod("getSpatialLocations", signature("giottoMulti"),
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
         sp <- .gm_resolve_space_arg(gobject, space)
         vw <- .gm_resolve_view_arg(gobject, view)
-        objs <- .gm_resolve_objects(gobject, samples)
+        objs <- .gm_read_objects(gobject, samples, vw)
         # cell-keyed, so the view is fully expressed by its global ID set
         # and the children are handed no view at all
         out <- lapply(objs, function(nm) {
@@ -3277,7 +3324,7 @@ setMethod("getSpatialNetwork", signature("giottoMulti"),
             }
         }
 
-        objs <- .gm_resolve_objects(gobject, samples)
+        objs <- .gm_read_objects(gobject, samples, vw)
         out <- lapply(objs, function(nm) {
             getSpatialNetwork(gobject@objects[[nm]],
                 spat_unit = spat_unit, name = name, ...)
@@ -3324,7 +3371,7 @@ setMethod("getPolygonInfo", signature("giottoMulti"),
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
         sp <- .gm_resolve_space_arg(gobject, space)
         vw <- .gm_resolve_view_arg(gobject, view)
-        objs <- .gm_resolve_objects(gobject, samples)
+        objs <- .gm_read_objects(gobject, samples, vw)
         out <- lapply(objs, function(nm) {
             getPolygonInfo(gobject@objects[[nm]], name = name,
                 space = .gm_space_for_child(sp, nm), ...)
@@ -3355,7 +3402,7 @@ setMethod("getFeatureInfo", signature("giottoMulti"),
             .gm_resolve_axis(gobject, "feat_type", NULL)$handle
         sp <- .gm_resolve_space_arg(gobject, space)
         vw <- .gm_resolve_view_arg(gobject, view)
-        objs <- .gm_resolve_objects(gobject, samples)
+        objs <- .gm_read_objects(gobject, samples, vw)
         # Points have no cell axis, so a global ID set says nothing about
         # them -- a crop narrows them geometrically instead. That happens
         # HERE, not in the child: the child was handed `space[nm]`, so what
@@ -3395,7 +3442,7 @@ setMethod("getGiottoImage", signature("giottoMulti"),
         view = NULL) {
         sp <- .gm_resolve_space_arg(gobject, space)
         vw <- .gm_resolve_view_arg(gobject, view)
-        objs <- .gm_resolve_objects(gobject, samples)
+        objs <- .gm_read_objects(gobject, samples, vw)
         # images have no ID axis either -- see getFeatureInfo above
         out <- lapply(objs, function(nm) {
             child <- getGiottoImage(gobject@objects[[nm]], name = name,
