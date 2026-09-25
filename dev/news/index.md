@@ -14,6 +14,17 @@
 
 ### changes
 
+- Downsampling an image for display – plotting a `giottoAffineImage`,
+  coercing an image to `magick` or `EBImage`, and
+  [`convertGiottoLargeImageToMG()`](https://giotto-suite.github.io/GiottoClass/dev/reference/convertGiottoLargeImageToMG.md)
+  – now uses `terra::spatSample(method = "display")`, which reads from
+  the image’s overviews when it has them. `method = "regular"` ignored
+  them: on a 10x JPEG-2000 `.ome.tif` read through its VRT, one
+  downsampled read of the whole image took ~2.2 s and now takes ~0.03 s.
+  Displayed pixel values now come from the overview level, so they are
+  averaged rather than exact. `data.frame` output, used for intensity
+  statistics, still samples exact pixels with `"regular"`.
+
 - **`n_threads_build` is gone from
   [`hnswKNN()`](https://giotto-suite.github.io/GiottoClass/dev/reference/hnswKNN.md),
   [`kNNNetworkParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/kNNNetworkParam-class.md),
