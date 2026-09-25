@@ -30,3 +30,19 @@ echo "pre-build: spliced gsource reference entries ($(grep -c 'New on the gsourc
 # cannot find. Drop the entry for dev only.
 sed -i.bak '/^ *- spat_net_to_igraph$/d' _pkgdown.yml && rm -f _pkgdown.yml.bak
 echo "pre-build: dropped spat_net_to_igraph (removed on gsource)"
+
+# 2. Articles that exist only on gsource. The shared workflow replaces the
+# checkout's vignettes/ with this branch's, which would drop them; restore the
+# checkout's copies alongside this branch's (files present in both are
+# identical). Design notes under vignettes/articles/ appear on the articles
+# index but are deliberately not linked from the navbar.
+git checkout HEAD -- vignettes/
+awk '{ print }
+     /href: articles\/image_tools\.html/ {
+       print "      - text: View and Space"
+       print "        href: articles/view_and_space.html"
+       print "      - text: Object Manifest"
+       print "        href: articles/object_manifest.html"
+     }' _pkgdown.yml > _pkgdown.tmp
+mv _pkgdown.tmp _pkgdown.yml
+echo "pre-build: restored gsource vignettes ($(ls vignettes/*.Rmd vignettes/articles/*.Rmd 2>/dev/null | wc -l | tr -d ' ') Rmd)"
