@@ -8,6 +8,8 @@
   design](https://giotto-suite.github.io/GiottoClass/dev/articles/design_view_space.md):
 - [Architecture and
   Design](https://giotto-suite.github.io/GiottoClass/dev/articles/design.md):
+- [giottoMulti: working with several
+  samples](https://giotto-suite.github.io/GiottoClass/dev/articles/giottoMulti.md):
 - [Giotto image
   tools](https://giotto-suite.github.io/GiottoClass/dev/articles/image_tools.md):
 - [The object
