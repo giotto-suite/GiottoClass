@@ -25,6 +25,12 @@ awk '/^- title: internal$/ && !done {
 mv _pkgdown.tmp _pkgdown.yml
 echo "pre-build: spliced gsource reference entries ($(grep -c 'New on the gsource line' _pkgdown.yml) marker, expect 1)"
 
+# 1b. spat_net_to_igraph() was removed on gsource (replaced by as.igraph()), but
+# the release index still lists it, and pkgdown errors on a listed topic it
+# cannot find. Drop the entry for dev only.
+sed -i.bak '/^ *- spat_net_to_igraph$/d' _pkgdown.yml && rm -f _pkgdown.yml.bak
+echo "pre-build: dropped spat_net_to_igraph (removed on gsource)"
+
 # 2. spatial_geometries.Rmd does not survive gsource. Its subsetting chunk fails in
 #     [ -> subset(x, cell_ids = i) -> .subset_giotto_polygon_object()
 # which returns a zero-length object, so plot() has nothing to draw. The same

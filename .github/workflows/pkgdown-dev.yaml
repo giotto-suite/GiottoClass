@@ -41,4 +41,4 @@ jobs:
       overlay-files: "_pkgdown.yml"
       dependencies: '"hard"'
       extra-packages: "any::pkgdown, bioc::BiocStyle, local::."
-      expect-versions: "GiottoClass=0.6.0"
+      expect-versions: "GiottoClass=0.7.2"
