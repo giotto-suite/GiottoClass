@@ -1940,7 +1940,7 @@ subsetGiottoLocsSubcellular <- function(
         return(gpolygon) # return early if none
     }
 
-    if (feat_type == ":all:") {
+    if (isTRUE(feat_type == ":all:")) {
         feat_type <- names(gpolygon@overlaps)
     }
 

@@ -221,4 +221,23 @@ test_that("Subsetting multiple spatial units works", {
 
 
 
+# giottoPolygon ####
+
+test_that("giottoPolygon subset by cell ID keeps the kept polygons' overlaps", {
+    gpoly <- updateGiottoPolygonObject(
+        GiottoData::loadSubObjectMini("giottoPolygon")
+    )
+    skip_if(length(overlaps(gpoly)) == 0L, "polygon mini has no overlaps")
+    ids <- spatIDs(gpoly)[1:3]
+
+    for (sub in list(gpoly[ids], subset(gpoly, cell_ids = ids))) {
+        expect_setequal(spatIDs(sub), ids)
+        for (feat in setdiff(names(sub@overlaps), "intensity")) {
+            expect_true(all(sub@overlaps[[feat]]@spat_ids %in% ids))
+        }
+    }
+})
+
+
+
 # subsetGiottoSubcellular ####
