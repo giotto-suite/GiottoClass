@@ -27,4 +27,7 @@ jobs:
     with:
       mode: release
       dependencies: '"hard"'
-      extra-packages: "any::pkgdown, bioc::BiocStyle, local::."
+      extra-packages: "any::pkgdown, bioc::BiocStyle, any::rprojroot, local::."
+      # vignettes need GiottoData (Suggests). Pinned without dependencies: its
+      # bare giotto-suite/GiottoClass Remote would otherwise replace this build.
+      pins: giotto-suite/GiottoData
