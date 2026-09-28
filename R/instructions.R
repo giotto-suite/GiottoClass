@@ -79,7 +79,7 @@ createGiottoInstructions <- function(python_path = getOption("giotto.py_path"),
     if (is.null(save_dir)) {
         save_dir <- getwd()
     }
-    save_dir <- as.character(save_dir)
+    save_dir <- .abs_path(as.character(save_dir))
 
     # plot format
     if (is.null(plot_format)) {
@@ -179,6 +179,20 @@ create_giotto_instructions <- function(python_path = NULL,
 # these directly so that internal access never routes through the deprecated
 # exports (and so never emits their deprecation warning).
 
+# save_dir is resolved when it is set, not when a plot is saved, so a later
+# setwd() (knitr, workers) cannot move where plots land. It usually does not
+# exist yet, which rules out normalizePath(). URIs and NA pass through.
+.abs_path <- function(path) {
+    is_uri <- grepl("^[A-Za-z][A-Za-z0-9+.-]*://", path)
+    local <- !is.na(path) & !is_uri
+    p <- path.expand(path[local])
+    rel <- !grepl("^(/|[A-Za-z]:[/\\\\]|\\\\\\\\)", p)
+    p[rel] <- file.path(getwd(), p[rel])
+    path[local] <- p
+    path
+}
+
+
 # Mirrors the shape of `instructions()` itself: accepts either a `giotto`
 # object or a `giottoInstructions` list, and returns the whole set of
 # instructions when no `param` is named, one value when one is.
@@ -240,6 +254,8 @@ create_giotto_instructions <- function(python_path = NULL,
                 "units"
             )) {
             instrs[[x]] <- as.character(instrs[[x]])
+        } else if (names(instrs[x]) == "save_dir" && !is.null(instrs[[x]])) {
+            instrs[[x]] <- .abs_path(as.character(instrs[[x]]))
         } else {
             instrs[[x]] <- instrs[[x]]
         }
@@ -274,6 +290,11 @@ create_giotto_instructions <- function(python_path = NULL,
             errWidth = TRUE
         ))
     } else {
+        if (!is.null(instructions$save_dir)) {
+            instructions$save_dir <- .abs_path(
+                as.character(instructions$save_dir)
+            )
+        }
         gobject@instructions <- instructions
         if (isTRUE(init_gobject)) gobject <- initialize(gobject)
         return(gobject)
