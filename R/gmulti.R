@@ -3280,29 +3280,100 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
     }, out_list, names(out_list))
 }
 
+#' Each sample's spatial locations, as a named list keyed by sample: the
+#' view's narrowing applied, the space's per-sample chain applied, and IDs
+#' promoted to `sample::id`. The one read path behind the getter and
+#' `.gm_fused_spatlocs()`. `space` is a resolved space object (or `NULL`).
+#' @noRd
+.gm_spatlocs_by_sample <- function(gobject, spat_unit = NULL, name = NULL,
+    samples = NULL, space = NULL, vw = NULL, ...) {
+    cell_ID <- NULL  # NSE
+    su <- spat_unit %||% .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
+    objs <- .gm_read_objects(gobject, samples, vw)
+    # cell-keyed, so the view is fully expressed by its global ID set and the
+    # children are handed no view at all
+    out <- lapply(objs, function(nm) {
+        getSpatialLocations(gobject@objects[[nm]],
+            spat_unit = spat_unit, name = name,
+            space = .gm_space_for_child(space, nm), ...)
+    })
+    names(out) <- objs
+    out <- .gm_narrow_child_outputs(out, gobject, spat_unit = su,
+        cells = vw$cells)
+    # Namespace last: the narrowing above matches in each child's local IDs.
+    stats::setNames(lapply(objs, function(nm) {
+        sl <- out[[nm]]
+        if (!inherits(sl, "spatLocsObj")) {
+            stop(sprintf(paste0("[gmulti getSpatialLocations] sample '%s' ",
+                "returned more than one set of locations; pass a single ",
+                "`name`."), nm), call. = FALSE)
+        }
+        dt <- data.table::copy(sl[])
+        dt[, cell_ID := .gm_global_cell_ids(gobject, nm, cell_ID)]
+        sl[] <- dt
+        sl
+    }), objs)
+}
+
+#' Fold per-sample locations into one object. Safe because the IDs are
+#' already `sample::id`; the children's local IDs collide.
+#' @noRd
+.gm_fold_spatlocs <- function(per_sample) {
+    if (length(per_sample) == 0L) return(NULL)
+    Reduce(rbind2, unname(per_sample))
+}
+
 #' @rdname getSpatialLocations
 #' @param samples (giottoMulti) children to read from. `NULL` = all children
 #' @param space (giottoMulti) name of a coordinate frame registered on the
 #'   **multi**. Each child is handed the frame narrowed to itself
+#' @details
+#' On a `giottoMulti`, cell IDs are always `sample::cell_ID`, the vocabulary
+#' of joint cell metadata and expression. The shape follows the space. In a
+#' sample's native frame, or a `perSampleSpace`, each sample has its own
+#' frame, so the result is a named list with one entry per sample. A
+#' `combinedSpace` puts its members in one shared frame, so the result is a
+#' single object across them; `samples =` then narrows the members, and
+#' naming a non-member is an error. A sample's own locations, with local IDs,
+#' are `getSpatialLocations(mg[["a"]])`.
 #' @export
 setMethod("getSpatialLocations", signature("giottoMulti"),
-    function(gobject, spat_unit = NULL, name = NULL, ...,
+    function(gobject, spat_unit = NULL, name = NULL,
+        output = c("spatLocsObj", "data.table"), ...,
         samples = NULL, space = NULL, view = NULL) {
-        su <- spat_unit %||%
-            .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
+        output <- match.arg(output)
         sp <- .gm_resolve_space_arg(gobject, space)
         vw <- .gm_resolve_view_arg(gobject, view)
-        objs <- .gm_read_objects(gobject, samples, vw)
-        # cell-keyed, so the view is fully expressed by its global ID set
-        # and the children are handed no view at all
-        out <- lapply(objs, function(nm) {
-            getSpatialLocations(gobject@objects[[nm]],
-                spat_unit = spat_unit, name = name,
-                space = .gm_space_for_child(sp, nm), ...)
-        })
-        names(out) <- objs
-        .gm_narrow_child_outputs(out, gobject, spat_unit = su,
-            cells = vw$cells)
+        combined <- inherits(sp, "combinedSpace")
+        if (combined) {
+            members <- names(sp)
+            if (is.null(samples)) {
+                # the members the view (if any) keeps
+                sel <- vw$samples
+                samples <- if (is.null(sel) || (length(sel) == 1L &&
+                    is.na(sel))) members else intersect(members, sel)
+            } else {
+                asked <- .gm_resolve_objects(gobject, samples)
+                bad <- setdiff(asked, members)
+                if (length(bad) > 0L) {
+                    stop(sprintf(paste0("[gmulti getSpatialLocations] ",
+                        "sample(s) %s are not members of combinedSpace ",
+                        "'%s' (members: %s)"),
+                        paste(sprintf("'%s'", bad), collapse = ", "),
+                        sp@name, paste(members, collapse = ", ")),
+                        call. = FALSE)
+                }
+            }
+        }
+        per_sample <- .gm_spatlocs_by_sample(gobject,
+            spat_unit = spat_unit, name = name, samples = samples,
+            space = sp, vw = vw, ...)
+        if (combined) {
+            out <- .gm_fold_spatlocs(per_sample)
+            return(switch(output, spatLocsObj = out, data.table = out[]))
+        }
+        if (output == "data.table") per_sample <- lapply(per_sample, `[`)
+        per_sample
     }
 )
 

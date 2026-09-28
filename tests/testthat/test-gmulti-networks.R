@@ -442,7 +442,7 @@ test_that("a combinedSpace naming an absent sample is refused", {
 
 test_that("the wrappers build on a giottoMulti instead of dying", {
     # both died with `incorrect number of dimensions`: they went straight to
-    # the shared builder, where getSpatialLocations(mg) hands back a list
+    # the shared builder, where getSpatialLocations(mg) handed back a list
     mg <- .netfix_multi()
     expect_s4_class(createSpatialKNNnetwork(mg, k = 5), "giottoMulti")
     expect_s4_class(
