@@ -90,40 +90,33 @@ dim(expr)
 dim(getExpression(mg, output = "matrix", samples = "tissue_a"))
 ```
 
-**Spatial locations** come back as one object across the samples, with the same
-`sample::cell_ID` IDs as the joint tables, so they line up with cell metadata
-directly:
+**Spatial data** — locations, polygons, points, images, spatial networks —
+belongs to one sample each. Each sample sits in its own coordinate frame, so
+spatial locations come back as a named list with one entry per sample. The IDs
+are the same `sample::cell_ID` IDs as the joint tables, so they line up with
+cell metadata directly:
 
 ```{r}
 locs <- getSpatialLocations(mg)
-locs
-table(sub("::.*", "", locs[]$cell_ID))
+names(locs)
+locs$tissue_a
 
-locs_a <- getSpatialLocations(mg, samples = "tissue_a")
-nrow(locs_a[])
+nrow(getSpatialLocations(mg, samples = "tissue_a")$tissue_a[])
 ```
 
 A sample's own locations, with its local IDs, are
-`getSpatialLocations(mg[["tissue_a"]])`. The other spatial data — polygons,
-points, images, spatial networks — belongs to one sample each and comes back as
-a named list with one entry per sample:
+`getSpatialLocations(mg[["tissue_a"]])`. Samples come back as one object only
+when they share a frame — see [Spaces](#spaces-laying-samples-out) below.
 
-```{r}
-names(getPolygonInfo(mg))
-```
-
-A small helper draws spatial locations one panel per sample, optionally
-highlighting some cells. It is reused below:
+A small helper draws the spatial locations it is given, one panel per sample,
+optionally highlighting some cells. It is reused below:
 
 ```{r}
 plot_samples <- function(locs, highlight = NULL) {
-    xy <- locs[]
-    xy$sample <- sub("::.*", "", xy$cell_ID)
-    samples <- unique(xy$sample)
-    op <- par(mfrow = c(1, length(samples)), mar = c(2, 2, 2, 1))
+    op <- par(mfrow = c(1, length(locs)), mar = c(2, 2, 2, 1))
     on.exit(par(op))
-    for (nm in samples) {
-        d <- xy[xy$sample == nm]
+    for (nm in names(locs)) {
+        d <- locs[[nm]][]
         plot(d$sdimx, d$sdimy, pch = 16, cex = 0.6, asp = 1,
             col = if (is.null(highlight)) "grey40" else
                 ifelse(d$cell_ID %in% highlight, "firebrick", "grey85"),
@@ -202,7 +195,7 @@ g <- mg[["tissue_b"]]
 g <- spatShift(g, dx = 500)
 mg[["tissue_b"]] <- g
 
-range(getSpatialLocations(mg, samples = "tissue_b")[]$sdimx)
+range(getSpatialLocations(mg, samples = "tissue_b")$tissue_b[]$sdimx)
 ```
 
 ## Narrowing
@@ -243,7 +236,8 @@ The same view narrows spatial reads, per sample:
 
 ```{r}
 c1 <- getSpatialLocations(mg, view = "cluster1")
-plot_samples(getSpatialLocations(mg), highlight = c1[]$cell_ID)
+plot_samples(getSpatialLocations(mg),
+    highlight = unlist(lapply(c1, function(x) x[]$cell_ID)))
 ```
 
 A view can also select samples. With `samples =` and `view =`, `subset()`
@@ -253,7 +247,7 @@ entirely. One call can record both a sample step and a filter:
 ```{r}
 mg <- subset(mg, leiden_clus == 1, samples = "tissue_b", view = "b_cluster1")
 
-table(sub("::.*", "", getSpatialLocations(mg, view = "b_cluster1")[]$cell_ID))
+names(getSpatialLocations(mg, view = "b_cluster1"))
 table(getCellMetadata(mg, output = "data.table", view = "b_cluster1")$list_ID)
 ```
 
@@ -263,39 +257,44 @@ kinds, and how views are stored.
 
 ## Spaces: laying samples out
 
-A space records coordinate transforms under a name. On a multi, `samples =`
-says which samples a transform moves, which is how you build a layout. Here
-`tissue_b` is moved beside `tissue_a` without changing either sample's data:
+A space records coordinate transforms under a name, without changing any
+sample's data. On a multi, `samples =` says which samples a transform moves.
+
+A space built by recording gives each sample its own copy of the frame, so the
+samples stay independent — a job over it is one job per sample — and reads
+through it still come back one entry per sample:
+
+```{r}
+mg <- spatShift(mg, dx = 4000, space = "moved", samples = "tissue_b")
+
+sapply(getSpatialLocations(mg, space = "moved"), function(x) range(x[]$sdimx))
+sapply(getSpatialLocations(mg), function(x) range(x[]$sdimx))   # native
+```
+
+To lay samples out together, so that their coordinates can be compared and
+distances between them mean something, declare a combined space naming its
+members. Reads through it return one object across the members:
 
 ```{r, fig.height = 2.6}
-mg <- spatShift(mg, dx = 4000, space = "side_by_side", samples = "tissue_b")
+giottoSpace(mg, "atlas") <- combinedSpace(c("tissue_a", "tissue_b"))
+mg <- spatShift(mg, dx = 4000, space = "atlas", samples = "tissue_b")
 
-xy <- getSpatialLocations(mg, space = "side_by_side")[]
+atlas <- getSpatialLocations(mg, space = "atlas")
+atlas
+
+xy <- atlas[]
 in_a <- startsWith(xy$cell_ID, "tissue_a::")
 plot(xy$sdimx, xy$sdimy, pch = 16, cex = 0.5, asp = 1,
     col = ifelse(in_a, "steelblue", "darkorange"),
     xlab = "", ylab = "")
 legend("topright", legend = c("tissue_a", "tissue_b"), pch = 16,
     col = c("steelblue", "darkorange"), bty = "n", cex = 0.8)
-
-range(getSpatialLocations(mg, samples = "tissue_b")[]$sdimx)   # native
-```
-
-A space built this way gives each sample its own copy of the frame, so the
-samples stay independent: a job over it is one job per sample. When the samples
-should share one coordinate system — so that distances between them mean
-something — declare a combined space first, naming its members:
-
-```{r}
-giottoSpace(mg, "atlas") <- combinedSpace(c("tissue_a", "tissue_b"))
-mg <- spatShift(mg, dx = 4000, space = "atlas", samples = "tissue_b")
-giottoSpace(mg, "atlas")
 ```
 
 Views and spaces combine: the view picks the cells, the space places them.
 
 ```{r}
-placed <- getSpatialLocations(mg, view = "cluster1", space = "side_by_side")[]
+placed <- getSpatialLocations(mg, view = "cluster1", space = "atlas")[]
 placed[, .(cells = .N, x_min = min(sdimx), x_max = max(sdimx)),
     by = .(sample = sub("::.*", "", cell_ID))]
 ```

@@ -43,8 +43,14 @@ options("giotto.use_conda" = FALSE)
 }
 
 
-# samples a folded gmulti read covers, from its `sample::` IDs
-.samples_of <- function(sl) sort(unique(sub("::.*", "", sl[]$cell_ID)))
+# samples a gmulti spatial read covers: a per-sample list's names, or the
+# `sample::` prefixes of a folded (combinedSpace) read
+.samples_of <- function(sl) {
+    if (inherits(sl, "spatLocsObj")) {
+        return(sort(unique(sub("::.*", "", sl[]$cell_ID))))
+    }
+    sort(names(sl))
+}
 
 
 # --- giottoView class ------------------------------------------------------
@@ -1039,7 +1045,7 @@ test_that("a sample step and a filter record in one call, samples first", {
         c("samples", "filter"))
     sl <- getSpatialLocations(mg, view = "b1")
     expect_identical(.samples_of(sl), "b")
-    expect_lt(nrow(sl[]), length(spatIDs(mg, object = "b")))
+    expect_lt(nrow(sl$b[]), length(spatIDs(mg, object = "b")))
 })
 
 test_that("getter samples = must sit inside the view's sample step", {
@@ -1067,7 +1073,8 @@ test_that("sample steps intersect, expand groups, and reject unknowns", {
 test_that("tabular getters on a multi honour a view's filter", {
     mg <- .fixture_gmulti()
     mg <- subset(mg, leiden_clus == "1", view = "c1")
-    keep <- nrow(getSpatialLocations(mg, view = "c1")[])
+    keep <- sum(vapply(getSpatialLocations(mg, view = "c1"),
+        function(sl) nrow(sl[]), integer(1L)))
     cm <- getCellMetadata(mg, output = "data.table", view = "c1")
     expect_equal(nrow(cm), sum(keep))
     expect_true(all(cm$leiden_clus == "1"))
@@ -1941,15 +1948,48 @@ test_that("space= on a gmulti getter resolves against the multi, not children", 
     # the space is registered on the parent; children's @spaces are empty.
     # Forwarding the NAME made each child resolve it against its own slot
     # and fail with "'atlas' is not a registered space".
-    native <- getSpatialLocations(mg, output = "data.table")
-    out <- getSpatialLocations(mg, space = "atlas", output = "data.table")
-    in_b <- startsWith(native$cell_ID, "b::")
-    expect_identical(out$cell_ID, native$cell_ID)
-    # equal, not identical: the fold shares one column across samples, so
-    # a's integer coordinates widen to double alongside b's shifted ones
-    expect_equal(out$sdimx[in_b], native$sdimx[in_b] + 100)
+    native <- getSpatialLocations(mg)
+    out <- getSpatialLocations(mg, space = "atlas")
+    expect_identical(out$b[]$sdimx, native$b[]$sdimx + 100)
     # the step was scoped to `b`, so `a` is untouched
-    expect_equal(out$sdimx[!in_b], native$sdimx[!in_b])
+    expect_identical(out$a[]$sdimx, native$a[]$sdimx)
+})
+
+test_that("a combinedSpace folds its members into one object", {
+    mg <- .fixture_gmulti()
+    giottoSpace(mg, "shared") <- combinedSpace(c("a", "b"))
+    mg <- spatShift(mg, dx = 100, space = "shared", samples = "b")
+    out <- getSpatialLocations(mg, space = "shared")
+    expect_s4_class(out, "spatLocsObj")
+    expect_setequal(out[]$cell_ID, spatIDs(mg))
+    native_b <- getSpatialLocations(mg, samples = "b")$b[]
+    in_b <- match(native_b$cell_ID, out[]$cell_ID)
+    expect_equal(out[]$sdimx[in_b], native_b$sdimx + 100)
+    expect_s3_class(getSpatialLocations(mg, space = "shared",
+        output = "data.table"), "data.table")
+    # samples = narrows the members
+    expect_identical(
+        .samples_of(getSpatialLocations(mg, space = "shared", samples = "a")),
+        "a")
+})
+
+test_that("a combinedSpace reads only its members and rejects others", {
+    mg <- .fixture_gmulti()
+    giottoSpace(mg, "only_a") <- combinedSpace("a")
+    mg <- spatShift(mg, dx = 1, space = "only_a", samples = "a")
+    expect_identical(.samples_of(getSpatialLocations(mg, space = "only_a")),
+        "a")
+    expect_error(getSpatialLocations(mg, space = "only_a", samples = "b"),
+        "not members of combinedSpace")
+})
+
+test_that("a combinedSpace and a view keep the members the view keeps", {
+    mg <- .fixture_gmulti()
+    giottoSpace(mg, "shared") <- combinedSpace(c("a", "b"))
+    mg <- spatShift(mg, dx = 100, space = "shared", samples = "b")
+    mg <- subset(mg, samples = "b", view = "only_b")
+    out <- getSpatialLocations(mg, space = "shared", view = "only_b")
+    expect_identical(.samples_of(out), "b")
 })
 
 test_that("a gmulti getter takes only a space the object owns", {
@@ -1986,10 +2026,10 @@ test_that("gmulti getters honour a view, narrowing children by that set", {
     # forwarding the NAME made each child resolve it against its own empty
     # @view and fail with "no view named 'v'"
     out <- getSpatialLocations(mg, view = "v")
-    # the parent speaks globals, and the fold keeps them
-    expect_setequal(out[]$cell_ID, keep)
+    # the parent speaks globals, and so does what it returns
+    expect_setequal(unlist(lapply(out, function(x) x[]$cell_ID)), keep)
     # and it narrows: unfiltered is strictly larger
-    expect_gt(nrow(getSpatialLocations(mg)[]), nrow(out[]))
+    expect_gt(nrow(getSpatialLocations(mg)$a[]), nrow(out$a[]))
 
     # cell-keyed polygons take the same set
     polys <- getPolygonInfo(mg, view = "v")

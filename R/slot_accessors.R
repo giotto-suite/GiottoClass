@@ -3683,11 +3683,9 @@ spatValues <- function(gobject,
         if (!is.null(vals)) {
             return(vals)
         }
-        # spatial_locs is a per-child slot on giottoMulti; the getter is
-        # signature("giotto") only and would throw a class-assertion
-        # error. Gracefully no-op on multi via tryCatch so spatValues
-        # falls through to whatever joint-level slot has the requested
-        # features.
+        # A gobject without spatial locations errors here; no-op via
+        # tryCatch so spatValues falls through to whatever other slot has
+        # the requested features.
         sl <- tryCatch(getSpatialLocations(
             gobject = gobject,
             spat_unit = spat_unit,
@@ -3698,6 +3696,12 @@ spatValues <- function(gobject,
         ), error = function(e) NULL)
         if (is.null(sl)) {
             return(NULL)
+        }
+        # a giottoMulti returns one entry per sample, already in `sample::id`,
+        # so a value lookup can fold them without colliding
+        if (is.list(sl) && !inherits(sl, "spatLocsObj")) {
+            sl <- .gm_fold_spatlocs(sl)
+            if (is.null(sl)) return(NULL)
         }
         present <- .resolve_feats(colnames(sl[]), "spatial locations")
         if (is.null(present)) return(NULL)

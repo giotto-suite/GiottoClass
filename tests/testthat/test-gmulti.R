@@ -766,15 +766,19 @@ test_that("getFeatureMetadata(samples = ) validates but is a no-op", {
 
 # spatial-domain per-child dispatch ####
 
-test_that("getSpatialLocations on giottoMulti folds samples into globals", {
+test_that("getSpatialLocations on giottoMulti: per-sample list, global IDs", {
     mg <- createGiottoMulti(list(a = .mk_minimal(5, 4), b = .mk_minimal(3, 4)))
     out <- getSpatialLocations(mg)
-    expect_s4_class(out, "spatLocsObj")
-    expect_identical(nrow(out[]), 8L)
-    # same vocabulary as joint metadata / expression
-    expect_setequal(out[]$cell_ID, spatIDs(mg))
-    expect_s3_class(getSpatialLocations(mg, output = "data.table"),
-        "data.table")
+    # native frames are per sample, so the shape is one entry per sample
+    expect_type(out, "list")
+    expect_identical(names(out), c("a", "b"))
+    expect_s4_class(out$a, "spatLocsObj")
+    expect_identical(nrow(out$a[]), 5L)
+    # but IDs are always the joint vocabulary from the multi tier
+    expect_true(all(startsWith(out$a[]$cell_ID, "a::")))
+    expect_setequal(c(out$a[]$cell_ID, out$b[]$cell_ID), spatIDs(mg))
+    dt <- getSpatialLocations(mg, output = "data.table")
+    expect_s3_class(dt$b, "data.table")
     # a sample's own object, with local IDs, is still one `[[` away
     expect_false(any(grepl("::", getSpatialLocations(mg[["a"]])[]$cell_ID)))
 })
@@ -782,8 +786,8 @@ test_that("getSpatialLocations on giottoMulti folds samples into globals", {
 test_that("getSpatialLocations honors samples= / object= (and their conflict)", {
     mg <- createGiottoMulti(list(a = .mk_minimal(5, 4), b = .mk_minimal(3, 4)))
     out <- getSpatialLocations(mg, samples = "b")
-    expect_true(all(startsWith(out[]$cell_ID, "b::")))
-    expect_identical(nrow(out[]), 3L)
+    expect_identical(names(out), "b")
+    expect_true(all(startsWith(out$b[]$cell_ID, "b::")))
     # `object =` was an alias for `samples =` on the per-child getters and
     # is gone. The setters keep theirs -- there it is a write target, and
     # never had a `samples` spelling to be an alias of.
@@ -794,9 +798,9 @@ test_that("sample-scoped getSpatialLocations composes with view narrowing", {
     mg <- createGiottoMulti(list(a = .mk_minimal(5, 4), b = .mk_minimal(3, 4)))
     mg2 <- subset(mg, cells = c("a::c1", "a::c3", "b::c1"))
 
-    sl_a <- getSpatialLocations(mg2, samples = "a")
+    sl_a <- getSpatialLocations(mg2, samples = "a")$a
     expect_identical(sort(sl_a[]$cell_ID), c("a::c1", "a::c3"))
-    sl_b <- getSpatialLocations(mg2, samples = "b")
+    sl_b <- getSpatialLocations(mg2, samples = "b")$b
     expect_identical(sort(sl_b[]$cell_ID), "b::c1")
 
     # children themselves untouched

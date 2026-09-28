@@ -73,10 +73,14 @@ data.table with coordinates or spatLocsObj depending on \code{output}
 Function to get a spatial location data.table
 }
 \details{
-On a \code{giottoMulti}, the samples' locations are returned as one object with
-\code{sample::cell_ID} IDs, the same vocabulary as joint cell metadata and
-expression, so they can be plotted or joined across samples directly. A
-sample's own object, with its local IDs, is \code{getSpatialLocations(mg[["a"]])}.
+On a \code{giottoMulti}, cell IDs are always \code{sample::cell_ID}, the vocabulary
+of joint cell metadata and expression. The shape follows the space. In a
+sample's native frame, or a \code{perSampleSpace}, each sample has its own
+frame, so the result is a named list with one entry per sample. A
+\code{combinedSpace} puts its members in one shared frame, so the result is a
+single object across them; \verb{samples =} then narrows the members, and
+naming a non-member is an error. A sample's own locations, with local IDs,
+are \code{getSpatialLocations(mg[["a"]])}.
 }
 \examples{
 g <- GiottoData::loadGiottoMini("vizgen")

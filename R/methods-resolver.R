@@ -376,12 +376,10 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # through, so `cell_ID` rides along as an attribute and survivors are read
 # off by ID rather than recovered positionally.
 #
-# giottoMulti: spatial locations live per-child, with no joint slot. Read
-# them per sample, scope the space to each child, apply, promote each
-# child's IDs to the joint vocabulary, then fold with `rbind2()` -- a
-# data.table rbind -- and convert ONCE at the end. Folding
-# first costs one terra allocation instead of one per child. Promote before
-# folding, or `.check_id_dups()` fires on IDs the children share.
+# giottoMulti: spatial locations live per-child, with no joint slot. The
+# per-sample reads arrive space-scoped and in `sample::id`, are folded with
+# `rbind2()` -- a data.table rbind -- and converted ONCE at the end. Folding
+# first costs one terra allocation instead of one per child.
 #' @keywords internal
 #' @noRd
 .get_projected_spatlocs <- function(gobject, space, coordinator) {
@@ -404,27 +402,24 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # asking differently, and nothing is persisted. Multi-only, matching the
 # getters -- a plain `giotto` has no such formal at all.
 #
-# It runs through `.gm_resolve_samples()` here and again inside the getter.
+# It runs through `.gm_resolve_samples()` here and again inside the read.
 # That is two calls to ONE authority, not two implementations: the second is
 # an idempotent re-check of literal child names. The first exists only
 # because it has to happen outside the tryCatch (see below), and paying it
 # is cheaper than the alternative -- a local membership test, which is
 # exactly the shape of the five copied `samples =` checks stage 7 removed.
 #
-# The space is applied here per sample, through the coordinator this
-# resolver was handed, rather than by the getter. The getter also scopes a
-# frame per child now, but it resolves with the default coordinator, and
-# the fold has to happen after each sample's chain has run.
-#
-# Order is the content: the space applies per child (each sample has its own
+# The per-sample read is the getter's own (`.gm_spatlocs_by_sample()`), so
+# the space's chain and the ID promotion are applied in one place. Order is
+# the content there: the space applies per child (each sample has its own
 # chain, which cannot be expressed once they are one table), then IDs are
-# promoted to `sample::id` (children share local IDs, so `rbind2()`'s
-# `.check_id_dups()` fires if the fold goes first), then one fold.
+# promoted, then this folds. The getter folds only for a `combinedSpace`;
+# this folds for any space, because its consumers either build in a shared
+# frame (a combined network) or only test membership (a crop carrier).
 #' @keywords internal
 #' @noRd
 .gm_fused_spatlocs <- function(gobject, space, coordinator,
     spat_unit = NULL, name = NULL, samples = NULL) {
-    cell_ID <- NULL  # NSE
     is_multi <- inherits(gobject, "giottoMulti")
     if (!is.null(samples) && !is_multi) {
         stop("[gmulti fused spatlocs] `samples =` is only meaningful on a ",
@@ -438,35 +433,20 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
         samples <- .gm_resolve_samples(gobject, samples,
             "gmulti fused spatlocs")
     }
-    # A multi is read per sample, since each sample's frame chain has to run
-    # before the fold. The getter would hand back the fold already.
-    sl <- tryCatch(if (is_multi) {
-        .gm_spatlocs_by_sample(gobject, spat_unit = spat_unit, name = name,
-            samples = samples, output = "spatLocsObj")
-    } else {
-        getSpatialLocations(gobject, spat_unit = spat_unit, name = name,
-            output = "spatLocsObj")
-    }, error = function(e) NULL)
-    if (is.null(sl)) return(NULL)
-
-    if (is.list(sl) && !inherits(sl, "spatLocsObj")) {
-        parts <- lapply(names(sl), function(nm) {
-            child_sl <- sl[[nm]]
-            if (!inherits(child_sl, "spatLocsObj")) return(NULL)
-            child_sl <- .apply_space_to_subobj(child_sl, gobject,
-                space, coordinator, sample = nm)
-            dt <- data.table::copy(child_sl[])
-            dt[, cell_ID := .gm_global_cell_ids(gobject, nm, cell_ID)]
-            child_sl[] <- dt
-            child_sl
-        })
-        parts <- Filter(Negate(is.null), parts)
-        if (length(parts) == 0L) return(NULL)
-        sl <- Reduce(rbind2, parts)
-    } else if (!is.null(space)) {
-        sl <- .apply_space_to_subobj(sl, gobject, space, coordinator)
+    if (!is_multi) {
+        sl <- tryCatch(getSpatialLocations(gobject, spat_unit = spat_unit,
+            name = name, output = "spatLocsObj"), error = function(e) NULL)
+        if (is.null(sl) || is.null(space)) return(sl)
+        return(.apply_space_to_subobj(sl, gobject, space, coordinator))
     }
-    sl
+    # The getter's read path already scopes the space per sample and
+    # namespaces the IDs, so the fold is safe whatever kind the space is.
+    # Crop carriers fold a per-sample frame too: they only test membership,
+    # and never compare coordinates across samples.
+    per_sample <- tryCatch(.gm_spatlocs_by_sample(gobject,
+        spat_unit = spat_unit, name = name, samples = samples,
+        space = space, output = "spatLocsObj"), error = function(e) NULL)
+    .gm_fold_spatlocs(per_sample)
 }
 
 # JIT helper for getters: apply view/space projection to a single subobject
