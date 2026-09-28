@@ -95,4 +95,39 @@ describe("giottoInstructions", {
     })
 
 
+
+    describe("save_dir", {
+
+        wd <- normalizePath(tempdir())
+
+        it("resolves a relative path when set, not when used", {
+            old <- setwd(wd)
+            on.exit(setwd(old), add = TRUE)
+            expected <- file.path(wd, "figs")
+
+            instrs <- createGiottoInstructions(save_dir = "figs")
+            expect_identical(instrs$save_dir, expected)
+
+            g <- giotto()
+            instructions(g, "save_dir") <- "figs"
+            expect_identical(instructions(g, "save_dir"), expected)
+
+            instrs$save_dir <- "figs"
+            instructions(g) <- instrs
+            expect_identical(instructions(g, "save_dir"), expected)
+
+            # a later change of working directory does not move it
+            setwd(old)
+            expect_identical(instructions(g, "save_dir"), expected)
+        })
+
+        it("leaves absolute paths, URIs and NA alone", {
+            x <- c("/abs/figs", "s3://bucket/figs", NA)
+            expect_identical(GiottoClass:::.abs_path(x), x)
+            expect_identical(
+                GiottoClass:::.abs_path("~/figs"), path.expand("~/figs")
+            )
+        })
+    })
+
 })

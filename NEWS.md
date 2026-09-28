@@ -14,6 +14,13 @@
   allow for it. With no `feat_type`, a polygon subset keeps every overlap for
   the kept polygons, as `[` did before the method existed.
 
+- A relative `save_dir` instruction is made absolute when it is set, through
+  `createGiottoInstructions()` or `instructions<-()`. It was stored as given
+  and resolved against the working directory at save time, so plots from a
+  knitted document, a parallel worker or code after `setwd()` could land in a
+  different folder from the one named. Objects saved before this keep their
+  relative `save_dir` until it is set again.
+
 ## changes
 
 - `selectSamples()` is removed. A view's sample step is recorded with
