@@ -2,7 +2,7 @@
 
 ## bug fixes
 
-- **A `resolve()` op is scoped to one `spat_unit` and `feat_type`**, given by
+- **A `resolveRecipe()` op is scoped to one `spat_unit` and `feat_type`**, given by
   the new `spat_unit =` / `feat_type =` arguments and defaulting to the active
   ones. The surviving cell set is computed in that unit's cell_ID vocabulary,
   and only subobjects in scope are narrowed; the rest are left untouched.
@@ -10,7 +10,7 @@
   an object whose units do not share IDs (cells and nuclei, say) every other
   unit came back empty. The getters resolve in the unit of the subobject they
   read, so `getSpatialLocations(g, spat_unit = "nucleus", view = )` narrows
-  nuclei by their own coordinates. `resolve()` is plumbing for consumers of
+  nuclei by their own coordinates. `resolveRecipe()` is plumbing for consumers of
   one scope; to narrow a whole object, use `subsetGiotto()` or `subset()`.
   - A filter step recorded against one `spat_unit` is an error when resolved
     for another. Filtering one unit by another's values is not supported yet.
@@ -24,20 +24,24 @@
 
 ## changes
 
-- **`resolve()` replaces `materialize()` and `resolveSubobject()`**, which were
+- **`resolveRecipe()` replaces `materialize()` and `resolveSubobject()`**, which were
   the same operation under two names, split at the point where one called the
   other. One generic now spans both levels of the walk: a container evaluates
   the recipe once and walks its slots, a subobject leaf applies the context it
   is handed. Dispatch is on `(x, coordinator)` and everything past `x` is
-  passed by name — `resolve(g, view = "roi", space = "layout")`.
+  passed by name — `resolveRecipe(g, view = "roi", space = "layout")`.
   - `materialize` was the wrong word, and an already-taken one: it is used
     elsewhere in the stack for pulling lazy or backed data into memory, which
     is the one thing this does not do — a resolved gobject's subobjects are
-    still whatever they were. `resolve` was already the subsystem's own word.
+    still whatever they were. "Resolve" was already the subsystem's own verb,
+    and the recipe is what it resolves. The name carries the noun because a
+    bare `resolve()` collides with `future::resolve()`, which returns its
+    input unchanged, so a script attaching future after Giotto would silently
+    get an un-narrowed object.
   - **A leaf no longer takes the parent gobject.** It used it for exactly one
     thing, deriving the surviving cell_ID set, and that belongs at the
     container, which is the thing walking the nesting keys. A leaf now takes
-    `keep`, `space` and `view`, so `resolve(myExprObj, co, keep = k)` is a
+    `keep`, `space` and `view`, so `resolveRecipe(myExprObj, co, keep = k)` is a
     unit test rather than a call needing a whole object graph. `keep` arrives
     as a promise, so a leaf that does not narrow by cell still never pays for
     it.
@@ -68,25 +72,25 @@
     companion generics its design note promised — one to apply a prepared ID
     set, one to translate a predicate — were never written. All three
     dispatched on the coordinator, which is now what the leaf generic
-    dispatches on, so each coordinator's `resolve` methods do that work
+    dispatches on, so each coordinator's `resolveRecipe` methods do that work
     directly.
   - **Both old names keep working for one release.** `resolveSubobject()`
-    forwards to `resolve()`, and the walk still routes through it for any
-    coordinator that has not registered `resolve` methods yet — a coordinator
+    forwards to `resolveRecipe()`, and the walk still routes through it for any
+    coordinator that has not registered `resolveRecipe` methods yet — a coordinator
     registered outside this package has a release in which both names resolve
     before the alias is dropped. The routing test is whether a method is
-    registered under the old name for that pair, not whether a `resolve`
+    registered under the old name for that pair, not whether a `resolveRecipe`
     method exists — concrete coordinators inherit the in-memory one, so the
     latter is always true and would send backed data down the in-memory path
     without an error.
 
 ## docs
 
-- `design_view_space.Rmd` gains the record for the `resolve()` merge: why the
+- `design_view_space.Rmd` gains the record for the `resolveRecipe()` merge: why the
   name changed, why `view` left the dispatch signature, and why a leaf is
   handed its context instead of the gobject.
 - `crop()` on a gobject without `view =` now points to reading through
-  `view =` on a getter or plot function, not to `resolve()`, which is
+  `view =` on a getter or plot function, not to `resolveRecipe()`, which is
   plumbing.
 
 # GiottoClass 0.7.2

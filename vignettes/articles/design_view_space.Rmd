@@ -224,7 +224,7 @@ two sets.
 | axis | key | status |
 |---|---|---|
 | cells | `cell_ID` | modelled — this section |
-| features | `feat_ID` | not modelled; `resolve(<featMetaObj>)` returns its input untouched for this reason |
+| features | `feat_ID` | not modelled; `resolveRecipe(<featMetaObj>)` returns its input untouched for this reason |
 | subcellular points | transcript id | not modelled |
 
 A crop reaching a transcript points store therefore cannot yet be expressed as an
@@ -334,7 +334,7 @@ ordered list with per-step scope can.
   the extent. Overridable per call.
 - **Sample-uniform scope, deliberately.** Within a sample, cells, polygons,
   points, images and spatial locations all move together. Per-element overrides
-  are unsupported; the documented path is `resolve()` plus per-element
+  are unsupported; the documented path is `resolveRecipe()` plus per-element
   transforms afterwards. This does put image-versus-polygon registration — the
   hard alignment problem — out of scope.
 - A `spaceTransform` step captures a call to an existing transform generic. At
@@ -342,9 +342,9 @@ ordered list with per-step scope can.
   `do.call()` dispatches to the method that already exists, so spaces add **no
   new transform implementations**.
 
-## `resolve()`
+## `resolveRecipe()`
 
-`resolve(g, view =, space =)` resolves the recipes and returns a new gobject
+`resolveRecipe(g, view =, space =)` resolves the recipes and returns a new gobject
 where ordinary accessors see the narrowed, reframed data — no recipe argument
 needed downstream. `slots =` limits which slots are walked, and the
 `combine*()` family routes through it so one resolution is reused rather than
@@ -352,7 +352,7 @@ recomputed. On a `giottoMulti` it walks participating children and applies each
 one's step list. Its resolved surviving-ID set is what GiottoLens pre-renders as
 a view payload.
 
-`resolve()` is plumbing rather than a user verb: it is exported so that
+`resolveRecipe()` is plumbing rather than a user verb: it is exported so that
 GiottoVisuals' `.gg_materialize()` can call it, and the user-facing route to the
 same effect is the `view =` / `space =` arguments on the ordinary accessors.
 
@@ -362,7 +362,7 @@ anything that exports a resolved gobject.
 
 ### One generic, two levels
 
-`resolve()` is a single generic spanning the container and the leaf. It was
+`resolveRecipe()` is a single generic spanning the container and the leaf. It was
 two — `materialize()` on the gobject and `resolveSubobject()` on each
 subobject — which were the same operation under two names, split at the point
 where one called the other.
@@ -372,9 +372,16 @@ a different meaning: GiottoDisk uses it throughout for pulling lazy or backed
 data into memory. This function is backend-agnostic, selects a
 `parquetCoordinator` for backed objects, and returns a gobject whose
 subobjects are *still stores*. A reader arriving from GiottoDisk would read it
-as "force this into RAM", which is the one thing it does not do. `resolve` was
-already the subsystem's own word — the resolver, `.surviving_cell_ids()`,
-`dataTableCoordinator` / `parquetCoordinator` as resolver backends.
+as "force this into RAM", which is the one thing it does not do. "Resolve" was
+already the subsystem's own verb — the resolver, `.surviving_cell_ids()`,
+`dataTableCoordinator` / `parquetCoordinator` as resolver backends — and a view
+and a space are both recipes, so `resolveRecipe()` names the verb and what it
+acts on. The noun is not decoration: a bare `resolve()` collides with
+`future::resolve()`, which returns its input unchanged, so a script that
+attached future after Giotto would get an un-narrowed object with no error.
+`resolveView()` was considered and passed over because a call with only
+`space =` is valid, and "query" was avoided because GiottoDisk already uses it
+for a lazy arrow plan.
 
 Dispatch is on `(x, coordinator)`; everything past `x` is passed by name, so
 which formal occupies dispatch slot 2 — the coordinator at a leaf, nothing at
@@ -423,7 +430,7 @@ and it is precisely the thing that should happen once at the container.
 So a leaf now takes what the container computed:
 
 ```r
-resolve(subobj, coordinator, keep = k, space = s, view = v)
+resolveRecipe(subobj, coordinator, keep = k, space = s, view = v)
 ```
 
 `view` stays because `.apply_crops_geometrically()` reads its crop steps, and
@@ -432,7 +439,7 @@ a recipe is inert data needing no gobject.
 Three things fall out:
 
 - **A leaf is callable, and testable, alone.** `resolveSubobject(myExprObj, …)`
-  needed a whole gobject and a view to do anything. `resolve(myExprObj, co,
+  needed a whole gobject and a view to do anything. `resolveRecipe(myExprObj, co,
   keep = k)` is a unit test.
 - **The `.cache` hack is gone from the leaf contract.** Every leaf used to
   fish `cache <- list(...)$.cache` out of the dots and memoise through a
@@ -442,7 +449,7 @@ Three things fall out:
 - **`keep` is a promise.** The laziness the per-leaf cache bought is preserved
   without the leaf knowing a cache exists: a leaf that never reads `keep` —
   points, images, feature metadata — never triggers the ID computation, so
-  `resolve(g, slots = "feat_info")` still costs nothing. R's argument
+  `resolveRecipe(g, slots = "feat_info")` still costs nothing. R's argument
   evaluation does the memoising the environment used to do.
 
 ### One resolve op, one scope, one `keep`
@@ -460,7 +467,7 @@ with one set computed in the active unit, which was correct only when every
 unit shared the active one's vocabulary. The vizgen mini does, which is why it
 went unnoticed until a cells + nuclei object came back with no nuclei (#424).
 
-A set *per unit* was considered and is not needed. `resolve()` is plumbing for
+A set *per unit* was considered and is not needed. `resolveRecipe()` is plumbing for
 a consumer of one scope — a plot reads one spat_unit — and it answers only for
 the scope it was asked about. Content outside that scope is not kept
 consistent with the narrowed content, and a caller who wants two units calls
@@ -521,7 +528,7 @@ sites in any package.
 
 They were designed before the leaf generic dispatched on the coordinator. Once
 it does, all three select on exactly the same thing, one layer further down. A
-coordinator's `resolve` methods already do the work each one describes, in the
+coordinator's `resolveRecipe` methods already do the work each one describes, in the
 form its own storage wants, and share it between their own leaves with
 ordinary internal helpers — which is cheaper than an exported generic and does
 not commit the package to a signature before there is a second implementation
@@ -536,19 +543,19 @@ from two working backends rather than sketched ahead of one.
 `materialize()` and `resolveSubobject()` are deprecated, not removed.
 GiottoDisk has 8 `resolveSubobject` registrations, **zero** call sites, and
 tracks *released* GiottoClass — so dropping the generic in the same release
-that introduces `resolve()` would unwire backed view resolution the moment it
-landed. `resolveSubobject`'s default method forwards to `resolve()`, and the
+that introduces `resolveRecipe()` would unwire backed view resolution the moment it
+landed. `resolveSubobject`'s default method forwards to `resolveRecipe()`, and the
 walk routes to `resolveSubobject` for any pair a downstream package still
 registers under that name, passing the gobject and the `.cache` those methods
 were written against. GiottoDisk switches against a release carrying both;
 then the alias goes.
 
-**The test for "still registered" cannot be "is there a `resolve` method".**
+**The test for "still registered" cannot be "is there a `resolveRecipe` method".**
 Concrete coordinators *inherit* `dataTableCoordinator` —
 `parquetCoordinator` is declared `contains = "dataTableCoordinator"` so that
 an in-memory subobject sitting inside an otherwise-backed gobject falls
 through to the in-memory path. That inheritance means every leaf class
-already has a `resolve` method for a backed coordinator, by inheritance from
+already has a `resolveRecipe` method for a backed coordinator, by inheritance from
 the in-memory one. Asking that question answers "yes, use the new path" and
 quietly routes backed data through the leaf that materialises it, losing
 every pushdown and every lazy op, with no error. The walk asks the question
@@ -623,16 +630,16 @@ disagree about scope.
 ## Threading through the ordinary generics
 
 `view =` and `space =` are exposed on the ordinary API so recipes are built and
-applied through the natural verbs rather than only through `resolve()`. The
+applied through the natural verbs rather than only through `resolveRecipe()`. The
 current reach is roughly 57 formals across 20 files.
 
 **This surface is under review, and the question should be settled before it is
 relied on further** — removing formals afterwards is a breaking change. Most
 sites are pass-through plumbing nobody will call with `space =`, and a
-getter-level `space =` is largely redundant with `resolve(g, space = ...)`
+getter-level `space =` is largely redundant with `resolveRecipe(g, space = ...)`
 followed by ordinary accessors, which is the pattern the user vignette already
 presents as primary. `view =` is the stronger case, since narrowing is reused and
-expensive to recompute. Trimming to `resolve()` plus the plot entry points
+expensive to recompute. Trimming to `resolveRecipe()` plus the plot entry points
 would remove most of the maintenance and documentation burden while keeping the
 capability.
 
@@ -685,7 +692,7 @@ atlas-scale narrowing a single query. Further out on the same list: ephemeral
 analysis steps inside a view, so a recipe can carry a derived structure rather
 than only a narrowing.
 
-**`attach_derived()`.** The write direction. `resolve()` projects a view into
+**`attach_derived()`.** The write direction. `resolveRecipe()` projects a view into
 a new gobject where derived outputs live; without a way back, anything computed
 on a resolved subset is stranded there and the only route to the parent is a
 manual key-based join. That join is exactly the operation the carry-keys
@@ -731,4 +738,4 @@ the other ordering, or when someone hits an off-by-axis bug from misreading the
 | `R/methods-view.R` | the view recorder and accessors |
 | `R/methods-space.R` | the space recorder and the transform verbs |
 | `R/methods-recipe.R` | the shared access / append / export surface |
-| `R/classes-resolver.R`, `R/methods-resolver.R` | the resolution engine: the `resolve()` generic, its subobject leaves, `.surviving_cell_ids()` |
+| `R/classes-resolver.R`, `R/methods-resolver.R` | the resolution engine: the `resolveRecipe()` generic, its subobject leaves, `.surviving_cell_ids()` |

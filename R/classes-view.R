@@ -88,7 +88,7 @@
 #     it narrows.
 #   * RECORDING a step is the one write: `subset(g, ..., view = "v")`
 #     returns the gobject with the recipe updated, data untouched.
-#   * `resolve()` — explicit escape hatch from a view to a new
+#   * `resolveRecipe()` — explicit escape hatch from a view to a new
 #     standalone gobject.
 #
 # See `R/classes-space.R` for the spatial-transform recipe.

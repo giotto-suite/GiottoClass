@@ -58,7 +58,7 @@ there is a length of 1.}
 
 \item{view}{optional character(1) name of a slotted view;
 when supplied, returned spatial locations are narrowed via
-\code{\link[=resolve]{resolve()}}}
+\code{\link[=resolveRecipe]{resolveRecipe()}}}
 
 \item{space}{(giottoMulti) name of a coordinate frame registered on the
 \strong{multi}. Each child is handed the frame narrowed to itself}

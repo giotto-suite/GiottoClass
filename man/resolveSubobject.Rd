@@ -23,7 +23,7 @@ resolveSubobject(subobj, gobject, view, space, coordinator, ...)
 the projected subobject (same class as \code{subobj})
 }
 \description{
-Deprecated in 0.7.3. Superseded by \code{\link[=resolve]{resolve()}}, which is one
+Deprecated in 0.7.3. Superseded by \code{\link[=resolveRecipe]{resolveRecipe()}}, which is one
 generic for both the container and the leaf, and which hands a leaf its
 evaluated context instead of the parent gobject.
 }

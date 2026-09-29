@@ -332,7 +332,7 @@ setMethod("giottoViews", signature(gobject = "gAny"),
 # resolve — container methods ####
 #
 # A container evaluates the recipe once and walks its slots; the leaves
-# (`methods-resolver.R`) apply what they are handed. See `?resolve`.
+# (`methods-resolver.R`) apply what they are handed. See `?resolveRecipe`.
 #
 # Container methods register against `coordinator = "ANY"` rather than
 # `"missing"`. A container does not dispatch on the coordinator -- it picks
@@ -430,9 +430,9 @@ setMethod("giottoViews", signature(gobject = "gAny"),
     out
 }
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve", signature(x = "giotto", coordinator = "ANY"),
+setMethod("resolveRecipe", signature(x = "giotto", coordinator = "ANY"),
     function(x, coordinator = NULL, view = NULL, space = NULL,
              slots = NULL, spat_unit = NULL, feat_type = NULL, ...) {
         .resolve_giotto(x, .resolve_view_arg(x, view),
@@ -521,9 +521,9 @@ setMethod("resolve", signature(x = "giotto", coordinator = "ANY"),
     out
 }
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve", signature(x = "giottoMulti", coordinator = "ANY"),
+setMethod("resolveRecipe", signature(x = "giottoMulti", coordinator = "ANY"),
     function(x, coordinator = NULL, view = NULL, space = NULL,
              slots = NULL, spat_unit = NULL, feat_type = NULL, ...) {
         .resolve_gmulti(x, .resolve_view_arg(x, view),
@@ -612,15 +612,17 @@ setMethod("resolve", signature(x = "giottoMulti", coordinator = "ANY"),
 # load-bearing elsewhere: {GiottoDisk} uses it throughout for pulling lazy or
 # backed data into memory. This function is backend-agnostic and returns a
 # gobject whose subobjects are still stores, which is the one thing that
-# reading makes you expect. `resolve` is the subsystem's own word — the
-# resolver, the coordinators as resolver backends — so the verb now matches.
+# reading makes you expect. "Resolve" is the subsystem's own verb — the
+# resolver, the coordinators as resolver backends — and the recipe is what it
+# resolves. A bare `resolve()` was rejected because `future` exports one that
+# returns its input unchanged, so attaching future would silently mask it.
 #
 # (`.materialize_crop_region()` above keeps its name: turning a recorded WKT
 # string into a concrete region really is materialisation in the usual sense.)
 
 #' @title materialize a giottoView into a new gobject
 #' @name materialize
-#' @description Deprecated in 0.7.3. Superseded by [resolve()].
+#' @description Deprecated in 0.7.3. Superseded by [resolveRecipe()].
 #' @param gobject a `giotto` object
 #' @param view either `NULL` or a `character(1)` slot key
 #' @param space `character(1)` optional — name of a slotted `giottoSpace`
@@ -638,8 +640,8 @@ setGeneric("materialize",
 setMethod("materialize", signature(gobject = "gAny", view = "ANY"),
     function(gobject, view, space = NULL, coordinator = NULL,
              slots = NULL, ...) {
-        deprecate_soft("0.7.3", "materialize()", "resolve()")
-        resolve(gobject, coordinator = coordinator, view = view,
+        deprecate_soft("0.7.3", "materialize()", "resolveRecipe()")
+        resolveRecipe(gobject, coordinator = coordinator, view = view,
             space = space, slots = slots, ...)
     }
 )

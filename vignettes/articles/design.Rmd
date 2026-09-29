@@ -382,7 +382,7 @@ Two invariants are worth knowing before touching any consumer:
   `space =` argument, with no fallback between them. That is what lets an ROI
   drawn on a rotated image select cells that are returned in native coordinates.
 
-`resolve(g, view =, space =)` applies the recipes and returns a new gobject whose
+`resolveRecipe(g, view =, space =)` applies the recipes and returns a new gobject whose
 ordinary accessors see the narrowed, reframed data. It is plumbing rather than a
 user verb — exported so GiottoVisuals can call it — and the user-facing route is
 the `view =` / `space =` arguments on the accessors themselves. One generic

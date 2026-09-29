@@ -1027,7 +1027,7 @@ setMethod(
 #' Resolves which globals are currently in scope for the subobject's own
 #' spat_unit / feat_type, then defers the filtering itself to
 #' `.narrow_subobject()` — the per-class axis knowledge is shared with the
-#' recipe layer's `resolve()` rather than duplicated here.
+#' recipe layer's `resolveRecipe()` rather than duplicated here.
 #'
 #' A no-op on a single giotto: there is nothing to narrow against, and the
 #' subobject is already aligned with the gobject's cells.

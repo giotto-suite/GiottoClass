@@ -11,7 +11,7 @@
 # Pattern mirrors GiottoClass's other strategy generics (`processData`,
 # `analyzeData`, etc.) where the entry-point generic dispatches on both the
 # data class and the strategy class. Here the entry point is
-# `resolve(subobj, coordinator, keep =, space =, view =)`, and it is the ONLY
+# `resolveRecipe(subobj, coordinator, keep =, space =, view =)`, and it is the ONLY
 # entry point.
 #
 # There is no separate coordinator protocol. The original sketch (2026-05-28)
@@ -20,7 +20,7 @@
 # map an R predicate into the backend's filter language. They were designed
 # before the leaf generic dispatched on the coordinator; once it does, they
 # select on exactly the same thing one layer further down. Each coordinator's
-# `resolve` methods do all three internally, in the form its storage wants,
+# `resolveRecipe` methods do all three internally, in the form its storage wants,
 # and share the work between their own leaves with ordinary internal helpers
 # rather than exported generics. `prepareIds()` shipped as an exported
 # identity transform with zero call sites and was removed in 0.7.3; the other

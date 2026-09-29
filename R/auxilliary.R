@@ -1730,7 +1730,7 @@ createMetafeats <- function(gobject,
 #' a `giottoMulti`'s `@cell_ID` / `@feat_ID` and applies it when a
 #' shared-domain getter reads a joint slot (`.gm_apply_view()`). The recipe
 #' one resolves a view lazily and applies it per subobject via
-#' `resolve()`. They differ in where the ID set comes from, not in how
+#' `resolveRecipe()`. They differ in where the ID set comes from, not in how
 #' a given class is filtered — so that part lives here rather than in both.
 #'
 #' In-memory only: a backed subobject is materialized to be filtered. A

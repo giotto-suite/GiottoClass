@@ -41,7 +41,7 @@ a \code{viewKeep}, or \code{NULL} when the view narrows nothing
 }
 \description{
 Evaluate a view into the surviving cell set of one
-\code{\link[=resolve]{resolve()}} op: the cells of \code{spat_unit} that pass every filter, crop and
+\code{\link[=resolveRecipe]{resolveRecipe()}} op: the cells of \code{spat_unit} that pass every filter, crop and
 sample step. Dispatches on the coordinator, which decides how the set is
 computed and which forms it carries.
 

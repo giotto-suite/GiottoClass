@@ -60,7 +60,7 @@ expression and spat_info are not expected to exist.}
 
 \item{view}{optional character(1) name of a slotted view;
 when supplied, the returned expression is narrowed to the cell set the
-view defines via \code{\link[=resolve]{resolve()}}}
+view defines via \code{\link[=resolveRecipe]{resolveRecipe()}}}
 
 \item{space}{optional character(1) name of a slotted
 space; accepted for API symmetry (no-op on expression — tabular)}

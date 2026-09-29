@@ -5,22 +5,22 @@
 NULL
 
 # =============================================================================
-# methods-resolver.R — the resolve() generic + dataTableCoordinator leaves
+# methods-resolver.R — the resolveRecipe() generic + dataTableCoordinator leaves
 #
-# `resolve()` spans both levels of one walk:
+# `resolveRecipe()` spans both levels of one walk:
 #
-#   container   resolve(gobject, view = "roi", space = "layout")
+#   container   resolveRecipe(gobject, view = "roi", space = "layout")
 #               evaluates the recipe ONCE — which cells survive, which frame
 #               to return — then walks its slots. Methods live in
 #               `methods-view.R`, beside the walk helpers.
-#   leaf        resolve(subobj, coordinator, keep = k, space = s, view = v)
+#   leaf        resolveRecipe(subobj, coordinator, keep = k, space = s, view = v)
 #               applies the context it was handed. Methods live below.
 #
 # The split used to be two generics (`materialize()` at the container,
 # `resolveSubobject()` at the leaf) doing the same thing under two names, with
 # every leaf reaching back up through the gobject to re-derive a value the
 # container already had. Handing the leaf its context instead is what makes
-# a leaf callable on its own — `resolve(myExprObj, co, keep = k)` is a unit
+# a leaf callable on its own — `resolveRecipe(myExprObj, co, keep = k)` is a unit
 # test — and makes recomputation structurally impossible rather than merely
 # memoised.
 #
@@ -33,7 +33,7 @@ NULL
 # Generic ####
 
 #' @title Resolve a view / space recipe
-#' @name resolve
+#' @name resolveRecipe
 #' @description Apply a [giottoView] (and optional [giottoSpace]) recipe and
 #' return the projected object.
 #'
@@ -105,14 +105,14 @@ NULL
 #' @param ... reserved for backend-specific args
 #' @returns the projected object, same class as `x`
 #' @export
-setGeneric("resolve",
-    function(x, coordinator = NULL, ...) standardGeneric("resolve"),
+setGeneric("resolveRecipe",
+    function(x, coordinator = NULL, ...) standardGeneric("resolveRecipe"),
     signature = c("x", "coordinator"))
 
 
 # Deprecated generic: resolveSubobject ####
 #
-# The leaf half of `resolve()` under its old name and its old five-argument
+# The leaf half of `resolveRecipe()` under its old name and its old five-argument
 # signature. Kept for one release because downstream coordinators register
 # against it and cannot be switched in the same release: {GiottoDisk} has 8
 # registrations, no call sites, and tracks *released* GiottoClass, so dropping
@@ -123,7 +123,7 @@ setGeneric("resolve",
 # registered on a concrete (subobj, coordinator) pair is more specific and
 # still wins — which is what keeps {GiottoDisk} working unchanged.
 # `.resolve_leaf()` closes the loop from the other side, falling back to this
-# generic for any coordinator that has not yet registered `resolve` methods.
+# generic for any coordinator that has not yet registered `resolveRecipe` methods.
 
 # Attached with `useAsDefault` rather than registered as an ANY,ANY
 # `setMethod` so that a downstream method on a concrete (subobj, coordinator)
@@ -132,7 +132,7 @@ setGeneric("resolve",
 #' @noRd
 .resolveSubobject_default <- function(subobj, gobject, view, space,
                                       coordinator, ...) {
-    deprecate_soft("0.7.3", "resolveSubobject()", "resolve()")
+    deprecate_soft("0.7.3", "resolveSubobject()", "resolveRecipe()")
     # Reached from a container walk, `.cache` holds the op's `keep`. Called
     # directly, there is no op, so the subobject's own tags are the scope.
     cache <- list(...)$.cache %||% .new_resolver_cache(gobject, view,
@@ -140,13 +140,13 @@ setGeneric("resolve",
         feat_type = .na_to_null(featType(subobj)))
     # `keep` stays a promise across this call, so the non-cell-keyed leaves
     # still never trigger the ID computation.
-    resolve(subobj, coordinator, keep = cache$keep, space = space,
+    resolveRecipe(subobj, coordinator, keep = cache$keep, space = space,
         view = view, ...)
 }
 
 #' @title resolveSubobject
 #' @name resolveSubobject
-#' @description Deprecated in 0.7.3. Superseded by [resolve()], which is one
+#' @description Deprecated in 0.7.3. Superseded by [resolveRecipe()], which is one
 #' generic for both the container and the leaf, and which hands a leaf its
 #' evaluated context instead of the parent gobject.
 #'
@@ -196,7 +196,7 @@ print.viewKeep <- function(x, ...) {
 #' @title resolveKeep
 #' @name resolveKeep
 #' @description Evaluate a view into the surviving cell set of one
-#' [resolve()] op: the cells of `spat_unit` that pass every filter, crop and
+#' [resolveRecipe()] op: the cells of `spat_unit` that pass every filter, crop and
 #' sample step. Dispatches on the coordinator, which decides how the set is
 #' computed and which forms it carries.
 #'
@@ -771,7 +771,7 @@ project_region <- function(y, from_space = NULL, to_space = NULL) {
 #
 # It is an environment rather than a closure variable because the deprecated
 # `resolveSubobject` path forwards it as `.cache`: downstream coordinators
-# that have not yet switched to `resolve()` memoise their own keys in it, and
+# that have not yet switched to `resolveRecipe()` memoise their own keys in it, and
 # the deprecated default reads `keep` back out of it.
 #
 # Scope: per-container-call. Persistent caching across calls needs a
@@ -789,12 +789,12 @@ project_region <- function(y, from_space = NULL, to_space = NULL) {
 # Does a downstream package still register this (subobj, coordinator) pair
 # under the deprecated name?
 #
-# It cannot be answered with `hasMethod("resolve", ...)`, and the reason is
+# It cannot be answered with `hasMethod("resolveRecipe", ...)`, and the reason is
 # worth stating because getting it wrong is silent. Concrete coordinators
 # INHERIT `dataTableCoordinator` -- {GiottoDisk}'s `parquetCoordinator` is
 # declared `contains = "dataTableCoordinator"` so that in-memory subobjects
 # inside an otherwise-backed gobject fall through to the in-memory path. That
-# inheritance means every leaf class already "has" a `resolve` method for a
+# inheritance means every leaf class already "has" a `resolveRecipe` method for a
 # backed coordinator, by inheritance from the in-memory one. Asking that
 # question would answer "yes, use the new path" and quietly route backed data
 # through the leaf that materialises it, losing every pushdown.
@@ -814,13 +814,13 @@ project_region <- function(y, from_space = NULL, to_space = NULL) {
     !all(m@defined == "ANY")
 }
 
-# The one leaf call site. Prefers `resolve()`, and uses the deprecated
+# The one leaf call site. Prefers `resolveRecipe()`, and uses the deprecated
 # `resolveSubobject()` when a downstream package still registers this pair
 # under that name -- {GiottoDisk}'s parquetCoordinator registrations land
 # here until its own switch ships. That arm passes the gobject and the
 # `.cache` they were written against, unchanged.
 #
-# On the `resolve()` arm `keep` is read out of the cache as a promise. Leaves
+# On the `resolveRecipe()` arm `keep` is read out of the cache as a promise. Leaves
 # that never read it -- points, images, feature metadata -- never trigger the
 # ID computation.
 #' @keywords internal
@@ -831,7 +831,7 @@ project_region <- function(y, from_space = NULL, to_space = NULL) {
         return(resolveSubobject(subobj, gobject, view, space, coordinator,
             .cache = cache))
     }
-    resolve(subobj, coordinator, keep = cache$keep, space = space,
+    resolveRecipe(subobj, coordinator, keep = cache$keep, space = space,
         view = view, spaces = spaces)
 }
 
@@ -839,9 +839,9 @@ project_region <- function(y, from_space = NULL, to_space = NULL) {
 # tags it carries: images carry neither and are always in scope; points carry
 # only a feat_type; spatial locations only a spat_unit.
 #
-# Out-of-scope leaves are left untouched rather than narrowed. `resolve()`
+# Out-of-scope leaves are left untouched rather than narrowed. `resolveRecipe()`
 # answers for the scope it was asked about, so a unit nobody requested is not
-# kept consistent with the one that was -- see the contract on `?resolve`.
+# kept consistent with the one that was -- see the contract on `?resolveRecipe`.
 #' @keywords internal
 #' @noRd
 .leaf_in_scope <- function(x, spat_unit, feat_type) {
@@ -963,9 +963,9 @@ project_region <- function(y, from_space = NULL, to_space = NULL) {
 # formals extend the generic's is wrapped in a `.local` call, and `missing()`
 # on such a formal forces its promise at the wrong moment.
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve",
+setMethod("resolveRecipe",
     signature(x = "cellMetaObj", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
         if (is.null(keep)) return(x)
@@ -973,9 +973,9 @@ setMethod("resolve",
     }
 )
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve",
+setMethod("resolveRecipe",
     signature(x = "exprObj", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
         if (is.null(keep)) return(x)
@@ -983,9 +983,9 @@ setMethod("resolve",
     }
 )
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve",
+setMethod("resolveRecipe",
     signature(x = "dimObj", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
         if (is.null(keep)) return(x)
@@ -993,9 +993,9 @@ setMethod("resolve",
     }
 )
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve",
+setMethod("resolveRecipe",
     signature(x = "spatEnrObj", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
         if (is.null(keep)) return(x)
@@ -1003,9 +1003,9 @@ setMethod("resolve",
     }
 )
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve",
+setMethod("resolveRecipe",
     signature(x = "featMetaObj", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
         # Feature metadata is feat-keyed, not cell-keyed. View filters that
@@ -1023,9 +1023,9 @@ setMethod("resolve",
 # cell-keyed spatial subobjects; for non-cell-keyed (points, images), crop is
 # applied geometrically at the subobject level.
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve",
+setMethod("resolveRecipe",
     signature(x = "spatLocsObj", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
         if (!is.null(keep)) x <- .narrow_subobject(x, cells = keep$vector)
@@ -1033,9 +1033,9 @@ setMethod("resolve",
     }
 )
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve",
+setMethod("resolveRecipe",
     signature(x = "giottoPolygon", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
         if (!is.null(keep)) {
@@ -1052,9 +1052,9 @@ setMethod("resolve",
     }
 )
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve",
+setMethod("resolveRecipe",
     signature(x = "giottoPoints", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL,
              spaces = NULL, ...) {
@@ -1066,9 +1066,9 @@ setMethod("resolve",
     }
 )
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve",
+setMethod("resolveRecipe",
     signature(x = "giottoLargeImage", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL,
              spaces = NULL, ...) {
@@ -1077,9 +1077,9 @@ setMethod("resolve",
     }
 )
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve",
+setMethod("resolveRecipe",
     signature(x = "giottoAffineImage", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL,
              spaces = NULL, ...) {
@@ -1088,9 +1088,9 @@ setMethod("resolve",
     }
 )
 
-#' @rdname resolve
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolve",
+setMethod("resolveRecipe",
     signature(x = "giottoImage", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL,
              spaces = NULL, ...) {
