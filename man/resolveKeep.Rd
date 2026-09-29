@@ -45,12 +45,14 @@ Evaluate a view into the surviving cell set of one
 sample step. Dispatches on the coordinator, which decides how the set is
 computed and which forms it carries.
 
-The set is returned as a \code{viewKeep}: a named list holding one form of the
-set per coordinator that reads it, built with
-\code{structure(list(vector = ids), class = "viewKeep")}.
-\code{dataTableCoordinator} reads \code{vector}, a character vector of cell_IDs. A
-coordinator that extends another adds its own form alongside, under its
-own name. A view that narrows nothing returns \code{NULL} rather than an empty
+The set is returned as a \code{viewKeep}: an environment holding one form of
+the set per coordinator that reads it, built with
+\code{structure(list2env(list(vector = ids), parent = emptyenv()), class = "viewKeep")}. \code{dataTableCoordinator} reads \code{vector}, a character
+vector of cell_IDs. A coordinator that extends another adds its own form
+alongside, under its own name. It is an environment so that a form can be
+installed with \code{\link[=delayedAssign]{delayedAssign()}} and computed only if a leaf reads it —
+a backed coordinator whose own form is a lazy query collects \code{vector} only
+when an in-memory subobject asks for it. A view that narrows nothing returns \code{NULL} rather than an empty
 \code{viewKeep}: \code{NULL} means "every cell survives", while a \code{viewKeep} holding
 zero IDs means none do.
 

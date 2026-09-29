@@ -474,11 +474,11 @@ Until it exists, a filter step recorded on another unit is an error.
 ### `keep` is a `viewKeep`, filled for every coordinator up the chain
 
 `resolveKeep(coordinator, gobject, view, spat_unit, feat_type)` evaluates the
-view and dispatches on the coordinator. It returns a `viewKeep`: a named list
-holding one form of the set per coordinator that reads it — `vector`, a
-character vector, for `dataTableCoordinator`; a backed coordinator adds the
-form its store joins against. The container calls it once, as a promise, and
-every leaf reads its own form.
+view and dispatches on the coordinator. It returns a `viewKeep`: an
+environment holding one form of the set per coordinator that reads it —
+`vector`, a character vector, for `dataTableCoordinator`; a backed coordinator
+adds the form its store joins against. The container calls it once, as a
+promise, and every leaf reads its own form.
 
 The rule is that a coordinator's method fills in the forms of every
 coordinator its class extends, as well as its own. That is what makes
@@ -489,11 +489,26 @@ package never registers. Either way the leaf finds `vector`. A coordinator
 with no fast path for some step can call the inherited method and promote the
 vector into its own form.
 
-It is a list with a class, not an S4 object with a constructor. Its only
-content is the forms, and each coordinator builds its own. Converting an arrow
-Table to a character vector with `as.vector()` returns an ALTREP vector, so a
-backed coordinator can fill `vector` eagerly at no cost: the R strings are
-built only if an in-memory leaf touches them.
+The set is a way to narrow IDs, not necessarily the IDs themselves. In memory
+it is the vector, because the content is in memory anyway. A backed store
+wants its joins pushed down lazily, so its form can be the accumulated
+narrowing as a query that nothing runs until a target is read. That is why a
+`viewKeep` is an environment rather than a list: the inherited `vector` form
+of a lazy query can only be had by collecting it, and `delayedAssign()` lets
+it be collected only if an in-memory leaf reads it. There is no constructor;
+each coordinator builds its own with
+`structure(list2env(forms, parent = emptyenv()), class = "viewKeep")`.
+
+### A leaf clipping geometry is handed `@spaces`
+
+A crop step records the frame its region was drawn in, by name. Content with
+no cell axis (points, images) is clipped geometrically in the output frame, so
+the region has to be projected from the step's frame into it
+(`project_region()`). The name is looked up in the object's `@spaces`, which
+the container hands to every leaf as `spaces =`: a list of recipes, inert data
+like the view itself, so the leaf still needs no gobject. On a `giottoMulti`
+the frames live on the parent, and each child is handed them scoped to itself,
+the way the output `space` already is.
 
 ### The coordinator protocol was a layer that never existed
 
@@ -512,7 +527,7 @@ ordinary internal helpers — which is cheaper than an exported generic and does
 not commit the package to a signature before there is a second implementation
 to check it against.
 
-`prepareIds()` was removed in 0.7.2. The other two stay unwritten. If a
+`prepareIds()` was removed in 0.7.3. The other two stay unwritten. If a
 cross-backing case ever does need a shared vocabulary, it should be derived
 from two working backends rather than sketched ahead of one.
 

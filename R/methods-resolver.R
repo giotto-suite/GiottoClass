@@ -82,6 +82,9 @@ NULL
 #'   region coordinates were read in. Defaulting one to the other is the
 #'   conflation that made a `space`-bound view silently return transformed
 #'   coordinates from a plain getter.
+#' @param spaces leaf only — the object's `@spaces` list, where a crop
+#'   step's recorded frame is looked up by name. Handed over as data so that
+#'   a leaf clipping geometry needs no gobject.
 #' @param keep leaf only — the op's surviving cell set as a `viewKeep` (see
 #'   [resolveKeep()]),
 #'   or `NULL` for "no narrowing".
@@ -129,7 +132,7 @@ setGeneric("resolve",
 #' @noRd
 .resolveSubobject_default <- function(subobj, gobject, view, space,
                                       coordinator, ...) {
-    deprecate_soft("0.7.2", "resolveSubobject()", "resolve()")
+    deprecate_soft("0.7.3", "resolveSubobject()", "resolve()")
     # Reached from a container walk, `.cache` holds the op's `keep`. Called
     # directly, there is no op, so the subobject's own tags are the scope.
     cache <- list(...)$.cache %||% .new_resolver_cache(gobject, view,
@@ -143,7 +146,7 @@ setGeneric("resolve",
 
 #' @title resolveSubobject
 #' @name resolveSubobject
-#' @description Deprecated in 0.7.2. Superseded by [resolve()], which is one
+#' @description Deprecated in 0.7.3. Superseded by [resolve()], which is one
 #' generic for both the container and the leaf, and which hands a leaf its
 #' evaluated context instead of the parent gobject.
 #'
@@ -184,9 +187,9 @@ setGeneric("resolveSubobject",
 #' @param x a `viewKeep`
 #' @export
 print.viewKeep <- function(x, ...) {
-    n <- if (!is.null(x$vector)) length(x$vector) else NA_integer_
-    cat(sprintf("<viewKeep> %s cells; forms: %s\n",
-        format(n), paste(names(x), collapse = ", ")))
+    # names only: printing must not force a form that is still a promise
+    cat(sprintf("<viewKeep> forms: %s\n",
+        paste(sort(names(x)), collapse = ", ")))
     invisible(x)
 }
 
@@ -197,12 +200,15 @@ print.viewKeep <- function(x, ...) {
 #' sample step. Dispatches on the coordinator, which decides how the set is
 #' computed and which forms it carries.
 #'
-#' The set is returned as a `viewKeep`: a named list holding one form of the
-#' set per coordinator that reads it, built with
-#' `structure(list(vector = ids), class = "viewKeep")`.
-#' `dataTableCoordinator` reads `vector`, a character vector of cell_IDs. A
-#' coordinator that extends another adds its own form alongside, under its
-#' own name. A view that narrows nothing returns `NULL` rather than an empty
+#' The set is returned as a `viewKeep`: an environment holding one form of
+#' the set per coordinator that reads it, built with
+#' `structure(list2env(list(vector = ids), parent = emptyenv()),
+#' class = "viewKeep")`. `dataTableCoordinator` reads `vector`, a character
+#' vector of cell_IDs. A coordinator that extends another adds its own form
+#' alongside, under its own name. It is an environment so that a form can be
+#' installed with [delayedAssign()] and computed only if a leaf reads it —
+#' a backed coordinator whose own form is a lazy query collects `vector` only
+#' when an in-memory subobject asks for it. A view that narrows nothing returns `NULL` rather than an empty
 #' `viewKeep`: `NULL` means "every cell survives", while a `viewKeep` holding
 #' zero IDs means none do.
 #'
@@ -235,7 +241,8 @@ setMethod("resolveKeep", signature(coordinator = "dataTableCoordinator"),
         ids <- .surviving_cell_ids(gobject, view, spat_unit = spat_unit,
             feat_type = feat_type)
         if (is.null(ids)) return(NULL)
-        structure(list(vector = ids), class = "viewKeep")
+        structure(list2env(list(vector = ids), parent = emptyenv()),
+            class = "viewKeep")
     }
 )
 
@@ -408,6 +415,69 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
         subobj <- do.call(step$op, c(list(x = subobj), step$args))
     }
     subobj
+}
+
+#' @title Project a region between coordinate frames
+#' @name project_region
+#' @description Move a region drawn in one [giottoSpace]'s frame into
+#' another's, through the native frame both are defined against. A crop step
+#' records the frame its region was drawn in; this is what lets it clip
+#' content returned in a different one.
+#' @param y the region: a `SpatVector`, WKT `character`, `SpatExtent`, or a
+#'   numeric `c(xmin, xmax, ymin, ymax)`
+#' @param from_space,to_space [giottoSpace] objects scoped to one sample (or
+#'   none), or `NULL` for the native frame
+#' @returns `y` in `to_space`'s frame. When both frames are native it is
+#'   returned as given, so a recorded WKT string stays WKT.
+#' @keywords internal
+#' @export
+project_region <- function(y, from_space = NULL, to_space = NULL) {
+    if (is.null(from_space) && is.null(to_space)) return(y)
+    if (!inherits(y, "SpatVector")) {
+        if (is.character(y)) y <- terra::vect(y)
+        else if (is.numeric(y)) y <- terra::as.polygons(terra::ext(y))
+        else if (inherits(y, "SpatExtent")) y <- terra::as.polygons(y)
+    }
+    m_from <- .space_composite_affine(from_space)
+    m_to <- .space_composite_affine(to_space)
+    # the same frame on both sides: skip the round trip and its float drift
+    if (!is.null(m_from) && !is.null(m_to) &&
+        isTRUE(all.equal(m_from, m_to))) {
+        return(y)
+    }
+    if (!is.null(m_from)) y <- affine(y, m_from, inv = TRUE)
+    if (!is.null(m_to)) y <- affine(y, m_to)
+    y
+}
+
+# The 3x3 affine a space applies, measured by pushing three basis points
+# through its steps, in the layout `affine()` reads: the linear part in
+# `m[1:2, 1:2]`, post-multiplied (`[x, y] %*% m[1:2, 1:2]`), and the
+# translation in COLUMN 3, `m[1:2, 3]`. A translation in row 3 -- the other
+# common convention -- is silently ignored by `affine()`, which applies the
+# linear part only. NULL when the space has no steps for this sample.
+#
+# The probe is a spatLocsObj rather than a bare SpatVector because every
+# transform generic has a spatLocsObj method and `spatShift()` has none for a
+# SpatVector; it also measures the matrix through the same methods real
+# coordinates go through, rather than a parallel implementation.
+#' @keywords internal
+#' @noRd
+.space_composite_affine <- function(space) {
+    if (is.null(space)) return(NULL)
+    steps <- space[[NA_character_]]
+    if (length(steps) == 0L) return(NULL)
+    probe <- createSpatLocsObj(
+        data.table::data.table(cell_ID = c("o", "x", "y"),
+            sdimx = c(0, 1, 0), sdimy = c(0, 0, 1)),
+        name = "probe", verbose = FALSE)
+    probe <- .apply_space_to_subobj(probe, space)
+    p <- as.matrix(probe@coordinates[, c("sdimx", "sdimy")])
+    m <- diag(3L)
+    m[1L, 1:2] <- p[2L, ] - p[1L, ]
+    m[2L, 1:2] <- p[3L, ] - p[1L, ]
+    m[1:2, 3L] <- p[1L, ]
+    m
 }
 
 # Crop routing: relation decides, not storage kind ####
@@ -755,13 +825,14 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # ID computation.
 #' @keywords internal
 #' @noRd
-.resolve_leaf <- function(subobj, gobject, view, space, coordinator, cache) {
+.resolve_leaf <- function(subobj, gobject, view, space, coordinator, cache,
+                          spaces = gobject@spaces) {
     if (.has_legacy_leaf_method(subobj, coordinator)) {
         return(resolveSubobject(subobj, gobject, view, space, coordinator,
             .cache = cache))
     }
     resolve(subobj, coordinator, keep = cache$keep, space = space,
-        view = view)
+        view = view, spaces = spaces)
 }
 
 # Is this leaf inside the op's scope? A leaf is compared only on the schema
@@ -842,14 +913,39 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 }
 
 # Apply every recorded crop step geometrically to a non-cell-keyed
-# subobject (points, images), in the post-transform frame.
+# subobject (points, images) that is already in the OUTPUT frame `space`.
+#
+# A step's region was drawn in the frame the step names (`step$space`, NA for
+# the native frame), which need not be the output frame, so the region is
+# projected across before it clips. The step names its frame; `spaces` --
+# the object's `@spaces` -- is where that name is looked up, handed over as
+# data so the leaf needs no gobject.
 #' @keywords internal
 #' @noRd
-.apply_crops_geometrically <- function(subobj, view) {
+.apply_crops_geometrically <- function(subobj, view, spaces = NULL,
+                                       space = NULL) {
     for (step in .view_steps_of(view, "crop")) {
-        subobj <- crop(subobj, .materialize_crop_region(step$region))
+        region <- project_region(.materialize_crop_region(step$region),
+            from_space = .step_frame(step, spaces), to_space = space)
+        subobj <- crop(subobj, region)
     }
     subobj
+}
+
+# The frame a crop step's region was drawn in: its named space looked up in
+# `spaces`, or NULL for the native frame.
+#' @keywords internal
+#' @noRd
+.step_frame <- function(step, spaces) {
+    nm <- step$space
+    if (is.null(nm) || is.na(nm)) return(NULL)
+    sp <- spaces[[nm]]
+    if (is.null(sp)) {
+        stop(sprintf(paste0("[resolve] a crop step was drawn in space ",
+            "'%s', which is not registered on this object"), nm),
+            call. = FALSE)
+    }
+    sp
 }
 
 
@@ -960,12 +1056,13 @@ setMethod("resolve",
 #' @export
 setMethod("resolve",
     signature(x = "giottoPoints", coordinator = "dataTableCoordinator"),
-    function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL,
+             spaces = NULL, ...) {
         # Points are not cell-keyed; cell narrowing doesn't apply directly.
         # A crop applies geometrically at the subobject level, in the
         # post-transform frame: transform first, then crop in that frame.
         x <- .apply_space_to_subobj(x, space)
-        .apply_crops_geometrically(x, view)
+        .apply_crops_geometrically(x, view, spaces, space)
     }
 )
 
@@ -973,9 +1070,10 @@ setMethod("resolve",
 #' @export
 setMethod("resolve",
     signature(x = "giottoLargeImage", coordinator = "dataTableCoordinator"),
-    function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL,
+             spaces = NULL, ...) {
         x <- .apply_space_to_subobj(x, space)
-        .apply_crops_geometrically(x, view)
+        .apply_crops_geometrically(x, view, spaces, space)
     }
 )
 
@@ -983,9 +1081,10 @@ setMethod("resolve",
 #' @export
 setMethod("resolve",
     signature(x = "giottoAffineImage", coordinator = "dataTableCoordinator"),
-    function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL,
+             spaces = NULL, ...) {
         x <- .apply_space_to_subobj(x, space)
-        .apply_crops_geometrically(x, view)
+        .apply_crops_geometrically(x, view, spaces, space)
     }
 )
 
@@ -993,8 +1092,9 @@ setMethod("resolve",
 #' @export
 setMethod("resolve",
     signature(x = "giottoImage", coordinator = "dataTableCoordinator"),
-    function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL,
+             spaces = NULL, ...) {
         x <- .apply_space_to_subobj(x, space)
-        .apply_crops_geometrically(x, view)
+        .apply_crops_geometrically(x, view, spaces, space)
     }
 )

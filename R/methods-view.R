@@ -397,6 +397,7 @@ setMethod("giottoViews", signature(gobject = "gAny"),
                             slots = NULL,
                             spat_unit = NULL,
                             feat_type = NULL,
+                            spaces = gobject@spaces,
                             ...) {
     if (is.null(coordinator)) {
         coordinator <- .default_view_coordinator(gobject)
@@ -419,7 +420,7 @@ setMethod("giottoViews", signature(gobject = "gAny"),
     # outside the op's spat_unit / feat_type, are left untouched.
     for (slot_name in .resolve_slot_filter(slots)) {
         out <- .resolve_walk(out, slot_name,
-            view, space_obj, coordinator, cache, scope)
+            view, space_obj, coordinator, cache, scope, spaces)
     }
 
     # Networks (spatial_network, nn_network) intentionally not walked:
@@ -495,11 +496,15 @@ setMethod("resolve", signature(x = "giotto", coordinator = "ANY"),
         # scope, so it is left as it is.
         if (identical(child_su, NA) || identical(child_ft, NA)) return(child)
         # `[` owns the sample-resolution rule; the child then reads as a
-        # single-sample object against the handle it is handed.
+        # single-sample object against the handle it is handed. The frames
+        # a crop step names live on the parent, so the child is handed the
+        # parent's, scoped to itself the same way.
         child_space <- if (is.null(space_obj)) NULL else space_obj[samp]
+        child_spaces <- lapply(gobject@spaces, function(sp) sp[samp])
         .resolve_giotto(child, view, space = child_space,
             coordinator = coordinator, slots = slots,
-            spat_unit = child_su, feat_type = child_ft, ...)
+            spat_unit = child_su, feat_type = child_ft,
+            spaces = child_spaces, ...)
     }), selected)
 
     # Narrow joint shared slots. Only multi-level cell_metadata /
@@ -510,7 +515,7 @@ setMethod("resolve", signature(x = "giotto", coordinator = "ANY"),
     joint_slots <- intersect(.resolve_slot_filter(slots), joint_candidates)
     for (slot_name in joint_slots) {
         out <- .resolve_walk(out, slot_name,
-            view, space_obj, coordinator, cache, scope)
+            view, space_obj, coordinator, cache, scope, gobject@spaces)
     }
 
     out
@@ -544,26 +549,27 @@ setMethod("resolve", signature(x = "giottoMulti", coordinator = "ANY"),
 #' @keywords internal
 #' @noRd
 .resolve_walk <- function(gobject, slot_name, view, space, coordinator,
-                          cache, scope) {
+                          cache, scope, spaces) {
     x <- methods::slot(gobject, slot_name)
     if (is.null(x) || length(x) == 0L) return(gobject)
     methods::slot(gobject, slot_name) <- .resolve_apply(
-        x, gobject, view, space, coordinator, cache, scope)
+        x, gobject, view, space, coordinator, cache, scope, spaces)
     gobject
 }
 
 .resolve_apply <- function(node, gobject, view, space, coordinator,
-                           cache, scope) {
+                           cache, scope, spaces) {
     if (is.list(node) && !isS4(node)) {
         return(lapply(node, .resolve_apply, gobject = gobject,
             view = view, space = space, coordinator = coordinator,
-            cache = cache, scope = scope))
+            cache = cache, scope = scope, spaces = spaces))
     }
     if (isS4(node) && inherits(node, "giottoSubobject")) {
         if (!.leaf_in_scope(node, scope$spat_unit, scope$feat_type)) {
             return(node)
         }
-        return(.resolve_leaf(node, gobject, view, space, coordinator, cache))
+        return(.resolve_leaf(node, gobject, view, space, coordinator, cache,
+            spaces))
     }
     node
 }
@@ -614,7 +620,7 @@ setMethod("resolve", signature(x = "giottoMulti", coordinator = "ANY"),
 
 #' @title materialize a giottoView into a new gobject
 #' @name materialize
-#' @description Deprecated in 0.7.2. Superseded by [resolve()].
+#' @description Deprecated in 0.7.3. Superseded by [resolve()].
 #' @param gobject a `giotto` object
 #' @param view either `NULL` or a `character(1)` slot key
 #' @param space `character(1)` optional — name of a slotted `giottoSpace`
@@ -632,7 +638,7 @@ setGeneric("materialize",
 setMethod("materialize", signature(gobject = "gAny", view = "ANY"),
     function(gobject, view, space = NULL, coordinator = NULL,
              slots = NULL, ...) {
-        deprecate_soft("0.7.2", "materialize()", "resolve()")
+        deprecate_soft("0.7.3", "materialize()", "resolve()")
         resolve(gobject, coordinator = coordinator, view = view,
             space = space, slots = slots, ...)
     }

@@ -33,13 +33,45 @@ resolve(x, coordinator = NULL, ...)
 
 \S4method{resolve}{giottoPolygon,dataTableCoordinator}(x, coordinator, keep = NULL, space = NULL, view = NULL, ...)
 
-\S4method{resolve}{giottoPoints,dataTableCoordinator}(x, coordinator, keep = NULL, space = NULL, view = NULL, ...)
+\S4method{resolve}{giottoPoints,dataTableCoordinator}(
+  x,
+  coordinator,
+  keep = NULL,
+  space = NULL,
+  view = NULL,
+  spaces = NULL,
+  ...
+)
 
-\S4method{resolve}{giottoLargeImage,dataTableCoordinator}(x, coordinator, keep = NULL, space = NULL, view = NULL, ...)
+\S4method{resolve}{giottoLargeImage,dataTableCoordinator}(
+  x,
+  coordinator,
+  keep = NULL,
+  space = NULL,
+  view = NULL,
+  spaces = NULL,
+  ...
+)
 
-\S4method{resolve}{giottoAffineImage,dataTableCoordinator}(x, coordinator, keep = NULL, space = NULL, view = NULL, ...)
+\S4method{resolve}{giottoAffineImage,dataTableCoordinator}(
+  x,
+  coordinator,
+  keep = NULL,
+  space = NULL,
+  view = NULL,
+  spaces = NULL,
+  ...
+)
 
-\S4method{resolve}{giottoImage,dataTableCoordinator}(x, coordinator, keep = NULL, space = NULL, view = NULL, ...)
+\S4method{resolve}{giottoImage,dataTableCoordinator}(
+  x,
+  coordinator,
+  keep = NULL,
+  space = NULL,
+  view = NULL,
+  spaces = NULL,
+  ...
+)
 
 \S4method{resolve}{giotto,ANY}(
   x,
@@ -87,6 +119,10 @@ coordinates from a plain getter.}
 \item{view}{at a container, a \code{character(1)} naming a slotted view, or
 \code{NULL}. At a leaf, the already-looked-up \link{giottoView} or \code{NULL} — a
 recipe is inert data, so a leaf needs no gobject to read one.}
+
+\item{spaces}{leaf only — the object's \verb{@spaces} list, where a crop
+step's recorded frame is looked up by name. Handed over as data so that
+a leaf clipping geometry needs no gobject.}
 
 \item{slots}{container only — optional \code{character} vector of slot names to
 narrow. When \code{NULL} (default), all slot lists are walked

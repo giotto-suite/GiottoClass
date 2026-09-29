@@ -44,7 +44,8 @@ combineMetadata <- function(gobject,
     if (!is.null(view) || !is.null(space)) {
         gobject <- resolve(gobject, view = view, space = space,
             slots = c("cell_metadata", "spatial_locs",
-                "spatial_enrichment"))
+                "spatial_enrichment"),
+            spat_unit = spat_unit, feat_type = feat_type)
         view <- NULL
         space <- NULL
     }
@@ -182,7 +183,8 @@ combineSpatialCellMetadataInfo <- function(gobject,
     # `combineCellData`. One resolver pass, two slots narrowed.
     if (!is.null(view) || !is.null(space)) {
         gobject <- resolve(gobject, view = view, space = space,
-            slots = c("spatial_info", "cell_metadata"))
+            slots = c("spatial_info", "cell_metadata"),
+            spat_unit = spat_unit, feat_type = feat_type)
         view <- NULL
         space <- NULL
     }
@@ -309,7 +311,9 @@ combineCellData <- function(gobject,
         }
         need_slots <- c(need_slots, "cell_metadata")
         gobject <- resolve(gobject, view = view, space = space,
-            slots = need_slots)
+            slots = need_slots,
+            spat_unit = if (length(poly_info) == 1L) poly_info,
+            feat_type = feat_type)
         view <- NULL
         space <- NULL
     }
@@ -519,7 +523,8 @@ combineFeatureData <- function(gobject,
     # `combineCellData` notes.
     if (!is.null(view) || !is.null(space)) {
         gobject <- resolve(gobject, view = view, space = space,
-            slots = c("feat_info", "feat_metadata"))
+            slots = c("feat_info", "feat_metadata"),
+            spat_unit = spat_unit, feat_type = feat_type)
         view <- NULL
         space <- NULL
     }
@@ -628,7 +633,8 @@ combineFeatureOverlapData <- function(gobject,
     # Pre-narrow once for the slots we touch.
     if (!is.null(view) || !is.null(space)) {
         gobject <- resolve(gobject, view = view, space = space,
-            slots = c("feat_metadata", "spatial_info", "feat_info"))
+            slots = c("feat_metadata", "spatial_info", "feat_info"),
+            spat_unit = poly_info, feat_type = feat_type)
         view <- NULL
         space <- NULL
     }

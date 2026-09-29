@@ -563,7 +563,7 @@ test_that("a leaf resolves on its own, with no gobject anywhere", {
     sub <- getCellMetadata(g, output = "cellMetaObj", copy_obj = TRUE)
     keep <- pDataDT(g)$cell_ID[1:5]
 
-    out <- resolve(sub, dataTableCoordinator(), keep = structure(list(vector = keep), class = "viewKeep"))
+    out <- resolve(sub, dataTableCoordinator(), keep = structure(list2env(list(vector = keep)), class = "viewKeep"))
 
     expect_s4_class(out, "cellMetaObj")
     expect_setequal(out[]$cell_ID, keep)
@@ -2396,8 +2396,9 @@ test_that("an extending coordinator's keep reaches the in-memory leaves", {
             k
         },
         where = globalenv())
+    # runs before the removeClass above: a method outliving its class warns
     on.exit(removeMethod("resolveKeep", "_test_child_coord_",
-        where = globalenv()), add = TRUE)
+        where = globalenv()), add = TRUE, after = FALSE)
 
     g <- .fixture_giotto()
     g <- subset(g, leiden_clus == "1", view = "c1")
@@ -2406,3 +2407,37 @@ test_that("an extending coordinator's keep reaches the in-memory leaves", {
     expect_setequal(names(seen$keep), c("vector", "child"))
     expect_equal(nrow(pDataDT(out)), sum(pDataDT(g)$leiden_clus == "1"))
 })
+
+test_that("project_region() moves a region between frames", {
+    g <- spatShift(giotto(), dx = 100, dy = 0, space = "shifted")
+    sp <- giottoSpace(g, "shifted")
+    wkt <- "POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0))"
+    # both native: returned as given
+    expect_identical(project_region(wkt), wkt)
+    # native -> shifted, and back
+    there <- project_region(wkt, to_space = sp)
+    expect_equal(as.vector(terra::ext(there)), c(100, 110, 0, 10),
+        ignore_attr = TRUE)
+    back <- project_region(there, from_space = sp)
+    expect_equal(as.vector(terra::ext(back)), c(0, 10, 0, 10),
+        ignore_attr = TRUE)
+})
+
+test_that("a geometric crop clips in the frame its step was drawn in", {
+    # The crop is drawn in "shifted", 100 units right of native. Points are
+    # returned native, so the region has to come back 100 units before it
+    # clips: the point at x = 5 survives, the one at x = 105 does not.
+    g <- spatShift(giotto(), dx = 100, dy = 0, space = "shifted")
+    g <- crop(g, c(100, 110, 0, 10), space = "shifted", view = "v")
+    gp <- createGiottoPoints(data.frame(x = c(5, 105), y = c(4, 6),
+        feat_ID = c("a", "b")))
+
+    out <- resolve(gp, dataTableCoordinator(), view = giottoView(g, "v"),
+        spaces = g@spaces)
+    expect_identical(out$feat_ID, "a")
+
+    expect_error(resolve(gp, dataTableCoordinator(),
+        view = giottoView(g, "v"), spaces = list()),
+        "drawn in space 'shifted'")
+})
+

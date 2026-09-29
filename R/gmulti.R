@@ -3222,6 +3222,13 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
     space[nm]
 }
 
+# Every frame registered on the multi, each scoped to child `nm` -- where a
+# crop step's recorded frame is looked up when the child's content is clipped.
+#' @noRd
+.gm_spaces_for_child <- function(gobject, nm) {
+    lapply(gobject@spaces, function(sp) sp[nm])
+}
+
 # ---- multi-level read helpers -------------------------------------------
 
 #' Descend one keyed level of a joint slot. `NULL` for an absent or
@@ -3425,16 +3432,18 @@ setMethod("getFeatureInfo", signature("giottoMulti"),
         # Points have no cell axis, so a global ID set says nothing about
         # them -- a crop narrows them geometrically instead. That happens
         # HERE, not in the child: the child was handed `space[nm]`, so what
-        # comes back is already in the predicate's frame and the recorded
-        # region applies to it directly. Keeping it here is what makes
-        # "a view is evaluated at the parent" structural rather than a
-        # convention children are trusted to honour.
+        # comes back is in that output frame, and each crop's region is
+        # projected into it from the frame its step names. Keeping it here
+        # is what makes "a view is evaluated at the parent" structural
+        # rather than a convention children are trusted to honour.
         out <- lapply(objs, function(nm) {
             child <- getFeatureInfo(gobject@objects[[nm]],
                 feat_type = feat_type,
                 space = .gm_space_for_child(sp, nm), ...)
             if (is.null(vw)) child else
-                .apply_crops_geometrically(child, vw$obj)
+                .apply_crops_geometrically(child, vw$obj,
+                    spaces = .gm_spaces_for_child(gobject, nm),
+                    space = .gm_space_for_child(sp, nm))
         })
         names(out) <- objs
         # feature-axis narrowing (@feat_ID) — the fourth call site of the
@@ -3467,7 +3476,9 @@ setMethod("getGiottoImage", signature("giottoMulti"),
             child <- getGiottoImage(gobject@objects[[nm]], name = name,
                 space = .gm_space_for_child(sp, nm), ...)
             if (is.null(vw)) child else
-                .apply_crops_geometrically(child, vw$obj)
+                .apply_crops_geometrically(child, vw$obj,
+                    spaces = .gm_spaces_for_child(gobject, nm),
+                    space = .gm_space_for_child(sp, nm))
         })
         names(out) <- objs
         out

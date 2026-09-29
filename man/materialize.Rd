@@ -26,6 +26,6 @@ materialize(gobject, view = NULL, ...)
 a new \code{giotto} object reflecting the resolved view
 }
 \description{
-Deprecated in 0.7.2. Superseded by \code{\link[=resolve]{resolve()}}.
+Deprecated in 0.7.3. Superseded by \code{\link[=resolve]{resolve()}}.
 }
 \keyword{internal}

@@ -23,7 +23,7 @@
 # `resolve` methods do all three internally, in the form its storage wants,
 # and share the work between their own leaves with ordinary internal helpers
 # rather than exported generics. `prepareIds()` shipped as an exported
-# identity transform with zero call sites and was removed in 0.7.2; the other
+# identity transform with zero call sites and was removed in 0.7.3; the other
 # two were never written.
 #
 # Concrete coordinators:

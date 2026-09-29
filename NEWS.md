@@ -1,3 +1,94 @@
+# GiottoClass 0.7.3
+
+## bug fixes
+
+- **A `resolve()` op is scoped to one `spat_unit` and `feat_type`**, given by
+  the new `spat_unit =` / `feat_type =` arguments and defaulting to the active
+  ones. The surviving cell set is computed in that unit's cell_ID vocabulary,
+  and only subobjects in scope are narrowed; the rest are left untouched.
+  Previously one set, computed in the active unit, narrowed every unit, so on
+  an object whose units do not share IDs (cells and nuclei, say) every other
+  unit came back empty. The getters resolve in the unit of the subobject they
+  read, so `getSpatialLocations(g, spat_unit = "nucleus", view = )` narrows
+  nuclei by their own coordinates. `resolve()` is plumbing for consumers of
+  one scope; to narrow a whole object, use `subsetGiotto()` or `subset()`.
+  - A filter step recorded against one `spat_unit` is an error when resolved
+    for another. Filtering one unit by another's values is not supported yet.
+
+- A crop drawn in a named space now clips points and images in that frame.
+  The region was applied to them as recorded, in whatever frame they were
+  returned in, so a crop drawn in one space and read in another (or in the
+  native frame) clipped the wrong area. The region is now projected from the
+  step's frame into the output frame first, through the new internal
+  `project_region()`.
+
+## changes
+
+- **`resolve()` replaces `materialize()` and `resolveSubobject()`**, which were
+  the same operation under two names, split at the point where one called the
+  other. One generic now spans both levels of the walk: a container evaluates
+  the recipe once and walks its slots, a subobject leaf applies the context it
+  is handed. Dispatch is on `(x, coordinator)` and everything past `x` is
+  passed by name — `resolve(g, view = "roi", space = "layout")`.
+  - `materialize` was the wrong word, and an already-taken one: it is used
+    elsewhere in the stack for pulling lazy or backed data into memory, which
+    is the one thing this does not do — a resolved gobject's subobjects are
+    still whatever they were. `resolve` was already the subsystem's own word.
+  - **A leaf no longer takes the parent gobject.** It used it for exactly one
+    thing, deriving the surviving cell_ID set, and that belongs at the
+    container, which is the thing walking the nesting keys. A leaf now takes
+    `keep`, `space` and `view`, so `resolve(myExprObj, co, keep = k)` is a
+    unit test rather than a call needing a whole object graph. `keep` arrives
+    as a promise, so a leaf that does not narrow by cell still never pays for
+    it.
+  - The per-leaf `.cache` lookup through `...` is gone with it: the value is
+    computed once where it is known, which makes recomputation structurally
+    impossible rather than merely avoided.
+  - Removing the one use of a coordinator inside the space-application helper
+    exposed that it had been threaded through the whole crop-carrier chain to
+    reach it, and read nowhere else. Five internal helpers lose the argument.
+  - **`resolveKeep()` is the seam a coordinator replaces.** It evaluates the
+    view into the op's surviving cell set and dispatches on the coordinator.
+    The set travels as a `viewKeep`, an environment with one form per
+    coordinator that reads it: `vector`, a character vector, for the
+    in-memory one; a backed coordinator can add a lazy query. A coordinator
+    that extends another fills in the inherited forms as well as its own, so
+    a subobject that falls through to an inherited leaf finds the form that
+    leaf reads, and the set is evaluated once. It is an environment so an
+    inherited form can be installed with `delayedAssign()` and computed only
+    if a leaf reads it.
+  - **A leaf that clips geometry is handed `spaces =`**, the object's
+    `@spaces` list, and looks up a crop step's recorded frame there instead
+    of reaching back into the gobject.
+  - `resolveSubobject()`'s five-slot dispatch signature is gone. Every
+    registration used only `(subobj, coordinator)`; the middle three were
+    always `ANY`.
+  - **`prepareIds()` is removed**, not deprecated. It was an exported
+    identity transform with no call sites in any package, and the two
+    companion generics its design note promised — one to apply a prepared ID
+    set, one to translate a predicate — were never written. All three
+    dispatched on the coordinator, which is now what the leaf generic
+    dispatches on, so each coordinator's `resolve` methods do that work
+    directly.
+  - **Both old names keep working for one release.** `resolveSubobject()`
+    forwards to `resolve()`, and the walk still routes through it for any
+    coordinator that has not registered `resolve` methods yet — a coordinator
+    registered outside this package has a release in which both names resolve
+    before the alias is dropped. The routing test is whether a method is
+    registered under the old name for that pair, not whether a `resolve`
+    method exists — concrete coordinators inherit the in-memory one, so the
+    latter is always true and would send backed data down the in-memory path
+    without an error.
+
+## docs
+
+- `design_view_space.Rmd` gains the record for the `resolve()` merge: why the
+  name changed, why `view` left the dispatch signature, and why a leaf is
+  handed its context instead of the gobject.
+- `crop()` on a gobject without `view =` now points to reading through
+  `view =` on a getter or plot function, not to `resolve()`, which is
+  plumbing.
+
 # GiottoClass 0.7.2
 
 ## bug fixes
@@ -117,68 +208,6 @@
   subgraph. Nodes are not the network's to supply — an edge table has no row
   for a cell with no edges — so a consumer takes its node set from the
   locations. Stated in `adr/0004` and the design article.
-- **`resolve()` replaces `materialize()` and `resolveSubobject()`**, which were
-  the same operation under two names, split at the point where one called the
-  other. One generic now spans both levels of the walk: a container evaluates
-  the recipe once and walks its slots, a subobject leaf applies the context it
-  is handed. Dispatch is on `(x, coordinator)` and everything past `x` is
-  passed by name — `resolve(g, view = "roi", space = "layout")`.
-  - `materialize` was the wrong word, and an already-taken one: it is used
-    elsewhere in the stack for pulling lazy or backed data into memory, which
-    is the one thing this does not do — a resolved gobject's subobjects are
-    still whatever they were. `resolve` was already the subsystem's own word.
-  - **A leaf no longer takes the parent gobject.** It used it for exactly one
-    thing, deriving the surviving cell_ID set, and that belongs at the
-    container, which is the thing walking the nesting keys. A leaf now takes
-    `keep`, `space` and `view`, so `resolve(myExprObj, co, keep = k)` is a
-    unit test rather than a call needing a whole object graph. `keep` arrives
-    as a promise, so a leaf that does not narrow by cell still never pays for
-    it.
-  - The per-leaf `.cache` lookup through `...` is gone with it: the value is
-    computed once where it is known, which makes recomputation structurally
-    impossible rather than merely avoided.
-  - Removing the one use of a coordinator inside the space-application helper
-    exposed that it had been threaded through the whole crop-carrier chain to
-    reach it, and read nowhere else. Five internal helpers lose the argument.
-  - **`resolveKeep()` is the seam a coordinator replaces.** It evaluates the
-    view into the op's surviving cell set and dispatches on the coordinator.
-    The set travels as a `viewKeep`, a named list with one form per
-    coordinator that reads it: `vector`, a character vector, for the
-    in-memory one. A coordinator that extends another fills in the inherited
-    forms as well as its own, so a subobject that falls through to an
-    inherited leaf finds the form that leaf reads, and the set is evaluated
-    once.
-  - `resolveSubobject()`'s five-slot dispatch signature is gone. Every
-    registration used only `(subobj, coordinator)`; the middle three were
-    always `ANY`.
-  - **`prepareIds()` is removed**, not deprecated. It was an exported
-    identity transform with no call sites in any package, and the two
-    companion generics its design note promised — one to apply a prepared ID
-    set, one to translate a predicate — were never written. All three
-    dispatched on the coordinator, which is now what the leaf generic
-    dispatches on, so each coordinator's `resolve` methods do that work
-    directly.
-  - **Both old names keep working for one release.** `resolveSubobject()`
-    forwards to `resolve()`, and the walk still routes through it for any
-    coordinator that has not registered `resolve` methods yet — a coordinator
-    registered outside this package has a release in which both names resolve
-    before the alias is dropped. The routing test is whether a method is
-    registered under the old name for that pair, not whether a `resolve`
-    method exists — concrete coordinators inherit the in-memory one, so the
-    latter is always true and would send backed data down the in-memory path
-    without an error.
-- **A `resolve()` op is scoped to one `spat_unit` and `feat_type`**, given by
-  the new `spat_unit =` / `feat_type =` arguments and defaulting to the active
-  ones. The surviving cell set is computed in that unit's cell_ID vocabulary,
-  and only subobjects in scope are narrowed; the rest are left untouched.
-  Previously one set, computed in the active unit, narrowed every unit, so on
-  an object whose units do not share IDs (cells and nuclei, say) every other
-  unit came back empty. The getters resolve in the unit of the subobject they
-  read, so `getSpatialLocations(g, spat_unit = "nucleus", view = )` narrows
-  nuclei by their own coordinates. `resolve()` is plumbing for consumers of
-  one scope; to narrow a whole object, use `subsetGiotto()` or `subset()`.
-  - A filter step recorded against one `spat_unit` is an error when resolved
-    for another. Filtering one unit by another's values is not supported yet.
 
 ## docs
 
@@ -196,9 +225,6 @@
   underneath it: the recipe containers are classes holding plain steps,
   recording a space produces a `perSampleSpace` and a `combinedSpace` is
   declared, and a crop's frame lives on its step.
-- `design_view_space.Rmd` gains the record for the `resolve()` merge: why the
-  name changed, why `view` left the dispatch signature, and why a leaf is
-  handed its context instead of the gobject.
 
 # GiottoClass 0.7.1
 
