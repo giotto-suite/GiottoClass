@@ -21,7 +21,7 @@ live elsewhere:
 | `AGENTS.md` (this file) | Code navigation, constraints, conventions. Read first when modifying code. |
 | `vignettes/articles/design.Rmd` | Architectural rationale: two-tier object model, the schema, subobject hierarchy, `initialize()`, versioning, the five analysis verbs, the disk-backed arc. Summarises the two subsystem articles below. |
 | `vignettes/articles/design_gmulti.Rmd` | Multi-sample federation: `gAny`, `giottoMulti`, `@mapping` / `@groups`, joint slots, the narrowing contract, carry-keys. |
-| `vignettes/articles/design_view_space.Rmd` | The `giottoView` / `giottoSpace` recipe subsystem: recording, step shape, frames, the crop invariant, `materialize()`. |
+| `vignettes/articles/design_view_space.Rmd` | The `giottoView` / `giottoSpace` recipe subsystem: recording, step shape, frames, the crop invariant, the `resolveRecipe()` generic. |
 | `vignettes/overview.Rmd` | User-facing walkthrough of the object model — nesting, accessors, subobjects. |
 | `vignettes/view_and_space.Rmd` | User-facing walkthrough of views and spaces. |
 | `adr/` | Architecture Decision Records: why a choice was made, what was rejected, what it costs. Dated and immutable — read when you are about to change a decision, not to learn current behaviour. |

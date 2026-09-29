@@ -473,7 +473,7 @@ setGeneric("getCellMetadata",
 #' @rdname getCellMetadata
 #' @param view optional character(1) name of a slotted
 #'   view; when supplied, the returned subobject is projected through the
-#'   view's narrowing recipe via [resolveSubobject()]
+#'   view's narrowing recipe via [resolveRecipe()]
 #' @param space optional character(1) name of a slotted
 #'   space; when supplied, applied alongside `view` (spaces are no-ops on
 #'   tabular subobjects but the param is accepted for API symmetry)
@@ -910,7 +910,7 @@ setGeneric("getExpression",
 #' @rdname getExpression
 #' @param view optional character(1) name of a slotted view;
 #'   when supplied, the returned expression is narrowed to the cell set the
-#'   view defines via [resolveSubobject()]
+#'   view defines via [resolveRecipe()]
 #' @param space optional character(1) name of a slotted
 #'   space; accepted for API symmetry (no-op on expression — tabular)
 #' @export
@@ -1386,7 +1386,7 @@ setGeneric("getSpatialLocations",
 #' @rdname getSpatialLocations
 #' @param view optional character(1) name of a slotted view;
 #'   when supplied, returned spatial locations are narrowed via
-#'   [resolveSubobject()]
+#'   [resolveRecipe()]
 #' @param space optional character(1) name of a slotted
 #'   space; when supplied, the recorded transforms are applied to the
 #'   returned coordinates
@@ -1641,7 +1641,7 @@ setGeneric("getDimReduction",
 
 #' @rdname getDimReduction
 #' @param view optional character(1) name of a slotted view;
-#'   narrows returned cells via [resolveSubobject()]
+#'   narrows returned cells via [resolveRecipe()]
 #' @param space optional character(1) (no-op on dim
 #'   reductions; accepted for API symmetry)
 #' @export
@@ -2575,7 +2575,7 @@ setGeneric("getPolygonInfo",
 #' @rdname getPolygonInfo
 #' @param view optional character(1) name of a slotted view;
 #'   when supplied, returned polygons are narrowed by surviving cell set via
-#'   [resolveSubobject()]
+#'   [resolveRecipe()]
 #' @param space optional character(1) name of a slotted
 #'   space; when supplied, the recorded transforms are applied to the
 #'   returned polygon geometry
@@ -2835,7 +2835,7 @@ setGeneric("getFeatureInfo",
 
 #' @rdname getFeatureInfo
 #' @param view optional character(1) name of a slotted view;
-#'   applies any crop step to the points via [resolveSubobject()]. Points are
+#'   applies any crop step to the points via [resolveRecipe()]. Points are
 #'   not cell-keyed so subset predicates do not cascade here.
 #' @param space optional character(1) name of a slotted
 #'   space; when supplied, recorded transforms are applied to the points
@@ -3068,7 +3068,7 @@ setGeneric("getSpatialEnrichment",
 
 #' @rdname getSpatialEnrichment
 #' @param view optional character(1) name of a slotted view;
-#'   narrows enrichment rows by surviving cell set via [resolveSubobject()]
+#'   narrows enrichment rows by surviving cell set via [resolveRecipe()]
 #' @param space optional character(1) (no-op; accepted for
 #'   API symmetry)
 #' @export
@@ -3908,7 +3908,8 @@ spatValues <- function(gobject,
         # Predicate frame is read per crop step inside .surviving_cell_ids;
         # the explicit `space` arg here only affects coord transforms on
         # value cols (not implemented for spatValues -- doc above).
-        keep <- .cached_surviving_cell_ids(gobject, v, coord)
+        keep <- resolveKeep(coord, gobject, v, spat_unit = spat_unit,
+            feat_type = feat_type)$vector
         if (!is.null(keep)) {
             vals <- vals[cell_ID %in% keep]
         }

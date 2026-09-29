@@ -645,7 +645,7 @@ createSpatialNetwork <- function(gobject,
     # `.gm_fused_spatlocs()` owns the order that matters: scope the frame per
     # child, apply, promote IDs to `sample::id`, THEN fold. Folding first
     # would trip the duplicate-ID check, since children share local IDs.
-    sl <- .gm_fused_spatlocs(gobject, space, coordinator = NULL,
+    sl <- .gm_fused_spatlocs(gobject, space,
         spat_unit = spat_unit, name = spat_loc_name, samples = members)
     if (is.null(sl)) {
         stop("[createSpatialNetwork] no spatial locations found for ",
@@ -808,7 +808,7 @@ createSpatialNetwork <- function(gobject,
         output = "spatLocsObj"
     )
     if (!is.null(sp)) {
-        sl <- .apply_space_to_subobj(sl, gobject, sp, coordinator = NULL)
+        sl <- .apply_space_to_subobj(sl, sp)
     }
 
     # An edge table is only ever the answer when there is no gobject to write

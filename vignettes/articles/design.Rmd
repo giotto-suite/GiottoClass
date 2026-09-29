@@ -382,10 +382,15 @@ Two invariants are worth knowing before touching any consumer:
   `space =` argument, with no fallback between them. That is what lets an ROI
   drawn on a rotated image select cells that are returned in native coordinates.
 
-`materialize(g, view, space)` applies the recipes and returns a new gobject whose
+`resolveRecipe(g, view =, space =)` applies the recipes and returns a new gobject whose
 ordinary accessors see the narrowed, reframed data. It is plumbing rather than a
 user verb — exported so GiottoVisuals can call it — and the user-facing route is
-the `view =` / `space =` arguments on the accessors themselves.
+the `view =` / `space =` arguments on the accessors themselves. One generic
+spans both levels of the walk: the same verb resolves a container and resolves
+one subobject, the leaf taking the context the container computed rather than
+the gobject it would have to recompute from. It was `materialize()` plus
+`resolveSubobject()` until 0.7.2; both survive as deprecated aliases for one
+release, because GiottoDisk registers against the latter.
 
 `vignettes/view_and_space.Rmd` is the user-facing walkthrough.
 `vignettes/articles/design_view_space.Rmd` is the full design record: the space

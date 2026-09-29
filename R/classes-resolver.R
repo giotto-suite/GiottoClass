@@ -1,57 +1,21 @@
 # =============================================================================
-# viewCoordinator — cross-storage bridging for view + space resolution
+# viewCoordinator — how a view / space recipe is executed on a gobject
 # =============================================================================
 #
-# DESIGN NOTES (sketch, 2026-05-28)
-# ---------------------------------
-# A `viewCoordinator` is the dispatch tag for HOW a giottoView + giottoSpace
-# recipe gets executed across the gobject's storage backings. It is NOT a
-# strategy class for picking an execution engine — the engine is owned by
-# the storage (GiottoDisk parquet stores expose lazy ops + storeRead output
-# modes that already select the engine at materialization time). The
-# coordinator's role is to provide a common protocol for moving IDs and
-# effecting joins between storages so they can collaborate during view
-# resolution.
+# A coordinator is a dispatch tag: it selects the `resolveKeep()` and
+# `resolveRecipe()` leaf methods that evaluate a recipe against the object's
+# storage. It does not pick an execution engine -- that belongs to the
+# storage itself.
 #
-# Pattern mirrors GiottoClass's other strategy generics (`processData`,
-# `analyzeData`, etc.) where the entry-point generic dispatches on both the
-# data class and the strategy class. Here the entry point is
-# `resolveSubobject(subobj, gobject, view, space, coordinator, ...)`.
+# `dataTableCoordinator` is the in-memory one, and the default for an object
+# with no `@source`. A backed source selects its own through
+# `defaultViewCoordinator()`; GiottoDisk registers `parquetCoordinator` for
+# `gsource`. A coordinator that extends another inherits its leaf methods,
+# which is how in-memory subobjects inside a backed object are handled.
 #
-# Protocol methods the coordinator provides:
-#   prepareIds(coordinator, ids, ...)
-#     Promote an R-memory cell_ID character vector into the form the
-#     coordinator's preferred backend wants. For dataTableCoordinator the
-#     identity transform; for duckDBCoordinator an ephemeral duckdb-
-#     registered table; for sedonaCoordinator a sedona view. The "prepared"
-#     form is then usable as the right-hand side of a JOIN / IN filter
-#     against any subobject the coordinator handles.
-#
-# Future-facing protocol (deferred until first cross-backing case lands):
-#   applyIdsFilter(coordinator, subobj, prepared_ids, id_col)
-#     Apply prepared IDs as a row filter on a subobject. Dispatches on
-#     (coordinator, subobj_class) so each combination knows whether it's
-#     an in-memory %in%, a backed JOIN, or an ephemeral-register-then-JOIN.
-#   translatePredicate(coordinator, predicate, target_subobj)
-#     Map an R predicate into the backend's filter form (delegating to the
-#     store's existing `subset()` + `.r_expr_to_sql()` for parquet stores).
-#
-# Concrete coordinators:
-#   dataTableCoordinator   — all in-memory; IDs as R character vector;
-#                            apply via [cell_ID %in% ids]. Lives in
-#                            GiottoClass. Default for non-disk gobjects;
-#                            also the always-works in-memory fallback when
-#                            mixed gobjects need promotion.
-#   duckDBCoordinator      — ID promotion via duckdb_register_arrow /
-#                            ephemeral table; apply via JOIN. Lives in
-#                            GiottoDisk; registered when loaded.
-#   sedonaCoordinator      — sedona view registration; full spatial
-#                            vocabulary at apply time. Lives in GiottoDisk.
-#
-# Default selection from `gobject@source`: no source → dataTableCoordinator;
-# parquet/sedona/duckdb-backed sources → respective concrete coordinator
-# via the S3 hook `defaultViewCoordinator.<source_class>` registered from
-# GiottoDisk. See `.default_view_coordinator()` in methods-resolver.R.
+# There is no separate protocol for promoting ID sets or translating
+# predicates: each coordinator's methods do that in the form its storage
+# wants.
 # =============================================================================
 
 

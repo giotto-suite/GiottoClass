@@ -3,96 +3,44 @@
 # =============================================================================
 #
 # A view describes a deferred, read-only NARROWING of a `giotto` (or
-# `giottoMulti`) object. It is a *recipe*, not a snapshot: each time it is
-# consumed it is re-resolved against the current state of the gobject.
+# `giottoMulti`). It is a recipe, not a snapshot: each time it is consumed it
+# is re-resolved against the current state of the object. Positioning lives
+# in [giottoSpace]; the two compose at the consumer, e.g.
+# `spatPlot2D(g, view = "tumor", space = "atlas")`.
 #
-# Spatial transforms (positioning) live in [giottoSpace], NOT here.
-# Views handle subsets, crops, and sample-selection only. The two compose at
-# the consumer-function API: `plot(g, space = "atlas", view = "tumor")`.
-#
-# A crop step may name a `space`, the coordinate frame its region was drawn
-# in. The resolver positions the data into that frame before evaluating the
-# region against it. The frame sits on the STEP, not on the view: a region
-# is a set of numbers, and it is the numbers that need a frame.
-#
-# Shape — views are built through the gobject, by name:
+# Views are built through the gobject, by name, and a step is appended on
+# each call:
 #   g <- subset(g, cluster == "A", view = "tumor_focus")
 #   g <- crop(g, c(0, 100, 0, 100), view = "tumor_focus", space = "atlas")
-#   g <- subset(mg, samples = c("a", "b"), view = "tumor_focus")   # gmulti only
+#   g <- subset(mg, samples = c("a", "b"), view = "tumor_focus")   # gmulti
 #
-# `.record_view_on_gobject()` creates the named view on first use and
-# appends on later calls, so there is no separate construction step.
+# A crop step names the `space` its region was drawn in. The frame sits on
+# the STEP, not the view: a region is a set of numbers, and it is the numbers
+# that need a frame, so one view may crop in one frame and then another.
 #
-# STEPS ARE PLAIN LISTS; THE CONTAINER IS S4 (decisions Q7 + Q8)
-# --------------------------------------------------------------
-# A view is a `giottoView` holding
-#
-#   @steps  list(<step>, ...)      where a step is `list(type = "<tag>", ...)`
-#
-# Q7 made the *steps* plain lists, and that is where the serialization
-# guarantees live (see below) -- so the container is free to be a class
-# again. It is one, because it is the handle: `[` / `[[` read it, the
-# builder verbs append to it, and `as.list()` exports it. Q8 had removed
-# the class along with those verbs, which left recipe edits to hand-built
-# lists at every call site.
-#
-# Q8's actual objection was to scope inherited from construction history
-# (`(a + b) |> spin(30)` differing from `(a |> spin(30)) + b`). That is
-# answered by scoping through `[` rather than through construction order,
-# not by removing the container.
-#
-# Validation runs in `setValidity()` and, for the same reasons as before,
-# also at record time -- that is where the user's call site is still in
-# scope for a good error message.
-#
-# The pre-Q8 class carried `@space` on the container. That was forced by a
-# constructor -- `giottoView(space = "atlas") |> crop(...)` declared the
-# frame before any step existed, so the container was the only place it
-# could go -- and it brought a rebind guard with it, because one field then
-# served every region in the view. Recording replaced the constructor, so
-# the frame now arrives on the call that builds the step. On the step it
-# also composes: `v1 + v2` concatenates unconditionally, `v[i]` carries
-# exactly the frames its steps need, and a view may legitimately crop in
-# one frame and then another.
-#
-# The reason the recorded form is normalized: a recipe must survive
-# `saveRDS` and reach a parallel worker. Three payloads made that false, and
-# each is normalized at record time rather than at resolve time:
-#
-#   * the filter predicate is stored **deparsed to a character string**, so
-#     no environment reference rides along. Env-resident scalars/vectors are
-#     substituted into the expression first (`.eager_substitute_env()`), so
-#     the string is self-contained; functions resolve through the package
-#     chain at eval time.
-#   * a crop region is stored as **WKT**, geometry only. terra objects are
-#     C++ pointer-backed and do not survive a round-trip.
+# The container is S4 -- it is the handle `[`, the builder verbs and
+# `as.list()` act on -- but every step is a plain tagged list,
+# `list(type = "<tag>", ...)`, because a recipe must survive `saveRDS()` and
+# reach a parallel worker. Each payload that would break that is normalized
+# at record time:
+#   * a filter predicate is stored deparsed, with environment-resident values
+#     substituted in (`.eager_substitute_env()`), so no environment rides
+#     along; functions resolve through the package chain at eval time.
+#   * a crop region is stored as WKT; terra objects are pointer-backed.
 #   * transform arguments are whitelisted to serializable types.
+# Validation runs in `setValidity()` and again at record time, where the
+# user's call is still in scope for a good error message.
 #
-# GiottoDisk's `@ops` chain is the same shape for the same reason.
+# Step types (transforms live on giottoSpace):
+#   "filter"    predicate row filter, evaluated against `spatValues()`
+#   "crop"      region crop, read in the step's `space`
+#   "samples"   gmulti-only child selection
 #
-# Step taxonomy (subset-flavor only — transforms live on giottoSpace):
-#   type = "filter"    predicate-style row filter (deparsed NSE)
-#   type = "crop"      region-based crop (region read in the step's `space`)
-#   type = "samples"   gmulti-only child filter
+# Read-only contract: resolving a view never mutates the gobject; recording
+# a step is the one write, and it touches only the recipe.
 #
-# Cell-keyed propagation:
-#   A `subset()` predicate is evaluated against `spatValues(g)` for the
-#   columns it references. Surviving cell_IDs propagate to cell-keyed slots
-#   (expression, spatial_locs, dim_reduction, polys with a `cell_ID` column)
-#   automatically via the existing relational structure — no flag needed.
-#   Polygons without a `cell_ID` linkage are out of scope for views; link
-#   them first or handle them in a separate step.
-#
-# Read-only contract:
-#   * RESOLVING a view never mutates the gobject and never touches the data
-#     it narrows.
-#   * RECORDING a step is the one write: `subset(g, ..., view = "v")`
-#     returns the gobject with the recipe updated, data untouched.
-#   * `materialize()` — explicit escape hatch from a view to a new
-#     standalone gobject.
-#
-# See `R/classes-space.R` for the spatial-transform recipe.
-# See `R/methods-view.R` for the recorder and the accessors.
+# See `R/classes-space.R` for the spatial-transform recipe and
+# `R/methods-view.R` for the recorder and the accessors.
 # =============================================================================
 
 

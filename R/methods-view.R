@@ -1,6 +1,7 @@
 #' @include classes-view.R
 #' @include classes.R
 #' @include generics.R
+#' @include methods-resolver.R
 NULL
 
 # =============================================================================
@@ -328,50 +329,18 @@ setMethod("giottoViews", signature(gobject = "gAny"),
 )
 
 
-# materialize ####
-
-#' @title materialize a giottoView into a new gobject
-#' @name materialize
-#' @description
-#' Resolve a [giottoView] (optionally with a slotted [giottoSpace]
-#' frame) against a gobject and return a new gobject containing the projected
-#' subobjects. Use this when downstream work needs to produce structured
-#' outputs (spatial networks, dim reductions) on top of the projected data —
-#' those outputs live in the materialised gobject, never in the parent.
-#'
-#' Read-only contract: the input gobject is not mutated.
-#'
-#' @param gobject a `giotto` object
-#' @param view either a `giottoView` or a `character(1)` slot key
-#' @param space `character(1)` optional — name of a slotted `giottoSpace`
-#'   naming the frame to return the data in. `NULL` means the native frame.
-#'   This is the OUTPUT frame, and it is deliberately independent of the
-#'   frame a crop step names, which says only which frame that step's region
-#'   coordinates were read in. Defaulting one to the other is the conflation
-#'   that made a `space`-bound view silently return transformed coordinates
-#'   from a plain getter.
-#' @param coordinator a [viewCoordinator-class]-inheriting object brokering
-#'   IDs and joins between storage backings. Defaults to the coordinator
-#'   selected from `gobject@source` (in-memory for non-disk gobjects).
-#' @param slots optional `character` vector of slot names to narrow.
-#'   When `NULL` (default), all slot lists are walked (`cell_metadata`,
-#'   `expression`, `dimension_reduction`, `spatial_enrichment`,
-#'   `feat_metadata`, `spatial_locs`, `spatial_info`, `feat_info`,
-#'   `images`). When supplied, only the listed slots are walked — the
-#'   rest are left untouched on the returned object. Useful for
-#'   internal helpers that only consume a subset of slots and want to
-#'   share one resolver pass without paying for irrelevant slots.
-#' @param ... reserved
-#' @returns a new `giotto` object reflecting the resolved view
-#' @export
-setGeneric("materialize",
-    function(gobject, view, ...) standardGeneric("materialize"))
+# resolveRecipe — container methods ####
+#
+# A container evaluates the recipe once and walks its slots; the leaves
+# (`methods-resolver.R`) apply what they are handed. Registered against
+# `coordinator = "ANY"`: a container picks its coordinator rather than
+# dispatching on one, but still accepts one.
 
 
-# All slots `materialize()` knows how to walk, in the canonical order
-# (tabular → spatial → images). Used as the default slot set when
-# `slots = NULL` and to validate caller-supplied slot names.
-.materialize_default_slots <- c(
+# All slots a container walks, in the canonical order (tabular -> spatial ->
+# images). Used as the default slot set when `slots = NULL` and to validate
+# caller-supplied slot names.
+.resolve_default_slots <- c(
     "cell_metadata", "expression", "dimension_reduction",
     "spatial_enrichment", "feat_metadata",
     "spatial_locs", "spatial_info", "feat_info", "images"
@@ -383,96 +352,105 @@ setGeneric("materialize",
 # error.
 #' @keywords internal
 #' @noRd
-.materialize_slot_filter <- function(slots) {
-    if (is.null(slots)) return(.materialize_default_slots)
-    bad <- setdiff(slots, .materialize_default_slots)
+.resolve_slot_filter <- function(slots) {
+    if (is.null(slots)) return(.resolve_default_slots)
+    bad <- setdiff(slots, .resolve_default_slots)
     if (length(bad) > 0L) {
         stop(sprintf(
-            "[materialize] unknown slot(s): %s. Available: %s",
+            "[resolve] unknown slot(s): %s. Available: %s",
             paste(bad, collapse = ", "),
-            paste(.materialize_default_slots, collapse = ", ")
+            paste(.resolve_default_slots, collapse = ", ")
         ), call. = FALSE)
     }
-    intersect(.materialize_default_slots, slots)  # canonical order
+    intersect(.resolve_default_slots, slots)  # canonical order
 }
 
-# Internal implementation: materialize on a giotto with an already-resolved
-# giottoView object. Called from the public character-signature method
-# (after slot lookup) and from the giottoMulti per-child loop (where the
-# view object is already in hand).
+# Look up the `view` name at a container entry point. A view is passed by
+# name, never inline (design_view_space.Rmd). The internal helpers take the
+# looked-up object, which is how a multi hands each child a recipe the child
+# could not look up itself.
 #' @keywords internal
 #' @noRd
-.materialize_giotto_resolved <- function(gobject, view,
-                                          space = NULL,
-                                          coordinator = NULL,
-                                          slots = NULL,
-                                          ...) {
+.resolve_view_arg <- function(gobject, view) {
+    if (is.null(view)) return(NULL)
+    checkmate::assert_string(view, .var.name = "view")
+    giottoView(gobject, view)
+}
+
+# Internal implementation: resolve on a giotto with an already-resolved
+# giottoView object. Called from the public method (after slot lookup) and
+# from the giottoMulti per-child loop (where the view object is in hand).
+#' @keywords internal
+#' @noRd
+.resolve_giotto <- function(gobject, view,
+                            space = NULL,
+                            coordinator = NULL,
+                            slots = NULL,
+                            spat_unit = NULL,
+                            feat_type = NULL,
+                            spaces = gobject@spaces,
+                            ...) {
     if (is.null(coordinator)) {
         coordinator <- .default_view_coordinator(gobject)
     }
-    # Normalise output space to a giottoSpace (or NULL) once at the
-    # entry point so per-subobject resolution doesn't re-look-up by
-    # name. The predicate space (the view's `space`) is consulted independently
-    # by the crop step handlers — it is not conflated with output here.
+    scope <- .resolve_scope(gobject, spat_unit, feat_type)
+    # the output frame, looked up once
     space_obj <- .resolve_space(gobject, space)
-    # Per-call cache shared across all slot walks within this
-    # materialize. surviving_cell_ids computed at most once per call.
-    cache <- .new_resolver_cache()
+    # The op's one surviving cell set, held as a promise: computed at most
+    # once per call, and not at all when no leaf reads it.
+    cache <- .new_resolver_cache(gobject, view, coordinator,
+        spat_unit = scope$spat_unit, feat_type = scope$feat_type)
 
     out <- gobject
 
     # Walk the (possibly filtered) slot list in canonical order:
-    # tabular → spatial → images. Slot names not in `slots` are
-    # left untouched on the returned gobject.
-    for (slot_name in .materialize_slot_filter(slots)) {
-        out <- .materialize_walk(out, slot_name,
-            view, space_obj, coordinator, cache)
+    # tabular → spatial → images. Slot names not in `slots`, and leaves
+    # outside the op's spat_unit / feat_type, are left untouched.
+    for (slot_name in .resolve_slot_filter(slots)) {
+        out <- .resolve_walk(out, slot_name,
+            view, space_obj, coordinator, cache, scope, spaces)
     }
 
-    # Networks (spatial_network, nn_network) intentionally not walked:
-    # they're built from a particular cell state and don't carry
-    # spatial coords; view/space resolution would be misleading.
+    # networks are not walked: built from one cell state, no coordinates
 
     out
 }
 
-#' @rdname materialize
+#' @rdname resolveRecipe
 #' @export
-setMethod("materialize",
-    signature(gobject = "giotto", view = "character"),
-    function(gobject, view, space = NULL, coordinator = NULL,
-             slots = NULL, ...) {
-        v <- giottoView(gobject, view)
-        .materialize_giotto_resolved(gobject, v,
+setMethod("resolveRecipe", signature(x = "giotto", coordinator = "ANY"),
+    function(x, coordinator = NULL, view = NULL, space = NULL,
+             slots = NULL, spat_unit = NULL, feat_type = NULL, ...) {
+        .resolve_giotto(x, .resolve_view_arg(x, view),
             space = space, coordinator = coordinator,
-            slots = slots, ...)
+            slots = slots, spat_unit = spat_unit, feat_type = feat_type, ...)
     }
 )
 
 
-# materialize on giottoMulti ####
-# 1. Apply the samples step FIRST — narrow children before any per-child
-#    work touches storage (matters at 4B-points-per-multi scale).
-# 2. Per-surviving-child materialize with the child-scoped giottoSpace.
-# 3. Narrow joint shared slots via the existing resolveSubobject dispatch —
-#    spatValues works on a multi, so joint-level predicates resolve against
-#    joint slots and the surviving global cell_IDs narrow each joint
-#    subobject.
+# resolveRecipe on giottoMulti ####
+# The samples step runs first, so excluded children are never touched; each
+# surviving child is then resolved with its scoped space, and the joint slots
+# are narrowed by the multi-level set.
 
-# Internal implementation: materialize on a giottoMulti with an
-# already-resolved giottoView object.
+# Internal implementation: resolve on a giottoMulti with an already-resolved
+# giottoView object.
 #' @keywords internal
 #' @noRd
-.materialize_gmulti_resolved <- function(gobject, view,
-                                          space = NULL,
-                                          coordinator = NULL,
-                                          slots = NULL,
-                                          ...) {
+.resolve_gmulti <- function(gobject, view,
+                            space = NULL,
+                            coordinator = NULL,
+                            slots = NULL,
+                            spat_unit = NULL,
+                            feat_type = NULL,
+                            ...) {
     if (is.null(coordinator)) {
         coordinator <- .default_view_coordinator(gobject)
     }
+    scope <- .resolve_scope(gobject, spat_unit, feat_type)
     space_obj <- .resolve_space(gobject, space)
-    cache <- .new_resolver_cache()
+    cache <- .new_resolver_cache(gobject, view, coordinator,
+        spat_unit = scope$spat_unit, feat_type = scope$feat_type)
 
     # Resolve the samples step FIRST — narrow children before any
     # per-child work touches storage.
@@ -486,16 +464,24 @@ setMethod("materialize",
     out <- gobject
     out@objects <- gobject@objects[selected]
 
-    # Per-surviving-child materialize with the child-scoped space.
-    # `slots` is forwarded so per-child narrowing matches the joint-level
-    # scope.
+    # the scope is in multi-level handles, which @mapping may name
+    # differently in each child
+    su_map <- .gm_scope_map(gobject, "spat_unit", scope$spat_unit)
+    ft_map <- .gm_scope_map(gobject, "feat_type", scope$feat_type)
     out@objects <- stats::setNames(lapply(selected, function(samp) {
         child <- out@objects[[samp]]
-        # `[` owns the sample-resolution rule; the child then reads as a
-        # single-sample object against the handle it is handed.
+        child_su <- .gm_scope_child(su_map, samp)
+        child_ft <- .gm_scope_child(ft_map, samp)
+        # A child that does not carry the requested handle holds nothing in
+        # scope, so it is left as it is.
+        if (identical(child_su, NA) || identical(child_ft, NA)) return(child)
+        # frames live on the parent; each child gets them scoped to itself
         child_space <- if (is.null(space_obj)) NULL else space_obj[samp]
-        .materialize_giotto_resolved(child, view, space = child_space,
-            coordinator = coordinator, slots = slots, ...)
+        child_spaces <- lapply(gobject@spaces, function(sp) sp[samp])
+        .resolve_giotto(child, view, space = child_space,
+            coordinator = coordinator, slots = slots,
+            spat_unit = child_su, feat_type = child_ft,
+            spaces = child_spaces, ...)
     }), selected)
 
     # Narrow joint shared slots. Only multi-level cell_metadata /
@@ -503,98 +489,122 @@ setMethod("materialize",
     # legitimately joint, so intersect the filter with that subset.
     joint_candidates <- c("cell_metadata", "expression",
         "dimension_reduction", "spatial_enrichment", "feat_metadata")
-    joint_slots <- intersect(.materialize_slot_filter(slots),
-        joint_candidates)
+    joint_slots <- intersect(.resolve_slot_filter(slots), joint_candidates)
     for (slot_name in joint_slots) {
-        out <- .materialize_walk(out, slot_name,
-            view, space_obj, coordinator, cache)
+        out <- .resolve_walk(out, slot_name,
+            view, space_obj, coordinator, cache, scope, gobject@spaces)
     }
 
     out
 }
 
-#' @rdname materialize
+#' @rdname resolveRecipe
 #' @export
-setMethod("materialize",
-    signature(gobject = "giottoMulti", view = "character"),
-    function(gobject, view, space = NULL, coordinator = NULL,
-             slots = NULL, ...) {
-        v <- giottoView(gobject, view)
-        .materialize_gmulti_resolved(gobject, v,
+setMethod("resolveRecipe", signature(x = "giottoMulti", coordinator = "ANY"),
+    function(x, coordinator = NULL, view = NULL, space = NULL,
+             slots = NULL, spat_unit = NULL, feat_type = NULL, ...) {
+        .resolve_gmulti(x, .resolve_view_arg(x, view),
             space = space, coordinator = coordinator,
-            slots = slots, ...)
+            slots = slots, spat_unit = spat_unit, feat_type = feat_type, ...)
     }
 )
 
 
-# materialize with no view — space only ####
-# `view` and `space` are independent knobs, so asking for a frame without
-# also naming a view is a normal request, not a degenerate one. Everything
-# below the dispatch already treats a NULL view as "no narrowing"
-# (`.view_steps_of()` returns an empty step list, `.surviving_cell_ids()`
-# returns NULL), so these methods exist to let that request through rather
-# than to add a second code path. Without them a caller that forwards its
-# own `view = NULL, space = "frame"` — as the combine* family does — fails
-# on dispatch instead of getting the frame it asked for.
+# `view = NULL` (a space-only call) needs no method of its own: everything
+# below treats a NULL view as no narrowing.
 
-#' @rdname materialize
-#' @export
-setMethod("materialize",
-    signature(gobject = "giotto", view = "NULL"),
-    function(gobject, view, space = NULL, coordinator = NULL,
-             slots = NULL, ...) {
-        .materialize_giotto_resolved(gobject, NULL,
-            space = space, coordinator = coordinator,
-            slots = slots, ...)
-    }
-)
 
-#' @rdname materialize
-#' @export
-setMethod("materialize",
-    signature(gobject = "giottoMulti", view = "NULL"),
-    function(gobject, view, space = NULL, coordinator = NULL,
-             slots = NULL, ...) {
-        .materialize_gmulti_resolved(gobject, NULL,
-            space = space, coordinator = coordinator,
-            slots = slots, ...)
-    }
-)
-
-# Walk one slot list (potentially nested by spat_unit / feat_type) calling
-# resolveSubobject on each subobject. The slot is a `nullOrList`; structure
-# is recursive — list of lists of subobjects. Apply the resolver leaf-wise.
-# `cache` (optional env from .new_resolver_cache) memoises
-# surviving_cell_ids across all subobjects walked within one materialize.
+# Walk one (nested) slot list and resolve each in-scope subobject.
 #' @keywords internal
 #' @noRd
-.materialize_walk <- function(gobject, slot_name, view, space, coordinator,
-                              cache = NULL) {
+.resolve_walk <- function(gobject, slot_name, view, space, coordinator,
+                          cache, scope, spaces) {
     x <- methods::slot(gobject, slot_name)
     if (is.null(x) || length(x) == 0L) return(gobject)
-    methods::slot(gobject, slot_name) <- .materialize_apply(
-        x, gobject, view, space, coordinator, cache)
+    methods::slot(gobject, slot_name) <- .resolve_apply(
+        x, gobject, view, space, coordinator, cache, scope, spaces)
     gobject
 }
 
-.materialize_apply <- function(node, gobject, view, space, coordinator,
-                               cache = NULL) {
+.resolve_apply <- function(node, gobject, view, space, coordinator,
+                           cache, scope, spaces) {
     if (is.list(node) && !isS4(node)) {
-        return(lapply(node, .materialize_apply, gobject = gobject,
+        return(lapply(node, .resolve_apply, gobject = gobject,
             view = view, space = space, coordinator = coordinator,
-            cache = cache))
+            cache = cache, scope = scope, spaces = spaces))
     }
     if (isS4(node) && inherits(node, "giottoSubobject")) {
-        return(resolveSubobject(node, gobject, view, space, coordinator,
-            .cache = cache))
+        if (!.leaf_in_scope(node, scope$spat_unit, scope$feat_type)) {
+            return(node)
+        }
+        return(.resolve_leaf(node, gobject, view, space, coordinator, cache,
+            spaces))
     }
     node
 }
 
+# Per-sample child names for a multi-level scope handle. `NULL` when the
+# scope leaves that axis open.
+#' @keywords internal
+#' @noRd
+.gm_scope_map <- function(gobject, axis, handle) {
+    if (is.null(handle)) return(NULL)
+    .gm_resolve_axis(gobject, axis, handle)$map
+}
 
-# Q8 removed `show(giottoView)` / `show(giottoSpace)` along with the
-# classes, and with them `.view_step_label()` / `.space_step_label()` /
-# `.wkt_label()`, which had no other callers. Recipes now print as the
-# lists they are. Note a crop step holds a full WKT string, so a real
-# polygon prints long -- a summary on `show(giotto)` is the natural
-# replacement and is deliberately not part of this change.
+# One child's name for the handle: `NULL` for an open axis, `NA` when the
+# child does not participate in it.
+#' @keywords internal
+#' @noRd
+.gm_scope_child <- function(map, samp) {
+    if (is.null(map)) return(NULL)
+    if (samp %in% names(map)) map[[samp]] else NA
+}
+
+# The op's scope: one spat_unit (whose cell_ID vocabulary the surviving set
+# is in) and one feat_type, defaulting to the active ones. `NULL` survives
+# only when the object has no default to offer (an image-only object), and
+# then scopes nothing on that axis.
+#' @keywords internal
+#' @noRd
+.resolve_scope <- function(gobject, spat_unit = NULL, feat_type = NULL) {
+    spat_unit <- suppressWarnings(set_default_spat_unit(gobject, spat_unit))
+    feat_type <- suppressWarnings(
+        set_default_feat_type(gobject, feat_type, spat_unit = spat_unit))
+    list(spat_unit = spat_unit, feat_type = feat_type)
+}
+
+
+# Deprecated: materialize ####
+# Superseded by `resolveRecipe()`; the naming is recorded in
+# design_view_space.Rmd.
+
+#' @title materialize a giottoView into a new gobject
+#' @name materialize
+#' @description Deprecated in 0.7.3. Superseded by [resolveRecipe()].
+#' @param gobject a `giotto` object
+#' @param view either `NULL` or a `character(1)` slot key
+#' @param space `character(1)` optional — name of a slotted `giottoSpace`
+#' @param coordinator a [viewCoordinator-class]-inheriting object
+#' @param slots optional `character` vector of slot names to narrow
+#' @param ... reserved
+#' @returns a new `giotto` object reflecting the resolved view
+#' @keywords internal
+#' @export
+setGeneric("materialize",
+    function(gobject, view = NULL, ...) standardGeneric("materialize"))
+
+#' @rdname materialize
+#' @export
+setMethod("materialize", signature(gobject = "gAny", view = "ANY"),
+    function(gobject, view, space = NULL, coordinator = NULL,
+             slots = NULL, ...) {
+        deprecate_soft("0.7.3", "materialize()", "resolveRecipe()")
+        resolveRecipe(gobject, coordinator = coordinator, view = view,
+            space = space, slots = slots, ...)
+    }
+)
+
+
+# Recipes have no `show()` method and print as the lists they are; a crop
+# step holds a full WKT string, so a real polygon prints long.

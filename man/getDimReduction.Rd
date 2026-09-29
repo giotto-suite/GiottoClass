@@ -43,7 +43,7 @@ only when
 expression and spat_info are not expected to exist.}
 
 \item{view}{optional character(1) name of a slotted view;
-narrows returned cells via \code{\link[=resolveSubobject]{resolveSubobject()}}}
+narrows returned cells via \code{\link[=resolveRecipe]{resolveRecipe()}}}
 
 \item{space}{optional character(1) (no-op on dim
 reductions; accepted for API symmetry)}

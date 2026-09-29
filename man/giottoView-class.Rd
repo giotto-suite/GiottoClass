@@ -8,15 +8,15 @@
 a \code{giottoView} object
 }
 \description{
-A \code{giottoView} is a deferred, read-only NARROWING of a \link[=giotto-class]{giotto} or
-\link[=giottoMulti-class]{giottoMulti} object: a recipe, re-resolved against the object's
+A `giottoView` is a deferred, read-only NARROWING of a [giotto-class] or
+[giottoMulti-class] object: a recipe, re-resolved against the object's
 current state each time it is consumed, rather than a snapshot.
 
-Access it with \code{[} (class-preserving, so the result stays editable) and
-\code{[[} (extracts a step). Append to it with the builder verbs \code{\link[=subset]{subset()}}
-(a filter step, or a sample step with \verb{samples =}) and \code{\link[=crop]{crop()}}, or
-compose two with \code{+}. Export the
-plain nested form with \code{\link[=as.list]{as.list()}}.
+Access it with `[` (class-preserving, so the result stays editable) and
+`[[` (extracts a step). Append to it with the builder verbs [subset()]
+(a filter step, or a sample step with `samples =`) and [crop()], or
+compose two with `+`. Export the
+plain nested form with [as.list()].
 }
 \section{Slots}{
 

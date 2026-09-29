@@ -5,72 +5,212 @@
 NULL
 
 # =============================================================================
-# methods-resolver.R — resolveSubobject generic + dataTableCoordinator methods
+# methods-resolver.R — the resolveRecipe() generic + dataTableCoordinator leaves
 #
-# resolveSubobject(subobj, gobject, view, space, coordinator, ...) takes one
-# subobject, the parent gobject (for spatValues lookups), and the
-# view+space+coordinator. Returns a new subobject projected through the
-# recipe.
+# `resolveRecipe()` spans both levels of one walk:
 #
-# The `coordinator` is a `viewCoordinator`-inheriting object that brokers
-# IDs and joins between storage backings during resolution — see
-# `R/classes-resolver.R` for the protocol notes.
+#   container   resolveRecipe(gobject, view = "roi", space = "layout")
+#               evaluates the recipe ONCE — which cells survive, which frame
+#               to return — then walks its slots. Methods live in
+#               `methods-view.R`, beside the walk helpers.
+#   leaf        resolveRecipe(subobj, coordinator, keep = k, space = s, view = v)
+#               applies the context it was handed. Methods live below.
 #
-# Cell-set narrowing is computed once via `.surviving_cell_ids()`; tabular
-# subobjects narrow by that set, spatial subobjects narrow + apply
-# transforms via existing eager GiottoClass dispatch.
+# A leaf is handed its context rather than the gobject, so it is callable on
+# its own and nothing is recomputed per leaf. See `R/classes-resolver.R` for
+# what a coordinator is.
 # =============================================================================
 
 
 # Generic ####
 
+#' @title Resolve a view / space recipe
+#' @name resolveRecipe
+#' @description Apply a [giottoView] (and optional [giottoSpace]) recipe and
+#' return the projected object.
+#'
+#' At a **container** (`giotto`, `giottoMulti`) this evaluates the recipe for
+#' one `spat_unit` / `feat_type` scope and returns a gobject whose in-scope
+#' subobjects have been projected through it. The input gobject is not
+#' mutated.
+#'
+#' This is plumbing for code that consumes one scope of data, such as a plot
+#' function, not a way to derive a new object to work on. Only the requested
+#' scope is guaranteed: subobjects outside it are left untouched, so they
+#' need not agree with the narrowed ones. The returned gobject is a carrier
+#' for the narrowed data — read what you asked for from it and discard it.
+#' To narrow a whole object, use [subsetGiotto()] or `subset()`.
+#'
+#' At a **leaf** (one subobject) this applies an already-evaluated context:
+#' the surviving cell set, the output frame, the recipe itself.
+#'
+#' @details
+#' Dispatch is on `(x, coordinator)`; everything past `x` is passed by name.
+#' A container does not dispatch on the coordinator — it *picks* one from
+#' `x@source` when none is given — so container methods register against
+#' `ANY` and consume `coordinator` as an ordinary argument.
+#'
+#' `keep` reaches a leaf as a promise, so a leaf that does not narrow by cell
+#' (points, images) never forces the ID computation.
+#'
+#' `coordinator` defaults to `NULL` on the *generic*, not just on the
+#' container methods. S4 propagates the generic's formals symbolically into
+#' the method's `.local` call, so a default written only on the method is
+#' never reached when the argument is omitted.
+#'
+#' @param x a `giotto` / `giottoMulti` container, or a giotto subobject leaf
+#' @param coordinator a [viewCoordinator-class]-inheriting object brokering
+#'   IDs and joins between storage backings. At a container, `NULL` (the
+#'   default) selects one from `x@source` — in-memory for non-disk gobjects.
+#' @param view at a container, a `character(1)` naming a slotted view, or
+#'   `NULL`. At a leaf, the already-looked-up [giottoView] or `NULL` — a
+#'   recipe is inert data, so a leaf needs no gobject to read one.
+#' @param space at a container, a `character(1)` naming a slotted
+#'   [giottoSpace]; at a leaf, the resolved object. `NULL` means the native
+#'   frame. This is the OUTPUT frame, independent of the frame a crop step
+#'   names, which says only which frame that step's region was drawn in.
+#' @param spaces leaf only — the object's `@spaces` list, where a crop
+#'   step's recorded frame is looked up by name. Handed over as data so that
+#'   a leaf clipping geometry needs no gobject.
+#' @param keep leaf only — the op's surviving cell set as a `viewKeep` (see
+#'   [resolveKeep()]),
+#'   or `NULL` for "no narrowing".
+#' @param spat_unit container only — the spat_unit to resolve. The surviving
+#'   cell set is computed in this unit's cell_ID vocabulary, and only
+#'   subobjects of this unit are narrowed. `NULL` uses the active one.
+#' @param feat_type container only — the feat_type to resolve. Subobjects of
+#'   other feat_types are left untouched, and filter columns are read from
+#'   this feat_type's metadata. `NULL` uses the active one.
+#' @param slots container only — optional `character` vector of slot names to
+#'   narrow. When `NULL` (default), all slot lists are walked
+#'   (`cell_metadata`, `expression`, `dimension_reduction`,
+#'   `spatial_enrichment`, `feat_metadata`, `spatial_locs`, `spatial_info`,
+#'   `feat_info`, `images`). When supplied, only the listed slots are walked —
+#'   the rest are left untouched on the returned object. Useful for internal
+#'   helpers that consume a subset of slots and want to share one resolver
+#'   pass without paying for irrelevant ones.
+#' @param ... reserved for backend-specific args
+#' @returns the projected object, same class as `x`
+#' @export
+setGeneric("resolveRecipe",
+    function(x, coordinator = NULL, ...) standardGeneric("resolveRecipe"),
+    signature = c("x", "coordinator"))
+
+
+# Deprecated generic: resolveSubobject ####
+#
+# Kept for one release so coordinators registered against it elsewhere keep
+# working: `.resolve_leaf()` routes to it for any pair still registered under
+# this name, and its default forwards to `resolveRecipe()`. The default is
+# attached with `useAsDefault`, not as an ANY,ANY method, so a concrete
+# (subobj, coordinator) method is chosen ahead of it.
+#' @keywords internal
+#' @noRd
+.resolveSubobject_default <- function(subobj, gobject, view, space,
+                                      coordinator, ...) {
+    deprecate_soft("0.7.3", "resolveSubobject()", "resolveRecipe()")
+    # Reached from a container walk, `.cache` holds the op's `keep`. Called
+    # directly, there is no op, so the subobject's own tags are the scope.
+    cache <- list(...)$.cache %||% .new_resolver_cache(gobject, view,
+        coordinator, spat_unit = .na_to_null(spatUnit(subobj)),
+        feat_type = .na_to_null(featType(subobj)))
+    # `keep` stays a promise across this call, so the non-cell-keyed leaves
+    # still never trigger the ID computation.
+    resolveRecipe(subobj, coordinator, keep = cache$keep, space = space,
+        view = view, ...)
+}
+
 #' @title resolveSubobject
 #' @name resolveSubobject
-#' @description Apply a [giottoView] (and optional [giottoSpace])
-#' recipe to a single subobject, returning the projected subobject. Dispatch
-#' is on `(subobj, coordinator)` so different storage-bridging coordinators
-#' register different methods.
+#' @description Deprecated in 0.7.3. Superseded by [resolveRecipe()], which is one
+#' generic for both the container and the leaf, and which hands a leaf its
+#' evaluated context instead of the parent gobject.
 #'
 #' @param subobj a giotto subobject (e.g. `cellMetaObj`, `spatLocsObj`, ...)
-#' @param gobject the parent `giotto` (needed for cross-slot lookups via
-#'   `spatValues()`)
+#' @param gobject the parent `giotto`
 #' @param view a [giottoView] or `NULL`
 #' @param space a [giottoSpace] or `NULL`
-#' @param coordinator a [viewCoordinator-class]-inheriting object brokering
-#'   IDs and joins between storage backings
+#' @param coordinator a [viewCoordinator-class]-inheriting object
 #' @param ... reserved for backend-specific args
 #' @returns the projected subobject (same class as `subobj`)
+#' @keywords internal
 #' @export
 setGeneric("resolveSubobject",
     function(subobj, gobject, view, space, coordinator, ...)
-        standardGeneric("resolveSubobject"))
+        standardGeneric("resolveSubobject"),
+    useAsDefault = .resolveSubobject_default)
 
 
-# Coordinator protocol ####
 
-#' @title prepareIds
-#' @name prepareIds
-#' @description Coordinator-side protocol method: promote an R-memory
-#' cell_ID character vector into the form the coordinator's preferred
-#' backend uses for filtering. For [dataTableCoordinator-class] this is
-#' the identity transform; downstream coordinators (e.g. duckDB / sedona
-#' from GiottoDisk) register methods that perform ephemeral table
-#' registration or similar.
+# The surviving cell set: viewKeep + resolveKeep ####
+#
+# One set per resolve op, carried in one form per coordinator. A
+# coordinator's `resolveKeep()` fills in the forms of every coordinator it
+# extends as well as its own, so whichever leaf S4 falls through to finds the
+# form it reads.
+
+#' @rdname resolveKeep
+#' @param x a `viewKeep`
+#' @export
+print.viewKeep <- function(x, ...) {
+    # names only: printing must not force a form that is still a promise
+    cat(sprintf("<viewKeep> forms: %s\n",
+        paste(sort(names(x)), collapse = ", ")))
+    invisible(x)
+}
+
+#' @title resolveKeep
+#' @name resolveKeep
+#' @description Evaluate a view into the surviving cell set of one
+#' [resolveRecipe()] op: the cells of `spat_unit` that pass every filter, crop and
+#' sample step. Dispatches on the coordinator, which decides how the set is
+#' computed and which forms it carries.
+#'
+#' The set is returned as a `viewKeep`: an environment holding one form of
+#' the set per coordinator that reads it, built with
+#' `structure(list2env(list(vector = ids), parent = emptyenv()),
+#' class = "viewKeep")`. `dataTableCoordinator` reads `vector`, a character
+#' vector of cell_IDs. A coordinator that extends another adds its own form
+#' alongside, under its own name. It is an environment so that a form can be
+#' installed with [delayedAssign()] and computed only if a leaf reads it —
+#' a backed coordinator whose own form is a lazy query collects `vector` only
+#' when an in-memory subobject asks for it. A view that narrows nothing returns `NULL` rather than an empty
+#' `viewKeep`: `NULL` means "every cell survives", while a `viewKeep` holding
+#' zero IDs means none do.
+#'
+#' A method must return every form that the coordinators its class extends
+#' read, as well as its own. A coordinator that computes its own form can
+#' derive the inherited ones from it; one that has no faster path can call
+#' the inherited method with `callNextMethod()` and add its form to the
+#' result.
 #'
 #' @param coordinator a [viewCoordinator-class]-inheriting object
-#' @param ids character vector of cell_IDs
-#' @param ... reserved
-#' @returns the prepared IDs in the coordinator's preferred form
+#' @param gobject the `giotto` / `giottoMulti` the view is evaluated against
+#' @param view a [giottoView], or `NULL`
+#' @param spat_unit the spat_unit whose ID vocabulary the set is in. `NULL`
+#'   uses the active one.
+#' @param feat_type the feat_type whose metadata a filter's columns are read
+#'   from. `NULL` uses the active one.
+#' @param ... reserved for backend-specific args
+#' @returns a `viewKeep`, or `NULL` when the view narrows nothing
+#' @keywords internal
 #' @export
-setGeneric("prepareIds",
-    function(coordinator, ids, ...) standardGeneric("prepareIds"))
+setGeneric("resolveKeep",
+    function(coordinator, gobject, view, ...) standardGeneric("resolveKeep"),
+    signature = "coordinator")
 
-#' @rdname prepareIds
+#' @rdname resolveKeep
 #' @export
-setMethod("prepareIds", signature(coordinator = "dataTableCoordinator"),
-    function(coordinator, ids, ...) ids
+setMethod("resolveKeep", signature(coordinator = "dataTableCoordinator"),
+    function(coordinator, gobject, view, spat_unit = NULL, feat_type = NULL,
+             ...) {
+        ids <- .surviving_cell_ids(gobject, view, spat_unit = spat_unit,
+            feat_type = feat_type)
+        if (is.null(ids)) return(NULL)
+        structure(list2env(list(vector = ids), parent = emptyenv()),
+            class = "viewKeep")
+    }
 )
-
 
 # Helpers ####
 
@@ -133,16 +273,10 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     sel
 }
 
-# Free-var names in `predicate` that name data columns — these are what
-# need pulling via spatValues.
-#
-# The predicate arrives self-contained: `.eager_substitute_env()` inlined
-# every env-resident value at record time, and `all.vars()` does not report
-# function names in call position. So what is left is columns, plus (rarely)
-# a function passed as a value, which is filtered out here.
-#
-# NSE caveat: a column whose name collides with a function's (`c`, `mean`)
-# is treated as the function. Same ambiguity as dplyr's `mutate(df, x = x)`.
+# Free-var names in `predicate` that name data columns, to pull via
+# spatValues. Env values were inlined at record time, so what remains is
+# columns plus the odd function passed as a value, dropped here. A column
+# named like a function (`c`, `mean`) is treated as the function.
 #' @keywords internal
 #' @noRd
 .predicate_column_refs <- function(predicate) {
@@ -153,26 +287,35 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     )
 }
 
-# Evaluate one filter step against the parent gobject via spatValues and
-# return the surviving cell_ID vector. Predicates that reference columns not
-# co-existing in a single artifact raise via spatValues' own contract.
-#
-# The predicate is stored deparsed, so it is parsed here. `globalenv()` is
-# the evaluation enclosure: the step carries no environment by design (Q7),
-# and functions resolve from there through the attached-package chain.
+# Evaluate one filter step via spatValues and return the surviving cell_IDs.
+# The op's `spat_unit` / `feat_type` fill in what the step did not record. A
+# step recorded on a different spat_unit is an error rather than an empty
+# intersection: mapping one unit's answer onto another is not implemented.
+# The step carries no environment, so it evaluates in `globalenv()`.
 #' @keywords internal
 #' @noRd
-.eval_view_filter <- function(step, gobject) {
+.eval_view_filter <- function(step, gobject, spat_unit = NULL,
+                              feat_type = NULL) {
     pred <- str2lang(step$predicate)
     cols <- .predicate_column_refs(pred)
     if (length(cols) == 0L) {
         # purely constant predicate; pull all cell_IDs and let eval decide
-        cell_ids <- spatIDs(gobject)
+        cell_ids <- spatIDs(gobject, spat_unit = spat_unit)
         keep <- eval(pred, envir = list(), enclos = globalenv())
         return(if (isTRUE(keep)) cell_ids else character())
     }
-    sv_args <- c(list(gobject = gobject, feats = cols),
-        step$scope_args %||% list())
+    scope <- step$scope_args %||% list()
+    step_su <- scope$spat_unit
+    if (!is.null(step_su) && !is.null(spat_unit) &&
+        !identical(step_su, spat_unit)) {
+        stop(sprintf(paste0("[resolve] filter step reads spat_unit '%s' ",
+            "but this resolve is scoped to '%s'. Filtering one spat_unit ",
+            "by another's values is not supported yet."), step_su,
+            spat_unit), call. = FALSE)
+    }
+    scope$spat_unit <- step_su %||% spat_unit
+    scope$feat_type <- scope$feat_type %||% feat_type
+    sv_args <- c(list(gobject = gobject, feats = cols), scope)
     sv <- do.call(spatValues, sv_args)
     keep <- eval(pred, envir = sv, enclos = globalenv())
     if (!is.logical(keep)) {
@@ -182,17 +325,9 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     sv[["cell_ID"]][which(keep)]
 }
 
-# Normalise the explicit `space` argument to a giottoSpace (or NULL).
-# Accepts: NULL (no space), a giottoSpace, or a character name to look up
-# on the gobject.
-#
-# IMPORTANT: this only resolves the *output* space -- the frame that
-# transforms get applied to on returned data. The *predicate* frame
-# (how a recorded crop region is interpreted) lives on the view's `space`
-# field and is consulted directly by the crop step handlers. Conflating the
-# two was the original bug that caused `getSpatialLocations(g, view =
-# "test")` to silently return rotated coords whenever the view was bound to
-# a space.
+# Normalise the OUTPUT `space` argument (NULL, a giottoSpace, or a slotted
+# name) to a giottoSpace or NULL. A crop step's own frame is separate, and is
+# read off the step.
 #' @keywords internal
 #' @noRd
 .resolve_space <- function(gobject, space = NULL) {
@@ -204,18 +339,12 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
         call. = FALSE)
 }
 
-# Apply a giottoSpace's transforms to a subobject via existing eager
-# GiottoClass dispatch. Each transform step becomes
-# `do.call(op, c(list(x = subobj), args))`.
-#
-# `sample` names the sample identity of `subobj` -- a gmulti child's name,
-# or `NA_character_` for a plain `giotto`, which is one sample with no
-# name. `[[` owns the resolution of that name against the recipe, so this
-# walks whatever it hands back and no rule is re-implemented here.
+# Apply a giottoSpace's transform steps to a subobject through the eager
+# transform generics. `sample` is the subobject's sample identity (NA for a
+# plain giotto); `[[` resolves it against the recipe.
 #' @keywords internal
 #' @noRd
-.apply_space_to_subobj <- function(subobj, gobject, space, coordinator,
-                                   sample = NA_character_) {
+.apply_space_to_subobj <- function(subobj, space, sample = NA_character_) {
     if (is.null(space)) return(subobj)
     for (step in space[[sample]]) {
         subobj <- do.call(step$op, c(list(x = subobj), step$args))
@@ -223,50 +352,85 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     subobj
 }
 
-# Crop routing: relation decides, not storage kind ####
-#
-# A crop step narrows the cell set, which means reducing each cell to a
-# geometry and testing it against the region. Which geometry is DECLARED on
-# the step as `geom` (see `.view_crop_geoms` in classes-view.R), not
-# inferred here:
-#
-#   geom = "centroid"  test the cell's `spatial_locs` row. Cheap, and the
-#                      conventional choice in spatial omics —
-#                      `combineCellData()` documents the same for an
-#                      intersects-style test. Approximate: a cell whose
-#                      polygon straddles the region boundary with its
-#                      centroid outside is dropped.
-#   geom = "poly"      test the cell's actual polygon. Exact; needs a
-#                      polygon source on the object.
-#
-# Reading the declaration rather than deriving it from the relation is what
-# lets a recorded recipe state which question it asks, and lets the backed
-# resolvers in {GiottoDisk} route on the same field instead of on target
-# storage kind. Storage is not a discriminator: a geom-mode predicate
-# evaluates against the gobject's polygon source and the resulting cell_ID
-# set narrows any target downstream.
+#' @title Project a region between coordinate frames
+#' @name project_region
+#' @description Move a region drawn in one [giottoSpace]'s frame into
+#' another's, through the native frame both are defined against. A crop step
+#' records the frame its region was drawn in; this is what lets it clip
+#' content returned in a different one.
+#' @param y the region: a `SpatVector`, WKT `character`, `SpatExtent`, or a
+#'   numeric `c(xmin, xmax, ymin, ymax)`
+#' @param from_space,to_space [giottoSpace] objects scoped to one sample (or
+#'   none), or `NULL` for the native frame
+#' @returns `y` in `to_space`'s frame. When both frames are native it is
+#'   returned as given, so a recorded WKT string stays WKT.
+#' @keywords internal
+#' @export
+project_region <- function(y, from_space = NULL, to_space = NULL) {
+    if (is.null(from_space) && is.null(to_space)) return(y)
+    if (!inherits(y, "SpatVector")) {
+        if (is.character(y)) y <- terra::vect(y)
+        else if (is.numeric(y)) y <- terra::as.polygons(terra::ext(y))
+        else if (inherits(y, "SpatExtent")) y <- terra::as.polygons(y)
+    }
+    m_from <- .space_composite_affine(from_space)
+    m_to <- .space_composite_affine(to_space)
+    # the same frame on both sides: skip the round trip and its float drift
+    if (!is.null(m_from) && !is.null(m_to) &&
+        isTRUE(all.equal(m_from, m_to))) {
+        return(y)
+    }
+    if (!is.null(m_from)) y <- affine(y, m_from, inv = TRUE)
+    if (!is.null(m_to)) y <- affine(y, m_to)
+    y
+}
 
-# Fetch the polygon source for `geom = "poly"`, in the predicate frame.
-#
-# Returns a `giottoPolygon`, not a bare SpatVector, so `spatRelate()`
-# dispatches on it — the whole point of routing the geom arm through that
-# generic is that one call covers terra here and sedona/duckdb on a store.
-#
-# giottoMulti: polygons live per child, so each child's are fetched,
-# space-scoped, and their poly_IDs prefixed to `sample::id` to match the
-# joint cell vocabulary — the same shape `.get_projected_spatlocs()`
-# produces for the centroid arm.
+# The 3x3 affine a space applies, measured by pushing three basis points
+# through its steps. Layout is what `affine()` reads: linear part in
+# `m[1:2, 1:2]`, post-multiplied, translation in COLUMN 3 -- a translation in
+# row 3 is silently ignored. The probe is a spatLocsObj because `spatShift()`
+# has no SpatVector method. NULL when the space has no steps.
 #' @keywords internal
 #' @noRd
-.get_projected_polys <- function(gobject, space, coordinator,
-                                 spat_unit = NULL) {
+.space_composite_affine <- function(space) {
+    if (is.null(space)) return(NULL)
+    steps <- space[[NA_character_]]
+    if (length(steps) == 0L) return(NULL)
+    probe <- createSpatLocsObj(
+        data.table::data.table(cell_ID = c("o", "x", "y"),
+            sdimx = c(0, 1, 0), sdimy = c(0, 0, 1)),
+        name = "probe", verbose = FALSE)
+    probe <- .apply_space_to_subobj(probe, space)
+    p <- as.matrix(probe@coordinates[, c("sdimx", "sdimy")])
+    m <- diag(3L)
+    m[1L, 1:2] <- p[2L, ] - p[1L, ]
+    m[2L, 1:2] <- p[3L, ] - p[1L, ]
+    m[1:2, 3L] <- p[1L, ]
+    m
+}
+
+# Crop routing ####
+#
+# Which geometry stands for a cell is declared on the step as `geom`, never
+# inferred from the relation or from storage: "centroid" tests the cell's
+# spatial_locs row (cheap, approximate at the boundary), "poly" tests its
+# polygon (exact, needs a polygon source). The resulting cell_ID set narrows
+# every target the same way.
+
+# The polygon source for `geom = "poly"`, in the predicate frame. Returned as
+# a giottoPolygon so `spatRelate()` dispatches on it (terra here, a store's
+# own engines when backed). On a multi, poly_IDs are prefixed to `sample::id`
+# to match the joint cell vocabulary.
+#' @keywords internal
+#' @noRd
+.get_projected_polys <- function(gobject, space, spat_unit = NULL) {
     one <- function(g, samp) {
         gp <- tryCatch(
             getPolygonInfo(g, name = spat_unit,
                 return_giottoPolygon = TRUE, verbose = FALSE),
             error = function(e) NULL)
         if (!inherits(gp, "giottoPolygon")) return(NULL)
-        .apply_space_to_subobj(gp, g, space, coordinator, sample = samp)
+        .apply_space_to_subobj(gp, space, sample = samp)
     }
 
     if (inherits(gobject, "giottoMulti")) {
@@ -288,16 +452,12 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     one(gobject, NA_character_)
 }
 
-# Route one crop step and return its surviving cell_IDs.
-#
-# Two arms, selected by the step's DECLARED `geom` — no relation
-# inspection. A declared `geom = "poly"` with no polygon source on the
-# object is a loud error: the caller asked for the geometric question, and
-# silently answering the centroid one instead is the failure mode this
-# whole design exists to remove.
+# Route one crop step by its declared `geom` and return its surviving
+# cell_IDs. `geom = "poly"` with no polygon source is an error rather than a
+# silent fall back to centroids.
 #' @keywords internal
 #' @noRd
-.cells_in_crop_step <- function(gobject, step, carriers, coordinator,
+.cells_in_crop_step <- function(gobject, step, carriers,
                                 spat_unit = NULL) {
     region <- .materialize_crop_region(step$region)
     if (is.null(region)) return(NULL)
@@ -323,19 +483,12 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     )
 }
 
-# Carriers for the crop arms, built lazily and memoised PER FRAME.
-#
-# Per frame, because the frame is a property of the step: two crop steps in
-# one view may name different spaces, and each needs its geometry projected
-# into its own. Steps sharing a frame -- the common case, and the only case
-# before the frame moved onto the step -- share one build.
-#
-# A `NULL` build is a real answer ("this object has no spatial locations"),
-# so it is cached too and the warning fires once per frame rather than once
-# per step.
+# Carriers for the crop arms, built lazily and memoised per frame, since two
+# crop steps may name different spaces. A NULL build ("no spatial locations")
+# is cached too, so its warning fires once per frame.
 #' @keywords internal
 #' @noRd
-.crop_carriers <- function(gobject, coordinator, spat_unit = NULL) {
+.crop_carriers <- function(gobject, spat_unit = NULL) {
     memo <- new.env(parent = emptyenv())
     memoised <- function(kind, space_name, build) {
         key <- paste0(kind, ":", if (is.na(space_name)) "" else space_name)
@@ -350,7 +503,7 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     list(
         points = function(space_name) {
             out <- memoised("pts", space_name, function(sp) {
-                .get_projected_spatlocs(gobject, sp, coordinator)
+                .get_projected_spatlocs(gobject, sp, spat_unit = spat_unit)
             })
             if (is.null(out)) {
                 warning("crop step skipped: no spatial locations available",
@@ -360,71 +513,32 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
         },
         polys = function(space_name) {
             memoised("poly", space_name, function(sp) {
-                .get_projected_polys(gobject, sp, coordinator,
-                    spat_unit = spat_unit)
+                .get_projected_polys(gobject, sp, spat_unit = spat_unit)
             })
         }
     )
 }
 
-# Pull the gobject's spatLocs (active spat_unit) as a points `SpatVector` in
-# the predicate frame, optionally applying the relevant space's transforms
-# first. Consumed by `.cells_in_crop_step()`'s centroid arm.
-#
-# A bare points `SpatVector` is the common representation the predicate
-# primitive works on, and `as.points()` passes the whole coordinate table
-# through, so `cell_ID` rides along as an attribute and survivors are read
-# off by ID rather than recovered positionally.
-#
-# giottoMulti: getSpatialLocations returns a per-child named list (spatial
-# locations live per-child, no joint slot). Scope the space to each child,
-# apply, promote each child's IDs to the joint vocabulary, then fold with
-# `rbind2()` -- a data.table rbind -- and convert ONCE at the end. Folding
-# first costs one terra allocation instead of one per child. Promote before
-# folding, or `.check_id_dups()` fires on IDs the children share.
+# The spatLocs of `spat_unit` (else the active one) as a points SpatVector in
+# the predicate frame, for the centroid arm. `cell_ID` rides along as an
+# attribute, so survivors are read off by ID.
 #' @keywords internal
 #' @noRd
-.get_projected_spatlocs <- function(gobject, space, coordinator) {
-    sl <- .gm_fused_spatlocs(gobject, space, coordinator)
+.get_projected_spatlocs <- function(gobject, space, spat_unit = NULL) {
+    sl <- .gm_fused_spatlocs(gobject, space, spat_unit = spat_unit)
     if (is.null(sl)) return(NULL)
     as.points(sl)
 }
 
-# The fold itself: every child's locations, space-scoped and promoted to the
-# joint `sample::id` vocabulary, folded into ONE `spatLocsObj`.
-#
-# Split out of `.get_projected_spatlocs()` because the fused object is worth
-# more than the points it was being converted into. A cross-sample spatial
-# network needs exactly this -- one coordinate table spanning samples in a
-# shared frame, with globally unique IDs -- and the crop carrier is just one
-# consumer that happens to want it as points.
-#
-# `samples =` narrows to a frame's members. That is a sample selector on a
-# READER, which adr/0006 permits: the caller gets a value it can widen by
-# asking differently, and nothing is persisted. Multi-only, matching the
-# getters -- a plain `giotto` has no such formal at all.
-#
-# It runs through `.gm_resolve_samples()` here and again inside the getter.
-# That is two calls to ONE authority, not two implementations: the second is
-# an idempotent re-check of literal child names. The first exists only
-# because it has to happen outside the tryCatch (see below), and paying it
-# is cheaper than the alternative -- a local membership test, which is
-# exactly the shape of the five copied `samples =` checks stage 7 removed.
-#
-# The space is NOT handed to the getter, and cannot be: a gmulti's frames
-# are slotted on the PARENT, while the getter forwards `...` to each child,
-# so `getSpatialLocations(mg, space = "atlas")` resolves "atlas" against a
-# child that has no such frame and errors. Each child's chain is applied
-# here instead, which makes this the second path -- after `materialize()` --
-# that scopes a frame across a multi correctly.
-#
-# Order is the content: the space applies per child (each sample has its own
-# chain, which cannot be expressed once they are one table), then IDs are
-# promoted to `sample::id` (children share local IDs, so `rbind2()`'s
-# `.check_id_dups()` fires if the fold goes first), then one fold.
+# Every child's locations in one `spatLocsObj`: the space applied per child
+# (each sample has its own chain), IDs promoted to `sample::id` (children
+# share local IDs, so `rbind2()` rejects the fold otherwise), then one fold.
+# The space is applied here rather than passed to the getter because a
+# multi's frames live on the parent, which a child cannot look up.
+# `samples =` narrows to a frame's members; multi-only (adr/0006).
 #' @keywords internal
 #' @noRd
-.gm_fused_spatlocs <- function(gobject, space, coordinator,
+.gm_fused_spatlocs <- function(gobject, space,
     spat_unit = NULL, name = NULL, samples = NULL) {
     cell_ID <- NULL  # NSE
     is_multi <- inherits(gobject, "giottoMulti")
@@ -451,8 +565,7 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
         parts <- lapply(names(sl), function(nm) {
             child_sl <- sl[[nm]]
             if (!inherits(child_sl, "spatLocsObj")) return(NULL)
-            child_sl <- .apply_space_to_subobj(child_sl, gobject,
-                space, coordinator, sample = nm)
+            child_sl <- .apply_space_to_subobj(child_sl, space, sample = nm)
             dt <- data.table::copy(child_sl[])
             dt[, cell_ID := .gm_global_cell_ids(gobject, nm, cell_ID)]
             child_sl[] <- dt
@@ -462,30 +575,18 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
         if (length(parts) == 0L) return(NULL)
         sl <- Reduce(rbind2, parts)
     } else if (!is.null(space)) {
-        sl <- .apply_space_to_subobj(sl, gobject, space, coordinator)
+        sl <- .apply_space_to_subobj(sl, space)
     }
     sl
 }
 
-# JIT helper for getters: apply view/space projection to a single subobject
-# fetched by an accessor. Returns the subobject unchanged if neither view
-# nor space is supplied. Normalises character `view` / `space` lookups
-# against the gobject; picks the default resolver from `gobject@source`.
-#
-# Use at the tail of a getter:
-#   obj <- getterLogic(...)
-#   obj <- .apply_view_space(obj, gobject, view, space)
-#   return(obj)
+# Apply `view` / `space` to one subobject at the tail of a getter.
 #' @keywords internal
 #' @noRd
 .apply_view_space <- function(subobj, gobject, view = NULL, space = NULL,
                               coordinator = NULL) {
     if (is.null(view) && is.null(space)) return(subobj)
-    # view contract: character(1) name of a slotted view, or NULL.
-    # Inline giottoView objects were considered and rejected — views
-    # are curated artifacts; build + slot via giottoView<-(g, name) <- v
-    # if programmatic composition is needed. See
-    # vignettes/articles/design_view_space.Rmd for the reasoning.
+    # a view is passed by name, never inline (design_view_space.Rmd)
     if (!is.null(view)) {
         checkmate::assert_string(view, .var.name = "view")
     }
@@ -495,57 +596,90 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     s <- .resolve_space(gobject, space)
     co <- if (is.null(coordinator)) .default_view_coordinator(gobject)
         else coordinator
-    resolveSubobject(subobj, gobject, v, s, co)
+    # The getter has already picked its subobject, so the subobject's own
+    # tags are the op's scope. `keep` is still a promise, which is what keeps
+    # a points getter from computing a cell_ID set it will not use.
+    cache <- .new_resolver_cache(gobject, v, co,
+        spat_unit = .na_to_null(spatUnit(subobj)),
+        feat_type = .na_to_null(featType(subobj)))
+    .resolve_leaf(subobj, gobject, v, s, co, cache)
 }
 
-
-# Per-call cache for expensive computations (currently just the surviving
-# cell_ID set). Created by materialize() at entry; threaded through
-# resolveSubobject via `.cache` in `...`. Each materialize call gets a
-# fresh env; JIT getter calls that don't pass a cache just recompute.
-#
-# Scope: per-materialize-call. Persistent caching across calls needs a
-# version-stamp invalidation scheme (deferred).
+# `spatUnit()` / `featType()` answer NA for an axis a subobject does not
+# carry; a resolve scope says the same thing with NULL.
 #' @keywords internal
 #' @noRd
-.new_resolver_cache <- function() new.env(parent = emptyenv())
+.na_to_null <- function(x) if (length(x) == 0L || is.na(x[[1L]])) NULL else x
 
-# Memoising wrapper around .surviving_cell_ids. Reads/writes through `cache`
-# if supplied; falls back to a direct call when cache is NULL.
+
+# Per-call resolver cache holding the op's one `keep` as a promise: computed
+# at most once, and not at all if no leaf reads it. An environment because
+# the deprecated `resolveSubobject` path forwards it as `.cache`.
 #' @keywords internal
 #' @noRd
-.cached_surviving_cell_ids <- function(gobject, view, coordinator,
-                                       cache = NULL) {
-    if (is.null(cache)) {
-        return(.surviving_cell_ids(gobject, view, coordinator))
-    }
-    if (exists("surviving_ids", envir = cache, inherits = FALSE)) {
-        return(get("surviving_ids", envir = cache))
-    }
-    ids <- .surviving_cell_ids(gobject, view, coordinator)
-    assign("surviving_ids", ids, envir = cache)
-    ids
+.new_resolver_cache <- function(gobject, view, coordinator,
+                                spat_unit = NULL, feat_type = NULL) {
+    cache <- new.env(parent = emptyenv())
+    delayedAssign("keep", resolveKeep(coordinator, gobject, view,
+        spat_unit = spat_unit, feat_type = feat_type), assign.env = cache)
+    cache
 }
 
-# Compute the cell_ID set that survives a view's filter + crop steps.
-# Returns a character vector of cell_IDs; NULL means "no narrowing" (all
-# cells survive).
-#
-# The PREDICATE frame for crop steps is the view's `space` -- the frame the
-# crop region was drawn in. This is independent of any output space the
-# caller may have requested via the explicit `space=` arg, which is why
-# this helper does not take a `space` argument.
+# Is this (subobj, coordinator) pair still registered under the deprecated
+# name? Not `hasMethod("resolveRecipe", ...)`: a backed coordinator inherits
+# the in-memory leaves, so that is always TRUE and would silently send backed
+# data down the in-memory path. A selected method whose `@defined` is not
+# all-`ANY` is a real registration.
 #' @keywords internal
 #' @noRd
-.surviving_cell_ids <- function(gobject, view, coordinator) {
+.has_legacy_leaf_method <- function(subobj, coordinator) {
+    m <- methods::selectMethod("resolveSubobject",
+        c(class(subobj)[1L], "ANY", "ANY", "ANY", class(coordinator)[1L]),
+        optional = TRUE)
+    if (!methods::is(m, "MethodDefinition")) return(FALSE)
+    !all(m@defined == "ANY")
+}
+
+# The one leaf call site: `resolveRecipe()`, or the deprecated
+# `resolveSubobject()` for a pair still registered under that name. `keep`
+# is passed as a promise, so leaves that never read it never compute it.
+#' @keywords internal
+#' @noRd
+.resolve_leaf <- function(subobj, gobject, view, space, coordinator, cache,
+                          spaces = gobject@spaces) {
+    if (.has_legacy_leaf_method(subobj, coordinator)) {
+        return(resolveSubobject(subobj, gobject, view, space, coordinator,
+            .cache = cache))
+    }
+    resolveRecipe(subobj, coordinator, keep = cache$keep, space = space,
+        view = view, spaces = spaces)
+}
+
+# Is this leaf inside the op's scope? Compared only on the tags it carries:
+# images carry none, points only a feat_type, spatial locations only a
+# spat_unit. Out-of-scope leaves are left untouched (see `?resolveRecipe`).
+#' @keywords internal
+#' @noRd
+.leaf_in_scope <- function(x, spat_unit, feat_type) {
+    su <- spatUnit(x)
+    ft <- featType(x)
+    (is.null(spat_unit) || is.na(su) || identical(su, spat_unit)) &&
+        (is.null(feat_type) || is.na(ft) || identical(ft, feat_type))
+}
+
+# The cell_IDs that survive a view's filter, crop and sample steps, in ONE
+# spat_unit's ID vocabulary; NULL means no narrowing. Spat_units need not
+# share cell_IDs, so every source is read in that unit. `feat_type` only
+# picks which metadata a filter's columns come from.
+#' @keywords internal
+#' @noRd
+.surviving_cell_ids <- function(gobject, view, spat_unit = NULL,
+                                feat_type = NULL) {
     if (is.null(view)) return(NULL)
 
     filter_steps <- .view_steps_of(view, "filter")
     crop_steps   <- .view_steps_of(view, "crop")
-    # On a multi, a sample step bounds the cell set too, so every path that
-    # resolves a view -- per-child getters, joint slots, the gAny fall-through
-    # -- agrees on it. A child being resolved on its own is a plain giotto
-    # and has no samples to select, so the step is a no-op there.
+    # on a multi a sample step bounds the cell set too
     sel <- if (inherits(gobject, "giottoMulti")) {
         .resolve_sample_select(gobject, view)
     } else NA
@@ -555,22 +689,19 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
         return(NULL)
     }
 
-    surviving <- if (no_sel) spatIDs(gobject) else
-        spatIDs(gobject, object = sel)
+    surviving <- if (no_sel) spatIDs(gobject, spat_unit = spat_unit) else
+        spatIDs(gobject, spat_unit = spat_unit, object = sel)
     for (step in filter_steps) {
-        keep <- .eval_view_filter(step, gobject)
+        keep <- .eval_view_filter(step, gobject, spat_unit = spat_unit,
+            feat_type = feat_type)
         surviving <- intersect(surviving, keep)
     }
     if (length(crop_steps) > 0L) {
-        # Carriers are built lazily and per frame, so an all-poly recipe on
-        # a polygon-only object never asks for spatial locations and never
-        # warns about their absence.
-        carriers <- .crop_carriers(gobject, coordinator)
+        # lazy, so an all-poly recipe never asks for spatial locations
+        carriers <- .crop_carriers(gobject, spat_unit = spat_unit)
         for (step in crop_steps) {
-            keep <- .cells_in_crop_step(gobject, step, carriers, coordinator)
-            # NULL = this step could not be evaluated (no region recorded,
-            # or no centroid source), which is a skip rather than an empty
-            # result.
+            keep <- .cells_in_crop_step(gobject, step, carriers)
+            # NULL: the step could not be evaluated, a skip not an empty set
             if (is.null(keep)) next
             surviving <- intersect(surviving, keep)
         }
@@ -578,173 +709,167 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     surviving
 }
 
-# Apply every recorded crop step geometrically to a non-cell-keyed
-# subobject (points, images), in the post-transform frame.
+# Clip a non-cell-keyed subobject (points, images), already in the output
+# frame `space`, by every crop step. Each region is projected from the frame
+# its step names, looked up in `spaces` (the object's `@spaces`).
 #' @keywords internal
 #' @noRd
-.apply_crops_geometrically <- function(subobj, view) {
+.apply_crops_geometrically <- function(subobj, view, spaces = NULL,
+                                       space = NULL) {
     for (step in .view_steps_of(view, "crop")) {
-        subobj <- crop(subobj, .materialize_crop_region(step$region))
+        region <- project_region(.materialize_crop_region(step$region),
+            from_space = .step_frame(step, spaces), to_space = space)
+        subobj <- crop(subobj, region)
     }
     subobj
 }
 
+# The frame a crop step's region was drawn in: its named space looked up in
+# `spaces`, or NULL for the native frame.
+#' @keywords internal
+#' @noRd
+.step_frame <- function(step, spaces) {
+    nm <- step$space
+    if (is.null(nm) || is.na(nm)) return(NULL)
+    sp <- spaces[[nm]]
+    if (is.null(sp)) {
+        stop(sprintf(paste0("[resolve] a crop step was drawn in space ",
+            "'%s', which is not registered on this object"), nm),
+            call. = FALSE)
+    }
+    sp
+}
 
-# Tabular subobject methods (dataTableCoordinator) ####
-# Tabular subobjects (cellMetaObj, exprObj, dimObj, spatEnrObj) narrow by
-# the surviving cell_ID set and are otherwise untouched by space transforms
-# (which are no-ops on non-spatial data).
-#
-# Note: for dataTableCoordinator, `prepareIds()` is the identity transform,
-# so these methods consume `keep` directly via `%in%`. Backed coordinators
-# (duckDB / sedona) register their own resolveSubobject methods that route
-# through `prepareIds()` to promote the ID set into a JOIN-able table
-# reference before applying it.
 
-#' @rdname resolveSubobject
+# Tabular leaves (dataTableCoordinator) ####
+# Narrow by the `vector` form of `keep`. `keep` is tested with `is.null()`,
+# never `missing()`, which forces the promise inside an S4 `.local` wrapper.
+
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolveSubobject",
-    signature(subobj = "cellMetaObj", coordinator = "dataTableCoordinator"),
-    function(subobj, gobject, view, space, coordinator, ...) {
-        cache <- list(...)$.cache
-        keep <- .cached_surviving_cell_ids(gobject, view, coordinator, cache)
-        if (is.null(keep)) return(subobj)
-        .narrow_subobject(subobj, cells = keep)
+setMethod("resolveRecipe",
+    signature(x = "cellMetaObj", coordinator = "dataTableCoordinator"),
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
+        if (is.null(keep)) return(x)
+        .narrow_subobject(x, cells = keep$vector)
     }
 )
 
-#' @rdname resolveSubobject
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolveSubobject",
-    signature(subobj = "exprObj", coordinator = "dataTableCoordinator"),
-    function(subobj, gobject, view, space, coordinator, ...) {
-        cache <- list(...)$.cache
-        keep <- .cached_surviving_cell_ids(gobject, view, coordinator, cache)
-        if (is.null(keep)) return(subobj)
-        .narrow_subobject(subobj, cells = keep)
+setMethod("resolveRecipe",
+    signature(x = "exprObj", coordinator = "dataTableCoordinator"),
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
+        if (is.null(keep)) return(x)
+        .narrow_subobject(x, cells = keep$vector)
     }
 )
 
-#' @rdname resolveSubobject
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolveSubobject",
-    signature(subobj = "dimObj", coordinator = "dataTableCoordinator"),
-    function(subobj, gobject, view, space, coordinator, ...) {
-        cache <- list(...)$.cache
-        keep <- .cached_surviving_cell_ids(gobject, view, coordinator, cache)
-        if (is.null(keep)) return(subobj)
-        .narrow_subobject(subobj, cells = keep)
+setMethod("resolveRecipe",
+    signature(x = "dimObj", coordinator = "dataTableCoordinator"),
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
+        if (is.null(keep)) return(x)
+        .narrow_subobject(x, cells = keep$vector)
     }
 )
 
-#' @rdname resolveSubobject
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolveSubobject",
-    signature(subobj = "spatEnrObj", coordinator = "dataTableCoordinator"),
-    function(subobj, gobject, view, space, coordinator, ...) {
-        cache <- list(...)$.cache
-        keep <- .cached_surviving_cell_ids(gobject, view, coordinator, cache)
-        if (is.null(keep)) return(subobj)
-        .narrow_subobject(subobj, cells = keep)
+setMethod("resolveRecipe",
+    signature(x = "spatEnrObj", coordinator = "dataTableCoordinator"),
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
+        if (is.null(keep)) return(x)
+        .narrow_subobject(x, cells = keep$vector)
     }
 )
 
-#' @rdname resolveSubobject
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolveSubobject",
-    signature(subobj = "featMetaObj", coordinator = "dataTableCoordinator"),
-    function(subobj, gobject, view, space, coordinator, ...) {
-        # Feature metadata is feat-keyed, not cell-keyed. View filters that
-        # carry `feat_ids` in their scope_args could narrow it; otherwise
-        # featMetaObj passes through untouched.
-        subobj
+setMethod("resolveRecipe",
+    signature(x = "featMetaObj", coordinator = "dataTableCoordinator"),
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
+        # feat-keyed, so a cell set does not apply; `keep` is never forced
+        x
     }
 )
 
 
-# Spatial subobject methods (dataTableCoordinator) ####
-# Spatial subobjects narrow by surviving cell_IDs (where cell-keyed) AND
-# apply the space's transforms via existing eager GiottoClass dispatch.
-# Crop is interpreted via the surviving cell_ID set (centroid-in-region
-# semantics) for cell-keyed spatial subobjects; for non-cell-keyed
-# (points, images), crop is applied geometrically at the subobject level.
+# Spatial leaves (dataTableCoordinator) ####
+# Cell-keyed ones narrow by `keep`; points and images are clipped
+# geometrically. Both then apply the output space.
 
-#' @rdname resolveSubobject
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolveSubobject",
-    signature(subobj = "spatLocsObj", coordinator = "dataTableCoordinator"),
-    function(subobj, gobject, view, space, coordinator, ...) {
-        cache <- list(...)$.cache
-        keep <- .cached_surviving_cell_ids(gobject, view, coordinator, cache)
-        if (!is.null(keep)) {
-            subobj <- .narrow_subobject(subobj, cells = keep)
-        }
-        .apply_space_to_subobj(subobj, gobject, space, coordinator)
+setMethod("resolveRecipe",
+    signature(x = "spatLocsObj", coordinator = "dataTableCoordinator"),
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
+        if (!is.null(keep)) x <- .narrow_subobject(x, cells = keep$vector)
+        .apply_space_to_subobj(x, space)
     }
 )
 
-#' @rdname resolveSubobject
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolveSubobject",
-    signature(subobj = "giottoPolygon", coordinator = "dataTableCoordinator"),
-    function(subobj, gobject, view, space, coordinator, ...) {
-        cache <- list(...)$.cache
-        keep <- .cached_surviving_cell_ids(gobject, view, coordinator, cache)
+setMethod("resolveRecipe",
+    signature(x = "giottoPolygon", coordinator = "dataTableCoordinator"),
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
         if (!is.null(keep)) {
             # Polygon's poly_ID is conventionally aligned with cell_ID for
             # the cells spat_unit. (Unlinked-poly cascade is out of scope.)
-            subobj <- .narrow_subobject(subobj, cells = keep)
+            x <- .narrow_subobject(x, cells = keep$vector)
             # Cached ID list, if present
-            if (length(subobj@unique_ID_cache) > 0L) {
-                subobj@unique_ID_cache <- intersect(
-                    subobj@unique_ID_cache, keep)
+            if (length(x@unique_ID_cache) > 0L) {
+                x@unique_ID_cache <- intersect(x@unique_ID_cache,
+                    keep$vector)
             }
         }
-        .apply_space_to_subobj(subobj, gobject, space, coordinator)
+        .apply_space_to_subobj(x, space)
     }
 )
 
-#' @rdname resolveSubobject
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolveSubobject",
-    signature(subobj = "giottoPoints", coordinator = "dataTableCoordinator"),
-    function(subobj, gobject, view, space, coordinator, ...) {
-        # Points are not cell-keyed; cell narrowing doesn't apply directly.
-        # A crop applies geometrically at the subobject level, in the
-        # post-transform frame: transform first, then crop in that frame.
-        subobj <- .apply_space_to_subobj(subobj, gobject, space, coordinator)
-        .apply_crops_geometrically(subobj, view)
+setMethod("resolveRecipe",
+    signature(x = "giottoPoints", coordinator = "dataTableCoordinator"),
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL,
+             spaces = NULL, ...) {
+        # transform first, then clip in that frame
+        x <- .apply_space_to_subobj(x, space)
+        .apply_crops_geometrically(x, view, spaces, space)
     }
 )
 
-#' @rdname resolveSubobject
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolveSubobject",
-    signature(subobj = "giottoLargeImage",
-        coordinator = "dataTableCoordinator"),
-    function(subobj, gobject, view, space, coordinator, ...) {
-        subobj <- .apply_space_to_subobj(subobj, gobject, space, coordinator)
-        .apply_crops_geometrically(subobj, view)
+setMethod("resolveRecipe",
+    signature(x = "giottoLargeImage", coordinator = "dataTableCoordinator"),
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL,
+             spaces = NULL, ...) {
+        x <- .apply_space_to_subobj(x, space)
+        .apply_crops_geometrically(x, view, spaces, space)
     }
 )
 
-#' @rdname resolveSubobject
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolveSubobject",
-    signature(subobj = "giottoAffineImage",
-        coordinator = "dataTableCoordinator"),
-    function(subobj, gobject, view, space, coordinator, ...) {
-        subobj <- .apply_space_to_subobj(subobj, gobject, space, coordinator)
-        .apply_crops_geometrically(subobj, view)
+setMethod("resolveRecipe",
+    signature(x = "giottoAffineImage", coordinator = "dataTableCoordinator"),
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL,
+             spaces = NULL, ...) {
+        x <- .apply_space_to_subobj(x, space)
+        .apply_crops_geometrically(x, view, spaces, space)
     }
 )
 
-#' @rdname resolveSubobject
+#' @rdname resolveRecipe
 #' @export
-setMethod("resolveSubobject",
-    signature(subobj = "giottoImage", coordinator = "dataTableCoordinator"),
-    function(subobj, gobject, view, space, coordinator, ...) {
-        subobj <- .apply_space_to_subobj(subobj, gobject, space, coordinator)
-        .apply_crops_geometrically(subobj, view)
+setMethod("resolveRecipe",
+    signature(x = "giottoImage", coordinator = "dataTableCoordinator"),
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL,
+             spaces = NULL, ...) {
+        x <- .apply_space_to_subobj(x, space)
+        .apply_crops_geometrically(x, view, spaces, space)
     }
 )
