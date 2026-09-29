@@ -329,15 +329,12 @@ setMethod("giottoViews", signature(gobject = "gAny"),
 )
 
 
-# resolve — container methods ####
+# resolveRecipe — container methods ####
 #
 # A container evaluates the recipe once and walks its slots; the leaves
-# (`methods-resolver.R`) apply what they are handed. See `?resolveRecipe`.
-#
-# Container methods register against `coordinator = "ANY"` rather than
-# `"missing"`. A container does not dispatch on the coordinator -- it picks
-# one from `@source` when none is given -- but it still accepts one, and a
-# supplied coordinator must not change which method runs.
+# (`methods-resolver.R`) apply what they are handed. Registered against
+# `coordinator = "ANY"`: a container picks its coordinator rather than
+# dispatching on one, but still accepts one.
 
 
 # All slots a container walks, in the canonical order (tabular -> spatial ->
@@ -368,16 +365,10 @@ setMethod("giottoViews", signature(gobject = "gAny"),
     intersect(.resolve_default_slots, slots)  # canonical order
 }
 
-# Normalise the `view` argument at a container entry point.
-#
-# View contract: character(1) name of a slotted view, or NULL. Inline
-# giottoView objects were considered and rejected — views are curated
-# artifacts; build + slot via `giottoView(g, name) <- v` if programmatic
-# composition is needed. See vignettes/articles/design_view_space.Rmd.
-#
-# The internal `.resolve_giotto()` / `.resolve_gmulti()` pair takes the
-# looked-up object instead, which is how the gmulti per-child loop hands each
-# child a recipe the child could not have looked up itself.
+# Look up the `view` name at a container entry point. A view is passed by
+# name, never inline (design_view_space.Rmd). The internal helpers take the
+# looked-up object, which is how a multi hands each child a recipe the child
+# could not look up itself.
 #' @keywords internal
 #' @noRd
 .resolve_view_arg <- function(gobject, view) {
@@ -403,10 +394,7 @@ setMethod("giottoViews", signature(gobject = "gAny"),
         coordinator <- .default_view_coordinator(gobject)
     }
     scope <- .resolve_scope(gobject, spat_unit, feat_type)
-    # Normalise output space to a giottoSpace (or NULL) once at the
-    # entry point so per-subobject resolution doesn't re-look-up by
-    # name. The predicate space (the view's `space`) is consulted independently
-    # by the crop step handlers — it is not conflated with output here.
+    # the output frame, looked up once
     space_obj <- .resolve_space(gobject, space)
     # The op's one surviving cell set, held as a promise: computed at most
     # once per call, and not at all when no leaf reads it.
@@ -423,9 +411,7 @@ setMethod("giottoViews", signature(gobject = "gAny"),
             view, space_obj, coordinator, cache, scope, spaces)
     }
 
-    # Networks (spatial_network, nn_network) intentionally not walked:
-    # they're built from a particular cell state and don't carry
-    # spatial coords; view/space resolution would be misleading.
+    # networks are not walked: built from one cell state, no coordinates
 
     out
 }
@@ -442,13 +428,10 @@ setMethod("resolveRecipe", signature(x = "giotto", coordinator = "ANY"),
 )
 
 
-# resolve on giottoMulti ####
-# 1. Apply the samples step FIRST — narrow children before any per-child
-#    work touches storage (matters at 4B-points-per-multi scale).
-# 2. Per-surviving-child resolve with the child-scoped giottoSpace.
-# 3. Narrow joint shared slots via the same leaf dispatch — spatValues works
-#    on a multi, so joint-level predicates resolve against joint slots and the
-#    surviving global cell_IDs narrow each joint subobject.
+# resolveRecipe on giottoMulti ####
+# The samples step runs first, so excluded children are never touched; each
+# surviving child is then resolved with its scoped space, and the joint slots
+# are narrowed by the multi-level set.
 
 # Internal implementation: resolve on a giottoMulti with an already-resolved
 # giottoView object.
@@ -481,11 +464,8 @@ setMethod("resolveRecipe", signature(x = "giotto", coordinator = "ANY"),
     out <- gobject
     out@objects <- gobject@objects[selected]
 
-    # Per-surviving-child resolve with the child-scoped space.
-    # `slots` is forwarded so per-child narrowing matches the joint-level
-    # scope.
-    # The scope is in multi-level handles; @mapping may name them
-    # differently in each child.
+    # the scope is in multi-level handles, which @mapping may name
+    # differently in each child
     su_map <- .gm_scope_map(gobject, "spat_unit", scope$spat_unit)
     ft_map <- .gm_scope_map(gobject, "feat_type", scope$feat_type)
     out@objects <- stats::setNames(lapply(selected, function(samp) {
@@ -495,10 +475,7 @@ setMethod("resolveRecipe", signature(x = "giotto", coordinator = "ANY"),
         # A child that does not carry the requested handle holds nothing in
         # scope, so it is left as it is.
         if (identical(child_su, NA) || identical(child_ft, NA)) return(child)
-        # `[` owns the sample-resolution rule; the child then reads as a
-        # single-sample object against the handle it is handed. The frames
-        # a crop step names live on the parent, so the child is handed the
-        # parent's, scoped to itself the same way.
+        # frames live on the parent; each child gets them scoped to itself
         child_space <- if (is.null(space_obj)) NULL else space_obj[samp]
         child_spaces <- lapply(gobject@spaces, function(sp) sp[samp])
         .resolve_giotto(child, view, space = child_space,
@@ -533,19 +510,11 @@ setMethod("resolveRecipe", signature(x = "giottoMulti", coordinator = "ANY"),
 )
 
 
-# `view` and `space` are independent knobs, so asking for a frame without also
-# naming a view is a normal request, not a degenerate one. Everything below
-# the dispatch already treats a NULL view as "no narrowing"
-# (`.view_steps_of()` returns an empty step list, `.surviving_cell_ids()`
-# returns NULL), so `view = NULL` needs no method of its own — it is the
-# default. Under `materialize()` this was a separate `view = "NULL"` S4
-# method, because `view` sat in the dispatch signature; collapsing that split
-# to a null check inside one method is what it always was, wearing dispatch.
+# `view = NULL` (a space-only call) needs no method of its own: everything
+# below treats a NULL view as no narrowing.
 
 
-# Walk one slot list (potentially nested by spat_unit / feat_type), calling
-# the leaf dispatcher on each subobject. The slot is a `nullOrList`; structure
-# is recursive — list of lists of subobjects. Apply leaf-wise.
+# Walk one (nested) slot list and resolve each in-scope subobject.
 #' @keywords internal
 #' @noRd
 .resolve_walk <- function(gobject, slot_name, view, space, coordinator,
@@ -607,18 +576,8 @@ setMethod("resolveRecipe", signature(x = "giottoMulti", coordinator = "ANY"),
 
 
 # Deprecated: materialize ####
-#
-# `materialize` is the wrong word for what this does, and the word is already
-# load-bearing elsewhere: {GiottoDisk} uses it throughout for pulling lazy or
-# backed data into memory. This function is backend-agnostic and returns a
-# gobject whose subobjects are still stores, which is the one thing that
-# reading makes you expect. "Resolve" is the subsystem's own verb — the
-# resolver, the coordinators as resolver backends — and the recipe is what it
-# resolves. A bare `resolve()` was rejected because `future` exports one that
-# returns its input unchanged, so attaching future would silently mask it.
-#
-# (`.materialize_crop_region()` above keeps its name: turning a recorded WKT
-# string into a concrete region really is materialisation in the usual sense.)
+# Superseded by `resolveRecipe()`; the naming is recorded in
+# design_view_space.Rmd.
 
 #' @title materialize a giottoView into a new gobject
 #' @name materialize
@@ -647,9 +606,5 @@ setMethod("materialize", signature(gobject = "gAny", view = "ANY"),
 )
 
 
-# Q8 removed `show(giottoView)` / `show(giottoSpace)` along with the
-# classes, and with them `.view_step_label()` / `.space_step_label()` /
-# `.wkt_label()`, which had no other callers. Recipes now print as the
-# lists they are. Note a crop step holds a full WKT string, so a real
-# polygon prints long -- a summary on `show(giotto)` is the natural
-# replacement and is deliberately not part of this change.
+# Recipes have no `show()` method and print as the lists they are; a crop
+# step holds a full WKT string, so a real polygon prints long.

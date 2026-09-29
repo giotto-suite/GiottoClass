@@ -1,47 +1,21 @@
 # =============================================================================
-# viewCoordinator — cross-storage bridging for view + space resolution
+# viewCoordinator — how a view / space recipe is executed on a gobject
 # =============================================================================
 #
-# A `viewCoordinator` is the dispatch tag for HOW a giottoView + giottoSpace
-# recipe gets executed across the gobject's storage backings. It is NOT a
-# strategy class for picking an execution engine — the engine is owned by
-# the storage (GiottoDisk parquet stores expose lazy ops + storeRead output
-# modes that already select the engine at read time).
+# A coordinator is a dispatch tag: it selects the `resolveKeep()` and
+# `resolveRecipe()` leaf methods that evaluate a recipe against the object's
+# storage. It does not pick an execution engine -- that belongs to the
+# storage itself.
 #
-# Pattern mirrors GiottoClass's other strategy generics (`processData`,
-# `analyzeData`, etc.) where the entry-point generic dispatches on both the
-# data class and the strategy class. Here the entry point is
-# `resolveRecipe(subobj, coordinator, keep =, space =, view =)`, and it is the ONLY
-# entry point.
+# `dataTableCoordinator` is the in-memory one, and the default for an object
+# with no `@source`. A backed source selects its own through
+# `defaultViewCoordinator()`; GiottoDisk registers `parquetCoordinator` for
+# `gsource`. A coordinator that extends another inherits its leaf methods,
+# which is how in-memory subobjects inside a backed object are handled.
 #
-# There is no separate coordinator protocol. The original sketch (2026-05-28)
-# proposed three generics -- `prepareIds()` to promote an ID set into the
-# backend's form, `applyIdsFilter()` to apply it, `translatePredicate()` to
-# map an R predicate into the backend's filter language. They were designed
-# before the leaf generic dispatched on the coordinator; once it does, they
-# select on exactly the same thing one layer further down. Each coordinator's
-# `resolveRecipe` methods do all three internally, in the form its storage wants,
-# and share the work between their own leaves with ordinary internal helpers
-# rather than exported generics. `prepareIds()` shipped as an exported
-# identity transform with zero call sites and was removed in 0.7.3; the other
-# two were never written.
-#
-# Concrete coordinators:
-#   dataTableCoordinator   — all in-memory; IDs as R character vector;
-#                            apply via [cell_ID %in% ids]. Lives in
-#                            GiottoClass. Default for non-disk gobjects;
-#                            also the always-works in-memory fallback when
-#                            mixed gobjects need promotion.
-#   duckDBCoordinator      — ID promotion via duckdb_register_arrow /
-#                            ephemeral table; apply via JOIN. Lives in
-#                            GiottoDisk; registered when loaded.
-#   sedonaCoordinator      — sedona view registration; full spatial
-#                            vocabulary at apply time. Lives in GiottoDisk.
-#
-# Default selection from `gobject@source`: no source → dataTableCoordinator;
-# parquet/sedona/duckdb-backed sources → respective concrete coordinator
-# via the S3 hook `defaultViewCoordinator.<source_class>` registered from
-# GiottoDisk. See `.default_view_coordinator()` in methods-resolver.R.
+# There is no separate protocol for promoting ID sets or translating
+# predicates: each coordinator's methods do that in the form its storage
+# wants.
 # =============================================================================
 
 

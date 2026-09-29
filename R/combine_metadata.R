@@ -284,20 +284,9 @@ combineCellData <- function(gobject,
     checkmate::assert_numeric(xlim, len = 2L, null.ok = TRUE)
     checkmate::assert_numeric(ylim, len = 2L, null.ok = TRUE)
 
-    # When view/space are supplied, pre-narrow the gobject ONCE for the
-    # specific slots this combine touches via resolveRecipe(slots = ...).
-    # resolve uses one resolver cache internally, so all slot
-    # narrowings here share a single predicate evaluation. Subsequent
-    # getter calls below run with view=NULL/space=NULL on the
-    # already-narrowed gobject — no per-getter resolver work.
-    #
-    # This runs BEFORE the giottoMulti branch, which is the only place it
-    # can run on a multi: a view resolves at the parent and nowhere else
-    # (joint metadata and fused coordinates are keyed `sample::id`), and a
-    # `space` is a name the parent owns, which a child cannot look up in
-    # its own empty slots. `resolveRecipe(giottoMulti)` already scopes the
-    # frame per child and narrows the joint slots, so the per-child loop
-    # below inherits both and passes neither.
+    # Pre-narrow once for the slots this combine reads, so the getters below
+    # run without a view. It runs before the giottoMulti branch because a
+    # view and a space resolve at the parent, which a child cannot do.
     if (!is.null(view) || !is.null(space)) {
         need_slots <- character(0L)
         if (isTRUE(include_spat_locs)) {

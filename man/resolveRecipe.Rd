@@ -110,11 +110,8 @@ or \code{NULL} for "no narrowing".}
 
 \item{space}{at a container, a \code{character(1)} naming a slotted
 \link{giottoSpace}; at a leaf, the resolved object. \code{NULL} means the native
-frame. This is the OUTPUT frame, and it is deliberately independent of
-the frame a crop step names, which says only which frame that step's
-region coordinates were read in. Defaulting one to the other is the
-conflation that made a \code{space}-bound view silently return transformed
-coordinates from a plain getter.}
+frame. This is the OUTPUT frame, independent of the frame a crop step
+names, which says only which frame that step's region was drawn in.}
 
 \item{view}{at a container, a \code{character(1)} naming a slotted view, or
 \code{NULL}. At a leaf, the already-looked-up \link{giottoView} or \code{NULL} — a
@@ -170,9 +167,7 @@ A container does not dispatch on the coordinator — it \emph{picks} one from
 \code{ANY} and consume \code{coordinator} as an ordinary argument.
 
 \code{keep} reaches a leaf as a promise, so a leaf that does not narrow by cell
-(points, images) never forces the ID computation. That preserves the
-laziness the old per-leaf \code{.cache} bought, without the leaf having to know
-a cache exists.
+(points, images) never forces the ID computation.
 
 \code{coordinator} defaults to \code{NULL} on the \emph{generic}, not just on the
 container methods. S4 propagates the generic's formals symbolically into

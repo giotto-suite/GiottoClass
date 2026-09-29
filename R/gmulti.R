@@ -3429,13 +3429,9 @@ setMethod("getFeatureInfo", signature("giottoMulti"),
         sp <- .gm_resolve_space_arg(gobject, space)
         vw <- .gm_resolve_view_arg(gobject, view)
         objs <- .gm_read_objects(gobject, samples, vw)
-        # Points have no cell axis, so a global ID set says nothing about
-        # them -- a crop narrows them geometrically instead. That happens
-        # HERE, not in the child: the child was handed `space[nm]`, so what
-        # comes back is in that output frame, and each crop's region is
-        # projected into it from the frame its step names. Keeping it here
-        # is what makes "a view is evaluated at the parent" structural
-        # rather than a convention children are trusted to honour.
+        # Points have no cell axis, so a crop clips them geometrically, here
+        # at the parent: each child returns in its output frame, and each
+        # region is projected into it from the frame its step names.
         out <- lapply(objs, function(nm) {
             child <- getFeatureInfo(gobject@objects[[nm]],
                 feat_type = feat_type,
