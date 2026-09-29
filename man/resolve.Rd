@@ -41,9 +41,27 @@ resolve(x, coordinator = NULL, ...)
 
 \S4method{resolve}{giottoImage,dataTableCoordinator}(x, coordinator, keep = NULL, space = NULL, view = NULL, ...)
 
-\S4method{resolve}{giotto,ANY}(x, coordinator = NULL, view = NULL, space = NULL, slots = NULL, ...)
+\S4method{resolve}{giotto,ANY}(
+  x,
+  coordinator = NULL,
+  view = NULL,
+  space = NULL,
+  slots = NULL,
+  spat_unit = NULL,
+  feat_type = NULL,
+  ...
+)
 
-\S4method{resolve}{giottoMulti,ANY}(x, coordinator = NULL, view = NULL, space = NULL, slots = NULL, ...)
+\S4method{resolve}{giottoMulti,ANY}(
+  x,
+  coordinator = NULL,
+  view = NULL,
+  space = NULL,
+  slots = NULL,
+  spat_unit = NULL,
+  feat_type = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{a \code{giotto} / \code{giottoMulti} container, or a giotto subobject leaf}
@@ -54,7 +72,8 @@ default) selects one from \code{x@source} — in-memory for non-disk gobjects.}
 
 \item{...}{reserved for backend-specific args}
 
-\item{keep}{leaf only — the surviving cell_ID set the container computed,
+\item{keep}{leaf only — the op's surviving cell set as a \code{viewKeep} (see
+\code{\link[=resolveKeep]{resolveKeep()}}),
 or \code{NULL} for "no narrowing".}
 
 \item{space}{at a container, a \code{character(1)} naming a slotted
@@ -77,6 +96,14 @@ narrow. When \code{NULL} (default), all slot lists are walked
 the rest are left untouched on the returned object. Useful for internal
 helpers that consume a subset of slots and want to share one resolver
 pass without paying for irrelevant ones.}
+
+\item{spat_unit}{container only — the spat_unit to resolve. The surviving
+cell set is computed in this unit's cell_ID vocabulary, and only
+subobjects of this unit are narrowed. \code{NULL} uses the active one.}
+
+\item{feat_type}{container only — the feat_type to resolve. Subobjects of
+other feat_types are left untouched, and filter columns are read from
+this feat_type's metadata. \code{NULL} uses the active one.}
 }
 \value{
 the projected object, same class as \code{x}
@@ -85,12 +112,17 @@ the projected object, same class as \code{x}
 Apply a \link{giottoView} (and optional \link{giottoSpace}) recipe and
 return the projected object.
 
-At a \strong{container} (\code{giotto}, \code{giottoMulti}) this evaluates the recipe and
-returns a new gobject whose subobjects have been projected through it. Use
-it when downstream work needs to produce structured outputs (spatial
-networks, dim reductions) on top of the projected data — those outputs live
-in the resolved gobject, never in the parent. Read-only contract: the input
-gobject is not mutated.
+At a \strong{container} (\code{giotto}, \code{giottoMulti}) this evaluates the recipe for
+one \code{spat_unit} / \code{feat_type} scope and returns a gobject whose in-scope
+subobjects have been projected through it. The input gobject is not
+mutated.
+
+This is plumbing for code that consumes one scope of data, such as a plot
+function, not a way to derive a new object to work on. Only the requested
+scope is guaranteed: subobjects outside it are left untouched, so they
+need not agree with the narrowed ones. The returned gobject is a carrier
+for the narrowed data — read what you asked for from it and discard it.
+To narrow a whole object, use \code{\link[=subsetGiotto]{subsetGiotto()}} or \code{subset()}.
 
 At a \strong{leaf} (one subobject) this applies an already-evaluated context:
 the surviving cell set, the output frame, the recipe itself.

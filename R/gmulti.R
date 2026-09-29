@@ -2759,7 +2759,8 @@ setMethod("getExpression", "giottoMulti",
             "gmulti getExpression")
         # A view resolves once at the parent into globals; its sample step
         # also narrows the sample scope.
-        vw <- .gm_resolve_view_arg(gobject, view)
+        vw <- .gm_resolve_view_arg(gobject, view, spat_unit = spat_unit,
+            feat_type = feat_type)
         samples <- .gm_view_samples(gobject, samples, vw)
 
         # Capture before default resolution so the assembly path can tell
@@ -2870,7 +2871,8 @@ setMethod("getCellMetadata", "giottoMulti", function(gobject,
     view = NULL) {
     output <- match.arg(output, choices = c("cellMetaObj", "data.table"))
     on_missing <- match.arg(on_missing)
-    vw <- .gm_resolve_view_arg(gobject, view)
+    vw <- .gm_resolve_view_arg(gobject, view, spat_unit = spat_unit,
+        feat_type = feat_type)
     samples <- .gm_view_samples(gobject, samples, vw)
     nospec_unit <- is.null(spat_unit)
     nospec_feat <- is.null(feat_type)
@@ -3155,7 +3157,8 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
 #' axis, rather than handing a child a view to apply). `NULL` when no view
 #' was asked for, so callers can skip the whole path.
 #' @noRd
-.gm_resolve_view_arg <- function(gobject, view, coordinator = NULL) {
+.gm_resolve_view_arg <- function(gobject, view, coordinator = NULL,
+                                 spat_unit = NULL, feat_type = NULL) {
     if (is.null(view)) return(NULL)
     if (!is.character(view)) {
         stop("[gmulti] `view` must be the name of a view registered on ",
@@ -3168,7 +3171,9 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
     co <- coordinator %null% .default_view_coordinator(gobject)
     # `cells` already reflects the view's sample step; `samples` is kept as
     # well so per-child reads can skip excluded children outright.
-    list(obj = v, cells = .surviving_cell_ids(gobject, v, co),
+    keep <- resolveKeep(co, gobject, v, spat_unit = spat_unit,
+        feat_type = feat_type)
+    list(obj = v, cells = keep$vector,
         samples = .resolve_sample_select(gobject, v))
 }
 
@@ -3291,7 +3296,7 @@ setMethod("getSpatialLocations", signature("giottoMulti"),
         su <- spat_unit %||%
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
         sp <- .gm_resolve_space_arg(gobject, space)
-        vw <- .gm_resolve_view_arg(gobject, view)
+        vw <- .gm_resolve_view_arg(gobject, view, spat_unit = su)
         objs <- .gm_read_objects(gobject, samples, vw)
         # cell-keyed, so the view is fully expressed by its global ID set
         # and the children are handed no view at all
@@ -3323,7 +3328,7 @@ setMethod("getSpatialNetwork", signature("giottoMulti"),
         samples = NULL, view = NULL) {
         su <- spat_unit %||%
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
-        vw <- .gm_resolve_view_arg(gobject, view)
+        vw <- .gm_resolve_view_arg(gobject, view, spat_unit = su)
 
         # A cross-sample network lives in the multi's own slot and is named
         # for the frame it was built in, so a plain name lookup finds it --
@@ -3384,7 +3389,7 @@ setMethod("getPolygonInfo", signature("giottoMulti"),
         su <- name %||% args$polygon_name %||% args$spat_unit %||%
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
         sp <- .gm_resolve_space_arg(gobject, space)
-        vw <- .gm_resolve_view_arg(gobject, view)
+        vw <- .gm_resolve_view_arg(gobject, view, spat_unit = su)
         objs <- .gm_read_objects(gobject, samples, vw)
         out <- lapply(objs, function(nm) {
             getPolygonInfo(gobject@objects[[nm]], name = name,

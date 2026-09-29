@@ -3908,7 +3908,8 @@ spatValues <- function(gobject,
         # Predicate frame is read per crop step inside .surviving_cell_ids;
         # the explicit `space` arg here only affects coord transforms on
         # value cols (not implemented for spatValues -- doc above).
-        keep <- .cached_surviving_cell_ids(gobject, v, coord)
+        keep <- resolveKeep(coord, gobject, v, spat_unit = spat_unit,
+            feat_type = feat_type)$vector
         if (!is.null(keep)) {
             vals <- vals[cell_ID %in% keep]
         }

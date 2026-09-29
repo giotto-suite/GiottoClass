@@ -563,7 +563,7 @@ test_that("a leaf resolves on its own, with no gobject anywhere", {
     sub <- getCellMetadata(g, output = "cellMetaObj", copy_obj = TRUE)
     keep <- pDataDT(g)$cell_ID[1:5]
 
-    out <- resolve(sub, dataTableCoordinator(), keep = keep)
+    out <- resolve(sub, dataTableCoordinator(), keep = structure(list(vector = keep), class = "viewKeep"))
 
     expect_s4_class(out, "cellMetaObj")
     expect_setequal(out[]$cell_ID, keep)
@@ -693,6 +693,7 @@ test_that("resolveSubobject() still reaches the new leaf methods", {
 })
 
 
+
 # --- JIT getter integration -----------------------------------------------
 
 test_that("getCellMetadata respects view = name", {
@@ -768,28 +769,25 @@ test_that("getter without view/space returns unchanged baseline", {
 
 # --- Resolver cache --------------------------------------------------------
 
-test_that(".cached_surviving_cell_ids memoises within a cache env", {
+test_that("the resolver cache computes the op's keep once", {
     g <- .fixture_giotto()
     g <- subset(g, leiden_clus == "1", view = "tmp")
     v <- giottoView(g, "tmp")
-    cache <- GiottoClass:::.new_resolver_cache()
+    cache <- GiottoClass:::.new_resolver_cache(g, v, dataTableCoordinator())
 
-    a <- GiottoClass:::.cached_surviving_cell_ids(g, v,
-        dataTableCoordinator(), cache)
-    expect_true(exists("surviving_ids", envir = cache))
-    b <- GiottoClass:::.cached_surviving_cell_ids(g, v,
-        dataTableCoordinator(), cache)
-    expect_identical(a, b)
+    a <- cache$keep
+    expect_s3_class(a, "viewKeep")
+    expect_type(a$vector, "character")
+    expect_equal(length(a$vector), sum(pDataDT(g)$leiden_clus == "1"))
+    expect_identical(cache$keep, a)
 })
 
-test_that(".cached_surviving_cell_ids with NULL cache works", {
+test_that("resolveKeep() returns NULL when the view narrows nothing", {
     g <- .fixture_giotto()
-    g <- subset(g, leiden_clus == "1", view = "tmp")
-    v <- giottoView(g, "tmp")
-    ids <- GiottoClass:::.cached_surviving_cell_ids(g, v,
-        dataTableCoordinator(), NULL)
-    expect_type(ids, "character")
-    expect_equal(length(ids), sum(pDataDT(g)$leiden_clus == "1"))
+    expect_null(resolveKeep(dataTableCoordinator(), g, NULL))
+    giottoView(g, "empty") <- .empty_view()
+    expect_null(resolveKeep(dataTableCoordinator(), g,
+        giottoView(g, "empty")))
 })
 
 
@@ -1691,12 +1689,9 @@ test_that("the resolver cache is memoization only, never routing", {
     v <- giottoView(g, "tmp")
     co <- dataTableCoordinator()
 
-    no_cache <- GiottoClass:::.cached_surviving_cell_ids(g, v, co, NULL)
-    cache <- GiottoClass:::.new_resolver_cache()
-    with_cache <- GiottoClass:::.cached_surviving_cell_ids(g, v, co, cache)
-    again <- GiottoClass:::.cached_surviving_cell_ids(g, v, co, cache)
-    expect_identical(no_cache, with_cache)
-    expect_identical(with_cache, again)
+    no_cache <- resolveKeep(co, g, v)
+    cache <- GiottoClass:::.new_resolver_cache(g, v, co)
+    expect_identical(no_cache, cache$keep)
 })
 
 test_that("a hand-poked incoherent step fails validity", {
@@ -2095,7 +2090,7 @@ test_that("a view resolves once at the parent, in global IDs", {
     mg <- subset(mg, leiden_clus == 1, view = "v")
 
     co <- GiottoClass:::.default_view_coordinator(mg)
-    keep <- GiottoClass:::.surviving_cell_ids(mg, giottoView(mg, "v"), co)
+    keep <- resolveKeep(co, mg, giottoView(mg, "v"))$vector
     # filters read joint metadata and crops read fused coordinates, both
     # keyed by sample::id -- so one evaluation answers for every child
     expect_true(all(grepl("::", keep)))
@@ -2106,7 +2101,7 @@ test_that("gmulti getters honour a view, narrowing children by that set", {
     mg <- .fixture_gmulti()
     mg <- subset(mg, leiden_clus == 1, view = "v")
     co <- GiottoClass:::.default_view_coordinator(mg)
-    keep <- GiottoClass:::.surviving_cell_ids(mg, giottoView(mg, "v"), co)
+    keep <- resolveKeep(co, mg, giottoView(mg, "v"))$vector
 
     # forwarding the NAME made each child resolve it against its own empty
     # @view and fail with "no view named 'v'"
@@ -2297,4 +2292,117 @@ test_that("combineFeatureOverlapData returns the as.data.table point shape", {
     # the overlap filter still narrows to overlapped points only
     expect_gt(nrow(ov$rna), 0L)
     expect_true(all(ov$rna$feat_ID %in% sel$rna))
+})
+
+# --- One scope per resolve op ----------------------------------------------
+# A resolve op computes ONE surviving cell set, in one spat_unit's ID
+# vocabulary. These pin that down on an object whose two spat_units share no
+# cell_IDs -- the shape a cells + nuclei (or cells + bins) object has, and the
+# one a same-vocabulary fixture like the vizgen mini cannot catch: a set from
+# one unit narrows the other to nothing, silently.
+
+# fixture — the visium mini plus a `nucleus` unit at the same coordinates
+# under disjoint IDs (`nuc_*`), with a `nuc_size` column only it carries
+.fixture_two_units <- function() {
+    g <- .fixture_giotto()
+    ex <- getExpression(g, values = "raw", output = "matrix")
+    colnames(ex) <- paste0("nuc_", colnames(ex))
+    g <- setExpression(g, createExprObj(ex, name = "raw",
+        spat_unit = "nucleus", feat_type = "rna"), verbose = FALSE)
+    sl <- getSpatialLocations(g, output = "data.table")
+    sl[, cell_ID := paste0("nuc_", cell_ID)]
+    g <- setSpatialLocations(g, createSpatLocsObj(sl, name = "raw",
+        spat_unit = "nucleus"), verbose = FALSE)
+    cm <- data.table::data.table(cell_ID = sl$cell_ID,
+        nuc_size = seq_len(nrow(sl)))
+    setCellMetadata(g, createCellMetaObj(cm, spat_unit = "nucleus",
+        feat_type = "rna"), verbose = FALSE)
+}
+
+.n_locs <- function(g, spat_unit) {
+    nrow(getSpatialLocations(g, spat_unit = spat_unit,
+        output = "data.table"))
+}
+
+test_that("resolve narrows the requested spat_unit and leaves the rest", {
+    g <- .fixture_two_units()
+    g <- crop(g, .box_at_centre(g), view = "roi")
+    n_all <- .n_locs(g, "cell")
+
+    out <- resolve(g, view = "roi", spat_unit = "cell")
+    n_cell <- .n_locs(out, "cell")
+    expect_gt(n_cell, 0L)
+    expect_lt(n_cell, n_all)
+    expect_identical(.n_locs(out, "nucleus"), n_all)
+})
+
+test_that("resolve computes the surviving set in the requested unit's IDs", {
+    g <- .fixture_two_units()
+    g <- crop(g, .box_at_centre(g), view = "roi")
+    n_cell <- .n_locs(resolve(g, view = "roi"), "cell")
+
+    out <- resolve(g, view = "roi", spat_unit = "nucleus")
+    nuc <- getSpatialLocations(out, spat_unit = "nucleus",
+        output = "data.table")
+    # same coordinates, so the same count -- but read in nucleus IDs
+    expect_identical(nrow(nuc), n_cell)
+    expect_true(all(startsWith(nuc$cell_ID, "nuc_")))
+    expect_identical(.n_locs(out, "cell"), .n_locs(g, "cell"))
+})
+
+test_that("a getter resolves in the spat_unit of the subobject it reads", {
+    g <- .fixture_two_units()
+    g <- crop(g, .box_at_centre(g), view = "roi")
+    n_cell <- nrow(getSpatialLocations(g, spat_unit = "cell", view = "roi",
+        output = "data.table"))
+    expect_gt(n_cell, 0L)
+    expect_identical(nrow(getSpatialLocations(g, spat_unit = "nucleus",
+        view = "roi", output = "data.table")), n_cell)
+})
+
+test_that("a filter step reads the resolve op's spat_unit", {
+    g <- .fixture_two_units()
+    # `nuc_size` exists only on the nucleus unit's metadata
+    g <- subset(g, nuc_size <= 10, view = "small")
+    out <- resolve(g, view = "small", spat_unit = "nucleus")
+    expect_identical(.n_locs(out, "nucleus"), 10L)
+})
+
+test_that("a filter step recorded on another spat_unit is an error", {
+    g <- .fixture_two_units()
+    g <- subset(g, leiden_clus == "1", spat_unit = "cell", view = "c1")
+    expect_error(resolve(g, view = "c1", spat_unit = "nucleus"),
+        "filter step reads spat_unit 'cell'")
+})
+
+test_that("an extending coordinator's keep reaches the in-memory leaves", {
+    # A coordinator's `resolveKeep()` fills in the forms of the coordinators
+    # it extends. This one computes nothing itself: it takes the in-memory
+    # set from its parent and adds a form of its own, the way a backed
+    # coordinator with no fast path for a step would. Its in-memory
+    # subobjects then fall through to the dataTableCoordinator leaves, which
+    # must find their `vector` form.
+    setClass("_test_child_coord_", contains = "dataTableCoordinator",
+        where = globalenv())
+    on.exit(removeClass("_test_child_coord_", where = globalenv()),
+        add = TRUE)
+    seen <- new.env(parent = emptyenv())
+    setMethod("resolveKeep", signature(coordinator = "_test_child_coord_"),
+        function(coordinator, gobject, view, ...) {
+            k <- callNextMethod()
+            if (is.null(k)) return(NULL)
+            k$child <- rev(k$vector)
+            seen$keep <- k
+            k
+        },
+        where = globalenv())
+    on.exit(removeMethod("resolveKeep", "_test_child_coord_",
+        where = globalenv()), add = TRUE)
+
+    g <- .fixture_giotto()
+    g <- subset(g, leiden_clus == "1", view = "c1")
+    out <- resolve(g, coordinator = new("_test_child_coord_"), view = "c1")
+
+    expect_setequal(names(seen$keep), c("vector", "child"))
+    expect_equal(nrow(pDataDT(out)), sum(pDataDT(g)$leiden_clus == "1"))
 })

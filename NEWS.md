@@ -130,7 +130,7 @@
   - **A leaf no longer takes the parent gobject.** It used it for exactly one
     thing, deriving the surviving cell_ID set, and that belongs at the
     container, which is the thing walking the nesting keys. A leaf now takes
-    `keep`, `space` and `view`, so `resolve(myExprObj, co, keep = ids)` is a
+    `keep`, `space` and `view`, so `resolve(myExprObj, co, keep = k)` is a
     unit test rather than a call needing a whole object graph. `keep` arrives
     as a promise, so a leaf that does not narrow by cell still never pays for
     it.
@@ -140,8 +140,14 @@
   - Removing the one use of a coordinator inside the space-application helper
     exposed that it had been threaded through the whole crop-carrier chain to
     reach it, and read nowhere else. Five internal helpers lose the argument.
-    `.surviving_cell_ids()` keeps it: that is a seam a backend replaces rather
-    than parameterises.
+  - **`resolveKeep()` is the seam a coordinator replaces.** It evaluates the
+    view into the op's surviving cell set and dispatches on the coordinator.
+    The set travels as a `viewKeep`, a named list with one form per
+    coordinator that reads it: `vector`, a character vector, for the
+    in-memory one. A coordinator that extends another fills in the inherited
+    forms as well as its own, so a subobject that falls through to an
+    inherited leaf finds the form that leaf reads, and the set is evaluated
+    once.
   - `resolveSubobject()`'s five-slot dispatch signature is gone. Every
     registration used only `(subobj, coordinator)`; the middle three were
     always `ANY`.
@@ -161,6 +167,18 @@
     method exists — concrete coordinators inherit the in-memory one, so the
     latter is always true and would send backed data down the in-memory path
     without an error.
+- **A `resolve()` op is scoped to one `spat_unit` and `feat_type`**, given by
+  the new `spat_unit =` / `feat_type =` arguments and defaulting to the active
+  ones. The surviving cell set is computed in that unit's cell_ID vocabulary,
+  and only subobjects in scope are narrowed; the rest are left untouched.
+  Previously one set, computed in the active unit, narrowed every unit, so on
+  an object whose units do not share IDs (cells and nuclei, say) every other
+  unit came back empty. The getters resolve in the unit of the subobject they
+  read, so `getSpatialLocations(g, spat_unit = "nucleus", view = )` narrows
+  nuclei by their own coordinates. `resolve()` is plumbing for consumers of
+  one scope; to narrow a whole object, use `subsetGiotto()` or `subset()`.
+  - A filter step recorded against one `spat_unit` is an error when resolved
+    for another. Filtering one unit by another's values is not supported yet.
 
 ## docs
 

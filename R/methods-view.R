@@ -395,28 +395,31 @@ setMethod("giottoViews", signature(gobject = "gAny"),
                             space = NULL,
                             coordinator = NULL,
                             slots = NULL,
+                            spat_unit = NULL,
+                            feat_type = NULL,
                             ...) {
     if (is.null(coordinator)) {
         coordinator <- .default_view_coordinator(gobject)
     }
+    scope <- .resolve_scope(gobject, spat_unit, feat_type)
     # Normalise output space to a giottoSpace (or NULL) once at the
     # entry point so per-subobject resolution doesn't re-look-up by
     # name. The predicate space (the view's `space`) is consulted independently
     # by the crop step handlers — it is not conflated with output here.
     space_obj <- .resolve_space(gobject, space)
-    # Per-call cache for the surviving cell_ID set, read through the promise
-    # `.resolve_leaf()` hands each leaf. Computed at most once per call, and
-    # not at all when no leaf reads it.
-    cache <- .new_resolver_cache()
+    # The op's one surviving cell set, held as a promise: computed at most
+    # once per call, and not at all when no leaf reads it.
+    cache <- .new_resolver_cache(gobject, view, coordinator,
+        spat_unit = scope$spat_unit, feat_type = scope$feat_type)
 
     out <- gobject
 
     # Walk the (possibly filtered) slot list in canonical order:
-    # tabular → spatial → images. Slot names not in `slots` are
-    # left untouched on the returned gobject.
+    # tabular → spatial → images. Slot names not in `slots`, and leaves
+    # outside the op's spat_unit / feat_type, are left untouched.
     for (slot_name in .resolve_slot_filter(slots)) {
         out <- .resolve_walk(out, slot_name,
-            view, space_obj, coordinator, cache)
+            view, space_obj, coordinator, cache, scope)
     }
 
     # Networks (spatial_network, nn_network) intentionally not walked:
@@ -430,10 +433,10 @@ setMethod("giottoViews", signature(gobject = "gAny"),
 #' @export
 setMethod("resolve", signature(x = "giotto", coordinator = "ANY"),
     function(x, coordinator = NULL, view = NULL, space = NULL,
-             slots = NULL, ...) {
+             slots = NULL, spat_unit = NULL, feat_type = NULL, ...) {
         .resolve_giotto(x, .resolve_view_arg(x, view),
             space = space, coordinator = coordinator,
-            slots = slots, ...)
+            slots = slots, spat_unit = spat_unit, feat_type = feat_type, ...)
     }
 )
 
@@ -454,12 +457,16 @@ setMethod("resolve", signature(x = "giotto", coordinator = "ANY"),
                             space = NULL,
                             coordinator = NULL,
                             slots = NULL,
+                            spat_unit = NULL,
+                            feat_type = NULL,
                             ...) {
     if (is.null(coordinator)) {
         coordinator <- .default_view_coordinator(gobject)
     }
+    scope <- .resolve_scope(gobject, spat_unit, feat_type)
     space_obj <- .resolve_space(gobject, space)
-    cache <- .new_resolver_cache()
+    cache <- .new_resolver_cache(gobject, view, coordinator,
+        spat_unit = scope$spat_unit, feat_type = scope$feat_type)
 
     # Resolve the samples step FIRST — narrow children before any
     # per-child work touches storage.
@@ -476,13 +483,23 @@ setMethod("resolve", signature(x = "giotto", coordinator = "ANY"),
     # Per-surviving-child resolve with the child-scoped space.
     # `slots` is forwarded so per-child narrowing matches the joint-level
     # scope.
+    # The scope is in multi-level handles; @mapping may name them
+    # differently in each child.
+    su_map <- .gm_scope_map(gobject, "spat_unit", scope$spat_unit)
+    ft_map <- .gm_scope_map(gobject, "feat_type", scope$feat_type)
     out@objects <- stats::setNames(lapply(selected, function(samp) {
         child <- out@objects[[samp]]
+        child_su <- .gm_scope_child(su_map, samp)
+        child_ft <- .gm_scope_child(ft_map, samp)
+        # A child that does not carry the requested handle holds nothing in
+        # scope, so it is left as it is.
+        if (identical(child_su, NA) || identical(child_ft, NA)) return(child)
         # `[` owns the sample-resolution rule; the child then reads as a
         # single-sample object against the handle it is handed.
         child_space <- if (is.null(space_obj)) NULL else space_obj[samp]
         .resolve_giotto(child, view, space = child_space,
-            coordinator = coordinator, slots = slots, ...)
+            coordinator = coordinator, slots = slots,
+            spat_unit = child_su, feat_type = child_ft, ...)
     }), selected)
 
     # Narrow joint shared slots. Only multi-level cell_metadata /
@@ -493,7 +510,7 @@ setMethod("resolve", signature(x = "giotto", coordinator = "ANY"),
     joint_slots <- intersect(.resolve_slot_filter(slots), joint_candidates)
     for (slot_name in joint_slots) {
         out <- .resolve_walk(out, slot_name,
-            view, space_obj, coordinator, cache)
+            view, space_obj, coordinator, cache, scope)
     }
 
     out
@@ -503,10 +520,10 @@ setMethod("resolve", signature(x = "giotto", coordinator = "ANY"),
 #' @export
 setMethod("resolve", signature(x = "giottoMulti", coordinator = "ANY"),
     function(x, coordinator = NULL, view = NULL, space = NULL,
-             slots = NULL, ...) {
+             slots = NULL, spat_unit = NULL, feat_type = NULL, ...) {
         .resolve_gmulti(x, .resolve_view_arg(x, view),
             space = space, coordinator = coordinator,
-            slots = slots, ...)
+            slots = slots, spat_unit = spat_unit, feat_type = feat_type, ...)
     }
 )
 
@@ -527,25 +544,59 @@ setMethod("resolve", signature(x = "giottoMulti", coordinator = "ANY"),
 #' @keywords internal
 #' @noRd
 .resolve_walk <- function(gobject, slot_name, view, space, coordinator,
-                          cache = NULL) {
+                          cache, scope) {
     x <- methods::slot(gobject, slot_name)
     if (is.null(x) || length(x) == 0L) return(gobject)
     methods::slot(gobject, slot_name) <- .resolve_apply(
-        x, gobject, view, space, coordinator, cache)
+        x, gobject, view, space, coordinator, cache, scope)
     gobject
 }
 
 .resolve_apply <- function(node, gobject, view, space, coordinator,
-                           cache = NULL) {
+                           cache, scope) {
     if (is.list(node) && !isS4(node)) {
         return(lapply(node, .resolve_apply, gobject = gobject,
             view = view, space = space, coordinator = coordinator,
-            cache = cache))
+            cache = cache, scope = scope))
     }
     if (isS4(node) && inherits(node, "giottoSubobject")) {
+        if (!.leaf_in_scope(node, scope$spat_unit, scope$feat_type)) {
+            return(node)
+        }
         return(.resolve_leaf(node, gobject, view, space, coordinator, cache))
     }
     node
+}
+
+# Per-sample child names for a multi-level scope handle. `NULL` when the
+# scope leaves that axis open.
+#' @keywords internal
+#' @noRd
+.gm_scope_map <- function(gobject, axis, handle) {
+    if (is.null(handle)) return(NULL)
+    .gm_resolve_axis(gobject, axis, handle)$map
+}
+
+# One child's name for the handle: `NULL` for an open axis, `NA` when the
+# child does not participate in it.
+#' @keywords internal
+#' @noRd
+.gm_scope_child <- function(map, samp) {
+    if (is.null(map)) return(NULL)
+    if (samp %in% names(map)) map[[samp]] else NA
+}
+
+# The op's scope: one spat_unit (whose cell_ID vocabulary the surviving set
+# is in) and one feat_type, defaulting to the active ones. `NULL` survives
+# only when the object has no default to offer (an image-only object), and
+# then scopes nothing on that axis.
+#' @keywords internal
+#' @noRd
+.resolve_scope <- function(gobject, spat_unit = NULL, feat_type = NULL) {
+    spat_unit <- suppressWarnings(set_default_spat_unit(gobject, spat_unit))
+    feat_type <- suppressWarnings(
+        set_default_feat_type(gobject, feat_type, spat_unit = spat_unit))
+    list(spat_unit = spat_unit, feat_type = feat_type)
 }
 
 

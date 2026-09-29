@@ -13,14 +13,14 @@ NULL
 #               evaluates the recipe ONCE — which cells survive, which frame
 #               to return — then walks its slots. Methods live in
 #               `methods-view.R`, beside the walk helpers.
-#   leaf        resolve(subobj, coordinator, keep = ids, space = s, view = v)
+#   leaf        resolve(subobj, coordinator, keep = k, space = s, view = v)
 #               applies the context it was handed. Methods live below.
 #
 # The split used to be two generics (`materialize()` at the container,
 # `resolveSubobject()` at the leaf) doing the same thing under two names, with
 # every leaf reaching back up through the gobject to re-derive a value the
 # container already had. Handing the leaf its context instead is what makes
-# a leaf callable on its own — `resolve(myExprObj, co, keep = ids)` is a unit
+# a leaf callable on its own — `resolve(myExprObj, co, keep = k)` is a unit
 # test — and makes recomputation structurally impossible rather than merely
 # memoised.
 #
@@ -37,12 +37,17 @@ NULL
 #' @description Apply a [giottoView] (and optional [giottoSpace]) recipe and
 #' return the projected object.
 #'
-#' At a **container** (`giotto`, `giottoMulti`) this evaluates the recipe and
-#' returns a new gobject whose subobjects have been projected through it. Use
-#' it when downstream work needs to produce structured outputs (spatial
-#' networks, dim reductions) on top of the projected data — those outputs live
-#' in the resolved gobject, never in the parent. Read-only contract: the input
-#' gobject is not mutated.
+#' At a **container** (`giotto`, `giottoMulti`) this evaluates the recipe for
+#' one `spat_unit` / `feat_type` scope and returns a gobject whose in-scope
+#' subobjects have been projected through it. The input gobject is not
+#' mutated.
+#'
+#' This is plumbing for code that consumes one scope of data, such as a plot
+#' function, not a way to derive a new object to work on. Only the requested
+#' scope is guaranteed: subobjects outside it are left untouched, so they
+#' need not agree with the narrowed ones. The returned gobject is a carrier
+#' for the narrowed data — read what you asked for from it and discard it.
+#' To narrow a whole object, use [subsetGiotto()] or `subset()`.
 #'
 #' At a **leaf** (one subobject) this applies an already-evaluated context:
 #' the surviving cell set, the output frame, the recipe itself.
@@ -77,8 +82,15 @@ NULL
 #'   region coordinates were read in. Defaulting one to the other is the
 #'   conflation that made a `space`-bound view silently return transformed
 #'   coordinates from a plain getter.
-#' @param keep leaf only — the surviving cell_ID set the container computed,
+#' @param keep leaf only — the op's surviving cell set as a `viewKeep` (see
+#'   [resolveKeep()]),
 #'   or `NULL` for "no narrowing".
+#' @param spat_unit container only — the spat_unit to resolve. The surviving
+#'   cell set is computed in this unit's cell_ID vocabulary, and only
+#'   subobjects of this unit are narrowed. `NULL` uses the active one.
+#' @param feat_type container only — the feat_type to resolve. Subobjects of
+#'   other feat_types are left untouched, and filter columns are read from
+#'   this feat_type's metadata. `NULL` uses the active one.
 #' @param slots container only — optional `character` vector of slot names to
 #'   narrow. When `NULL` (default), all slot lists are walked
 #'   (`cell_metadata`, `expression`, `dimension_reduction`,
@@ -118,12 +130,15 @@ setGeneric("resolve",
 .resolveSubobject_default <- function(subobj, gobject, view, space,
                                       coordinator, ...) {
     deprecate_soft("0.7.2", "resolveSubobject()", "resolve()")
+    # Reached from a container walk, `.cache` holds the op's `keep`. Called
+    # directly, there is no op, so the subobject's own tags are the scope.
+    cache <- list(...)$.cache %||% .new_resolver_cache(gobject, view,
+        coordinator, spat_unit = .na_to_null(spatUnit(subobj)),
+        feat_type = .na_to_null(featType(subobj)))
     # `keep` stays a promise across this call, so the non-cell-keyed leaves
     # still never trigger the ID computation.
-    resolve(subobj, coordinator,
-        keep = .cached_surviving_cell_ids(gobject, view, coordinator,
-            list(...)$.cache),
-        space = space, view = view, ...)
+    resolve(subobj, coordinator, keep = cache$keep, space = space,
+        view = view, ...)
 }
 
 #' @title resolveSubobject
@@ -146,6 +161,83 @@ setGeneric("resolveSubobject",
         standardGeneric("resolveSubobject"),
     useAsDefault = .resolveSubobject_default)
 
+
+
+# The surviving cell set: viewKeep + resolveKeep ####
+#
+# A resolve op computes ONE surviving cell set, in one spat_unit's ID
+# vocabulary, and hands it to every leaf. Different coordinators want that
+# set in different forms -- a character vector to `%in%` against in memory,
+# an arrow Table to semi-join inside a backed store's lazy query -- so the
+# set travels as a `viewKeep`: a named list holding each form under the
+# coordinator's name for it.
+#
+# Coordinators extend one another (`parquetCoordinator` contains
+# `dataTableCoordinator`, so an in-memory subobject inside a backed gobject
+# falls through to the in-memory leaf). The rule that makes that fall-through
+# safe is on `resolveKeep()`: a coordinator's method fills in its own form
+# AND the forms of every coordinator it extends. Whichever leaf S4 lands on
+# then finds the form it reads, and the set is evaluated once rather than
+# once per coordinator.
+
+#' @rdname resolveKeep
+#' @param x a `viewKeep`
+#' @export
+print.viewKeep <- function(x, ...) {
+    n <- if (!is.null(x$vector)) length(x$vector) else NA_integer_
+    cat(sprintf("<viewKeep> %s cells; forms: %s\n",
+        format(n), paste(names(x), collapse = ", ")))
+    invisible(x)
+}
+
+#' @title resolveKeep
+#' @name resolveKeep
+#' @description Evaluate a view into the surviving cell set of one
+#' [resolve()] op: the cells of `spat_unit` that pass every filter, crop and
+#' sample step. Dispatches on the coordinator, which decides how the set is
+#' computed and which forms it carries.
+#'
+#' The set is returned as a `viewKeep`: a named list holding one form of the
+#' set per coordinator that reads it, built with
+#' `structure(list(vector = ids), class = "viewKeep")`.
+#' `dataTableCoordinator` reads `vector`, a character vector of cell_IDs. A
+#' coordinator that extends another adds its own form alongside, under its
+#' own name. A view that narrows nothing returns `NULL` rather than an empty
+#' `viewKeep`: `NULL` means "every cell survives", while a `viewKeep` holding
+#' zero IDs means none do.
+#'
+#' A method must return every form that the coordinators its class extends
+#' read, as well as its own. A coordinator that computes its own form can
+#' derive the inherited ones from it; one that has no faster path can call
+#' the inherited method with `callNextMethod()` and add its form to the
+#' result.
+#'
+#' @param coordinator a [viewCoordinator-class]-inheriting object
+#' @param gobject the `giotto` / `giottoMulti` the view is evaluated against
+#' @param view a [giottoView], or `NULL`
+#' @param spat_unit the spat_unit whose ID vocabulary the set is in. `NULL`
+#'   uses the active one.
+#' @param feat_type the feat_type whose metadata a filter's columns are read
+#'   from. `NULL` uses the active one.
+#' @param ... reserved for backend-specific args
+#' @returns a `viewKeep`, or `NULL` when the view narrows nothing
+#' @keywords internal
+#' @export
+setGeneric("resolveKeep",
+    function(coordinator, gobject, view, ...) standardGeneric("resolveKeep"),
+    signature = "coordinator")
+
+#' @rdname resolveKeep
+#' @export
+setMethod("resolveKeep", signature(coordinator = "dataTableCoordinator"),
+    function(coordinator, gobject, view, spat_unit = NULL, feat_type = NULL,
+             ...) {
+        ids <- .surviving_cell_ids(gobject, view, spat_unit = spat_unit,
+            feat_type = feat_type)
+        if (is.null(ids)) return(NULL)
+        structure(list(vector = ids), class = "viewKeep")
+    }
+)
 
 # Helpers ####
 
@@ -232,22 +324,39 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # return the surviving cell_ID vector. Predicates that reference columns not
 # co-existing in a single artifact raise via spatValues' own contract.
 #
+# `spat_unit` / `feat_type` are the resolve op's scope, and fill in whatever
+# the step did not record. A step that recorded a DIFFERENT spat_unit asks a
+# question in another ID vocabulary; mapping its answer across (cell <->
+# nucleus via overlaps, say) is not implemented, so it is an error rather
+# than an empty intersection.
+#
 # The predicate is stored deparsed, so it is parsed here. `globalenv()` is
 # the evaluation enclosure: the step carries no environment by design (Q7),
 # and functions resolve from there through the attached-package chain.
 #' @keywords internal
 #' @noRd
-.eval_view_filter <- function(step, gobject) {
+.eval_view_filter <- function(step, gobject, spat_unit = NULL,
+                              feat_type = NULL) {
     pred <- str2lang(step$predicate)
     cols <- .predicate_column_refs(pred)
     if (length(cols) == 0L) {
         # purely constant predicate; pull all cell_IDs and let eval decide
-        cell_ids <- spatIDs(gobject)
+        cell_ids <- spatIDs(gobject, spat_unit = spat_unit)
         keep <- eval(pred, envir = list(), enclos = globalenv())
         return(if (isTRUE(keep)) cell_ids else character())
     }
-    sv_args <- c(list(gobject = gobject, feats = cols),
-        step$scope_args %||% list())
+    scope <- step$scope_args %||% list()
+    step_su <- scope$spat_unit
+    if (!is.null(step_su) && !is.null(spat_unit) &&
+        !identical(step_su, spat_unit)) {
+        stop(sprintf(paste0("[resolve] filter step reads spat_unit '%s' ",
+            "but this resolve is scoped to '%s'. Filtering one spat_unit ",
+            "by another's values is not supported yet."), step_su,
+            spat_unit), call. = FALSE)
+    }
+    scope$spat_unit <- step_su %||% spat_unit
+    scope$feat_type <- scope$feat_type %||% feat_type
+    sv_args <- c(list(gobject = gobject, feats = cols), scope)
     sv <- do.call(spatValues, sv_args)
     keep <- eval(pred, envir = sv, enclos = globalenv())
     if (!is.logical(keep)) {
@@ -427,7 +536,7 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     list(
         points = function(space_name) {
             out <- memoised("pts", space_name, function(sp) {
-                .get_projected_spatlocs(gobject, sp)
+                .get_projected_spatlocs(gobject, sp, spat_unit = spat_unit)
             })
             if (is.null(out)) {
                 warning("crop step skipped: no spatial locations available",
@@ -443,9 +552,9 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     )
 }
 
-# Pull the gobject's spatLocs (active spat_unit) as a points `SpatVector` in
-# the predicate frame, optionally applying the relevant space's transforms
-# first. Consumed by `.cells_in_crop_step()`'s centroid arm.
+# Pull the gobject's spatLocs (`spat_unit`, else the active one) as a points
+# `SpatVector` in the predicate frame, optionally applying the relevant
+# space's transforms first. Consumed by `.cells_in_crop_step()`'s centroid arm.
 #
 # A bare points `SpatVector` is the common representation the predicate
 # primitive works on, and `as.points()` passes the whole coordinate table
@@ -460,8 +569,8 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # folding, or `.check_id_dups()` fires on IDs the children share.
 #' @keywords internal
 #' @noRd
-.get_projected_spatlocs <- function(gobject, space) {
-    sl <- .gm_fused_spatlocs(gobject, space)
+.get_projected_spatlocs <- function(gobject, space, spat_unit = NULL) {
+    sl <- .gm_fused_spatlocs(gobject, space, spat_unit = spat_unit)
     if (is.null(sl)) return(NULL)
     as.points(sl)
 }
@@ -570,43 +679,41 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
     s <- .resolve_space(gobject, space)
     co <- if (is.null(coordinator)) .default_view_coordinator(gobject)
         else coordinator
-    # One subobject, so there is nothing to memoise across -- but `keep` is
-    # still a promise, which is what keeps a points getter from computing a
-    # cell_ID set it will not use.
-    .resolve_leaf(subobj, gobject, v, s, co)
+    # The getter has already picked its subobject, so the subobject's own
+    # tags are the op's scope. `keep` is still a promise, which is what keeps
+    # a points getter from computing a cell_ID set it will not use.
+    cache <- .new_resolver_cache(gobject, v, co,
+        spat_unit = .na_to_null(spatUnit(subobj)),
+        feat_type = .na_to_null(featType(subobj)))
+    .resolve_leaf(subobj, gobject, v, s, co, cache)
 }
 
+# `spatUnit()` / `featType()` answer NA for an axis a subobject does not
+# carry; a resolve scope says the same thing with NULL.
+#' @keywords internal
+#' @noRd
+.na_to_null <- function(x) if (length(x) == 0L || is.na(x[[1L]])) NULL else x
 
-# Per-call cache for the surviving cell_ID set. Created by a container
-# `resolve()` at entry and read through `.keep_resolver()`; each call gets a
-# fresh env.
+
+# Per-call resolver cache. Holds the op's one `keep` as a promise, installed
+# by `.new_resolver_cache()`, so it is computed at most once per call and not
+# at all when no leaf reads it.
 #
-# It is also what the deprecated `resolveSubobject` path forwards as `.cache`,
-# which is the only reason it is still an environment rather than a plain
-# closure variable: downstream coordinators that have not yet switched to
-# `resolve()` read that key themselves.
+# It is an environment rather than a closure variable because the deprecated
+# `resolveSubobject` path forwards it as `.cache`: downstream coordinators
+# that have not yet switched to `resolve()` memoise their own keys in it, and
+# the deprecated default reads `keep` back out of it.
 #
 # Scope: per-container-call. Persistent caching across calls needs a
 # version-stamp invalidation scheme (deferred).
 #' @keywords internal
 #' @noRd
-.new_resolver_cache <- function() new.env(parent = emptyenv())
-
-# Memoising wrapper around .surviving_cell_ids. Reads/writes through `cache`
-# if supplied; falls back to a direct call when cache is NULL.
-#' @keywords internal
-#' @noRd
-.cached_surviving_cell_ids <- function(gobject, view, coordinator,
-                                       cache = NULL) {
-    if (is.null(cache)) {
-        return(.surviving_cell_ids(gobject, view, coordinator))
-    }
-    if (exists("surviving_ids", envir = cache, inherits = FALSE)) {
-        return(get("surviving_ids", envir = cache))
-    }
-    ids <- .surviving_cell_ids(gobject, view, coordinator)
-    assign("surviving_ids", ids, envir = cache)
-    ids
+.new_resolver_cache <- function(gobject, view, coordinator,
+                                spat_unit = NULL, feat_type = NULL) {
+    cache <- new.env(parent = emptyenv())
+    delayedAssign("keep", resolveKeep(coordinator, gobject, view,
+        spat_unit = spat_unit, feat_type = feat_type), assign.env = cache)
+    cache
 }
 
 # Does a downstream package still register this (subobj, coordinator) pair
@@ -639,48 +746,60 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 
 # The one leaf call site. Prefers `resolve()`, and uses the deprecated
 # `resolveSubobject()` when a downstream package still registers this pair
-# under that name -- {GiottoDisk}'s 8 parquetCoordinator registrations land
+# under that name -- {GiottoDisk}'s parquetCoordinator registrations land
 # here until its own switch ships. That arm passes the gobject and the
 # `.cache` they were written against, unchanged.
 #
-# On the `resolve()` arm `keep` is handed over as a promise. Leaves that never
-# read it -- points, images, feature metadata -- never trigger the ID
-# computation, which is the property the old per-leaf `.cache` lookup bought
-# and the reason the container cannot simply compute it eagerly.
+# On the `resolve()` arm `keep` is read out of the cache as a promise. Leaves
+# that never read it -- points, images, feature metadata -- never trigger the
+# ID computation.
 #' @keywords internal
 #' @noRd
-.resolve_leaf <- function(subobj, gobject, view, space, coordinator,
-                          cache = NULL) {
+.resolve_leaf <- function(subobj, gobject, view, space, coordinator, cache) {
     if (.has_legacy_leaf_method(subobj, coordinator)) {
         return(resolveSubobject(subobj, gobject, view, space, coordinator,
             .cache = cache))
     }
-    resolve(subobj, coordinator,
-        keep = .cached_surviving_cell_ids(gobject, view, coordinator, cache),
-        space = space, view = view)
+    resolve(subobj, coordinator, keep = cache$keep, space = space,
+        view = view)
 }
 
-# Compute the cell_ID set that survives a view's filter + crop steps.
-# Returns a character vector of cell_IDs; NULL means "no narrowing" (all
-# cells survive).
+# Is this leaf inside the op's scope? A leaf is compared only on the schema
+# tags it carries: images carry neither and are always in scope; points carry
+# only a feat_type; spatial locations only a spat_unit.
+#
+# Out-of-scope leaves are left untouched rather than narrowed. `resolve()`
+# answers for the scope it was asked about, so a unit nobody requested is not
+# kept consistent with the one that was -- see the contract on `?resolve`.
+#' @keywords internal
+#' @noRd
+.leaf_in_scope <- function(x, spat_unit, feat_type) {
+    su <- spatUnit(x)
+    ft <- featType(x)
+    (is.null(spat_unit) || is.na(su) || identical(su, spat_unit)) &&
+        (is.null(feat_type) || is.na(ft) || identical(ft, feat_type))
+}
+
+# Compute the cell_ID set that survives a view's filter + crop steps, in ONE
+# spat_unit's ID vocabulary. Returns a character vector of cell_IDs; NULL
+# means "no narrowing" (all cells survive).
+#
+# One vocabulary per call is the whole scoping rule. Two spat_units need not
+# share cell_IDs (cells and nuclei, cells and bins), so a set computed in one
+# cannot narrow the other -- `%in%` over disjoint sets answers "empty", not
+# "error". A resolve op is therefore scoped to one spat_unit, and every
+# source this reads -- the starting ID set, filter columns, crop carriers --
+# is read in that unit. `feat_type` never splits the cell vocabulary; it only
+# picks which feat_type's metadata a filter's columns are looked up in.
 #
 # The PREDICATE frame for crop steps is the view's `space` -- the frame the
 # crop region was drawn in. This is independent of any output space the
 # caller may have requested via the explicit `space=` arg, which is why
 # this helper does not take a `space` argument.
-#
-# `coordinator` is unread by this in-memory implementation and kept
-# deliberately: this function is the seam a backed coordinator REPLACES
-# wholesale rather than parameterises, and the replacement does take one --
-# it computes the surviving set in the coordinator's own form (an arrow
-# table, a registered view) instead of a character vector. Turning this into
-# a coordinator-dispatched generic is the shape that lands when the first
-# such backend switches over; see design_view_space.Rmd. The crop-carrier
-# helpers below it were threaded the same way and did NOT have that future,
-# so they no longer take one.
 #' @keywords internal
 #' @noRd
-.surviving_cell_ids <- function(gobject, view, coordinator) {
+.surviving_cell_ids <- function(gobject, view, spat_unit = NULL,
+                                feat_type = NULL) {
     if (is.null(view)) return(NULL)
 
     filter_steps <- .view_steps_of(view, "filter")
@@ -698,17 +817,18 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
         return(NULL)
     }
 
-    surviving <- if (no_sel) spatIDs(gobject) else
-        spatIDs(gobject, object = sel)
+    surviving <- if (no_sel) spatIDs(gobject, spat_unit = spat_unit) else
+        spatIDs(gobject, spat_unit = spat_unit, object = sel)
     for (step in filter_steps) {
-        keep <- .eval_view_filter(step, gobject)
+        keep <- .eval_view_filter(step, gobject, spat_unit = spat_unit,
+            feat_type = feat_type)
         surviving <- intersect(surviving, keep)
     }
     if (length(crop_steps) > 0L) {
         # Carriers are built lazily and per frame, so an all-poly recipe on
         # a polygon-only object never asks for spatial locations and never
         # warns about their absence.
-        carriers <- .crop_carriers(gobject)
+        carriers <- .crop_carriers(gobject, spat_unit = spat_unit)
         for (step in crop_steps) {
             keep <- .cells_in_crop_step(gobject, step, carriers)
             # NULL = this step could not be evaluated (no region recorded,
@@ -738,11 +858,10 @@ setMethod("defaultViewCoordinator", signature(source = "ANY"),
 # surviving cell_ID set and are otherwise untouched by space transforms, which
 # are no-ops on non-spatial data.
 #
-# Note: `keep` arrives in whatever form its coordinator's method wants, which
-# for dataTableCoordinator is a plain character vector consumed via `%in%`. A
-# backed coordinator registers its own methods and promotes the set to a
-# JOIN-able reference itself -- there is no separate protocol step for that,
-# because dispatching on the coordinator is what selects the promotion.
+# `keep` is a `viewKeep`; these leaves read its `vector` form, a character
+# vector consumed via `%in%`. A backed coordinator's `resolveKeep()` method
+# fills that form too, which is what lets its in-memory subobjects fall
+# through to these methods unchanged.
 #
 # `keep` is read with `is.null()`, never `missing()`: an S4 method whose
 # formals extend the generic's is wrapped in a `.local` call, and `missing()`
@@ -754,7 +873,7 @@ setMethod("resolve",
     signature(x = "cellMetaObj", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
         if (is.null(keep)) return(x)
-        .narrow_subobject(x, cells = keep)
+        .narrow_subobject(x, cells = keep$vector)
     }
 )
 
@@ -764,7 +883,7 @@ setMethod("resolve",
     signature(x = "exprObj", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
         if (is.null(keep)) return(x)
-        .narrow_subobject(x, cells = keep)
+        .narrow_subobject(x, cells = keep$vector)
     }
 )
 
@@ -774,7 +893,7 @@ setMethod("resolve",
     signature(x = "dimObj", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
         if (is.null(keep)) return(x)
-        .narrow_subobject(x, cells = keep)
+        .narrow_subobject(x, cells = keep$vector)
     }
 )
 
@@ -784,7 +903,7 @@ setMethod("resolve",
     signature(x = "spatEnrObj", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
         if (is.null(keep)) return(x)
-        .narrow_subobject(x, cells = keep)
+        .narrow_subobject(x, cells = keep$vector)
     }
 )
 
@@ -813,7 +932,7 @@ setMethod("resolve",
 setMethod("resolve",
     signature(x = "spatLocsObj", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL, ...) {
-        if (!is.null(keep)) x <- .narrow_subobject(x, cells = keep)
+        if (!is.null(keep)) x <- .narrow_subobject(x, cells = keep$vector)
         .apply_space_to_subobj(x, space)
     }
 )
@@ -826,10 +945,11 @@ setMethod("resolve",
         if (!is.null(keep)) {
             # Polygon's poly_ID is conventionally aligned with cell_ID for
             # the cells spat_unit. (Unlinked-poly cascade is out of scope.)
-            x <- .narrow_subobject(x, cells = keep)
+            x <- .narrow_subobject(x, cells = keep$vector)
             # Cached ID list, if present
             if (length(x@unique_ID_cache) > 0L) {
-                x@unique_ID_cache <- intersect(x@unique_ID_cache, keep)
+                x@unique_ID_cache <- intersect(x@unique_ID_cache,
+                    keep$vector)
             }
         }
         .apply_space_to_subobj(x, space)

@@ -423,7 +423,7 @@ and it is precisely the thing that should happen once at the container.
 So a leaf now takes what the container computed:
 
 ```r
-resolve(subobj, coordinator, keep = ids, space = s, view = v)
+resolve(subobj, coordinator, keep = k, space = s, view = v)
 ```
 
 `view` stays because `.apply_crops_geometrically()` reads its crop steps, and
@@ -433,7 +433,7 @@ Three things fall out:
 
 - **A leaf is callable, and testable, alone.** `resolveSubobject(myExprObj, …)`
   needed a whole gobject and a view to do anything. `resolve(myExprObj, co,
-  keep = ids)` is a unit test.
+  keep = k)` is a unit test.
 - **The `.cache` hack is gone from the leaf contract.** Every leaf used to
   fish `cache <- list(...)$.cache` out of the dots and memoise through a
   shared environment, because each independently re-derived a value the
@@ -445,11 +445,55 @@ Three things fall out:
   `resolve(g, slots = "feat_info")` still costs nothing. R's argument
   evaluation does the memoising the environment used to do.
 
-This also dissolves the first half of #424 rather than patching it. One ID
-vocabulary was applied across every spat_unit because the leaf had no way to
-ask for its own; the container is the thing walking the nesting keys, so
-computing `keep` per spat_unit hands each leaf the correct set by
-construction.
+### One resolve op, one scope, one `keep`
+
+A resolve op is scoped to one `spat_unit` and one `feat_type` (the active
+ones unless named), and computes **one** surviving cell set, in that unit's
+cell_ID vocabulary. Only subobjects in scope are walked; the rest are left
+untouched.
+
+The scope exists because two spat_units need not share IDs. Cells and nuclei,
+or cells and bins, are keyed independently, so a set computed in one cannot
+narrow the other: `%in%` over disjoint sets answers "empty", not "error", and
+the object still looks valid afterwards. The walk used to narrow every unit
+with one set computed in the active unit, which was correct only when every
+unit shared the active one's vocabulary. The vizgen mini does, which is why it
+went unnoticed until a cells + nuclei object came back with no nuclei (#424).
+
+A set *per unit* was considered and is not needed. `resolve()` is plumbing for
+a consumer of one scope — a plot reads one spat_unit — and it answers only for
+the scope it was asked about. Content outside that scope is not kept
+consistent with the narrowed content, and a caller who wants two units calls
+twice. `feat_type` never splits the cell vocabulary (a unit's rna and protein
+share cell_IDs); it only picks which metadata a filter's columns are read from,
+so it is an input to the one set, not a reason for several. A filter across
+units — cells by a property of their nuclei — would still produce a subset of
+one unit's IDs, so it changes how the set is evaluated, not how many there are.
+Until it exists, a filter step recorded on another unit is an error.
+
+### `keep` is a `viewKeep`, filled for every coordinator up the chain
+
+`resolveKeep(coordinator, gobject, view, spat_unit, feat_type)` evaluates the
+view and dispatches on the coordinator. It returns a `viewKeep`: a named list
+holding one form of the set per coordinator that reads it — `vector`, a
+character vector, for `dataTableCoordinator`; a backed coordinator adds the
+form its store joins against. The container calls it once, as a promise, and
+every leaf reads its own form.
+
+The rule is that a coordinator's method fills in the forms of every
+coordinator its class extends, as well as its own. That is what makes
+inheritance safe. `parquetCoordinator` contains `dataTableCoordinator`, so an
+in-memory subobject inside a backed gobject lands on an in-memory leaf —
+explicitly through `callNextMethod()`, or implicitly for any class the backed
+package never registers. Either way the leaf finds `vector`. A coordinator
+with no fast path for some step can call the inherited method and promote the
+vector into its own form.
+
+It is a list with a class, not an S4 object with a constructor. Its only
+content is the forms, and each coordinator builds its own. Converting an arrow
+Table to a character vector with `as.vector()` returns an ALTREP vector, so a
+backed coordinator can fill `vector` eagerly at no cost: the R strings are
+built only if an in-memory leaf touches them.
 
 ### The coordinator protocol was a layer that never existed
 
@@ -506,9 +550,10 @@ GiottoDisk. Its leaves push the view down into the store as a predicate —
 and in cache mode compute the surviving set as an **arrow table** rather than
 a character vector, scoped by spat_unit and feat_type. So the leaf contract's
 `keep` is not "a character vector of IDs" but "the surviving set in whatever
-form this coordinator's methods want" — the coordinator in the signature is
-what makes that well defined. Naming it here so the next pass does not
-rediscover it.
+form this coordinator's methods want", which is what the forms of a
+`viewKeep` carry. The lazy cross-store join those leaves also have, for
+atlas-scale owners, does not need the gobject either: the narrowed owner store
+is lazy, so it is a form the container can build.
 
 ### A view on a `giottoMulti` is evaluated at the parent and nowhere else
 
