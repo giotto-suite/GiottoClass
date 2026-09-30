@@ -3474,8 +3474,10 @@ setMethod("setGiottoImage", signature("giotto"), function(gobject,
 #' `"dimension_reduction"` and `"spatial_info"` (polygon info), which scope to
 #' that slot while leaving its item at the default. A `slot` that contradicts
 #' a name param is an error.
-#' @param svkey use a `svkey`. Other params will be ignored. This is just
-#' syntactic sugar for `svkey@get(gobject)`
+#' @param svkey a `svkey`, or a list of them. A single `svkey` is syntactic
+#' sugar for `svkey@get(gobject)`, and other params are ignored. A list pulls
+#' each key and joins the results on `cell_ID` (see details); `view`, `space`
+#' and `samples` apply to every key, and the other params are ignored.
 #' @param samples character. (giottoMulti only) optional vector of sample
 #' names to narrow the joint output to. Joint slots (`@expression`,
 #' `@cell_metadata`) honor this directly; per-child-only slots (spatial
@@ -3501,6 +3503,16 @@ setMethod("setGiottoImage", signature("giotto"), function(gobject,
 #' If a specific name for one of the types of information is provided via a
 #' param such as `expression_values`, `spat_enr_name`, etc, or a `slot` is
 #' given, then the search will only be performed on that type of data.\cr\cr
+#' **\[svkey lists\]**\cr
+#' Each key carries its own location through its params, so a list can pull
+#' the same name from different slots, or from different items in one slot
+#' (e.g. `raw` and `normalized` expression), in one call. Results are joined
+#' on `cell_ID` as a full join: a cell missing from one key gets `NA` there.
+#' All keys must resolve to the same `spat_unit`, since cell IDs are not
+#' shared across units. When a value name comes back from more than one key,
+#' those columns are prefixed with the key's list name, or, for an unnamed
+#' list, with what locates the key (its `expression_values`, `slot`, etc.).
+#' If that still does not tell them apart, name the list.\cr\cr
 #' **\[debug\]**\cr
 #' This function uses Giotto's accessor functions which can usually throw errors
 #' whenever a specific set of data or the features within that set do not
@@ -3555,7 +3567,12 @@ spatValues <- function(gobject,
     # Sample identity is surfaced as a `list_ID` column at the bottom.
     checkmate::assert_class(gobject, "gAny")
     if (!is.null(svkey)) {
-        checkmate::assert_class(svkey, "svkey")
+        if (!inherits(svkey, "svkey")) {
+            return(.sv_key_list(gobject, svkey,
+                view = view, space = space, samples = samples,
+                verbose = verbose, debug = debug
+            ))
+        }
         return(svkey@get(gobject))
     }
     # `samples =` is a giottoMulti-only narrowing arg. On a single giotto
@@ -3992,6 +4009,102 @@ svkey <- function(feats,
 
 
 # internals ####
+
+# spatValues() over a list of svkeys: one spatValues() per key, joined on
+# cell_ID. Each key is a full location (slot, item, spat_unit, feat_type), so
+# a repeated value name across keys is the expected case -- raw vs normalized,
+# expression vs metadata -- and is resolved by prefixing, not refused.
+.sv_key_list <- function(gobject, keys, view = NULL, space = NULL,
+    samples = NULL, verbose = NULL, debug = FALSE) {
+    checkmate::assert_list(keys, types = "svkey", min.len = 1L,
+        .var.name = "svkey")
+
+    # cell IDs are only comparable within one spat_unit
+    units <- vapply(keys, function(k) {
+        u <- k@spat_unit
+        if (length(u) > 1L) {
+            stop("[spatValues] an svkey in a list must name one spat_unit, ",
+                "got: ", paste(u, collapse = ", "), call. = FALSE)
+        }
+        if (is.null(u)) set_default_spat_unit(gobject = gobject) else u
+    }, character(1L))
+    if (length(unique(units)) > 1L) {
+        stop("[spatValues] svkeys resolve to different spat_units (",
+            paste(unique(units), collapse = ", "), "). Cell IDs are not ",
+            "shared across units; pull each unit in its own call.",
+            call. = FALSE)
+    }
+
+    res <- lapply(keys, function(k) {
+        spatValues(gobject,
+            feats = k@feats,
+            spat_unit = k@spat_unit,
+            feat_type = k@feat_type,
+            expression_values = k@expression_values,
+            spat_loc_name = k@spat_loc_name,
+            spat_enr_name = k@spat_enr_name,
+            poly_info = k@poly_info,
+            dim_reduction_to_use = k@dim_reduction_to_use,
+            dim_reduction_name = k@dim_reduction_name,
+            slot = k@slot,
+            view = view,
+            space = space,
+            samples = samples,
+            verbose = k@verbose %null% verbose,
+            debug = debug
+        )
+    })
+
+    .sv_join_keyed(res, labels = .sv_key_labels(keys))
+}
+
+# What names a key in a prefix: its list name, else the item or slot it
+# points at, else its position.
+.sv_key_labels <- function(keys) {
+    nms <- names(keys) %null% rep("", length(keys))
+    vapply(seq_along(keys), function(i) {
+        if (nzchar(nms[[i]])) {
+            return(nms[[i]])
+        }
+        k <- keys[[i]]
+        loc <- c(k@expression_values, k@spat_loc_name, k@spat_enr_name,
+            k@poly_info, k@dim_reduction_name, k@dim_reduction_to_use,
+            k@slot)
+        if (length(loc)) loc[[1L]] else paste0("key", i)
+    }, character(1L))
+}
+
+# Full join of per-key tables on cell_ID, in first-appearance order. Value
+# columns named by more than one table are prefixed `<label>_<name>`.
+.sv_join_keyed <- function(res, labels) {
+    vcols <- lapply(res, function(r) setdiff(colnames(r), "cell_ID"))
+    counts <- table(unlist(vcols))
+    shared <- names(counts)[counts > 1L]
+    for (i in seq_along(res)) {
+        hit <- intersect(vcols[[i]], shared)
+        if (length(hit)) {
+            new <- paste0(labels[[i]], "_", hit)
+            res[[i]] <- data.table::copy(res[[i]])
+            data.table::setnames(res[[i]], hit, new)
+            vcols[[i]][match(hit, vcols[[i]])] <- new
+        }
+    }
+    all_cols <- unlist(vcols)
+    if (anyDuplicated(all_cols)) {
+        stop("[spatValues] svkeys return overlapping columns that their ",
+            "locations do not tell apart: ",
+            paste(unique(all_cols[duplicated(all_cols)]), collapse = ", "),
+            ". Name the list to prefix them.", call. = FALSE)
+    }
+
+    ids <- unique(unlist(lapply(res, `[[`, "cell_ID")))
+    out <- data.table::data.table(cell_ID = ids)
+    for (i in seq_along(res)) {
+        idx <- match(ids, res[[i]]$cell_ID)
+        out[, (vcols[[i]]) := res[[i]][idx, vcols[[i]], with = FALSE]]
+    }
+    out[]
+}
 
 # `slot` -> the label `spatValues()` uses for that check. Refuses a `slot`
 # that contradicts a name param, since the two would scope to different

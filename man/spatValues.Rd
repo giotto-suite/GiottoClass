@@ -76,8 +76,10 @@ The other slots are already scoped by passing their name param
 that slot while leaving its item at the default. A \code{slot} that contradicts
 a name param is an error.}
 
-\item{svkey}{use a \code{svkey}. Other params will be ignored. This is just
-syntactic sugar for \code{svkey@get(gobject)}}
+\item{svkey}{a \code{svkey}, or a list of them. A single \code{svkey} is syntactic
+sugar for \code{svkey@get(gobject)}, and other params are ignored. A list pulls
+each key and joins the results on \code{cell_ID} (see details); \code{view}, \code{space}
+and \code{samples} apply to every key, and the other params are ignored.}
 
 \item{samples}{character. (giottoMulti only) optional vector of sample
 names to narrow the joint output to. Joint slots (\verb{@expression},
@@ -116,6 +118,16 @@ spatValues searches through the set of available information within the
 If a specific name for one of the types of information is provided via a
 param such as \code{expression_values}, \code{spat_enr_name}, etc, or a \code{slot} is
 given, then the search will only be performed on that type of data.\cr\cr
+\strong{[svkey lists]}\cr
+Each key carries its own location through its params, so a list can pull
+the same name from different slots, or from different items in one slot
+(e.g. \code{raw} and \code{normalized} expression), in one call. Results are joined
+on \code{cell_ID} as a full join: a cell missing from one key gets \code{NA} there.
+All keys must resolve to the same \code{spat_unit}, since cell IDs are not
+shared across units. When a value name comes back from more than one key,
+those columns are prefixed with the key's list name, or, for an unnamed
+list, with what locates the key (its \code{expression_values}, \code{slot}, etc.).
+If that still does not tell them apart, name the list.\cr\cr
 \strong{[debug]}\cr
 This function uses Giotto's accessor functions which can usually throw errors
 whenever a specific set of data or the features within that set do not

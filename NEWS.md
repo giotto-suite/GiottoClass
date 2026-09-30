@@ -1,3 +1,15 @@
+# GiottoClass 0.7.6
+
+## changes
+
+- **`spatValues(svkey = )` takes a list of `svkey`s** and joins the results on
+  `cell_ID`. Each key carries its own location, so one call can pull the same
+  name from several places, such as `raw` and `normalized` expression, or a
+  feature and a same-named metadata column. It's a full join. A value name
+  returned by more than one key is prefixed with the key's list name, or, in
+  an unnamed list, with its location (e.g. `raw_CD3E`). Keys must resolve to
+  one `spat_unit`. `view`, `space` and `samples` apply to every key.
+
 # GiottoClass 0.7.5
 
 ## changes
