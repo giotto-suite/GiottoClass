@@ -1,3 +1,19 @@
+# GiottoClass 0.7.8
+
+## bug fixes
+
+- `overlapToMatrix()` on the overlaps of a `giottoBinPoints` counted each
+  (bin, feature) entry once instead of summing its counts, so aggregated
+  Visium HD 2 um bins came out low. The overlap data always carries a `count`
+  column for bin points; it is now autodetected, as it already was for
+  points in `calculateOverlap()`. `feat_count_column = FALSE` opts out, and
+  no longer errors.
+
+- `addSpatialCentroidLocations()` failed with "unable to find an inherited
+  method for function 'geom'" on a project-managed giotto, where polygons are
+  store-backed. The centroids are now read in from the store, and the cell
+  IDs come from `spatIDs()`.
+
 # GiottoClass 0.7.7
 
 ## bug fixes
