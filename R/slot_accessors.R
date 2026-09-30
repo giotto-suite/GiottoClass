@@ -3464,13 +3464,16 @@ setMethod("setGiottoImage", signature("giotto"), function(gobject,
 #' reduction to use
 #' @param dim_reduction_name character. (optional) Name of dimension reduction
 #' to use
-#' @param slot character. (optional) The `giotto` slot to search, one of
-#' `"expression"`, `"cell_metadata"`, `"spatial_locs"`,
-#' `"spatial_enrichment"`, `"dimension_reduction"`, `"spatial_info"` (polygon
-#' info). Scopes the search like the name params above, and is the only way
-#' to scope to cell metadata, which has no name to pass. Use it when a name
-#' could exist in more than one slot, since an unscoped search checks
-#' expression first.
+#' @param slot character. (optional) The `giotto` slot to search. Mainly
+#' `"cell_metadata"`: cell metadata has no name to pass, so this is the only
+#' way to scope the search to it. Use it when a metadata column could share a
+#' name with a feature, since an unscoped search checks expression first.
+#' The other slots are already scoped by passing their name param
+#' (`expression_values`, `spat_loc_name`, ...); `slot` also accepts
+#' `"expression"`, `"spatial_locs"`, `"spatial_enrichment"`,
+#' `"dimension_reduction"` and `"spatial_info"` (polygon info), which scope to
+#' that slot while leaving its item at the default. A `slot` that contradicts
+#' a name param is an error.
 #' @param svkey use a `svkey`. Other params will be ignored. This is just
 #' syntactic sugar for `svkey@get(gobject)`
 #' @param samples character. (giottoMulti only) optional vector of sample

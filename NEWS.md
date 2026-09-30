@@ -2,14 +2,14 @@
 
 ## changes
 
-- **`spatValues()` gains `slot =`** to search one `giotto` slot: `"expression"`,
-  `"cell_metadata"`, `"spatial_locs"`, `"spatial_enrichment"`,
-  `"dimension_reduction"` or `"spatial_info"`. It scopes the search the way
-  `expression_values`, `spat_enr_name` and the other name params already do,
-  and it is the only way to scope to cell metadata, which has no name to pass.
-  An unscoped search checks expression first, so a metadata column that
-  shares a feature's name returned the feature. A `slot` that contradicts a
-  name param is an error. `svkey()` takes and forwards `slot` too.
+- **`spatValues()` gains `slot =`, mainly to scope the search to cell
+  metadata** with `slot = "cell_metadata"`. Every other slot is already scoped
+  by passing its name param (`expression_values`, `spat_enr_name`, ...), but
+  cell metadata has no name to pass. An unscoped search checks expression
+  first, so a metadata column that shares a feature's name returned the
+  feature. `slot` also accepts the other slot names, which scope to that slot
+  while leaving its item at the default. A `slot` that contradicts a name param
+  is an error. `svkey()` takes and forwards `slot` too.
 - **`calculateMetaTable()` computes its means in one grouped
   `analyzeData(featStatsParam)` call** instead of one pass per group, so a
   disk-backed expression store is read once rather than once per group. It
