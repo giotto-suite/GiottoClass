@@ -1,3 +1,25 @@
+# GiottoClass 0.7.4
+
+## changes
+
+- **`allMatrix`, `featStatsParam` and `cellStatsParam` are defined here**, moved
+  down from Giotto together with the `analyzeData()` methods for the two
+  stats params. They are arithmetic summaries with no analysis choice in them,
+  and packages that cannot depend on Giotto need them: per-group means for
+  cluster heatmaps and trees, for example. `allMatrix` gains `DelayedArray`
+  and BPCells' `IterableMatrix` at load time when those are installed, as it
+  did in Giotto. Giotto's `analyzeParam("feat_stats")` /
+  `analyzeParam("cell_stats")` still build them. Construct them directly with
+  `new("featStatsParam", param = list(...))`; `detection_threshold` defaults to
+  `0`.
+
+## bug fixes
+
+- `analyzeData(<IterableMatrix>, featStatsParam)` with a `detection_threshold`
+  above 0 no longer errors computing `mean_expr_det`. It clamped through the
+  `allMatrix` threshold method, which assigns into the matrix and is not
+  supported for BPCells matrices; it now calls `BPCells::min_scalar()`.
+
 # GiottoClass 0.7.3
 
 ## bug fixes

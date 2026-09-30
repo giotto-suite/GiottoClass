@@ -17,4 +17,5 @@
 #' @importMethodsFrom terra nrow ncol
 #' @importMethodsFrom terra hist density
 #' @importClassesFrom terra SpatExtent SpatVector
+#' @importClassesFrom Matrix Matrix
 NULL
