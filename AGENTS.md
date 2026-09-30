@@ -57,7 +57,7 @@ NEWS.md                   # Changelog
 | File | Role |
 |------|------|
 | `R/classes.R` | Core `giotto` S4 class definition (24 slots) + most subobject classes |
-| `R/classes-virtuals.R` | Virtual/abstract base classes and class unions |
+| `R/classes-virtuals.R` | Virtual/abstract base classes and class unions, incl. `allMatrix` |
 | `R/classes-points.R` | `giottoPoints`, `featureNetwork` |
 | `R/classes-polygons.R` | `giottoPolygon` |
 | `R/classes-images.R` | `giottoImage`, `giottoLargeImage`, `giottoAffineImage` |
@@ -75,7 +75,8 @@ NEWS.md                   # Changelog
 | `R/flex_functions.R` | `*_flex` dispatch helpers (see *Dispatch outside S4* below) |
 | `R/package_imports.R` | All `@import`/`@importFrom` declarations (centralised) |
 | `R/auxilliary.R` | Internal helper utilities |
-| `R/zzz.R` | Package startup hooks, `allMatrix` class union |
+| `R/zzz.R` | Package startup hooks, including the load hook that adds `DelayedArray` / `IterableMatrix` to `allMatrix` |
+| `R/analyze-featStats.R` | `featStatsParam` / `cellStatsParam` and their `analyzeData()` methods (the grouped featStats contract disk backends reproduce) |
 
 ---
 

@@ -10,7 +10,18 @@ setClassUnion("nullOrList", c("NULL", "list"))
 setClassUnion("nullOrInstructions", c("nullOrList", "giottoInstructions"))
 setClassUnion("nullOrDatatable", c("NULL", "data.table"))
 setClassUnion("nullOrLogical", c("NULL", "logical"))
-# see zzz.R for allMatrix
+
+#' @title allMatrix
+#' @name allMatrix-class
+#' @aliases allMatrix
+#' @description
+#' Class union of the matrix representations that expression-type methods
+#' dispatch on: base `matrix` and \pkg{Matrix} classes, plus `DelayedArray`
+#' and \pkg{BPCells} `IterableMatrix` when those packages are installed. The
+#' optional members are added at load time (see `zzz.R`), so this package
+#' does not depend on either.
+#' @exportClass allMatrix
+setClassUnion("allMatrix", members = c("matrix", "Matrix"))
 
 #' @title gIndex
 #' @description
