@@ -31,6 +31,7 @@ svkey(
   feat_type = NULL,
   expression_values = NULL,
   spat_loc_name = NULL,
+  spat_enr_name = NULL,
   poly_info = NULL,
   dim_reduction_to_use = NULL,
   dim_reduction_name = NULL,
