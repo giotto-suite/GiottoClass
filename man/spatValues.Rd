@@ -16,6 +16,7 @@ spatValues(
   poly_info = NULL,
   dim_reduction_to_use = NULL,
   dim_reduction_name = NULL,
+  slot = NULL,
   svkey = NULL,
   view = NULL,
   space = NULL,
@@ -33,6 +34,7 @@ svkey(
   poly_info = NULL,
   dim_reduction_to_use = NULL,
   dim_reduction_name = NULL,
+  slot = NULL,
   verbose = NULL
 )
 }
@@ -62,6 +64,17 @@ reduction to use}
 
 \item{dim_reduction_name}{character. (optional) Name of dimension reduction
 to use}
+
+\item{slot}{character. (optional) The \code{giotto} slot to search. Mainly
+\code{"cell_metadata"}: cell metadata has no name to pass, so this is the only
+way to scope the search to it. Use it when a metadata column could share a
+name with a feature, since an unscoped search checks expression first.
+The other slots are already scoped by passing their name param
+(\code{expression_values}, \code{spat_loc_name}, ...); \code{slot} also accepts
+\code{"expression"}, \code{"spatial_locs"}, \code{"spatial_enrichment"},
+\code{"dimension_reduction"} and \code{"spatial_info"} (polygon info), which scope to
+that slot while leaving its item at the default. A \code{slot} that contradicts
+a name param is an error.}
 
 \item{svkey}{use a \code{svkey}. Other params will be ignored. This is just
 syntactic sugar for \code{svkey@get(gobject)}}
@@ -101,8 +114,8 @@ spatValues searches through the set of available information within the
 \item{polygon info}
 }
 If a specific name for one of the types of information is provided via a
-param such as \code{expression_values}, \code{spat_enr_name}, etc, then
-the search will only be performed on that type of data.\cr\cr
+param such as \code{expression_values}, \code{spat_enr_name}, etc, or a \code{slot} is
+given, then the search will only be performed on that type of data.\cr\cr
 \strong{[debug]}\cr
 This function uses Giotto's accessor functions which can usually throw errors
 whenever a specific set of data or the features within that set do not
@@ -136,5 +149,8 @@ spatValues(g, spat_unit = "aggregate", feats = c("agg_n", "valid"))
 
 # cell meta
 spatValues(g, spat_unit = "aggregate", feats = c("nr_feats"))
+spatValues(g, spat_unit = "aggregate", feats = "leiden_clus",
+    slot = "cell_metadata"
+)
 
 }

@@ -225,8 +225,10 @@ GiottoDisk** — not a new generic here. Route to the generic whose return
 contract matches, or fall through to the `ANY,ANY` catch-all. A method attached
 to the wrong generic silently never dispatches.
 
-GiottoClass defines these generics and the virtual `Param` classes and exports
-**no methods** for them.
+GiottoClass defines these generics and the virtual `Param` classes. The only
+methods it exports are arithmetic summaries other packages build on
+(`featStatsParam` / `cellStatsParam`, `labelProportionsParam`); analysis
+methods belong in Giotto or GiottoDisk.
 
 If a generic genuinely is new, it goes in `R/generics.R` with an `@rdname` tag
 and no implementation.

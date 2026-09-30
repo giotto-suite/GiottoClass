@@ -164,6 +164,7 @@ setClass("svkey",
         poly_info = "nullOrChar",
         dim_reduction_to_use = "nullOrChar",
         dim_reduction_name = "nullOrChar",
+        slot = "nullOrChar",
         verbose = "nullOrLogical",
         get = "function"
     )

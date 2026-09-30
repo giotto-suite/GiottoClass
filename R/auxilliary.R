@@ -1050,13 +1050,23 @@ calculateMetaTable <- function(gobject,
     }
 
     # data.table variables
-    uniq_ID <- NULL
+    uniq_ID <- variable <- value <- NULL
 
-    ## get metadata and create unique groups
-    metadata <- data.table::copy(pDataDT(
-        gobject,
-        feat_type = feat_type, spat_unit = spat_unit
-    ))
+    ## groups, from cell metadata only -- an unscoped lookup searches
+    ## expression first, so a metadata column sharing a feature's name would
+    ## silently return that feature
+    metadata <- spatValues(gobject,
+        feats = metadata_cols,
+        spat_unit = spat_unit,
+        feat_type = feat_type,
+        slot = "cell_metadata",
+        verbose = FALSE
+    )
+    missing_cols <- setdiff(metadata_cols, colnames(metadata))
+    if (length(missing_cols)) {
+        stop("[calculateMetaTable] `metadata_cols` not found in cell metadata: ",
+            paste(missing_cols, collapse = ", "), call. = FALSE)
+    }
     if (length(metadata_cols) > 1) {
         metadata[, uniq_ID := paste(.SD, collapse = "-"),
             by = seq_len(nrow(metadata)), .SDcols = metadata_cols
@@ -1064,16 +1074,9 @@ calculateMetaTable <- function(gobject,
     } else {
         metadata[, uniq_ID := get(metadata_cols)]
     }
-
-    ## possible groups
-    possible_groups <- unique(metadata[, metadata_cols, with = FALSE])
-    if (length(metadata_cols) > 1) {
-        possible_groups[, uniq_ID := paste(.SD, collapse = "-"),
-            by = seq_len(nrow(possible_groups)), .SDcols = metadata_cols
-        ]
-    } else {
-        possible_groups[, uniq_ID := get(metadata_cols)]
-    }
+    # first-appearance order, which the output keeps
+    possible_groups <- unique(metadata[, c(metadata_cols, "uniq_ID"),
+        with = FALSE])
 
     ## get expression data
     values <- match.arg(
@@ -1091,35 +1094,37 @@ calculateMetaTable <- function(gobject,
         output = "matrix"
     )
     if (!is.null(selected_feats)) {
-        expr_values <- expr_values[rownames(expr_values) %in% selected_feats, ]
-    }
-
-    ## summarize unique groups (average)
-    result_list <- list()
-
-    for (row in seq_len(nrow(possible_groups))) {
-        uniq_identifiier <- possible_groups[row][["uniq_ID"]]
-        selected_cell_IDs <- metadata[uniq_ID == uniq_identifiier][["cell_ID"]]
-        sub_expr_values <- expr_values[
-            ,
-            colnames(expr_values) %in% selected_cell_IDs
+        expr_values <- expr_values[
+            rownames(expr_values) %in% selected_feats, ,
+            drop = FALSE
         ]
-
-        if (is.vector(sub_expr_values) == FALSE) {
-            subvec <- rowMeans_flex(sub_expr_values)
-        } else {
-            subvec <- sub_expr_values
-        }
-        result_list[[row]] <- subvec
     }
-    finaldt <- data.table::as.data.table(do.call("rbind", result_list))
-    possible_groups_res <- cbind(possible_groups, finaldt)
-    possible_groups_res_melt <- data.table::melt.data.table(
-        possible_groups_res,
-        id.vars = c(metadata_cols, "uniq_ID")
+
+    ## per-group means in one grouped featStats call, which disk backends
+    ## stream in a single pass. `stats = "sum"` asks for the means only.
+    labels <- stats::setNames(
+        as.character(metadata$uniq_ID), metadata$cell_ID
+    )
+    st <- analyzeData(expr_values, new("featStatsParam", param = list()),
+        groups = labels, stats = "sum"
     )
 
-    return(possible_groups_res_melt)
+    ## long format, feature by feature. A group with no cells in the matrix
+    ## has no row in `st`; its mean over zero cells is NaN, as before.
+    feats <- rownames(expr_values)
+    n_grp <- nrow(possible_groups)
+    grp <- as.character(possible_groups$uniq_ID)
+    hit <- match(
+        paste(rep(grp, times = length(feats)), rep(feats, each = n_grp),
+            sep = "\r"),
+        paste(st$group, st$feats, sep = "\r")
+    )
+    out <- possible_groups[rep(seq_len(n_grp), times = length(feats))]
+    out[, variable := factor(rep(feats, each = n_grp), levels = feats)]
+    out[, value := st$mean_expr[hit]]
+    out[is.na(hit), value := NaN]
+
+    return(out[])
 }
 
 
