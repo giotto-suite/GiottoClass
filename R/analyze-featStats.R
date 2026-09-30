@@ -73,7 +73,7 @@ setMethod("analyzeData",
 
         if (!is.null(groups)) {
             return(.feat_stats_grouped(
-                x, det_thresh, align_groups(x, groups),
+                x, det_thresh, .align_groups(x, groups),
                 stats = stats %null% c("sum", "sumsq", "nnz", "sum_det")
             ))
         }
@@ -118,18 +118,6 @@ setMethod("analyzeData",
 
 # internals ####
 
-#' @title Align a grouping to the columns of a matrix
-#' @name align_groups
-#' @description
-#' Put `groups` into the column order of `x`. Named input is matched on
-#' column (cell) ID; unnamed input is matched by position, with a warning.
-#' Columns the grouping does not name become `NA`.
-#' @param x matrix-like object with column names
-#' @param groups vector or factor of group assignments, ideally named by
-#' column ID
-#' @returns `groups`, reordered to the columns of `x`
-#' @keywords internal
-#' @export
 # A grouping has to mean the same set of cells on both sides. Callers build it
 # from cell metadata, and the expression matrix and the metadata are fetched
 # independently with no guarantee they share a cell order, so a bare positional
@@ -145,7 +133,7 @@ setMethod("analyzeData",
 # masking the rest is a supported way to call this, and the disk backend resolves
 # a grouping the same way. No overlap at all is a mistake, not an empty
 # selection, and says so.
-align_groups <- function(x, groups) {
+.align_groups <- function(x, groups) {
     if (is.null(groups)) {
         return(NULL)
     }

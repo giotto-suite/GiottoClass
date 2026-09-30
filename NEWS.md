@@ -12,8 +12,6 @@
   `analyzeParam("cell_stats")` still build them. Construct them directly with
   `new("featStatsParam", param = list(...))`; `detection_threshold` defaults to
   `0`.
-- New internal export `align_groups()`, which puts a grouping into the column
-  order of a matrix, matching on names when it has them.
 
 ## bug fixes
 
