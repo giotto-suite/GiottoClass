@@ -1,3 +1,11 @@
+# GiottoClass 0.7.7
+
+## bug fixes
+
+- `svkey()` takes `spat_enr_name` and forwards it. The class always had the
+  slot, but the constructor didn't accept the argument and `@get` never passed
+  it on, so a key couldn't point at a specific spatial enrichment.
+
 # GiottoClass 0.7.6
 
 ## changes

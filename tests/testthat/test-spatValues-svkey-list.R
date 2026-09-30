@@ -102,3 +102,20 @@ test_that("the join is a full join in first-appearance order", {
     expect_identical(got$B_x, c(NA, NA, 30L, 40L))
     expect_identical(got$y, c(NA, NA, "p", "q"))
 })
+
+test_that("svkey takes and forwards spat_enr_name", {
+    for (nm in c("cluster_metagene", "DWLS")) {
+        col <- setdiff(colnames(getSpatialEnrichment(g, name = nm,
+            output = "data.table")), "cell_ID")[1]
+        k <- svkey(col, spat_enr_name = nm)
+        expect_identical(k@spat_enr_name, nm)
+        expect_identical(spatValues(g, svkey = k),
+            spatValues(g, feats = col, spat_enr_name = nm))
+    }
+    # in a list, each key reaches its own enrichment
+    got <- spatValues(g, svkey = list(
+        svkey("Neurons", spat_enr_name = "DWLS"),
+        svkey("1", spat_enr_name = "cluster_metagene")
+    ))
+    expect_named(got, c("cell_ID", "Neurons", "1"))
+})
