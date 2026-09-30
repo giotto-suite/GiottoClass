@@ -3464,6 +3464,13 @@ setMethod("setGiottoImage", signature("giotto"), function(gobject,
 #' reduction to use
 #' @param dim_reduction_name character. (optional) Name of dimension reduction
 #' to use
+#' @param slot character. (optional) The `giotto` slot to search, one of
+#' `"expression"`, `"cell_metadata"`, `"spatial_locs"`,
+#' `"spatial_enrichment"`, `"dimension_reduction"`, `"spatial_info"` (polygon
+#' info). Scopes the search like the name params above, and is the only way
+#' to scope to cell metadata, which has no name to pass. Use it when a name
+#' could exist in more than one slot, since an unscoped search checks
+#' expression first.
 #' @param svkey use a `svkey`. Other params will be ignored. This is just
 #' syntactic sugar for `svkey@get(gobject)`
 #' @param samples character. (giottoMulti only) optional vector of sample
@@ -3489,8 +3496,8 @@ setMethod("setGiottoImage", signature("giotto"), function(gobject,
 #'   \item{polygon info}
 #' }
 #' If a specific name for one of the types of information is provided via a
-#' param such as `expression_values`, `spat_enr_name`, etc, then
-#' the search will only be performed on that type of data.\cr\cr
+#' param such as `expression_values`, `spat_enr_name`, etc, or a `slot` is
+#' given, then the search will only be performed on that type of data.\cr\cr
 #' **\[debug\]**\cr
 #' This function uses Giotto's accessor functions which can usually throw errors
 #' whenever a specific set of data or the features within that set do not
@@ -3516,6 +3523,9 @@ setMethod("setGiottoImage", signature("giotto"), function(gobject,
 #'
 #' # cell meta
 #' spatValues(g, spat_unit = "aggregate", feats = c("nr_feats"))
+#' spatValues(g, spat_unit = "aggregate", feats = "leiden_clus",
+#'     slot = "cell_metadata"
+#' )
 #'
 #' @export
 spatValues <- function(gobject,
@@ -3528,6 +3538,7 @@ spatValues <- function(gobject,
     poly_info = NULL,
     dim_reduction_to_use = NULL,
     dim_reduction_name = NULL,
+    slot = NULL,
     svkey = NULL,
     view = NULL,
     space = NULL,
@@ -3552,20 +3563,28 @@ spatValues <- function(gobject,
             call. = FALSE)
     }
     checkmate::assert_character(feats)
+    slot_check <- .sv_resolve_slot(slot,
+        expression_values = expression_values, spat_loc_name = spat_loc_name,
+        spat_enr_name = spat_enr_name, poly_info = poly_info,
+        dim_reduction_to_use = dim_reduction_to_use,
+        dim_reduction_name = dim_reduction_name
+    )
     # dedupe — duplicate feats would produce duplicate columns downstream
     # which silently breaks check_*'s as.data.table step (was the source
     # of confusing "features not found in cell expression" errors).
     feats <- unique(feats)
     # scoped: when the caller has narrowed the search to one slot via a
     # location param (`expression_values`, `spat_enr_name`, `spat_loc_name`,
-    # `poly_info`, `dim_reduction_to_use/_name`), permit partial matches —
+    # `poly_info`, `dim_reduction_to_use/_name`) or `slot`, permit partial
+    # matches —
     # return values for the feats that are present, drop the rest with a
     # verbose note. Unscoped (fall-through to all slots) keeps the strict
     # all-or-nothing semantics so we don't return a partial match from
     # the wrong slot.
     scoped <- (!is.null(expression_values) || !is.null(spat_enr_name) ||
         !is.null(spat_loc_name) || !is.null(poly_info) ||
-        !is.null(dim_reduction_to_use) || !is.null(dim_reduction_name))
+        !is.null(dim_reduction_to_use) || !is.null(dim_reduction_name) ||
+        !is.null(slot_check))
 
     # Self-reference / re-entry guard. The resolver calls spatValues
     # internally to evaluate view-filter predicates; those calls pass
@@ -3810,7 +3829,9 @@ spatValues <- function(gobject,
 
 
     # set nextcheck if location is known -------------------------------- #
-    nextcheck <- NULL
+    # `.sv_resolve_slot()` has already refused a `slot` that contradicts a
+    # name param, so at most one location is in play here
+    nextcheck <- slot_check
     if (!is.null(spat_enr_name)) nextcheck <- "spatial enrichment"
     if (!is.null(spat_loc_name)) nextcheck <- "spatial locations"
     if (!is.null(expression_values)) nextcheck <- "cell expression"
@@ -3943,6 +3964,7 @@ svkey <- function(feats,
     poly_info = NULL,
     dim_reduction_to_use = NULL,
     dim_reduction_name = NULL,
+    slot = NULL,
     verbose = NULL) {
     if (missing(feats)) stop("'feats' to get must be provided", call. = FALSE)
     a <- get_args_list()
@@ -3958,6 +3980,7 @@ svkey <- function(feats,
             poly_info = svk@poly_info,
             dim_reduction_to_use = svk@dim_reduction_to_use,
             dim_reduction_name = svk@dim_reduction_name,
+            slot = svk@slot,
             verbose = svk@verbose
         )
     }
@@ -3966,6 +3989,43 @@ svkey <- function(feats,
 
 
 # internals ####
+
+# `slot` -> the label `spatValues()` uses for that check. Refuses a `slot`
+# that contradicts a name param, since the two would scope to different
+# places and one would silently win.
+.sv_resolve_slot <- function(slot, ...) {
+    if (is.null(slot)) {
+        return(NULL)
+    }
+    labels <- c(
+        expression = "cell expression",
+        cell_metadata = "cell metadata",
+        spatial_locs = "spatial locations",
+        spatial_enrichment = "spatial enrichment",
+        dimension_reduction = "dimension reduction",
+        spatial_info = "polygon info"
+    )
+    checkmate::assert_choice(slot, names(labels), .var.name = "slot")
+
+    implied <- c(
+        expression_values = "expression",
+        spat_loc_name = "spatial_locs",
+        spat_enr_name = "spatial_enrichment",
+        poly_info = "spatial_info",
+        dim_reduction_to_use = "dimension_reduction",
+        dim_reduction_name = "dimension_reduction"
+    )
+    given <- list(...)
+    given <- names(given)[!vapply(given, is.null, logical(1L))]
+    clash <- given[implied[given] != slot]
+    if (length(clash)) {
+        stop(sprintf(
+            "[spatValues] `slot = \"%s\"` conflicts with `%s`, which searches \"%s\"",
+            slot, clash[[1L]], implied[[clash[[1L]]]]
+        ), call. = FALSE)
+    }
+    labels[[slot]]
+}
 
 .simplify_list <- function(x) {
     if (length(x) == 1L && inherits(x, "list")) {

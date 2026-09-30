@@ -16,6 +16,7 @@ spatValues(
   poly_info = NULL,
   dim_reduction_to_use = NULL,
   dim_reduction_name = NULL,
+  slot = NULL,
   svkey = NULL,
   view = NULL,
   space = NULL,
@@ -33,6 +34,7 @@ svkey(
   poly_info = NULL,
   dim_reduction_to_use = NULL,
   dim_reduction_name = NULL,
+  slot = NULL,
   verbose = NULL
 )
 }
@@ -62,6 +64,14 @@ reduction to use}
 
 \item{dim_reduction_name}{character. (optional) Name of dimension reduction
 to use}
+
+\item{slot}{character. (optional) The \code{giotto} slot to search, one of
+\code{"expression"}, \code{"cell_metadata"}, \code{"spatial_locs"},
+\code{"spatial_enrichment"}, \code{"dimension_reduction"}, \code{"spatial_info"} (polygon
+info). Scopes the search like the name params above, and is the only way
+to scope to cell metadata, which has no name to pass. Use it when a name
+could exist in more than one slot, since an unscoped search checks
+expression first.}
 
 \item{svkey}{use a \code{svkey}. Other params will be ignored. This is just
 syntactic sugar for \code{svkey@get(gobject)}}
@@ -101,8 +111,8 @@ spatValues searches through the set of available information within the
 \item{polygon info}
 }
 If a specific name for one of the types of information is provided via a
-param such as \code{expression_values}, \code{spat_enr_name}, etc, then
-the search will only be performed on that type of data.\cr\cr
+param such as \code{expression_values}, \code{spat_enr_name}, etc, or a \code{slot} is
+given, then the search will only be performed on that type of data.\cr\cr
 \strong{[debug]}\cr
 This function uses Giotto's accessor functions which can usually throw errors
 whenever a specific set of data or the features within that set do not
@@ -136,5 +146,8 @@ spatValues(g, spat_unit = "aggregate", feats = c("agg_n", "valid"))
 
 # cell meta
 spatValues(g, spat_unit = "aggregate", feats = c("nr_feats"))
+spatValues(g, spat_unit = "aggregate", feats = "leiden_clus",
+    slot = "cell_metadata"
+)
 
 }

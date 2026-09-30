@@ -1,3 +1,27 @@
+# GiottoClass 0.7.5
+
+## changes
+
+- **`spatValues()` gains `slot =`** to search one `giotto` slot: `"expression"`,
+  `"cell_metadata"`, `"spatial_locs"`, `"spatial_enrichment"`,
+  `"dimension_reduction"` or `"spatial_info"`. It scopes the search the way
+  `expression_values`, `spat_enr_name` and the other name params already do,
+  and it is the only way to scope to cell metadata, which has no name to pass.
+  An unscoped search checks expression first, so a metadata column that
+  shares a feature's name returned the feature. A `slot` that contradicts a
+  name param is an error. `svkey()` takes and forwards `slot` too.
+- **`calculateMetaTable()` computes its means in one grouped
+  `analyzeData(featStatsParam)` call** instead of one pass per group, so a
+  disk-backed expression store is read once rather than once per group. It
+  reads the grouping columns with `spatValues(slot = "cell_metadata")`. The
+  output is unchanged: same columns, same group and feature order, same values.
+
+## bug fixes
+
+- `calculateMetaTable()` with a single `selected_feats` entry no longer errors.
+  The subset dropped the matrix to a vector.
+- `calculateMetaTable()` names any `metadata_cols` missing from cell metadata.
+
 # GiottoClass 0.7.4
 
 ## changes
