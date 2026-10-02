@@ -995,9 +995,17 @@ addSpatialCentroidLocationsLayer <- function(gobject,
         append_gpolygon = TRUE
     )
 
-    centroid_spatvector <- .spatvector_to_dt(
-        extended_spatvector@spatVectorCentroids
-    )
+    ctrds <- extended_spatvector@spatVectorCentroids
+    # On a project-managed giotto the polygons are store-backed and their
+    # centroids come back as a lazy store. Read them in as terra points.
+    if (!inherits(ctrds, "SpatVector")) {
+        GiottoUtils::package_check(
+            "GiottoDisk",
+            repository = "github:giotto-suite/GiottoDisk"
+        )
+        ctrds <- GiottoDisk::storeRead(ctrds, output = "terra")
+    }
+    centroid_spatvector <- .spatvector_to_dt(ctrds)
 
     # this could be 3D
     spatial_locs <- centroid_spatvector[, .(x, y, poly_ID)]
@@ -1033,7 +1041,7 @@ addSpatialCentroidLocationsLayer <- function(gobject,
 
 
         # cell ID
-        gpoly_IDs <- gpoly@spatVector$poly_ID
+        gpoly_IDs <- spatIDs(gpoly, uniques = FALSE)
         ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
         gobject <- set_cell_id(gobject,
             spat_unit = poly_info,
