@@ -1331,7 +1331,7 @@ setMethod(
         gobject@feat_info[feat_type],
         function(gpts) {
             if (!inherits(gpts, "giottoPoints") ||
-                is.null(gpts@spatVector)) return(NULL)
+                !inherits(gpts@spatVector, "SpatVector")) return(NULL)
             gpts@spatVector$feat_ID_uniq
         }
     )
