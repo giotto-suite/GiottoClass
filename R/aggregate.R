@@ -1915,6 +1915,18 @@ setMethod("overlapToMatrix", signature("overlapPointDT"),
     ...) {
         vmsg(.is_debug = TRUE, "[overlap2mat][overlap_point_dt]...")
         output <- match.arg(tolower(output), choices = c("matrix", "exprobj"))
+        # autodetect counts col
+        # (giottoBinPoints overlaps always carry one)
+        if ("count" %in% names(x@data) && is.null(feat_count_column)) {
+            vmsg(
+                "[overlap] Found column \"count\" in overlap data.
+                - Using as `feat_count_column`
+                [!] Set feat_count_column = FALSE to disable.")
+            feat_count_column <- "count"
+        }
+        if (isFALSE(feat_count_column)) {
+            feat_count_column <- NULL
+        }
         m <- as.matrix(x, feat_count_column = feat_count_column, ...)
         if (isTRUE(sort)) m <- .mixedsort_rowcols(m)
         switch(output,

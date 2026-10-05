@@ -155,6 +155,29 @@ test_that("overlapToMatrix works for point overlaps", {
     expect_equal(ovlp_val, 6)
 })
 
+test_that("overlapToMatrix sums bin point counts", {
+    # 4 bins on a grid, 2 features, counts > 1 so summing and counting differ
+    sl <- createSpatLocsObj(data.table::data.table(
+        sdimx = c(1, 2, 11, 12), sdimy = c(1, 1, 1, 1),
+        cell_ID = sprintf("bin_%d", 1:4)
+    ))
+    m <- matrix(c(3, 0, 1, 2, 5, 0, 0, 4), nrow = 2,
+        dimnames = list(c("a", "b"), sprintf("bin_%d", 1:4))
+    )
+    gbp <- createGiottoBinPoints(createExprObj(m), sl)
+    bp <- createGiottoPolygon(terra::as.polygons(terra::ext(0, 5, 0, 2)))
+    bp$poly_ID <- "left"
+    ovlp <- calculateOverlap(bp, gbp, return_gpolygon = FALSE, verbose = FALSE)
+
+    # "count" is detected without being named
+    res <- overlapToMatrix(ovlp)
+    expect_equal(res["a", "left"], 4)
+    expect_equal(res["b", "left"], 2)
+    # FALSE opts out and counts entries instead
+    res_n <- overlapToMatrix(ovlp, feat_count_column = FALSE)
+    expect_equal(res_n["a", "left"], 2)
+})
+
 test_that("overlapToMatrix works for intensity overlaps", {
     res_rast <- calculateOverlap(gpoly, img, verbose = FALSE)
     ovlp_rast <- overlaps(res_rast, "dapi_z0")
