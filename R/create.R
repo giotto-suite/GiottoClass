@@ -254,7 +254,9 @@ createGiottoObject <- function(expression,
     if (is_present(h5_file)) backend <- h5_file
     if (!is_present(h5_file)) h5_file <- NULL
     if (!is.null(backend)) {
-        package_check("GiottoDisk", repository = "github:drieslab/GiottoDisk")
+        package_check("GiottoDisk",
+            repository = "github:giotto-suite/GiottoDisk"
+        )
         if (is.character(backend)) {
             backend <- GiottoDisk::gDirSource(path = backend)
         }
