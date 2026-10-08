@@ -4,13 +4,13 @@
 \alias{activeFeatType-generic}
 \alias{activeFeatType}
 \alias{activeFeatType<-}
-\alias{activeFeatType,giotto-method}
-\alias{activeFeatType<-,giotto,character-method}
+\alias{activeFeatType,gAny-method}
+\alias{activeFeatType<-,gAny,character-method}
 \title{Active feature type}
 \usage{
-\S4method{activeFeatType}{giotto}(gobject)
+\S4method{activeFeatType}{gAny}(gobject)
 
-\S4method{activeFeatType}{giotto,character}(gobject) <- value
+\S4method{activeFeatType}{gAny,character}(gobject) <- value
 }
 \arguments{
 \item{gobject}{giotto object}

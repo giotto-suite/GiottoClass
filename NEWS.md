@@ -1,3 +1,15 @@
+# GiottoClass 0.7.8
+
+## bug fixes
+
+- `instructions()`, `instructions<-()`, `activeSpatUnit()` and
+  `activeFeatType()` (and their setters) work on a `giottoMulti`. The multi
+  always had an `@instructions` slot, but the methods were defined for
+  `giotto` only, so anything that read plot settings from the object
+  (`plotUMAP()`, `plotPCA()`, `dimFeatPlot2D()`, ...) failed on a multi. The
+  multi's instructions are its own; the samples keep theirs. With no active
+  spatial unit or feature type set, the default still comes from the mapping.
+
 # GiottoClass 0.7.7
 
 ## bug fixes

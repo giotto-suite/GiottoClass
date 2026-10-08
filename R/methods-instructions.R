@@ -101,7 +101,7 @@ setMethod(
 #' @rdname giotto_instructions
 #' @export
 setMethod(
-    "instructions", signature(gobject = "giotto", param = "missing"),
+    "instructions", signature(gobject = "gAny", param = "missing"),
     function(gobject) {
         return(.instr_read(gobject))
     }
@@ -112,7 +112,7 @@ setMethod(
 #' @rdname giotto_instructions
 #' @export
 setMethod(
-    "instructions", signature(gobject = "giotto", param = "character"),
+    "instructions", signature(gobject = "gAny", param = "character"),
     function(gobject, param) {
         return(.instr_read(gobject, param = param))
     }
@@ -133,7 +133,7 @@ setMethod(
 setMethod(
     "instructions<-",
     signature(
-        gobject = "giotto",
+        gobject = "gAny",
         param = "missing", initialize = "missing", value = "ANY"
     ),
     function(gobject, initialize, value) {
@@ -149,7 +149,7 @@ setMethod(
 setMethod(
     "instructions<-",
     signature(
-        gobject = "giotto",
+        gobject = "gAny",
         param = "missing", initialize = "logical", value = "ANY"
     ),
     function(gobject, initialize, value) {
@@ -168,7 +168,7 @@ setMethod(
 setMethod(
     "instructions<-",
     signature(
-        gobject = "giotto",
+        gobject = "gAny",
         param = "character", initialize = "missing", value = "ANY"
     ),
     function(gobject, param, initialize, value) {
@@ -187,7 +187,7 @@ setMethod(
 setMethod(
     "instructions<-",
     signature(
-        gobject = "giotto",
+        gobject = "gAny",
         param = "character", initialize = "logical", value = "ANY"
     ),
     function(gobject, param, initialize, value) {
@@ -225,7 +225,7 @@ setMethod(
 ## activeSpatUnit ####
 #' @rdname activeSpatUnit-generic
 #' @export
-setMethod("activeSpatUnit", signature(gobject = "giotto"), function(gobject) {
+setMethod("activeSpatUnit", signature(gobject = "gAny"), function(gobject) {
     su_try <- try(instructions(gobject, "active_spat_unit"), silent = TRUE)
     if (inherits(su_try, "try-error")) su_try <- NULL
     return(su_try)
@@ -235,7 +235,7 @@ setMethod("activeSpatUnit", signature(gobject = "giotto"), function(gobject) {
 #' @rdname activeSpatUnit-generic
 #' @export
 setMethod(
-    "activeSpatUnit<-", signature(gobject = "giotto", value = "character"),
+    "activeSpatUnit<-", signature(gobject = "gAny", value = "character"),
     function(gobject, value) {
         instructions(gobject, "active_spat_unit") <- value
         return(gobject)
@@ -255,7 +255,7 @@ setGeneric(
 
 #' @rdname activeFeatType-generic
 #' @export
-setMethod("activeFeatType", signature(gobject = "giotto"), function(gobject) {
+setMethod("activeFeatType", signature(gobject = "gAny"), function(gobject) {
     ft_try <- try(instructions(gobject, "active_feat_type"), silent = TRUE)
     if (inherits(ft_try, "try-error")) ft_try <- NULL
     return(ft_try)
@@ -265,7 +265,7 @@ setMethod("activeFeatType", signature(gobject = "giotto"), function(gobject) {
 #' @rdname activeFeatType-generic
 #' @export
 setMethod(
-    "activeFeatType<-", signature(gobject = "giotto", value = "character"),
+    "activeFeatType<-", signature(gobject = "gAny", value = "character"),
     function(gobject, value) {
         instructions(gobject, "active_feat_type") <- value
         return(gobject)
