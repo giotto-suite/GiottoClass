@@ -36,7 +36,7 @@ setMethod(
             options("giotto.check_valid" = cv_opt)
         }
 
-        on.exit(.reset_opts, add = TRUE)
+        on.exit(.reset_opts(), add = TRUE)
         options("giotto.init" = FALSE)
         options("giotto.check_valid" = FALSE)
 

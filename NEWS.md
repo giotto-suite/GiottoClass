@@ -17,6 +17,9 @@
   spatial enrichments and cross-sample spatial networks are written to the
   multi. Locations, polygons, points and images are refused with the same
   error as their typed setters, because each belongs to one sample.
+- `setGiotto()` with a list restores the `giotto.init` and
+  `giotto.check_valid` options when one of the items fails. They were switched
+  off for the loop and left off for the rest of the session.
 
 # GiottoClass 0.7.7
 
