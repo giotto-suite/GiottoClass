@@ -6,13 +6,13 @@
 \alias{instructions}
 \alias{instructions<-}
 \alias{instructions,missing,missing-method}
-\alias{instructions,giotto,missing-method}
-\alias{instructions,giotto,character-method}
+\alias{instructions,gAny,missing-method}
+\alias{instructions,gAny,character-method}
 \alias{instructions,giottoInstructions,character-method}
-\alias{instructions<-,giotto,missing,missing-method}
-\alias{instructions<-,giotto,missing,logical-method}
-\alias{instructions<-,giotto,character,missing-method}
-\alias{instructions<-,giotto,character,logical-method}
+\alias{instructions<-,gAny,missing,missing-method}
+\alias{instructions<-,gAny,missing,logical-method}
+\alias{instructions<-,gAny,character,missing-method}
+\alias{instructions<-,gAny,character,logical-method}
 \alias{instructions<-,giottoInstructions,character,ANY-method}
 \title{Giotto instructions}
 \usage{
@@ -35,19 +35,19 @@ createGiottoInstructions(
 
 \S4method{instructions}{missing,missing}(gobject, param, ...)
 
-\S4method{instructions}{giotto,missing}(gobject)
+\S4method{instructions}{gAny,missing}(gobject)
 
-\S4method{instructions}{giotto,character}(gobject, param)
+\S4method{instructions}{gAny,character}(gobject, param)
 
 \S4method{instructions}{giottoInstructions,character}(gobject, param)
 
-\S4method{instructions}{giotto,missing,missing}(gobject, initialize) <- value
+\S4method{instructions}{gAny,missing,missing}(gobject, initialize) <- value
 
-\S4method{instructions}{giotto,missing,logical}(gobject, initialize) <- value
+\S4method{instructions}{gAny,missing,logical}(gobject, initialize) <- value
 
-\S4method{instructions}{giotto,character,missing}(gobject, param, initialize) <- value
+\S4method{instructions}{gAny,character,missing}(gobject, param, initialize) <- value
 
-\S4method{instructions}{giotto,character,logical}(gobject, param, initialize) <- value
+\S4method{instructions}{gAny,character,logical}(gobject, param, initialize) <- value
 
 \S4method{instructions}{giottoInstructions,character,ANY}(gobject, param) <- value
 }

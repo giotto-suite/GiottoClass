@@ -201,8 +201,8 @@ create_giotto_instructions <- function(python_path = NULL,
 .instr_read <- function(giotto_instructions,
     param = NULL,
     default) {
-    # get instructions if provided the giotto object
-    if (inherits(giotto_instructions, "giotto")) {
+    # get instructions if provided a giotto or giottoMulti
+    if (inherits(giotto_instructions, "gAny")) {
         giotto_instructions <- giotto_instructions@instructions
     }
 

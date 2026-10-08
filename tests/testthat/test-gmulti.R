@@ -1166,3 +1166,66 @@ test_that("a single declared handle stays the default despite NA skips", {
     # disagreement about which handle to mean.
     expect_identical(.gm_resolve_axis(mg, "spat_unit", NULL)$handle, "cell")
 })
+
+
+# instructions ####
+
+test_that("instructions read and write on the multi, not its children", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(3, 4), b = .mk_minimal(3, 4)))
+    expect_s3_class(instructions(mg), "giottoInstructions")
+
+    instructions(mg, "show_plot") <- FALSE
+    expect_false(instructions(mg, "show_plot"))
+    expect_true(instructions(mg[["a"]], "show_plot"))
+
+    instructions(mg, "dpi", initialize = FALSE) <- 150
+    expect_identical(instructions(mg, "dpi"), 150)
+
+    instructions(mg) <- createGiottoInstructions(save_plot = FALSE)
+    expect_false(instructions(mg, "save_plot"))
+})
+
+test_that("an unset active spat_unit still defaults through the mapping", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(3, 4), b = .mk_minimal(3, 4)))
+    expect_null(activeSpatUnit(mg))
+    expect_identical(set_default_spat_unit(mg), "cell")
+
+    activeSpatUnit(mg) <- "cell"
+    activeFeatType(mg) <- "rna"
+    expect_identical(activeSpatUnit(mg), "cell")
+    expect_identical(set_default_feat_type(mg, spat_unit = "cell"), "rna")
+})
+
+
+# setGiotto ####
+
+test_that("setGiotto writes joint subobjects onto the multi", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(3, 4), b = .mk_minimal(3, 4)))
+    m <- getExpression(mg, output = "matrix")
+    x <- createExprObj(m + 1, name = "normalized", spat_unit = "cell",
+        feat_type = "rna")
+
+    mg <- setGiotto(mg, x, verbose = FALSE)
+    expect_identical(
+        getExpression(mg, values = "normalized", output = "matrix")[],
+        m + 1)
+    expect_null(mg[["a"]]@expression$cell$rna$normalized)
+})
+
+test_that("setGiotto sets a list of subobjects onto the multi", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(3, 4), b = .mk_minimal(3, 4)))
+    m <- getExpression(mg, output = "matrix")
+    xs <- list(
+        createExprObj(m + 1, name = "n1", spat_unit = "cell", feat_type = "rna"),
+        createExprObj(m + 2, name = "n2", spat_unit = "cell", feat_type = "rna"))
+
+    mg <- setGiotto(mg, xs, verbose = FALSE)
+    expect_true(all(c("n1", "n2") %in% names(mg@expression$cell$rna)))
+})
+
+test_that("setGiotto refuses a per-sample spatial subobject on the multi", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(3, 4), b = .mk_minimal(3, 4)))
+    sl <- createSpatLocsObj(data.table::data.table(
+        sdimx = 1:3, sdimy = 1:3, cell_ID = paste0("c", 1:3)))
+    expect_error(setGiotto(mg, sl, verbose = FALSE), "belongs to exactly one sample")
+})
