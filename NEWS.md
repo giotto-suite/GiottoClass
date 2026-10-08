@@ -1,3 +1,11 @@
+# GiottoClass 0.7.9
+
+## changes
+
+- The `gAny` virtual class is exported. It is the base class that `giotto`
+  and `giottoMulti` share, so another package can define one method on
+  `gAny` and have it apply to both.
+
 # GiottoClass 0.7.8
 
 ## bug fixes

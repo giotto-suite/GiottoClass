@@ -45,8 +45,12 @@ setClassUnion("gIndex", c("numeric", "logical", "character"))
 #' shared-domain API without inheriting `giotto`'s spatial slots — and without
 #' spatial-domain methods silently falling through to slots it does not have.
 #' An unimplemented method fails loudly via no-method dispatch instead.
+#'
+#' Exported so that analysis packages can attach their container-level
+#' methods to `gAny` too, covering `giotto` and `giottoMulti` with one method.
+#' @name gAny-class
 #' @keywords internal
-#' @noRd
+#' @exportClass gAny
 setClass(
     "gAny",
     contains = "VIRTUAL"
