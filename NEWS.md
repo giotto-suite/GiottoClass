@@ -9,6 +9,14 @@
   (`plotUMAP()`, `plotPCA()`, `dimFeatPlot2D()`, ...) failed on a multi. The
   multi's instructions are its own; the samples keep theirs. With no active
   spatial unit or feature type set, the default still comes from the mapping.
+- `setGiotto()` works on a `giottoMulti`. It forwards each subobject to its
+  typed setter, and those already handled the multi, but `setGiotto()` itself
+  was defined for `giotto` only, so every analysis function that saves its
+  result through it (`normalizeGiotto()`, `runPCA()`, ...) failed on a multi.
+  Expression, metadata, dimension reductions, nearest-neighbor networks,
+  spatial enrichments and cross-sample spatial networks are written to the
+  multi. Locations, polygons, points and images are refused with the same
+  error as their typed setters, because each belongs to one sample.
 
 # GiottoClass 0.7.7
 

@@ -55,7 +55,7 @@ Other functions to set data in giotto object:
 \code{\link[=setDimReduction]{setDimReduction()}},
 \code{\link[=setExpression]{setExpression()}},
 \code{\link[=setFeatureMetadata]{setFeatureMetadata()}},
-\code{\link{setGiotto,giotto,giottoBinPoints-method}},
+\code{\link{setGiotto,gAny,giottoBinPoints-method}},
 \code{\link[=setGiottoImage]{setGiottoImage()}},
 \code{\link[=setMultiomics]{setMultiomics()}},
 \code{\link[=setNearestNetwork]{setNearestNetwork()}},

@@ -243,7 +243,7 @@ tail.giottoBinPoints <- function(x, n = 6L, ...) {
 
 #' @rdname setGiotto
 #' @export
-setMethod("setGiotto", signature("giotto", "giottoBinPoints"),
+setMethod("setGiotto", signature("gAny", "giottoBinPoints"),
     function(gobject, x, ...) {
         gobject <- setFeatureInfo(gobject = gobject, x = x, ...)
         gobject
