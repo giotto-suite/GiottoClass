@@ -1636,6 +1636,7 @@ setMethod(
             output = "exprobj",
             sort = TRUE,
             type = type,
+            verbose = verbose,
             ...
         )
 
@@ -1753,17 +1754,9 @@ setMethod(
 
 
         # 2. Perform aggregation to counts DT
-        # autodetect counts col
-        if ("count" %in% names(dtoverlap) && is.null(feat_count_column)) {
-            vmsg(.v = verbose,
-                 "[overlap] Found column \"count\" in feature info.
-                - Using as `feat_count_column`
-                [!] Set feat_count_column = FALSE to disable.")
-            feat_count_column <- "count"
-        }
-        if (isFALSE(feat_count_column)) {
-            feat_count_column <- NULL
-        }
+        feat_count_column <- .resolve_count_column(
+            names(dtoverlap), feat_count_column, verbose = verbose
+        )
 
         if (!is.null(feat_count_column)) { # if there is a counts col selected
 
@@ -1901,6 +1894,22 @@ setMethod(
 )
 
 # * overlapPointDT ####
+
+# Which overlap column holds counts. A `count` column reaches an overlap only
+# when counts were meant (calculateOverlap() detects it in the points; bin
+# points always carry it), so it is summed unless `FALSE` asks for row counts.
+.resolve_count_column <- function(cols, feat_count_column = NULL,
+                                  verbose = NULL) {
+    if (isFALSE(feat_count_column)) return(NULL)
+    if (is.null(feat_count_column) && "count" %in% cols) {
+        vmsg(.v = verbose,
+             "[overlap] Found column \"count\" in feature info.
+            - Using as `feat_count_column`
+            [!] Set feat_count_column = FALSE to disable.")
+        feat_count_column <- "count"
+    }
+    feat_count_column
+}
 
 #' @rdname overlapToMatrix
 #' @param sort logical (default = TRUE). Whether to perform a mixed sort on

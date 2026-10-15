@@ -254,3 +254,62 @@ test_that("overlap `as.data.frame` works", {
 #
 
 
+
+# A `count` column in the points is summed by default at the matrix step, the
+# same as the explicit `feat_count_column = "count"`; `FALSE` counts rows.
+.count_toy <- function() {
+    sv <- terra::vect(c("POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))",
+                        "POLYGON ((2 0, 4 0, 4 2, 2 2, 2 0))"))
+    sv$poly_ID <- c("A", "B")
+    pts <- data.table::data.table(
+        feat_ID = c("g1", "g1", "g2", "g1"),
+        x = c(0.5, 1.5, 1, 3), y = c(1, 1, 0.5, 1), count = c(3, 2, 5, 4)
+    )
+    createGiottoObjectSubcellular(
+        gpoints = list(rna = createGiottoPoints(pts, verbose = FALSE)),
+        gpolygons = list(cell = createGiottoPolygon(sv, verbose = FALSE)),
+        verbose = FALSE
+    )
+}
+.count_toy_sums <- matrix(c(5, 5, 4, 0), 2L, dimnames = list(c("g1", "g2"), c("A", "B")))
+.count_toy_rows <- matrix(c(2, 1, 1, 0), 2L, dimnames = list(c("g1", "g2"), c("A", "B")))
+.toy_expr <- function(g, values) {
+    as.matrix(getExpression(g, spat_unit = "cell", feat_type = "rna",
+                            values = values, output = "matrix"))
+}
+
+test_that("overlapToMatrix sums a count column by default", {
+    g <- calculateOverlap(.count_toy(), spat_info = "cell", feat_info = "rna",
+                          verbose = FALSE)
+    g <- overlapToMatrix(g, spat_info = "cell", feat_info = "rna",
+                         name = "raw", verbose = FALSE)
+    expect_equal(.toy_expr(g, "raw"), .count_toy_sums)
+
+    g <- overlapToMatrix(g, spat_info = "cell", feat_info = "rna",
+                         name = "rows", feat_count_column = FALSE,
+                         verbose = FALSE)
+    expect_equal(.toy_expr(g, "rows"), .count_toy_rows)
+})
+
+test_that("aggregateFeatures sums a count column by default", {
+    g <- aggregateFeatures(.count_toy(), spat_info = "cell", feat_info = "rna",
+                           name = "agg", verbose = FALSE)
+    expect_equal(.toy_expr(g, "agg"), .count_toy_sums)
+})
+
+test_that("giottoBinPoints overlaps sum their counts by default", {
+    m <- Matrix::sparseMatrix(i = c(1L, 1L, 2L, 1L), j = 1:4, x = c(3, 2, 5, 4),
+                              dims = c(2L, 4L),
+                              dimnames = list(c("g1", "g2"), paste0("b", 1:4)))
+    sl <- createSpatLocsObj(data.table::data.table(
+        cell_ID = paste0("b", 1:4), sdimx = c(0.5, 1.5, 1, 3),
+        sdimy = c(1, 1, 0.5, 1)), verbose = FALSE)
+    gbp <- createGiottoBinPoints(createExprObj(m), sl, feat_type = "rna")
+    sv <- terra::vect(c("POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))",
+                        "POLYGON ((2 0, 4 0, 4 2, 2 2, 2 0))"))
+    sv$poly_ID <- c("A", "B")
+    ov <- calculateOverlap(createGiottoPolygon(sv, verbose = FALSE), gbp,
+                           return_gpolygon = FALSE, verbose = FALSE)
+    expect_equal(as.matrix(overlapToMatrix(ov, verbose = FALSE)),
+                 .count_toy_sums)
+})

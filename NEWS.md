@@ -1,5 +1,13 @@
 # GiottoClass 0.7.9
 
+## bug fixes
+
+- `overlapToMatrix()` and `aggregateFeatures()` sum a points `count` column
+  by default, as `calculateOverlap()` already detects one. They counted
+  overlap rows unless `feat_count_column = "count"` was passed, so points or
+  `giottoBinPoints` carrying counts were undercounted.
+  `feat_count_column = FALSE` still counts rows.
+
 ## changes
 
 - The `gAny` virtual class is exported. It is the base class that `giotto`

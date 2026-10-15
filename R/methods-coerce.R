@@ -34,6 +34,8 @@ NULL
 #' @param feat_count_column character. If provided, column in overlaps info
 #' that contains count information to take into account when generating matrix.
 #' This is important when point detections represent more than one count.
+#' When `NULL`, a `count` column is used if present; `FALSE` counts rows.
+#' @param verbose be verbose
 #' @param \dots additional params to pass (none implemented)
 #' @examples
 #' sl <- GiottoData::loadSubObjectMini("spatLocsObj")
@@ -191,7 +193,10 @@ setMethod("as.matrix", signature("spatLocsObj"), function(x, id_rownames = TRUE,
 #' @rdname as.matrix
 #' @export
 setMethod("as.matrix", signature("overlapPointDT"),
-          function(x, feat_count_column = NULL, ...) {
+          function(x, feat_count_column = NULL, verbose = NULL, ...) {
+              feat_count_column <- .resolve_count_column(
+                  names(x@data), feat_count_column, verbose = verbose
+              )
               if (!is.null(feat_count_column)) {
                   feat_count <- x@data[[feat_count_column]]
               } else {
