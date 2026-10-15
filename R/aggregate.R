@@ -541,17 +541,12 @@ setMethod(
             fun = "calculateOverlap", when = "0.5.0"
         )
 
-        # autodetect count columns
-        if ("count" %in% names(y) && is.null(feat_count_column)) {
-            vmsg(.v = verbose,
-                "[overlap] Found column \"count\" in feature info.
-                - Using as `feat_count_column`
-                [!] Set feat_count_column = FALSE to disable.")
-            feat_count_column <- "count"
-        }
-        if (isFALSE(feat_count_column)) {
-            feat_count_column <- NULL
-        }
+        # autodetect count columns. `FALSE` is kept for store-backed points,
+        # whose method decides whether its overlap carries counts.
+        no_counts <- isFALSE(feat_count_column)
+        feat_count_column <- .resolve_count_column(
+            names(y), feat_count_column, verbose = verbose
+        )
 
         # ------------------------------------------------------------------
         # dbSpatial-backed path: keep results dbSpatial-native
@@ -604,7 +599,11 @@ setMethod(
             poly_subset_ids = poly_subset_ids,
             feat_subset_column = feat_subset_column,
             feat_subset_values = feat_subset_values,
-            feat_count_column = feat_count_column,
+            feat_count_column = if (no_counts && !inherits(y[], "SpatVector")) {
+                FALSE
+            } else {
+                feat_count_column
+            },
             verbose = verbose,
             ...
         )

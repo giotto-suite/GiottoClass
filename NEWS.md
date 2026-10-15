@@ -6,7 +6,8 @@
   by default, as `calculateOverlap()` already detects one. They counted
   overlap rows unless `feat_count_column = "count"` was passed, so points or
   `giottoBinPoints` carrying counts were undercounted.
-  `feat_count_column = FALSE` still counts rows.
+  `feat_count_column = FALSE` still counts rows, and on store-backed points
+  `calculateOverlap(feat_count_column = FALSE)` now reaches the store method.
 
 ## changes
 
