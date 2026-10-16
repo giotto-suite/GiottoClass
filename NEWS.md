@@ -1,4 +1,4 @@
-# GiottoClass 0.7.9
+# GiottoClass 0.7.10
 
 ## bug fixes
 
@@ -8,6 +8,8 @@
   `giottoBinPoints` carrying counts were undercounted.
   `feat_count_column = FALSE` still counts rows, and on store-backed points
   `calculateOverlap(feat_count_column = FALSE)` now reaches the store method.
+
+# GiottoClass 0.7.9
 
 ## changes
 
