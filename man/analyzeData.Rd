@@ -14,7 +14,7 @@
 \usage{
 analyzeData(x, param, ...)
 
-\S4method{analyzeData}{allMatrix,edgeStatsParam}(x, param, ..., network)
+\S4method{analyzeData}{allMatrix,edgeStatsParam}(x, param, ..., network, groups = NULL)
 
 \S4method{analyzeData}{exprObj,analyzeParam}(x, param, ...)
 

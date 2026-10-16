@@ -22,6 +22,16 @@ NULL
 # i runs over the cells of the data; an edge counts only when both its ends
 # are among them. d_i is the summed weight of cell i's edges (its degree when
 # unweighted), w_e the edge weight (1 when unweighted).
+#
+# With a cell grouping (`groups =`, K groups), attribute "grouped" adds what
+# a null conditioned on the grouping needs -- matrices, rows named by feature
+# or group, columns by group:
+#   levels     the K group labels          n_cells  cells per group
+#   sum, sumsq, sum3, sum4                 G x K: power sums within each group
+#   nbr_sum    G x K: sum_i x_i * a_il, a_il the summed weight of cell i's
+#              edges to cells of group l
+#   edges      K x K: sum over cells i of group k of a_il
+#   paths      K x K x K: [k, l, m] = sum over cells i of group k of a_il a_im
 # ============================================================================
 
 
@@ -72,7 +82,7 @@ edgeStatsParam <- function(weighted = FALSE, ...) {
 #' weighted), one row per edge, or an `igraph`.
 setMethod("analyzeData",
     signature(x = "allMatrix", param = "edgeStatsParam"),
-    function(x, param, ..., network) {
+    function(x, param, ..., network, groups = NULL) {
         weighted <- isTRUE(param$weighted)
         x <- methods::as(x, "CsparseMatrix")
         e <- .edge_list_idx(network, colnames(x), weighted)
@@ -94,6 +104,10 @@ setMethod("analyzeData",
             n_cells = N, n_edges = nrow(e),
             sum_w = sum(e$w), sum_w2 = sum(e$w^2), sum_deg2 = sum(deg^2)
         ))
+        if (!is.null(groups)) {
+            data.table::setattr(out, "grouped",
+                .edge_stats_grouped(x, e, .edge_align_groups(x, groups)))
+        }
         out
     }
 )
@@ -143,4 +157,48 @@ setMethod("analyzeData",
         acc <- acc + Matrix::rowSums(a * b)
     }
     acc
+}
+
+# Every cell needs a group: a conditioned null has no place for a cell without
+# one. Matched by cell ID through .align_groups().
+.edge_align_groups <- function(x, groups) {
+    g <- .align_groups(x, groups)
+    if (anyNA(g)) {
+        stop("[edgeStatsParam] every cell needs a group; ", sum(is.na(g)),
+            " have none.", call. = FALSE)
+    }
+    droplevels(if (is.factor(g)) g else factor(g))
+}
+
+.edge_stats_grouped <- function(x, e, g) {
+    lv <- levels(g)
+    k <- as.integer(g)
+    K <- length(lv)
+    N <- ncol(x)
+    Z <- Matrix::sparseMatrix(i = seq_len(N), j = k, x = 1, dims = c(N, K))
+    # weighted neighbour counts per group: a_il
+    A <- Matrix::sparseMatrix(i = c(e$from, e$to), j = k[c(e$to, e$from)],
+        x = c(e$w, e$w), dims = c(N, K))
+    x2 <- x * x
+    gm <- function(m) {
+        m <- as.matrix(m)
+        dimnames(m) <- list(rownames(x), lv)
+        m
+    }
+    paths <- array(0, c(K, K, K), dimnames = list(lv, lv, lv))
+    for (i in seq_len(K)) {
+        sel <- k == i
+        if (any(sel)) paths[i, , ] <- as.matrix(Matrix::crossprod(A[sel, , drop = FALSE]))
+    }
+    edges <- as.matrix(Matrix::crossprod(Z, A))
+    dimnames(edges) <- list(lv, lv)
+    list(
+        levels = lv,
+        n_cells = stats::setNames(as.numeric(tabulate(k, K)), lv),
+        sum = gm(x %*% Z), sumsq = gm(x2 %*% Z),
+        sum3 = gm((x2 * x) %*% Z), sum4 = gm((x2 * x2) %*% Z),
+        nbr_sum = gm(x %*% A),
+        edges = edges,
+        paths = paths
+    )
 }

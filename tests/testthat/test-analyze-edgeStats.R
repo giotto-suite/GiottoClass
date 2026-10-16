@@ -63,3 +63,36 @@ test_that("an igraph network gives the same result", {
     expect_error(analyzeData(f$m, edgeStatsParam(weighted = TRUE),
                              network = f$net[, 1:2]), "no `weight`")
 })
+
+test_that("the grouped attribute matches a cell-by-cell computation", {
+    f <- .es_fixture()
+    ids <- colnames(f$m)
+    grp <- stats::setNames(rep(c("b", "a", "c"), length.out = length(ids)), ids)
+    for (wt in c(FALSE, TRUE)) {
+        w <- if (wt) f$net$weight else rep(1, nrow(f$net))
+        got <- attr(analyzeData(f$m, edgeStatsParam(weighted = wt),
+            network = f$net, groups = rev(grp)), "grouped")
+        lv <- sort(unique(grp))
+        expect_equal(got$levels, lv)
+        x <- as.matrix(f$m)
+        N <- ncol(x)
+        a <- matrix(0, N, 3, dimnames = list(ids, lv))
+        for (r in seq_along(f$from)) {
+            i <- f$from[r]; j <- f$to[r]
+            a[i, grp[j]] <- a[i, grp[j]] + w[r]
+            a[j, grp[i]] <- a[j, grp[i]] + w[r]
+        }
+        for (l in lv) {
+            in_l <- grp == l
+            expect_equal(unname(got$sum[, l]), unname(rowSums(x[, in_l])))
+            expect_equal(unname(got$sum4[, l]), unname(rowSums(x[, in_l]^4)))
+            expect_equal(unname(got$nbr_sum[, l]), unname(as.numeric(x %*% a[, l])))
+            expect_equal(unname(got$edges[l, ]), unname(colSums(a[in_l, , drop = FALSE])))
+            expect_equal(unname(got$paths[l, , ]),
+                         unname(crossprod(a[in_l, , drop = FALSE])))
+        }
+        expect_equal(unname(got$n_cells), as.numeric(table(grp)[lv]))
+    }
+    expect_error(analyzeData(f$m, edgeStatsParam(), network = f$net,
+        groups = grp[1:5]), "needs a group")
+})
