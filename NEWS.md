@@ -1,3 +1,12 @@
+# GiottoClass 0.7.11
+
+## bug fixes
+
+- `resolveRecipe()` resolves `giottoBinPoints` as it does `giottoPoints`
+  (space, then crops). A crop view, or any in-situ plot of a disk-backed
+  object, holding bin points failed with "unable to find an inherited method
+  for function 'resolveRecipe'".
+
 # GiottoClass 0.7.10
 
 ## bug fixes

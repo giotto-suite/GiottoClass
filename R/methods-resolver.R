@@ -844,6 +844,18 @@ setMethod("resolveRecipe",
 #' @rdname resolveRecipe
 #' @export
 setMethod("resolveRecipe",
+    signature(x = "giottoBinPoints", coordinator = "dataTableCoordinator"),
+    function(x, coordinator, keep = NULL, space = NULL, view = NULL,
+             spaces = NULL, ...) {
+        # as giottoPoints: transform first, then clip in that frame
+        x <- .apply_space_to_subobj(x, space)
+        .apply_crops_geometrically(x, view, spaces, space)
+    }
+)
+
+#' @rdname resolveRecipe
+#' @export
+setMethod("resolveRecipe",
     signature(x = "giottoLargeImage", coordinator = "dataTableCoordinator"),
     function(x, coordinator, keep = NULL, space = NULL, view = NULL,
              spaces = NULL, ...) {
