@@ -96,3 +96,14 @@ test_that("the grouped attribute matches a cell-by-cell computation", {
     expect_error(analyzeData(f$m, edgeStatsParam(), network = f$net,
         groups = grp[1:5]), "needs a group")
 })
+
+test_that("a pair listed in both directions counts once", {
+    f <- .es_fixture()
+    both <- rbind(f$net, data.frame(from = f$net$to, to = f$net$from,
+                                    weight = f$net$weight))
+    for (wt in c(FALSE, TRUE)) {
+        expect_equal(
+            analyzeData(f$m, edgeStatsParam(weighted = wt), network = both),
+            analyzeData(f$m, edgeStatsParam(weighted = wt), network = f$net))
+    }
+})

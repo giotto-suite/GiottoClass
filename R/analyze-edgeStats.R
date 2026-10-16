@@ -20,7 +20,8 @@ NULL
 #   edge_prod  sum_e w_e x_i x_j    over the edges, each once
 # with attribute "graph" = list(n_cells, n_edges, sum_w, sum_w2, sum_deg2).
 # i runs over the cells of the data; an edge counts only when both its ends
-# are among them. d_i is the summed weight of cell i's edges (its degree when
+# are among them, and once per pair of cells whichever way round it is listed
+# (a kNN network lists a mutual pair in both directions). d_i is the summed weight of cell i's edges (its degree when
 # unweighted), w_e the edge weight (1 when unweighted).
 #
 # With a cell grouping (`groups =`, K groups), attribute "grouped" adds what
@@ -89,13 +90,13 @@ setMethod("analyzeData",
 
         N <- ncol(x)
         deg <- .edge_degree_vec(e, N)
-        x2 <- x * x
+        x2 <- .pow_x(x, 2)
         out <- data.table::data.table(
             feats     = rownames(x),
             sum       = Matrix::rowSums(x),
             sumsq     = Matrix::rowSums(x2),
-            sum3      = Matrix::rowSums(x2 * x),
-            sum4      = Matrix::rowSums(x2 * x2),
+            sum3      = Matrix::rowSums(.pow_x(x, 3)),
+            sum4      = Matrix::rowSums(.pow_x(x, 4)),
             deg_sum   = as.numeric(x %*% deg),
             deg_sumsq = as.numeric(x2 %*% deg),
             edge_prod = .edge_products(x, e)
@@ -132,12 +133,22 @@ setMethod("analyzeData",
         stop("[edgeStatsParam] weighted = TRUE but `network` has no ",
             "`weight` column.", call. = FALSE)
     }
+    a <- match(as.character(el$from), ids)
+    b <- match(as.character(el$to), ids)
     e <- data.table::data.table(
-        from = match(as.character(el$from), ids),
-        to = match(as.character(el$to), ids),
+        from = pmin(a, b), to = pmax(a, b),
         w = if (weighted) as.numeric(el$weight) else 1
     )
-    e[!is.na(from) & !is.na(to)]
+    e <- e[!is.na(from) & !is.na(to)]
+    # one row per pair of cells, the first listing's weight
+    unique(e, by = c("from", "to"))
+}
+
+# x with each stored value raised to `k`: elementwise, without forming a
+# sparse x sparse product
+.pow_x <- function(x, k) {
+    x@x <- x@x^k
+    x
 }
 
 .edge_degree_vec <- function(e, N) {
@@ -145,18 +156,13 @@ setMethod("analyzeData",
         sum, default = 0))
 }
 
-# sum_e w_e x_i x_j per feature, in edge chunks so the column gather stays
-# bounded
-.edge_products <- function(x, e, chunk = 200000L) {
-    acc <- numeric(nrow(x))
-    if (nrow(e) == 0L) return(acc)
-    for (s in seq.int(1L, nrow(e), by = chunk)) {
-        idx <- s:min(s + chunk - 1L, nrow(e))
-        a <- x[, e$from[idx], drop = FALSE]
-        b <- x[, e$to[idx], drop = FALSE] %*% Matrix::Diagonal(x = e$w[idx])
-        acc <- acc + Matrix::rowSums(a * b)
-    }
-    acc
+# sum_e w_e x_i x_j per feature: with A the from -> to weight matrix, the
+# row sums of x * (x A)
+.edge_products <- function(x, e) {
+    if (nrow(e) == 0L) return(numeric(nrow(x)))
+    A <- Matrix::sparseMatrix(i = e$from, j = e$to, x = e$w,
+        dims = c(ncol(x), ncol(x)))
+    Matrix::rowSums(x * (x %*% A))
 }
 
 # Every cell needs a group: a conditioned null has no place for a cell without
@@ -179,7 +185,7 @@ setMethod("analyzeData",
     # weighted neighbour counts per group: a_il
     A <- Matrix::sparseMatrix(i = c(e$from, e$to), j = k[c(e$to, e$from)],
         x = c(e$w, e$w), dims = c(N, K))
-    x2 <- x * x
+    x2 <- .pow_x(x, 2)
     gm <- function(m) {
         m <- as.matrix(m)
         dimnames(m) <- list(rownames(x), lv)
@@ -196,7 +202,7 @@ setMethod("analyzeData",
         levels = lv,
         n_cells = stats::setNames(as.numeric(tabulate(k, K)), lv),
         sum = gm(x %*% Z), sumsq = gm(x2 %*% Z),
-        sum3 = gm((x2 * x) %*% Z), sum4 = gm((x2 * x2) %*% Z),
+        sum3 = gm(.pow_x(x, 3) %*% Z), sum4 = gm(.pow_x(x, 4) %*% Z),
         nbr_sum = gm(x %*% A),
         edges = edges,
         paths = paths
