@@ -94,6 +94,7 @@ Collate:
     'generics.R'
     'NN_network.R'
     'aggregate.R'
+    'analyze-edgeStats.R'
     'analyze-featStats.R'
     'combine_metadata.R'
     'analyze-labelProportions.R'

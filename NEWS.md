@@ -1,3 +1,11 @@
+# GiottoClass (development version)
+
+## new
+
+- `edgeStatsParam()` and an `analyzeData()` method for matrices return the
+  per-feature sums over a spatial network that Moran's I, Geary's C and join
+  counts are computed from.
+
 # GiottoClass 0.7.13
 
 ## changes
