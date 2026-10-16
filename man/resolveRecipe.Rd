@@ -10,6 +10,7 @@
 \alias{resolveRecipe,spatLocsObj,dataTableCoordinator-method}
 \alias{resolveRecipe,giottoPolygon,dataTableCoordinator-method}
 \alias{resolveRecipe,giottoPoints,dataTableCoordinator-method}
+\alias{resolveRecipe,giottoBinPoints,dataTableCoordinator-method}
 \alias{resolveRecipe,giottoLargeImage,dataTableCoordinator-method}
 \alias{resolveRecipe,giottoAffineImage,dataTableCoordinator-method}
 \alias{resolveRecipe,giottoImage,dataTableCoordinator-method}
@@ -34,6 +35,16 @@ resolveRecipe(x, coordinator = NULL, ...)
 \S4method{resolveRecipe}{giottoPolygon,dataTableCoordinator}(x, coordinator, keep = NULL, space = NULL, view = NULL, ...)
 
 \S4method{resolveRecipe}{giottoPoints,dataTableCoordinator}(
+  x,
+  coordinator,
+  keep = NULL,
+  space = NULL,
+  view = NULL,
+  spaces = NULL,
+  ...
+)
+
+\S4method{resolveRecipe}{giottoBinPoints,dataTableCoordinator}(
   x,
   coordinator,
   keep = NULL,

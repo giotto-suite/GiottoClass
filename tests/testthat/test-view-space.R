@@ -152,6 +152,24 @@ test_that("resolve with polygon crop narrows by region", {
     expect_equal(nrow(pDataDT(g2)), expected)
 })
 
+test_that("resolve with a crop clips giottoBinPoints", {
+    m <- Matrix::sparseMatrix(i = c(1L, 1L, 2L, 1L), j = 1:4, x = c(3, 2, 5, 4),
+                              dims = c(2L, 4L),
+                              dimnames = list(c("g1", "g2"), paste0("b", 1:4)))
+    sl <- createSpatLocsObj(data.table::data.table(
+        cell_ID = paste0("b", 1:4), sdimx = c(0.5, 1.5, 1, 3),
+        sdimy = c(1, 1, 0.5, 1)), verbose = FALSE)
+    gbp <- createGiottoBinPoints(createExprObj(m), sl, feat_type = "rna")
+    g <- setGiotto(giotto(), gbp, verbose = FALSE)
+
+    g <- crop(g, c(0, 2, 0, 2), view = "v")
+    g2 <- resolveRecipe(g, view = "v")
+    bp <- getFeatureInfo(g2, return_giottoPoints = TRUE)
+    expect_s4_class(bp, "giottoBinPoints")
+    expect_equal(nrow(bp), nrow(crop(gbp, terra::ext(c(0, 2, 0, 2)))))
+    expect_lt(nrow(bp), nrow(gbp))
+})
+
 test_that("subset(samples = ) records a samples step", {
     g <- subset(giotto(), samples = c("a", "b"), view = "v")
     steps <- giottoView(g, "v")@steps
