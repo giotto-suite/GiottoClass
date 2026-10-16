@@ -21,7 +21,8 @@ NULL
 # with attribute "graph" = list(n_cells, n_edges, sum_w, sum_w2, sum_deg2).
 # i runs over the cells of the data; an edge counts only when both its ends
 # are among them, and once per pair of cells whichever way round it is listed
-# (a kNN network lists a mutual pair in both directions). d_i is the summed weight of cell i's edges (its degree when
+# (a kNN network lists a mutual pair in both directions), at the mean of the
+# listed weights. d_i is the summed weight of cell i's edges (its degree when
 # unweighted), w_e the edge weight (1 when unweighted).
 #
 # With a cell grouping (`groups =`, K groups), attribute "grouped" adds what
@@ -119,7 +120,7 @@ setMethod("analyzeData",
 # Network -> data.table(from, to, w) of column indices of the data, keeping
 # only edges with both ends among `ids`.
 .edge_list_idx <- function(network, ids, weighted) {
-    from <- to <- NULL  # NSE
+    from <- to <- w <- NULL  # NSE
     if (inherits(network, "igraph")) {
         el <- igraph::as_data_frame(network, what = "edges")
     } else {
@@ -140,8 +141,9 @@ setMethod("analyzeData",
         w = if (weighted) as.numeric(el$weight) else 1
     )
     e <- e[!is.na(from) & !is.na(to)]
-    # one row per pair of cells, the first listing's weight
-    unique(e, by = c("from", "to"))
+    # one row per pair of cells; a pair listed both ways gets the mean weight,
+    # the symmetric part of the weights
+    e[, list(w = mean(w)), by = c("from", "to")]
 }
 
 # x with each stored value raised to `k`: elementwise, without forming a

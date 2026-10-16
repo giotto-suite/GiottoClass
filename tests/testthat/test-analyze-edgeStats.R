@@ -107,3 +107,14 @@ test_that("a pair listed in both directions counts once", {
             analyzeData(f$m, edgeStatsParam(weighted = wt), network = f$net))
     }
 })
+
+test_that("a pair listed twice with different weights gets their mean", {
+    f <- .es_fixture()
+    both <- rbind(f$net, data.frame(from = f$net$to, to = f$net$from,
+                                    weight = f$net$weight * 3))
+    mean_w <- f$net
+    mean_w$weight <- f$net$weight * 2
+    expect_equal(
+        analyzeData(f$m, edgeStatsParam(weighted = TRUE), network = both),
+        analyzeData(f$m, edgeStatsParam(weighted = TRUE), network = mean_w))
+})
