@@ -592,6 +592,7 @@ joinGiottoObjects <- function(gobject_list,
             }
 
             if (inherits(featureinfo, "giottoBinPoints")) {
+                if (.gbp_is_backed(featureinfo)) .gbp_backed_stop("joining")
                 # manually change bin IDs
                 featureinfo@bid <- paste0(gname, "-", featureinfo@bid)
             }

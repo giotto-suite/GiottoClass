@@ -28,12 +28,14 @@ once and mapping the sparse values information against the points.
 \section{Slots}{
 
 \describe{
-\item{\code{spatial}}{ANY (currently \code{SpatVector} only). Row-indexed spatial points}
+\item{\code{spatial}}{ANY. Row-indexed spatial points: a \code{SpatVector}, or on a
+backed object a GiottoDisk points store keyed by the bin's row in \verb{@counts}}
 
 \item{\code{counts}}{\code{data.table} with integer cols \code{i} and \code{j} mapping to \verb{@fid}
 and \verb{@bid} respectively. \code{x} is a numeric col standing for count or value of
 a feature for this bin point. Row indexing of this object is based on this
-slot.}
+slot. On a backed object, a GiottoDisk expression store of features x bins,
+with \verb{@bid} and \verb{@pmap} left empty since its cell IDs are the bin IDs.}
 
 \item{\code{bid}}{\code{character}. Bin IDs to map against}
 

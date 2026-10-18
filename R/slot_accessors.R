@@ -2996,23 +2996,12 @@ setMethod("setFeatureInfo", signature("giotto"), function(gobject, x,
         "Setting feature info [%s]", featType(x)
     ))
   
-    # write to disk if needed
-    #
-    # giottoBinPoints is held back deliberately. It has no `[` payload
-    # accessor (only character/logical/numeric indices), so `x[]` errors, and
-    # even with one the vault would take `@spatial` only -- while `@counts`
-    # holds the bulk. Worse, `@spatial` has to stay a terra SpatVector:
-    # calculateOverlap() and crop() call terra::extract() / terra::relate() on
-    # it directly, neither of which accepts a store. Storing it would break
-    # the bin1 overlap workflow. Revisit once giottoBinPoints has a
-    # store-backed representation for both slots.
+    # write to disk if needed. giottoBinPoints carries two payloads, its
+    # points and its counts, so it is written whole rather than through `x[]`.
     if (!is.null(gobject@source)) {
         gsrc <- .gsource(gobject)
         if (inherits(x, "giottoBinPoints")) {
-            vmsg(.v = verbose, sprintf(
-                "giottoBinPoints [%s] kept in memory; no disk representation",
-                featType(x)
-            ))
+            if (!.gbp_is_backed(x)) x <- GiottoDisk::sourceWrite(gsrc, x)
         } else if (!inherits(x[], "dataStore")) {
             store <- GiottoDisk::sourceWrite(gsrc, x[])
             x[] <- store

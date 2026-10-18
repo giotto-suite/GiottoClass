@@ -1,3 +1,15 @@
+# GiottoClass 0.7.13
+
+## changes
+
+- `giottoBinPoints` can be store-backed, as `giottoPoints` and `exprObj` are:
+  on a backed object `@spatial` holds a GiottoDisk points store and `@counts`
+  a GiottoDisk expression store. Its methods hand such objects to GiottoDisk
+  (`calculateOverlap()`, `as.data.table()`, `crop()`, feature `[`), and
+  `setFeatureInfo()` on a backed object writes in-memory bin points to the
+  backend, as it does other feature info. `@counts` is typed `ANY`;
+  in-memory bin points are unchanged.
+
 # GiottoClass 0.7.12
 
 ## bug fixes
