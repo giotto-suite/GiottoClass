@@ -313,3 +313,30 @@ test_that("giottoBinPoints overlaps sum their counts by default", {
     expect_equal(as.matrix(overlapToMatrix(ov, verbose = FALSE)),
                  .count_toy_sums)
 })
+
+test_that("a bin inside two overlapping polygons counts in both", {
+    m <- Matrix::sparseMatrix(i = c(1L, 1L, 2L), j = 1:3, x = c(3, 2, 5),
+                              dims = c(2L, 3L),
+                              dimnames = list(c("g1", "g2"), paste0("b", 1:3)))
+    sl <- createSpatLocsObj(data.table::data.table(
+        cell_ID = paste0("b", 1:3), sdimx = c(0.5, 1.5, 2.5),
+        sdimy = c(1, 1, 1)), verbose = FALSE)
+    gbp <- createGiottoBinPoints(createExprObj(m), sl, feat_type = "rna")
+    # A covers b1 and b2, B covers b2 and b3: b2 is in both
+    sv <- terra::vect(c("POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))",
+                        "POLYGON ((1 0, 3 0, 3 2, 1 2, 1 0))"))
+    sv$poly_ID <- c("A", "B")
+    gpoly <- createGiottoPolygon(sv, name = "cell")
+    ov <- calculateOverlap(gpoly, gbp, return_gpolygon = FALSE)
+    mat <- as.matrix(overlapToMatrix(ov, feat_count_column = "count"))
+    expect_equal(mat["g1", "A"], 5) # b1 3 + b2 2
+    expect_equal(mat["g1", "B"], 2) # b2 2
+    expect_equal(mat["g2", "B"], 5) # b3
+
+    # uncompacted: b1 and b2 keep their points but have no counts left
+    sub <- gbp[which(gbp@counts$i == 2L), compact = FALSE]
+    ov <- calculateOverlap(gpoly, sub, return_gpolygon = FALSE)
+    mat <- as.matrix(overlapToMatrix(ov, feat_count_column = "count"))
+    expect_equal(sum(mat[, "A"]), 0)
+    expect_equal(mat["g2", "B"], 5)
+})

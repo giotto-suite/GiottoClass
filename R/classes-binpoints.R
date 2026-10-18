@@ -513,7 +513,6 @@ createGiottoBinPoints <- function(expr_values, spatial_locs,
 #' @param y `giottoBinPoints` object
 #' @param overlap_data relationships (data.frame). Expected to be numeric row
 #' indices between x and y
-#' @param keep additional col(s) in `y` to keep
 #' @examples
 #' # load test data
 #' sl <- GiottoData::loadSubObjectMini("spatLocsObj")
@@ -528,9 +527,8 @@ createGiottoBinPoints <- function(expr_values, spatial_locs,
 #'
 #' overlapToMatrix(odt, feat_count_column = "count")
 #' @noRd
-.gbp_create_overlap_point_dt <- function(x, y,
-    overlap_data, keep = NULL) {
-    poly <- feat_idx <- feat <- feat_id_index <- NULL # NSE vars
+.gbp_create_overlap_point_dt <- function(x, y, overlap_data) {
+    poly <- feat_idx <- count_j <- NULL # NSE vars
     # cleanup input overlap_data
     checkmate::assert_data_frame(overlap_data)
     data.table::setDT(overlap_data)
@@ -553,31 +551,50 @@ createGiottoBinPoints <- function(expr_values, spatial_locs,
     overlap_data <- overlap_data[!is.na(poly)]
     # change poly to map against spat_ids
     overlap_data[, poly := match(poly, odt@spat_ids)]
-    # append a feature index col to counts info in gbp
-    y@counts$feat_ID_uniq <- seq_len(nrow(y))
-    # add col matched to gbp counts j col in overlap info
-    overlap_data[, count_j := y@pmap[feat_idx]]
-    # left join counts info into overlap_data.
-    overlap_data <- y@counts[overlap_data, on = .(j = count_j)]
-    overlap_data[, feat_idx := NULL] # no longer needed.
-    overlap_data[, j := NULL] # j is from y@spatial mapping. No longer needed.
-    # current expected cols:
-    # i (feat name map), x (count), feat_ID_uniq, poly
-    data.table::setnames(overlap_data,
-        old = c("i", "x", "feat_ID_uniq"),
-        new = c("feat_id_index", "count", "feat")
-    )
 
-    # extract needed info from y
-    keep <- unique(c("feat_id_index", "count", "feat", "poly", keep))
-    overlap_data <- overlap_data[, keep, with = FALSE]
+    # Look up each bin's polygon and index the counts rows directly, instead
+    # of copying and joining the whole counts table. Only bins lying in more
+    # than one polygon (shared borders) go through a join.
+    multi_idx <- overlap_data$feat_idx[duplicated(overlap_data$feat_idx)]
+    in_multi <- overlap_data$feat_idx %in% multi_idx
+    single <- overlap_data[!in_multi]
+    bin_poly <- integer(length(y@bid))
+    bin_poly[y@pmap[single$feat_idx]] <- single$poly
+    rows <- which(bin_poly[y@counts$j] > 0L)
+    mres <- NULL
+    if (any(in_multi)) {
+        multi <- overlap_data[in_multi]
+        multi[, count_j := y@pmap[feat_idx]]
+        mrows <- which(y@counts$j %in% multi$count_j)
+        mc <- data.table::data.table(feat = mrows, j = y@counts$j[mrows],
+            feat_id_index = y@counts$i[mrows], count = y@counts$x[mrows])
+        mres <- mc[multi[, list(j = count_j, poly)], on = "j",
+            allow.cartesian = TRUE, nomatch = NULL]
+    }
+    # allocated once at the final length and filled, so appending the
+    # shared-bin rows does not copy the table
+    n1 <- length(rows)
+    n <- n1 + NROW(mres)
+    res <- data.table::setDT(list(poly = integer(n), feat = integer(n),
+        feat_id_index = integer(n), count = numeric(n)))
+    at <- seq_len(n1)
+    data.table::set(res, at, "poly", bin_poly[y@counts$j[rows]])
+    data.table::set(res, at, "feat", rows)
+    data.table::set(res, at, "feat_id_index", y@counts$i[rows])
+    data.table::set(res, at, "count", y@counts$x[rows])
+    rm(bin_poly, rows, at)
+    if (!is.null(mres) && nrow(mres)) {
+        at <- n1 + seq_len(nrow(mres))
+        for (cn in c("poly", "feat", "feat_id_index", "count")) {
+            data.table::set(res, at, cn, mres[[cn]])
+        }
+    }
 
     # set indices
-    data.table::setkeyv(overlap_data, "feat")
-    data.table::setindexv(overlap_data, "poly")
-    data.table::setcolorder(overlap_data, c("poly", "feat", "feat_id_index"))
+    data.table::setkeyv(res, "feat")
+    data.table::setindexv(res, "poly")
     # add to object
-    odt@data <- overlap_data
+    odt@data <- res
 
     odt
 }
