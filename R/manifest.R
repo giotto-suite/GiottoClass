@@ -502,11 +502,13 @@ setMethod(".manifest_leaf", signature("giottoBinPoints"), function(
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     out <- .manifest_leaf_base(x, wenv, path)
     out$n_geom <- g("n_geom", function() {
-        as.integer(terra::nrow(slot(x, "spatial")))
+        as.integer(nrow(slot(x, "spatial")))
     })
     # one record per (bin, feature) detection, which is what nrow() reports
     out$n_records <- g("n_records", function() as.integer(nrow(x)))
-    out$n_bins <- g("n_bins", function() length(slot(x, "bid")))
+    out$n_bins <- g("n_bins", function() {
+        if (.gbp_is_backed(x)) as.integer(nrow(x)) else length(slot(x, "bid"))
+    })
     out$n_feats <- g("n_feats", function() length(slot(x, "fid")))
     out$compact <- g("compact", function() isTRUE(slot(x, "compact")))
     out$extent <- g("extent", function() .manifest_ext(x))
@@ -772,8 +774,14 @@ setMethod(".fingerprint", signature("terraVectData"), function(x, fp, ...) {
 # the expensive half of the object for no added signal.
 setMethod(".fingerprint", signature("giottoBinPoints"), function(x, fp, ...) {
     k <- .fp_n(fp)
+    # store-backed counts: their shape and IDs, as for a store-backed exprObj
+    counts <- slot(x, "counts")
     .fp_hash(list(
-        counts = .fp_dt(slot(x, "counts"), k),
+        counts = if (data.table::is.data.table(counts)) {
+            .fp_dt(counts, k)
+        } else {
+            list(dim = dim(counts), rn = rownames(counts))
+        },
         bid = .fp_stride(slot(x, "bid"), k),
         fid = .fp_stride(slot(x, "fid"), k),
         ext = tryCatch(.fp_num(as.vector(ext(x))), error = function(e) NULL)

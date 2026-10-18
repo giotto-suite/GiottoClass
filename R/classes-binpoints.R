@@ -8,11 +8,13 @@
 #' S4 class allowing point detection-like access patterns for binned spatial
 #' values. Implemented more efficiently by only representing the spatial points
 #' once and mapping the sparse values information against the points.
-#' @slot spatial ANY (currently `SpatVector` only). Row-indexed spatial points
+#' @slot spatial ANY. Row-indexed spatial points: a `SpatVector`, or on a
+#' backed object a GiottoDisk points store keyed by the bin's row in `@counts`
 #' @slot counts `data.table` with integer cols `i` and `j` mapping to `@fid`
 #' and `@bid` respectively. `x` is a numeric col standing for count or value of
 #' a feature for this bin point. Row indexing of this object is based on this
-#' slot.
+#' slot. On a backed object, a GiottoDisk expression store of features x bins,
+#' with `@bid` and `@pmap` left empty since its cell IDs are the bin IDs.
 #' @slot bid `character`. Bin IDs to map against
 #' @slot pmap `integer`. For each spatial point, gives the index into `@bid`.
 #' Length equals `length(spatial)`. Forms a bridge between spatial and counts:
@@ -31,21 +33,39 @@ setClass("giottoBinPoints",
     contains = c("featData", "giottoSubobject"),
     slots = list(
         spatial = "ANY", # spatvector etc.
-        counts = "data.table",
+        counts = "ANY", # data.table, or a store on a backed object
         bid = "character", # bin ID (static)
         pmap = "integer", # point IDs by mapping onto bid
         fid = "character", # feature ID
         compact = "logical" # state of compaction
     ),
     prototype = list(
+        counts = data.table::data.table(),
         compact = TRUE
     )
 )
+
+# Points and counts held as GiottoDisk stores (backed object) rather than a
+# SpatVector and a data.table
+.gbp_is_backed <- function(x) {
+    !is.null(x@spatial) && !inherits(x@spatial, "SpatVector")
+}
+
+.gbp_backed_stop <- function(what) {
+    stop(sprintf("[giottoBinPoints] %s is not supported for store-backed bin points",
+        what), call. = FALSE)
+}
 
 # * methods ####
 setMethod("show", signature("giottoBinPoints"), function(object) {
     cat(sprintf("An object of class %s\n", class(object)))
     .show_feat(object)
+    if (.gbp_is_backed(object)) {
+        print_list(c(bins = format(nrow(object), big.mark = ","),
+            features = format(length(object@fid), big.mark = ",")))
+        print(object@spatial)
+        return(invisible())
+    }
     plist <- c(
         dimensions = toString(dim(object)),
         compact = as.character(object@compact)
@@ -55,15 +75,20 @@ setMethod("show", signature("giottoBinPoints"), function(object) {
     cat("\n")
 })
 
+# rows are count records in memory; for store-backed bin points, the bins
 setMethod("dim", signature("giottoBinPoints"), function(x) {
-    c(nrow(x@counts), 2L)
+    c(nrow(x), 2L)
 })
 
-setMethod("nrow", signature("giottoBinPoints"), function(x) nrow(x@counts))
+setMethod("nrow", signature("giottoBinPoints"), function(x) {
+    if (.gbp_is_backed(x)) return(nrow(x@spatial))
+    nrow(x@counts)
+})
 
 setMethod("ncol", signature("giottoBinPoints"), function(x) 1L)
 
 setMethod("[", signature(x = "giottoBinPoints", i = "numeric", j = "missing", drop = "missing"), function(x, i, j, compact = "auto", ...,  drop) {
+    if (.gbp_is_backed(x)) .gbp_backed_stop("row indexing")
     i <- as.integer(i)
     x@counts <- x@counts[i,]
     if (identical(compact, "auto")) compact <- .gbp_compact_auto(x)
@@ -90,6 +115,11 @@ setMethod("[", signature(x = "giottoBinPoints", i = "logical", j = "missing", dr
 
 # feature subsetting
 setMethod("[", signature(x = "giottoBinPoints", i = "character", j = "missing", drop = "missing"), function(x, i, j, compact = "auto", ..., drop) {
+    if (.gbp_is_backed(x)) {
+        x@counts <- x@counts[intersect(i, x@fid), ]
+        x@fid <- rownames(x@counts)
+        return(x)
+    }
     keep_feat_idx <- which(x@fid %in% i) # i is feature whitelist
     i <- which(x@counts$i %in% keep_feat_idx)
     x[i, ..., compact = compact]
@@ -105,6 +135,7 @@ setMethod("objName<-", signature("giottoBinPoints", "ANY"),
 setMethod("plot", signature("giottoBinPoints", "missing"), function(x,
     point_size = 0.2, feats = NULL, dens = FALSE, dens_transform = NULL, raster = TRUE, raster_size = 600, ...) {
     checkmate::assert_function(dens_transform, null.ok = TRUE)
+    if (.gbp_is_backed(x)) return(plot(x@spatial, ...))
     if (nrow(x@counts) == 0L) {
         stop(wrap_txt("No geometries to plot"), call. = FALSE)
     }
@@ -138,30 +169,36 @@ setMethod("calculateOverlap", signature("giottoPolygon", "giottoBinPoints"),
             x <- x[x$poly_ID %in% poly_subset_ids]
         }
 
-        # On a project-managed giotto the polygons are store-backed, and
-        # terra::extract() has no method for a store. Materialize them into a
-        # working copy for the terra call: segmentation polygon counts are
-        # modest (~10^4-10^5) next to the bin1 points they are overlapped
-        # with (~10^6-10^7), which stay untouched in `y`. `x` itself is left
-        # alone so the object handed back keeps its store.
-        px <- x
-        if (!inherits(px[], "SpatVector")) {
-            GiottoUtils::package_check(
-                "GiottoDisk",
-                repository = "github:giotto-suite/GiottoDisk"
-            )
-            px[] <- GiottoDisk::storeRead(px[], output = "terra")
-        }
-        overlap_data <- terra::extract(px[], y@spatial)
-        # res <- terra::relate(x[], y@spatial,
-        #     relation = "intersects", pairs = TRUE) |>
-        #     data.table::as.data.table()
-        # names(res) <- c("poly_ID", "b")
-        # res <- res[, .gbp_spatial_select_counts(y, b), by = "poly_ID"]
+        if (.gbp_is_backed(y)) {
+            # store-backed bins: GiottoDisk overlaps the polygons with the
+            # bins and keeps their counts for overlapToMatrix()
+            res <- calculateOverlap(x[], y, ...)
+        } else {
+            # On a project-managed giotto the polygons are store-backed, and
+            # terra::extract() has no method for a store. Materialize them
+            # into a working copy for the terra call: segmentation polygon
+            # counts are modest (~10^4-10^5) next to the bin1 points they are
+            # overlapped with (~10^6-10^7), which stay untouched in `y`. `x`
+            # itself is left alone so the object handed back keeps its store.
+            px <- x
+            if (!inherits(px[], "SpatVector")) {
+                GiottoUtils::package_check(
+                    "GiottoDisk",
+                    repository = "github:giotto-suite/GiottoDisk"
+                )
+                px[] <- GiottoDisk::storeRead(px[], output = "terra")
+            }
+            overlap_data <- terra::extract(px[], y@spatial)
+            # res <- terra::relate(x[], y@spatial,
+            #     relation = "intersects", pairs = TRUE) |>
+            #     data.table::as.data.table()
+            # names(res) <- c("poly_ID", "b")
+            # res <- res[, .gbp_spatial_select_counts(y, b), by = "poly_ID"]
 
-        # built from the materialized copy: it reads `poly_ID` off the
-        # payload, which terra provides and a store need not
-        res <- .gbp_create_overlap_point_dt(px, y, overlap_data)
+            # built from the materialized copy: it reads `poly_ID` off the
+            # payload, which terra provides and a store need not
+            res <- .gbp_create_overlap_point_dt(px, y, overlap_data)
+        }
 
         if (isTRUE(return_gpolygon)) {
             # update schema metadata in overlap object
@@ -196,6 +233,10 @@ setMethod("ext", signature("giottoBinPoints"), function(x, ...) {
 setMethod("crop", signature("giottoBinPoints", "ANY"), function(x, y,
     ext = FALSE, compact = "auto", ...) {
     if (inherits(y, "SpatExtent")) ext <- TRUE
+    if (.gbp_is_backed(x)) {
+        x@spatial <- crop(x@spatial, if (isTRUE(ext)) ext(y) else y[], ...)
+        return(x)
+    }
     if (isTRUE(ext)) {
         y <- terra::as.polygons(ext(y))
     } else {
@@ -211,6 +252,10 @@ setMethod("crop", signature("giottoBinPoints", "SpatVector"), function(x, y,
     ext = FALSE, compact = "auto", ...) {
     if (isTRUE(ext)) {
         return(crop(x, y = terra::as.polygons(ext(y)), compact = compact, ...))
+    }
+    if (.gbp_is_backed(x)) {
+        x@spatial <- crop(x@spatial, y, ...)
+        return(x)
     }
     keep_spat_idx <- which(terra::relate(x@spatial, y, relation = "intersects"))
     keep_j <- x@pmap[keep_spat_idx]
@@ -252,6 +297,7 @@ setMethod("setGiotto", signature("gAny", "giottoBinPoints"),
 #' @rdname spatIDs-generic
 #' @export
 setMethod("featIDs", signature(x = "giottoBinPoints"), function(x, uniques = TRUE, ...) {
+    if (.gbp_is_backed(x)) return(x@fid)
     if (uniques) {
         return(x@fid[unique(x@counts$i)])
     }
@@ -262,6 +308,7 @@ setMethod("featIDs", signature(x = "giottoBinPoints"), function(x, uniques = TRU
 #' @export
 setMethod("rbind2", signature("giottoBinPoints", "giottoBinPoints"),
     function(x, y, ...) {
+        if (.gbp_is_backed(x) || .gbp_is_backed(y)) .gbp_backed_stop("rbind")
         # 1. force compaction on both
         if (isFALSE(x@compact)) x <- .gbp_compact(x)
         if (isFALSE(y@compact)) y <- .gbp_compact(y)
@@ -321,6 +368,14 @@ setMethod("rbind2", signature("giottoBinPoints", "giottoBinPoints"),
 #' @method as.data.table giottoBinPoints
 #' @export
 as.data.table.giottoBinPoints <- function(x, geom, ...) {
+    if (.gbp_is_backed(x)) {
+        GiottoUtils::package_check(
+            "GiottoDisk",
+            repository = "github:giotto-suite/GiottoDisk"
+        )
+        return(GiottoDisk::binPointsTable(x,
+            geom = if (missing(geom)) "" else geom))
+    }
     d <- data.table::copy(x@counts)
     data.table::setnames(d, old = c("i", "x"), new = c("feat_ID", "count"))
     if (!missing(geom)) {

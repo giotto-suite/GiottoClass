@@ -416,6 +416,7 @@ setMethod(".save_external", signature("giottoPoints"), function(x, dir,
 })
 setMethod(".save_external", signature("giottoBinPoints"), function(x, dir,
     verbose = NULL, ...) {
+    if (.gbp_is_backed(x)) return() # stores stay in the backend
     dir <- file.path(dir, "Features")
     if (!dir.exists(dir)) dir.create(dir)
     vmsg(.v = verbose, "For feature: ", objName(x))
@@ -486,6 +487,7 @@ setMethod(".load_external", signature("giottoPoints"), function(x, dir, ...) {
     x
 })
 setMethod(".load_external", signature("giottoBinPoints"), function(x, dir, ...) {
+    if (.gbp_is_backed(x)) return(x)
     dir <- file.path(dir, "Features")
     if (!dir.exists(dir)) return(x)
     name_fmt <- paste0(objName(x), "_feature_%s")
