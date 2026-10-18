@@ -1,3 +1,13 @@
+# GiottoClass 0.7.12
+
+## bug fixes
+
+- `calculateOverlap()` of polygons with `giottoBinPoints` indexes the bins'
+  counts directly instead of copying and joining the whole counts table. It
+  also works where it failed: a bin inside two overlapping polygons (a
+  data.table cartesian error), and bin points whose bins have no counts left,
+  which put empty rows in the overlap and made `overlapToMatrix()` fail.
+
 # GiottoClass 0.7.11
 
 ## bug fixes
