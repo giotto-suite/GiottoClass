@@ -1,4 +1,4 @@
-# GiottoClass (development version)
+# GiottoClass 0.7.14
 
 ## new
 
