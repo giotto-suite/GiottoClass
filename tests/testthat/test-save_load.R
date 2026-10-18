@@ -29,6 +29,31 @@ describe("Giotto Object Save/Load", {
 
     })
 
+    describe("qs2 method", {
+
+        on.exit(unlink(file.path(test, c("qs2Dir", "legacyQs")),
+                       recursive = TRUE), add = TRUE)
+
+        it("it can be saved and loaded", {
+            skip_if_not_installed("qs2")
+            rlang::local_options(lifecycle_verbosity = "quiet")
+            saveGiotto(g, dir = test, foldername = "qs2Dir", method = "qs2",
+                       overwrite = TRUE, verbose = FALSE)
+            expect_true(file.exists(file.path(test, "qs2Dir", "gobject.qs2")))
+            g2 <- loadGiotto(file.path(test, "qs2Dir"), verbose = FALSE)
+            expect_true(methods::validObject(g2))
+            expect_identical(spatIDs(g2), spatIDs(g))
+        })
+
+        it("a .qs save is not a recognized format", {
+            dir.create(file.path(test, "legacyQs"), showWarnings = FALSE)
+            writeBin(as.raw(c(0x0b, 0x0e, 0x0a, 0x0c)),
+                     file.path(test, "legacyQs", "gobject.qs"))
+            expect_error(loadGiotto(file.path(test, "legacyQs"),
+                                    verbose = FALSE), "not a recognized")
+        })
+    })
+
     describe("zero attribute SpatVector", {
 
         # register cleanup

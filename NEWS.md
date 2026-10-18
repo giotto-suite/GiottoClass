@@ -1,3 +1,12 @@
+# GiottoClass 0.7.15
+
+## changes
+
+- `saveGiotto()` and `loadGiotto()` use qs2 instead of qs, which is archived
+  on CRAN and no longer builds: `method = "qs2"` writes `gobject.qs2`. The
+  `"qs"` method is removed and `.qs` saves are no longer read. qs2 replaces qs
+  in Suggests and in the CI workflow.
+
 # GiottoClass 0.7.14
 
 ## new
