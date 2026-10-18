@@ -40,7 +40,7 @@ Saves a Giotto object to a specific folder structure
 Works together with \code{\link{saveGiotto}} to save and re-load
 Giotto objects.
 Additional load_params need to be provided as a list and will
-go to \code{\link[base]{readRDS}} or \code{\link[qs]{qread}}
+go to \code{\link[base]{readRDS}} or \code{\link[qs2]{qs_read}}
 You can set the python path, alternatively it will look for an existing
 Giotto python environment.
 }

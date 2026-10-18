@@ -8,7 +8,7 @@ saveGiotto(
   gobject,
   foldername = "saveGiottoDir",
   dir = getwd(),
-  method = c("RDS", "qs"),
+  method = c("RDS", "qs2"),
   method_params = list(),
   overwrite = FALSE,
   export_image = TRUE,
@@ -26,9 +26,9 @@ saveGiotto(
 \item{dir}{Directory where to create the folder
 (ignored when \code{gsource} is managed)}
 
-\item{method}{method to save main object}
+\item{method}{method to save main object: \code{"RDS"} or \code{"qs2"}}
 
-\item{method_params}{additional method parameters for RDS or qs}
+\item{method_params}{additional method parameters for RDS or qs2}
 
 \item{overwrite}{Overwrite existing folders}
 
@@ -59,7 +59,7 @@ inheriting project manager (see \link[GiottoDisk:gsource]{GiottoDisk::gsource} a
 \details{
 Works together with \code{\link{loadGiotto}} to save and re-load
 Giotto objects. Additional method_params need to be provided as a list
-and will go to \code{\link[base]{saveRDS}} or \code{\link[qs]{qsave}}
+and will go to \code{\link[base]{saveRDS}} or \code{\link[qs2]{qs_save}}
 }
 \examples{
 g <- GiottoData::loadGiottoMini("visium")

@@ -8,8 +8,8 @@
 #' @param foldername Folder name (ignored when `gsource` is managed)
 #' @param dir Directory where to create the folder
 #'   (ignored when `gsource` is managed)
-#' @param method method to save main object
-#' @param method_params additional method parameters for RDS or qs
+#' @param method method to save main object: `"RDS"` or `"qs2"`
+#' @param method_params additional method parameters for RDS or qs2
 #' @param overwrite Overwrite existing folders
 #' @param export_image logical. Write out an image of the format specified by
 #' `image_filetype` when saving a `giottoLargeImage`.
@@ -24,7 +24,7 @@
 #' @returns Creates a directory with Giotto object information
 #' @details Works together with \code{\link{loadGiotto}} to save and re-load
 #' Giotto objects. Additional method_params need to be provided as a list
-#' and will go to \code{\link[base]{saveRDS}} or \code{\link[qs]{qsave}}
+#' and will go to \code{\link[base]{saveRDS}} or \code{\link[qs2]{qs_save}}
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
@@ -34,7 +34,7 @@ saveGiotto <- function(
         gobject,
         foldername = "saveGiottoDir",
         dir = getwd(),
-        method = c("RDS", "qs"),
+        method = c("RDS", "qs2"),
         method_params = list(),
         overwrite = FALSE,
         export_image = TRUE,
@@ -42,7 +42,9 @@ saveGiotto <- function(
         include_feat_coord = TRUE,
         verbose = TRUE,
         ...) {
-  
+    # resolved first: a backed object hands one method on to GiottoDisk
+    method <- match.arg(arg = method, choices = c("RDS", "qs2"))
+
     if (!is.null(gobject@source)) {
         return(GiottoDisk::snapshotSave(gobject@source, gobject,
             method = method,
@@ -74,7 +76,6 @@ saveGiotto <- function(
     checkmate::assert_list(method_params)
     checkmate::assert_character(image_filetype)
     overwrite <- as.logical(overwrite)
-    method <- match.arg(arg = method, choices = c("RDS", "qs"))
 
     ## set directory path and folder
     dir <- normalizePath(dir)
@@ -181,14 +182,14 @@ saveGiotto <- function(
                 method_params
             )
         ),
-        "qs" = {
-            package_check(pkg_name = "qs", repository = "CRAN")
-            qsave_fun <- get("qsave", asNamespace("qs"))
+        "qs2" = {
+            package_check(pkg_name = "qs2", repository = "CRAN")
+            qs_save_fun <- get("qs_save", asNamespace("qs2"))
             do.call(
-                qsave_fun,
+                qs_save_fun,
                 args = c(
-                    x = gobject,
-                    file = paste0(use_dir, "/", "gobject.qs"),
+                    object = gobject,
+                    file = paste0(use_dir, "/", "gobject.qs2"),
                     method_params
                 )
             )
@@ -257,7 +258,7 @@ saveGiotto <- function(
 #' @details Works together with \code{\link{saveGiotto}} to save and re-load
 #' Giotto objects.
 #' Additional load_params need to be provided as a list and will
-#' go to \code{\link[base]{readRDS}} or \code{\link[qs]{qread}}
+#' go to \code{\link[base]{readRDS}} or \code{\link[qs2]{qs_read}}
 #' You can set the python path, alternatively it will look for an existing
 #' Giotto python environment.
 #' @returns Giotto object
@@ -552,24 +553,9 @@ setMethod(".load_external", signature("SpatVector"), function(x, name_fmt, dir,
         vmsg(.v = verbose, "more than 1 giotto object was found
         skip loading giotto object")
     } else {
-        # pick a reading function
-        read_fun <- NULL
-        if (grepl(".RDS", x = gobject_file)) { # .RDS file
-            read_fun <- "readRDS"
-            full_path <- file.path(path_to_folder, "gobject.RDS")
-        }
-        if (grepl(".qs", x = gobject_file)) { # .qs file
-            package_check(pkg_name = "qs", repository = "CRAN")
-            read_fun <- get("qread", asNamespace("qs"))
-            full_path <- file.path(path_to_folder, "gobject.qs")
-        }
-
-        if (is.null(read_fun)) { # unrecognized file
-            stop(
-                "object is not a recognized save format.\n ",
-                ".RDS, .qs are supported\n"
-            )
-        }
+        # pick a reading function by the file's extension
+        read_fun <- .gobject_read_fun(gobject_file)
+        full_path <- file.path(path_to_folder, gobject_file)
 
         # read in the object
         gobject <- do.call(
@@ -659,4 +645,17 @@ setMethod(".load_external", signature("SpatVector"), function(x, name_fmt, dir,
     }
 
     return(gobject)
+}
+
+# Reader for a saved gobject file, by its extension
+.gobject_read_fun <- function(file) {
+    switch(sub("^.*[.]", "", basename(file)),
+        "RDS" = , "rds" = readRDS,
+        "qs2" = {
+            package_check(pkg_name = "qs2", repository = "CRAN")
+            get("qs_read", asNamespace("qs2"))
+        },
+        stop("[loadGiotto] ", basename(file), " is not a recognized save ",
+            "format. .RDS and .qs2 are supported", call. = FALSE)
+    )
 }
