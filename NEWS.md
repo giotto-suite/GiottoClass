@@ -1,3 +1,23 @@
+# GiottoClass 0.7.16
+
+## new
+
+- `spatialSmoothParam()`: `processData()` averages each cell's values with
+  its neighbours' in a spatial network, counting edges in both directions.
+  The giotto method writes the result as new expression values.
+  `spatial_smooth_operator()` returns the cells x cells matrix it applies,
+  for backends that smooth themselves.
+- `featCorParam()`: `analyzeData()` returns the feature x feature
+  correlation, Pearson from moment sums or Spearman.
+- `createMetafeats(stat = "zmean")` averages features after scaling each to
+  mean 0 and standard deviation 1.
+
+## bug fixes
+
+- `createMetafeats(rescale_to =)` failed on a feature with the same value in
+  every cell.
+- `compatible_spatial_network()` checked only the `from` ends of the edges.
+
 # GiottoClass 0.7.15
 
 ## changes
