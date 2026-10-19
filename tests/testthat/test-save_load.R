@@ -77,6 +77,20 @@ describe("Giotto Object Save/Load", {
         })
     })
 
+    describe("foldername", {
+
+        it("must be a single folder name", {
+            for (bad in c("a/b", "a\\b", ".", "..")) {
+                expect_error(
+                    saveGiotto(empty, dir = test, foldername = bad,
+                        verbose = FALSE),
+                    "single folder name", fixed = TRUE
+                )
+            }
+            expect_false(dir.exists(file.path(test, "a")))
+        })
+    })
+
     describe("zero attribute SpatVector", {
 
         # register cleanup

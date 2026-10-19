@@ -21,7 +21,8 @@ saveGiotto(
 \arguments{
 \item{gobject}{Giotto object}
 
-\item{foldername}{Folder name (ignored when \code{gsource} is managed)}
+\item{foldername}{Folder name, created inside \code{dir}. A single folder:
+parent folders go in \code{dir}. (ignored when \code{gsource} is managed)}
 
 \item{dir}{Directory where to create the folder
 (ignored when \code{gsource} is managed)}

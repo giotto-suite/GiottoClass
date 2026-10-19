@@ -5,7 +5,8 @@
 #'   inheriting project manager (see [GiottoDisk::gsource] and
 #'   [GiottoDisk::gDirSource-class] for examples).
 #' @param gobject Giotto object
-#' @param foldername Folder name (ignored when `gsource` is managed)
+#' @param foldername Folder name, created inside `dir`. A single folder:
+#'   parent folders go in `dir`. (ignored when `gsource` is managed)
 #' @param dir Directory where to create the folder
 #'   (ignored when `gsource` is managed)
 #' @param method method to save main object: `"RDS"` or `"qs2"`
@@ -71,7 +72,15 @@ saveGiotto <- function(
     }
 
     # check params
-    checkmate::assert_character(foldername)
+    checkmate::assert_string(foldername, min.chars = 1L)
+    # one folder inside `dir`: dir.create() below is recursive, so a separator
+    # would nest the save silently
+    if (grepl("[/\\\\]", foldername) || foldername %in% c(".", "..")) {
+        stop(sprintf(paste0(
+            "[saveGiotto] foldername '%s' must be a single folder name.\n",
+            "  Put parent folders in `dir`."
+        ), foldername), call. = FALSE)
+    }
     checkmate::assert_character(dir)
     checkmate::assert_list(method_params)
     checkmate::assert_character(image_filetype)
