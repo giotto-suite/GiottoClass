@@ -1,3 +1,11 @@
+# GiottoClass 0.7.18
+
+## bug fixes
+
+- `saveGiotto()` errors when `foldername` is not a single folder name (it
+  contains `/` or `\`, or is `.` or `..`) instead of creating the nested
+  folders. Parent folders go in `dir`.
+
 # GiottoClass 0.7.17
 
 ## changes
