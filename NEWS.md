@@ -4,6 +4,7 @@
 - `create_average_detection_DT()` removed. It had no callers left in the suite once Giotto's gini markers moved onto `analyzeData(x, analyzeParam("feat_stats"), groups =)`, whose `perc_cells` column is the same statistic. `create_average_DT()` is retained, since `create_cluster_matrix()` needs it and GiottoClass cannot depend on Giotto, but it duplicates that verb's `mean_expr` and should not be used in new code.
 
 ## bug fixes
+- `subsetGiotto()` (and `filterGiotto()`, which calls it) no longer replaces the points of feature types it does not subset. Each one received the points of the feature type before it, so after the default `feat_type = "rna"` an object's control-probe and codeword points were the `rna` points. Affects every object with more than one points feature type, in memory or disk-backed, since 0.5.1; re-run from before the subset to recover them.
 - `create_average_DT()` and `create_average_detection_DT()` now select each group's cells by `cell_ID` rather than by position. Both fetch the expression matrix and the cell metadata independently, and nothing guarantees the two share a cell order — a freshly created object happens to agree, but `GiottoData::loadGiottoMini("visium")` has none of its 624 cells in matching position. Where the orders diverged, cells were labelled with another cell's group: on that object the per-cluster means correlated only 0.77 with the correct values. **Results will change for affected objects**; they were wrong before.
 
 ## changes
