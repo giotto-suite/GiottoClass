@@ -687,7 +687,7 @@
 
             res_list[[feat]] <- feat_subset
         } else {
-            res_list[[feat]] <- pts
+            res_list[[feat]] <- feat_info[[feat]]
         }
     }
     return(res_list)
