@@ -8,7 +8,13 @@
   `spatial_smooth_operator()` returns the cells x cells matrix it applies,
   for backends that smooth themselves.
 - `featCorParam()`: `analyzeData()` returns the feature x feature
-  correlation, Pearson from moment sums or Spearman.
+  correlation, Pearson from moment sums or Spearman. With
+  `smooth = spatialSmoothParam()` it correlates the smoothed values, which a
+  backend can do without storing them. `feat_cor_from_moments()` turns the
+  sums into the correlation.
+- `createMetafeats()` computes `"mean"` and `"sum"` scores for all modules
+  in one product, so a disk-backed store is read once rather than once per
+  module.
 - `createMetafeats(stat = "zmean")` averages features after scaling each to
   mean 0 and standard deviation 1.
 

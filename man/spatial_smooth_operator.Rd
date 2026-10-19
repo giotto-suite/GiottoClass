@@ -10,7 +10,8 @@ spatial_smooth_operator(
   weight = 1,
   n,
   smoothing = NULL,
-  names = NULL
+  names = NULL,
+  dedupe = TRUE
 )
 }
 \arguments{
@@ -26,6 +27,10 @@ its weights, and self edges are dropped}
 \eqn{k} the median number of neighbours}
 
 \item{names}{optional cell IDs for the dimnames}
+
+\item{dedupe}{logical. \code{FALSE} skips merging pairs listed more than once,
+for callers whose pairs are already one per pair of cells, which saves a
+pass over the edges on large networks}
 }
 \value{
 a sparse \verb{n x n} matrix

@@ -126,8 +126,9 @@ setMethod("processData",
 # operator over the cells `ids` of a network
 .smooth_operator <- function(network, ids, b, weighted) {
     e <- .edge_list_idx(network, ids, weighted)
+    # .edge_list_idx already gives one row per pair of cells
     spatial_smooth_operator(e$from, e$to, e$w, n = length(ids),
-        smoothing = b, names = ids)
+        smoothing = b, names = ids, dedupe = FALSE)
 }
 
 #' @title Spatial smoothing operator
@@ -145,28 +146,53 @@ setMethod("processData",
 #' @param smoothing neighbour weight \eqn{b}; `NULL` uses \eqn{1 - 1/k},
 #' \eqn{k} the median number of neighbours
 #' @param names optional cell IDs for the dimnames
+#' @param dedupe logical. `FALSE` skips merging pairs listed more than once,
+#' for callers whose pairs are already one per pair of cells, which saves a
+#' pass over the edges on large networks
 #' @returns a sparse `n x n` matrix
 #' @examples
 #' spatial_smooth_operator(c(1, 2), c(2, 3), n = 3, smoothing = 0.5)
 #' @export
 spatial_smooth_operator <- function(from, to, weight = 1, n, smoothing = NULL,
-    names = NULL) {
+    names = NULL, dedupe = TRUE) {
     w <- NULL  # NSE
-    e <- data.table::data.table(from = pmin(from, to), to = pmax(from, to),
-        w = rep_len(as.numeric(weight), length(from)))
-    e <- e[e$from != e$to][, list(w = mean(w)), by = c("from", "to")]
-    A <- Matrix::sparseMatrix(i = c(e$from, e$to), j = c(e$to, e$from),
-        x = c(e$w, e$w), dims = c(n, n))
-    d <- Matrix::colSums(A)
+    weight <- rep_len(as.numeric(weight), length(from))
+    if (isTRUE(dedupe)) {
+        e <- data.table::data.table(from = pmin(from, to),
+            to = pmax(from, to), w = weight)
+        e <- e[e$from != e$to][, list(w = mean(w)), by = c("from", "to")]
+        from <- e$from
+        to <- e$to
+        weight <- e$w
+        rm(e)
+    } else if (any(from == to)) {
+        keep <- from != to
+        from <- from[keep]
+        to <- to[keep]
+        weight <- weight[keep]
+    }
+    # one entry per (cell, neighbour) both ways and one per cell on the
+    # diagonal, built in a single construction: no intermediate n x n matrices
+    k <- tabulate(c(from, to), nbins = n)
+    d <- as.numeric(k)
+    if (any(weight != 1)) {
+        rs <- rowsum(c(weight, weight), c(from, to))
+        d[] <- 0
+        d[as.integer(rownames(rs))] <- rs[, 1L]
+    }
     b <- smoothing
     if (is.null(b)) {
-        k <- stats::median(Matrix::colSums(A != 0)[d > 0])
-        b <- if (is.finite(k) && k > 0) 1 - 1 / k else 0
+        med <- stats::median(k[k > 0])
+        b <- if (is.finite(med) && med > 0) 1 - 1 / med else 0
     }
-    P <- A %*% Matrix::Diagonal(x = ifelse(d > 0, 1 / d, 0))
-    M <- Matrix::Diagonal(x = ifelse(d > 0, 1 - b, 1)) + b * P
+    M <- Matrix::sparseMatrix(
+        i = c(from, to, seq_len(n)),
+        j = c(to, from, seq_len(n)),
+        x = c(b * weight / d[to], b * weight / d[from],
+            ifelse(d > 0, 1 - b, 1)),
+        dims = c(n, n))
     if (!is.null(names)) dimnames(M) <- list(names, names)
-    methods::as(M, "CsparseMatrix")
+    M
 }
 
 # features of x among `feats`, in the order given; stops on missing ones

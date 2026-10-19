@@ -4,10 +4,14 @@
 \alias{featCorParam}
 \title{Correlation between features}
 \usage{
-featCorParam(method = c("pearson", "spearman"), ...)
+featCorParam(method = c("pearson", "spearman"), smooth = NULL, ...)
 }
 \arguments{
 \item{method}{character. \code{"pearson"} (default) or \code{"spearman"}.}
+
+\item{smooth}{optional \code{\link[=spatialSmoothParam]{spatialSmoothParam()}}: correlate the values after
+smoothing them over the spatial network passed to \code{\link[=analyzeData]{analyzeData()}} as
+\code{network}}
 
 \item{...}{additional named entries to attach to \verb{@param}.}
 }

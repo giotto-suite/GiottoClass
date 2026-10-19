@@ -308,3 +308,20 @@ test_that("re-annotating an existing name overwrites it", {
     expect_identical(cm$ct[match("cell_1", cm$cell_ID)], "X")
     expect_false("ct.1" %in% colnames(cm))
 })
+
+test_that("one-pass module scores equal the per-module mean on sparse data", {
+    set.seed(9)
+    sm <- Matrix::rsparsematrix(6, 40, 0.3,
+        rand.x = function(n) rpois(n, 3) + 1)
+    dimnames(sm) <- list(paste0("f", 1:6), paste0("c", 1:40))
+    cl <- c(f1 = 1, f2 = 1, f3 = 2, f4 = 2, f6 = 2, fx = 3)
+    got <- .calc_metafeat_proj(cl, sm, mean = TRUE)
+    ref <- .calc_metafeat_vec(cl[names(cl) != "fx"], sm,
+        stat_fun = colMeans_flex)
+    expect_equal(as.matrix(got[, c("1", "2")]), as.matrix(ref))
+    expect_true(all(is.nan(got[["3"]])))
+    w <- data.frame(clus = c(1, 1, 2), feat = c("f1", "f2", "f5"),
+        w = c(2, 0.5, 3))
+    expect_equal(as.matrix(.calc_metafeat_proj(w, sm, mean = FALSE)),
+        as.matrix(.calc_metafeat_dt(w, sm, stat_fun = colSums_flex)))
+})

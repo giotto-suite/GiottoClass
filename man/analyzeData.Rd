@@ -17,7 +17,7 @@ analyzeData(x, param, ...)
 
 \S4method{analyzeData}{allMatrix,edgeStatsParam}(x, param, ..., network, groups = NULL)
 
-\S4method{analyzeData}{allMatrix,featCorParam}(x, param, ...)
+\S4method{analyzeData}{allMatrix,featCorParam}(x, param, ..., network = NULL)
 
 \S4method{analyzeData}{exprObj,analyzeParam}(x, param, ...)
 
@@ -46,9 +46,8 @@ analyzeData(x, param, ...)
 
 \item{...}{additional arguments, for use in specific methods}
 
-\item{network}{for an \link[=edgeStatsParam-class]{edgeStatsParam}: the spatial network, as a
-\code{data.frame} with \code{from} and \code{to} columns of cell IDs (plus \code{weight} when
-weighted), one row per edge, or an \code{igraph}.}
+\item{network}{for a \code{featCorParam} with \code{smooth}: the spatial network to
+smooth over}
 
 \item{groups}{optional vector of group assignments, one per column of \code{x},
 \code{NA} to exclude. When supplied, the statistics are taken per
