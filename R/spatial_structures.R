@@ -96,7 +96,7 @@ compatible_spatial_network <- function(spatial_network,
     # compatible network
     # all network nodes need to be found back in the column names
 
-    network_ids <- unique(spatial_network$from, spatial_network$to)
+    network_ids <- unique(c(spatial_network$from, spatial_network$to))
     cell_ids <- colnames(expression_matrix)
 
     missing_network_ids <- network_ids[!network_ids %in% cell_ids]

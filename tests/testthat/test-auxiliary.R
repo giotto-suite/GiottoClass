@@ -173,6 +173,20 @@ test_that("createMetafeat can use rescale", {
     expect_identical(test_m_num, expect_m)
 })
 
+test_that("createMetafeat zmean scales each feature before averaging", {
+    # every gene rises by 3 per cell: each scales to -1, 0, 1
+    g <- createMetafeats(g, stat = "zmean", expression_values = "test",
+        feat_clusters = num_vec_clus, name = "zm", verbose = FALSE)
+    enr <- getSpatialEnrichment(g, name = "zm", output = "data.table")
+    test_m <- as.matrix(enr[, 1:3])
+    dimnames(test_m) <- NULL
+    expect_equal(test_m, matrix(rep(c(-1, 0, 1), 3), nrow = 3))
+})
+
+test_that("rescaling a constant feature gives the range midpoint", {
+    expect_identical(.rescalev(c(2, 2, 2), 0, 1), rep(0.5, 3))
+})
+
 # annotateGiotto ####
 
 # The mapping is a lookup, not a per-row walk, and an unclustered cell
@@ -293,4 +307,21 @@ test_that("re-annotating an existing name overwrites it", {
     cm <- pDataDT(out)
     expect_identical(cm$ct[match("cell_1", cm$cell_ID)], "X")
     expect_false("ct.1" %in% colnames(cm))
+})
+
+test_that("one-pass module scores equal the per-module mean on sparse data", {
+    set.seed(9)
+    sm <- Matrix::rsparsematrix(6, 40, 0.3,
+        rand.x = function(n) rpois(n, 3) + 1)
+    dimnames(sm) <- list(paste0("f", 1:6), paste0("c", 1:40))
+    cl <- c(f1 = 1, f2 = 1, f3 = 2, f4 = 2, f6 = 2, fx = 3)
+    got <- .calc_metafeat_proj(cl, sm, mean = TRUE)
+    ref <- .calc_metafeat_vec(cl[names(cl) != "fx"], sm,
+        stat_fun = colMeans_flex)
+    expect_equal(as.matrix(got[, c("1", "2")]), as.matrix(ref))
+    expect_true(all(is.nan(got[["3"]])))
+    w <- data.frame(clus = c(1, 1, 2), feat = c("f1", "f2", "f5"),
+        w = c(2, 0.5, 3))
+    expect_equal(as.matrix(.calc_metafeat_proj(w, sm, mean = FALSE)),
+        as.matrix(.calc_metafeat_dt(w, sm, stat_fun = colSums_flex)))
 })

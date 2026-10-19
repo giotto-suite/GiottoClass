@@ -1,6 +1,6 @@
 Package: GiottoClass
 Title: Giotto Suite Object Definitions and Framework
-Version: 0.7.15
+Version: 0.7.16
 Authors@R: c(
 	person("Ruben", "Dries", email = "rubendries@gmail.com",
 		 role = c("aut", "cre"), comment = c(ORCID = "0000-0001-7650-7754")),
@@ -95,6 +95,7 @@ Collate:
     'NN_network.R'
     'aggregate.R'
     'analyze-edgeStats.R'
+    'analyze-featCor.R'
     'analyze-featStats.R'
     'combine_metadata.R'
     'analyze-labelProportions.R'
@@ -159,6 +160,7 @@ Collate:
     'methods-wrap.R'
     'methods-zoom.R'
     'nn_search_hnsw.R'
+    'process-spatialSmooth.R'
     'provenance.R'
     'python_bento.R'
     'python_environment.R'

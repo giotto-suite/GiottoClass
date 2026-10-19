@@ -1223,7 +1223,10 @@ calculateMetaTableCells <- function(gobject,
 #' @param feat_clusters numerical vector with features as names
 #' @param stat statistical transformation to calculate across the cluster
 #' features per cell to get the metafeature value. Provided defaults are
-#' "mean", 'sum', "max", and "min". If a function  is supplied instead,
+#' "mean", "zmean", "sum", "max", and "min". "zmean" averages the features
+#' after scaling each to mean 0 and standard deviation 1 across cells, so
+#' highly expressed features do not dominate the score; features without
+#' variance are left out. If a function is supplied instead,
 #' it will be run via `apply(MARGIN = 2)` across the expression matrix to
 #' calculate  the metafeature value.
 #' @param rescale_to numeric vector of length 2. (optional) New maximum and
@@ -1346,7 +1349,7 @@ createMetafeats <- function(gobject,
     feat_type = NULL,
     expression_values = c("normalized", "scaled", "custom"),
     feat_clusters,
-    stat = c("mean", "sum", "max", "min"),
+    stat = c("mean", "zmean", "sum", "max", "min"),
     rescale_to = NULL,
     name = paste0("metafeat_", ifelse(is.function(stat), "custom", stat)),
     return_gobject = TRUE,
@@ -1369,12 +1372,13 @@ createMetafeats <- function(gobject,
         }
     }
 
-    preset_stats <- c("mean", "sum", "max", "min")
+    preset_stats <- c("mean", "zmean", "sum", "max", "min")
     if (is.character(stat)) {
         # preset stat_fun
         stat <- match.arg(stat, choices = preset_stats)
         stat_fun <- switch(stat,
             "mean" = colMeans_flex,
+            "zmean" = .colmeans_z,
             "sum" = colSums_flex,
             "max" = function(x) apply(x, MARGIN = 2L, FUN = max),
             "min" = function(x) apply(x, MARGIN = 2L, FUN = min),
@@ -1429,7 +1433,13 @@ createMetafeats <- function(gobject,
     )
 
     ## calculate metafeat ##
-    res_final <- if (is.vector(feat_clusters)) {
+    # mean and sum are a product of the expression with a features x modules
+    # weight matrix: one pass over the values for all modules, which is what
+    # lets a disk-backed store score them without a pass per module
+    res_final <- if (is.character(stat) && stat %in% c("mean", "sum")) {
+        .calc_metafeat_proj(feat_clusters, expr_values,
+            mean = identical(stat, "mean"))
+    } else if (is.vector(feat_clusters)) {
         do.call(.calc_metafeat_vec, args = calc_args)
     } else if (inherits(feat_clusters, "data.frame")) {
         do.call(.calc_metafeat_dt, args = calc_args)
@@ -1489,6 +1499,40 @@ createMetafeats <- function(gobject,
     }
 }
 
+
+# mean or sum of each module's features per cell, as crossprod(W, expr):
+# W holds each feature's weight (1, or `w`) in its module's column. Features
+# absent from `expr_values` are skipped, as the per-module loop does.
+.calc_metafeat_proj <- function(x, expr_values, mean = TRUE) {
+    clus <- feat <- w <- NULL  # NSE
+    tab <- if (is.vector(x)) {
+        data.table::data.table(clus = unname(x), feat = names(x), w = 1)
+    } else if (inherits(x, "data.frame")) {
+        tab <- data.table::as.data.table(x)
+        if (!"w" %in% names(tab)) tab[, w := 1]
+        tab[, list(clus, feat, w)]
+    } else {
+        stop(wrap_txtf(
+            "`feat_clusters` is neither a vector nor a data.frame-like input",
+            errWidth = TRUE
+        ), call. = FALSE)
+    }
+    clusters <- mixedsort(unique(tab$clus))
+    tab <- tab[feat %in% rownames(expr_values)]
+    tab <- tab[!duplicated(tab[, list(clus, feat)])]
+    feats <- unique(tab$feat)
+    W <- matrix(0, nrow = length(feats), ncol = length(clusters))
+    W[cbind(match(tab$feat, feats), match(tab$clus, clusters))] <- tab$w
+    scores <- as.matrix(Matrix::crossprod(W,
+        expr_values[feats, , drop = FALSE]))
+    if (mean) {
+        n <- tabulate(match(tab$clus, clusters), nbins = length(clusters))
+        scores <- scores / n
+    }
+    res <- data.table::as.data.table(t(scores))
+    colnames(res) <- as.character(clusters)
+    res
+}
 
 # `x` should be a vector (numeric or character) with names.
 # The metafeatures/clusters are defined by the numerical values
@@ -1563,6 +1607,18 @@ createMetafeats <- function(gobject,
     return(res_final)
 }
 
+# column means of the rows scaled to mean 0, sd 1; rows without variance
+# are left out
+.colmeans_z <- function(x) {
+    x <- as.matrix(x)
+    sdv <- matrixStats::rowSds(x)
+    keep <- is.finite(sdv) & sdv > 0
+    if (!any(keep)) return(rep(NA_real_, ncol(x)))
+    z <- (x[keep, , drop = FALSE] - rowMeans(x[keep, , drop = FALSE])) /
+        sdv[keep]
+    colMeans(z)
+}
+
 # rescale a numeric vector input to a new min and max
 # values are zeroed before scaling
 .rescalev <- function(x, rmin, rmax) {
@@ -1570,7 +1626,8 @@ createMetafeats <- function(gobject,
     xmin <- rx[1L]
     xmax <- rx[2L]
     if (xmax == xmin) {
-        return(mean(rmin, rmax)) # return midpoint of rescaled range
+        # midpoint of the rescaled range, for every value
+        return(rep(mean(c(rmin, rmax)), length(x)))
     }
 
     # zero values
