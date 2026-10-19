@@ -1,6 +1,6 @@
 Package: GiottoClass
 Title: Giotto Suite Object Definitions and Framework
-Version: 0.7.16
+Version: 0.7.17
 Authors@R: c(
 	person("Ruben", "Dries", email = "rubendries@gmail.com",
 		 role = c("aut", "cre"), comment = c(ORCID = "0000-0001-7650-7754")),
@@ -50,7 +50,7 @@ Suggests:
     exactextractr,
     geometry,
     GiottoData (>= 0.3.6),
-    GiottoDisk,
+    GiottoDisk (>= 0.0.0.6),
     HDF5Array (>= 1.18.1),
     jsonlite,
     knitr,

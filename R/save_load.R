@@ -319,6 +319,9 @@ loadGiotto <- function(path_to_folder,
             verbose = verbose
         )
     } else {
+        # a project written by an older GiottoDisk is migrated to the layout
+        # the installed one reads before anything is loaded from it
+        src <- GiottoDisk::sourceUpdate(src, verbose = verbose)
         gobject <- GiottoDisk::snapshotLoad(src, 
             load_params = load_params,
             verbose = verbose,

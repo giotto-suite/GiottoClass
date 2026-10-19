@@ -54,6 +54,29 @@ describe("Giotto Object Save/Load", {
         })
     })
 
+    describe("backend-managed project", {
+
+        proj <- file.path(test, "oldLayoutProject")
+        on.exit(unlink(proj, recursive = TRUE), add = TRUE)
+
+        it("is upgraded to the backend's current layout and loads", {
+            skip_if_not_installed("GiottoDisk", minimum_version = "0.0.0.6")
+            # a project as an older backend left it: schema v1, one flat
+            # snapshot file
+            dir.create(file.path(proj, "giottosave"), recursive = TRUE)
+            jsonlite::write_json(list(
+                header = list(versions = list(manifest = 1L)),
+                content = list()
+            ), file.path(proj, "giottodir.json"), auto_unbox = TRUE)
+            saveRDS(empty, file.path(proj, "giottosave", "snap.rds"))
+
+            g2 <- loadGiotto(proj, verbose = FALSE)
+            expect_s4_class(g2, "giotto")
+            s <- GiottoDisk::sourceSchema(proj)
+            expect_identical(s$version, s$current)
+        })
+    })
+
     describe("zero attribute SpatVector", {
 
         # register cleanup
