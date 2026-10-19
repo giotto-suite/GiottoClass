@@ -1,3 +1,12 @@
+# GiottoClass 0.7.17
+
+## changes
+
+- `loadGiotto()` on a backend-managed project directory first upgrades the
+  directory to the layout the installed backend reads (`sourceUpdate()`), so
+  a project saved by an older backend version loads instead of being
+  refused. Needs `GiottoDisk (>= 0.0.0.6)` for such directories.
+
 # GiottoClass 0.7.16
 
 ## new
