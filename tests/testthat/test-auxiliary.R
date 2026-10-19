@@ -173,6 +173,20 @@ test_that("createMetafeat can use rescale", {
     expect_identical(test_m_num, expect_m)
 })
 
+test_that("createMetafeat zmean scales each feature before averaging", {
+    # every gene rises by 3 per cell: each scales to -1, 0, 1
+    g <- createMetafeats(g, stat = "zmean", expression_values = "test",
+        feat_clusters = num_vec_clus, name = "zm", verbose = FALSE)
+    enr <- getSpatialEnrichment(g, name = "zm", output = "data.table")
+    test_m <- as.matrix(enr[, 1:3])
+    dimnames(test_m) <- NULL
+    expect_equal(test_m, matrix(rep(c(-1, 0, 1), 3), nrow = 3))
+})
+
+test_that("rescaling a constant feature gives the range midpoint", {
+    expect_identical(.rescalev(c(2, 2, 2), 0, 1), rep(0.5, 3))
+})
+
 # annotateGiotto ####
 
 # The mapping is a lookup, not a per-row walk, and an unclustered cell

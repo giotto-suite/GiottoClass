@@ -1223,7 +1223,10 @@ calculateMetaTableCells <- function(gobject,
 #' @param feat_clusters numerical vector with features as names
 #' @param stat statistical transformation to calculate across the cluster
 #' features per cell to get the metafeature value. Provided defaults are
-#' "mean", 'sum', "max", and "min". If a function  is supplied instead,
+#' "mean", "zmean", "sum", "max", and "min". "zmean" averages the features
+#' after scaling each to mean 0 and standard deviation 1 across cells, so
+#' highly expressed features do not dominate the score; features without
+#' variance are left out. If a function is supplied instead,
 #' it will be run via `apply(MARGIN = 2)` across the expression matrix to
 #' calculate  the metafeature value.
 #' @param rescale_to numeric vector of length 2. (optional) New maximum and
@@ -1346,7 +1349,7 @@ createMetafeats <- function(gobject,
     feat_type = NULL,
     expression_values = c("normalized", "scaled", "custom"),
     feat_clusters,
-    stat = c("mean", "sum", "max", "min"),
+    stat = c("mean", "zmean", "sum", "max", "min"),
     rescale_to = NULL,
     name = paste0("metafeat_", ifelse(is.function(stat), "custom", stat)),
     return_gobject = TRUE,
@@ -1369,12 +1372,13 @@ createMetafeats <- function(gobject,
         }
     }
 
-    preset_stats <- c("mean", "sum", "max", "min")
+    preset_stats <- c("mean", "zmean", "sum", "max", "min")
     if (is.character(stat)) {
         # preset stat_fun
         stat <- match.arg(stat, choices = preset_stats)
         stat_fun <- switch(stat,
             "mean" = colMeans_flex,
+            "zmean" = .colmeans_z,
             "sum" = colSums_flex,
             "max" = function(x) apply(x, MARGIN = 2L, FUN = max),
             "min" = function(x) apply(x, MARGIN = 2L, FUN = min),
@@ -1563,6 +1567,18 @@ createMetafeats <- function(gobject,
     return(res_final)
 }
 
+# column means of the rows scaled to mean 0, sd 1; rows without variance
+# are left out
+.colmeans_z <- function(x) {
+    x <- as.matrix(x)
+    sdv <- matrixStats::rowSds(x)
+    keep <- is.finite(sdv) & sdv > 0
+    if (!any(keep)) return(rep(NA_real_, ncol(x)))
+    z <- (x[keep, , drop = FALSE] - rowMeans(x[keep, , drop = FALSE])) /
+        sdv[keep]
+    colMeans(z)
+}
+
 # rescale a numeric vector input to a new min and max
 # values are zeroed before scaling
 .rescalev <- function(x, rmin, rmax) {
@@ -1570,7 +1586,8 @@ createMetafeats <- function(gobject,
     xmin <- rx[1L]
     xmax <- rx[2L]
     if (xmax == xmin) {
-        return(mean(rmin, rmax)) # return midpoint of rescaled range
+        # midpoint of the rescaled range, for every value
+        return(rep(mean(c(rmin, rmax)), length(x)))
     }
 
     # zero values

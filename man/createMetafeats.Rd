@@ -10,7 +10,7 @@ createMetafeats(
   feat_type = NULL,
   expression_values = c("normalized", "scaled", "custom"),
   feat_clusters,
-  stat = c("mean", "sum", "max", "min"),
+  stat = c("mean", "zmean", "sum", "max", "min"),
   rescale_to = NULL,
   name = paste0("metafeat_", ifelse(is.function(stat), "custom", stat)),
   return_gobject = TRUE,
@@ -30,7 +30,10 @@ createMetafeats(
 
 \item{stat}{statistical transformation to calculate across the cluster
 features per cell to get the metafeature value. Provided defaults are
-"mean", 'sum', "max", and "min". If a function  is supplied instead,
+"mean", "zmean", "sum", "max", and "min". "zmean" averages the features
+after scaling each to mean 0 and standard deviation 1 across cells, so
+highly expressed features do not dominate the score; features without
+variance are left out. If a function is supplied instead,
 it will be run via \code{apply(MARGIN = 2)} across the expression matrix to
 calculate  the metafeature value.}
 
