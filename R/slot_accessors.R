@@ -2775,6 +2775,10 @@ setMethod("setPolygonInfo", signature("giotto"), function(gobject,
             store <- GiottoDisk::sourceWrite(gsrc, x[])
             x[] <- store
         }
+        # a backed polygon derives its centroids from the store; terra
+        # centroids kept next to it do not survive a snapshot and break
+        # subsetting by poly_ID
+        x@spatVectorCentroids <- NULL
     }
     gobject@spatial_info[[name]] <- x
   
