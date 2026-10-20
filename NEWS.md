@@ -2,6 +2,12 @@
 
 ## bug fixes
 
+- A polygon set on a disk-backed object no longer keeps terra centroids next
+  to its store. They did not survive a snapshot, so `filterGiotto()` and
+  `subsetGiotto()` failed with "object 'poly_ID' not found" after
+  `saveGiotto()`, for example with the cell outlines from a Stereo-seq
+  reader. The centroids are derived from the store.
+
 - `saveGiotto()` errors when `foldername` is not a single folder name (it
   contains `/` or `\`, or is `.` or `..`) instead of creating the nested
   folders. Parent folders go in `dir`.
