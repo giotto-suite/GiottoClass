@@ -401,6 +401,36 @@ describe("fingerprint_data methods", {
         expect_identical(fingerprint_data(mk(3)), fp)
     })
 
+    it("fingerprints a BPCells matrix from its handle", {
+        skip_if_not_installed("BPCells")
+        m <- as(g@expression$cell$rna$raw@exprMat, "dgCMatrix")
+        d <- tempfile()
+        b <- BPCells::write_matrix_dir(m, d, compress = FALSE)
+        fp <- fingerprint_data(b)
+        expect_type(fp, "character")
+        # a copy elsewhere is the same matrix
+        d2 <- tempfile()
+        dir.create(d2)
+        file.copy(list.files(d, full.names = TRUE), d2)
+        expect_identical(fingerprint_data(BPCells::open_matrix_dir(d2)), fp)
+        # queued operations and other content are not
+        expect_false(identical(fingerprint_data(log1p(b)), fp))
+        b3 <- BPCells::write_matrix_dir(m[, 1:10], tempfile(), compress = FALSE)
+        expect_false(identical(fingerprint_data(b3), fp))
+    })
+
+    it("fingerprints an HDF5Array matrix from its handle", {
+        skip_if_not_installed("HDF5Array")
+        m <- as.matrix(g@expression$cell$rna$raw@exprMat[1:50, 1:20])
+        f <- tempfile(fileext = ".h5")
+        h <- HDF5Array::writeHDF5Array(m, f, name = "x")
+        fp <- fingerprint_data(h)
+        f2 <- tempfile(fileext = ".h5")
+        file.copy(f, f2)
+        expect_identical(fingerprint_data(HDF5Array::HDF5Array(f2, "x")), fp)
+        expect_false(identical(fingerprint_data(h[1:5, ]), fp))
+    })
+
     it("has no fingerprint only for an absent payload", {
         expect_null(fingerprint_data(NULL))
         expect_error(fingerprint_data(new.env()), "no method")

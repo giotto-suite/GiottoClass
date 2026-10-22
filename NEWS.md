@@ -1,3 +1,12 @@
+# GiottoClass 0.7.22
+
+## new
+
+- `fingerprint_data()` fingerprints BPCells and HDF5Array expression matrices
+  from their handle: the delayed operations and the sizes of their backing
+  files. The data is not read, and copying the files elsewhere keeps the
+  fingerprint.
+
 # GiottoClass 0.7.21
 
 ## new

@@ -730,6 +730,9 @@ setMethod(".manifest_leaf", signature("giottoImage"), function(
 #' unreadable fingerprint in its `warnings` rather than treating the payload
 #' as unchanged. Only an absent payload (`NULL`) has no fingerprint.
 #'
+#' BPCells and HDF5Array matrices are fingerprinted from their handle: the
+#' delayed operations, and the names and sizes of their backing files.
+#'
 #' A function is fingerprinted by its code. Values a closure captures are not
 #' seen, so two closures that differ only in a captured value share a
 #' fingerprint.
@@ -745,9 +748,58 @@ NULL
 #' @rdname fingerprint_data
 #' @export
 setMethod("fingerprint_data", signature("ANY"), function(x, ...) {
+    # BPCells and HDF5Array matrices are matched by class name: they are held
+    # as expression without either package being imported here.
+    if (inherits(x, c("IterableMatrix", "DelayedArray"))) {
+        return(.fp_hash(.fp_file_tree(x)))
+    }
     stop("[fingerprint_data] no method for payload class ", class(x)[[1L]],
         call. = FALSE)
 })
+
+# Slots holding a backing file or directory: BPCells MatrixDir `dir`, its h5
+# matrices' `path`, and HDF5Array seeds' `filepath`.
+.FP_PATH_SLOTS <- c("dir", "path", "filepath")
+
+# An on-disk matrix by its handle: the op tree with each backing path replaced
+# by the names and sizes of the files under it. The data is never read. Sizes
+# rather than paths or mtimes, so a copy into a save folder or project keeps
+# the fingerprint. An edit that leaves every file the same size is missed;
+# both packages write a new file rather than edit one in place.
+.fp_file_tree <- function(x) {
+    if (is.null(x) || is.atomic(x)) return(x)
+    if (is.function(x)) return(fingerprint_data(x))
+    if (isS4(x)) {
+        sn <- methods::slotNames(x)
+        parts <- lapply(sn, function(s) {
+            v <- methods::slot(x, s)
+            if (s %in% .FP_PATH_SLOTS && is.character(v)) {
+                .fp_file_sizes(v)
+            } else {
+                .fp_file_tree(v)
+            }
+        })
+        return(c(list(class = class(x)[[1L]]), stats::setNames(parts, sn)))
+    }
+    if (is.list(x)) return(lapply(x, .fp_file_tree))
+    stop("[fingerprint_data] no canonical form for ", class(x)[[1L]],
+        call. = FALSE)
+}
+
+.fp_file_sizes <- function(paths) {
+    lapply(paths, function(p) {
+        f <- if (dir.exists(p)) {
+            sort(list.files(p, recursive = TRUE, full.names = TRUE))
+        } else {
+            p
+        }
+        if (!all(file.exists(f))) {
+            stop("[fingerprint_data] backing file not found: ", p,
+                call. = FALSE)
+        }
+        list(files = substring(f, nchar(p) + 2L), size = file.size(f))
+    })
+}
 
 # an absent payload is not an error
 #' @rdname fingerprint_data
