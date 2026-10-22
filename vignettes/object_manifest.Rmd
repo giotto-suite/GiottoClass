@@ -153,6 +153,7 @@ How a fingerprint is computed depends on what the subobject holds:
 | polygons and points | a fixed-stride sample of the geometries and their attributes, plus the overall extent |
 | images | the pixels read at display resolution, plus extent |
 | disk-backed stores | the store's handle: its identity, recorded operations and schema |
+| BPCells and HDF5Array matrices | their delayed operations, and the names and sizes of their backing files |
 | functions | their code; values a closure captures are not seen |
 
 A fingerprint is never a hash of the R object itself. Objects that hold an
