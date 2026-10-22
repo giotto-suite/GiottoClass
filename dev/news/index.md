@@ -1,5 +1,50 @@
 # Changelog
 
+## GiottoClass 0.7.20
+
+### breaking changes
+
+- Manifest schema 0.2.0 replaces the unreleased 0.1.0. Each slot is a
+  list of records, one per subobject, with its identity under `keys`:
+  the arguments its getter takes. Metadata `columns` are keyed by column
+  name.
+- [`objManifest()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest.md)
+  drops `level` and `fingerprint`; every record is fingerprinted.
+  Metadata level counts are opt-in with `levels = TRUE`.
+- Manifest records no longer report sizes or extents (`shape`, `nnz`,
+  `n_geom`, `extent`, …), which cost a scan on disk-backed objects. Cell
+  and feature counts stay in the summary block.
+
+### new
+
+- [`fingerprint_data()`](https://giotto-suite.github.io/GiottoClass/dev/reference/fingerprint_data.md):
+  the generic a payload representation, such as a disk-backed store,
+  implements so manifests can fingerprint it.
+- [`objManifest()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest.md)
+  reports the object’s backing source, and views and spaces.
+- [`print()`](https://rdrr.io/r/base/print.html) on a manifest lists
+  each slot’s records by their keys.
+
+### changes
+
+- Fingerprints hash in-memory content in full. Metadata is fingerprinted
+  per column, so
+  [`manifestDiff()`](https://giotto-suite.github.io/GiottoClass/dev/reference/manifestDiff.md)
+  names the column an edit touched. Images are read at display
+  resolution and keep their fingerprint through
+  [`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md).
+- [`manifestDiff()`](https://giotto-suite.github.io/GiottoClass/dev/reference/manifestDiff.md)
+  says “no detected change (N items unfingerprinted)” rather than “no
+  state change” when it could not see into a record, and states a subset
+  once instead of listing every record it touched.
+
+### bug fixes
+
+- Manifest JSON keeps list fields such as `provenance` as arrays; a
+  single value was written as a bare string.
+- Two subobjects with the same identity are both kept in a manifest and
+  reported in `warnings`; one used to overwrite the other in a diff.
+
 ## GiottoClass 0.7.19
 
 ### bug fixes

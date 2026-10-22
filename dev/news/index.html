@@ -58,7 +58,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.20</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -91,6 +91,36 @@
       <small>Source: <a href="https://github.com/giotto-suite/Giotto/blob/website/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.20" id="giottoclass-0720">GiottoClass 0.7.20<a class="anchor" aria-label="anchor" href="#giottoclass-0720"></a></h2>
+<div class="section level3">
+<h3 id="breaking-changes-0-7-20">breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-7-20"></a></h3>
+<ul><li>Manifest schema 0.2.0 replaces the unreleased 0.1.0. Each slot is a list of records, one per subobject, with its identity under <code>keys</code>: the arguments its getter takes. Metadata <code>columns</code> are keyed by column name.</li>
+<li>
+<code><a href="../reference/objManifest.html">objManifest()</a></code> drops <code>level</code> and <code>fingerprint</code>; every record is fingerprinted. Metadata level counts are opt-in with <code>levels = TRUE</code>.</li>
+<li>Manifest records no longer report sizes or extents (<code>shape</code>, <code>nnz</code>, <code>n_geom</code>, <code>extent</code>, …), which cost a scan on disk-backed objects. Cell and feature counts stay in the summary block.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="new-0-7-20">new<a class="anchor" aria-label="anchor" href="#new-0-7-20"></a></h3>
+<ul><li>
+<code><a href="../reference/fingerprint_data.html">fingerprint_data()</a></code>: the generic a payload representation, such as a disk-backed store, implements so manifests can fingerprint it.</li>
+<li>
+<code><a href="../reference/objManifest.html">objManifest()</a></code> reports the object’s backing source, and views and spaces.</li>
+<li>
+<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> on a manifest lists each slot’s records by their keys.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="changes-0-7-20">changes<a class="anchor" aria-label="anchor" href="#changes-0-7-20"></a></h3>
+<ul><li>Fingerprints hash in-memory content in full. Metadata is fingerprinted per column, so <code><a href="../reference/manifestDiff.html">manifestDiff()</a></code> names the column an edit touched. Images are read at display resolution and keep their fingerprint through <code><a href="../reference/saveGiotto.html">saveGiotto()</a></code>.</li>
+<li>
+<code><a href="../reference/manifestDiff.html">manifestDiff()</a></code> says “no detected change (N items unfingerprinted)” rather than “no state change” when it could not see into a record, and states a subset once instead of listing every record it touched.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-7-20">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-20"></a></h3>
+<ul><li>Manifest JSON keeps list fields such as <code>provenance</code> as arrays; a single value was written as a bare string.</li>
+<li>Two subobjects with the same identity are both kept in a manifest and reported in <code>warnings</code>; one used to overwrite the other in a diff.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.7.19" id="giottoclass-0719">GiottoClass 0.7.19<a class="anchor" aria-label="anchor" href="#giottoclass-0719"></a></h2>
 <div class="section level3">

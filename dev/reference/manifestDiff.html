@@ -68,7 +68,7 @@ from printed console output."><meta property="og:image" content="https://giotto-
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.20</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -131,7 +131,10 @@ from printed console output.</p>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>list with <code>changed</code> (logical), <code>summary</code> (character scalar) and
-<code>detail</code> (added / removed / modified / object)</p>
+<code>detail</code> (added / removed / modified / counts / object / unfingerprinted).
+<code>changed</code> reports detected changes only: a record that carries no
+fingerprint on either side is listed in <code>unfingerprinted</code>, and named in
+<code>summary</code>, because it could have changed without the diff seeing it.</p>
     </div>
 
     <div class="section level2">

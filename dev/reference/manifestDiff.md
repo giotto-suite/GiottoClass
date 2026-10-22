@@ -28,7 +28,10 @@ manifestDiff(before, after)
 ## Value
 
 list with `changed` (logical), `summary` (character scalar) and `detail`
-(added / removed / modified / object)
+(added / removed / modified / counts / object / unfingerprinted).
+`changed` reports detected changes only: a record that carries no
+fingerprint on either side is listed in `unfingerprinted`, and named in
+`summary`, because it could have changed without the diff seeing it.
 
 ## Examples
 
