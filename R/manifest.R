@@ -733,6 +733,10 @@ setMethod(".manifest_leaf", signature("giottoImage"), function(
 #' was given. The default method errors, and the manifest reports that as an
 #' unreadable fingerprint in its `warnings` rather than treating the payload
 #' as unchanged. Only an absent payload (`NULL`) has no fingerprint.
+#'
+#' A function is fingerprinted by its code. Values a closure captures are not
+#' seen, so two closures that differ only in a captured value share a
+#' fingerprint.
 #' @param x a payload
 #' @param ... additional params (none implemented)
 #' @returns character scalar, or `NULL` for a `NULL` payload
@@ -977,6 +981,18 @@ setMethod("fingerprint_data", signature("affine2d"), function(x, ...) {
     .fp_hash(stats::setNames(
         lapply(sn, function(s) fingerprint_data(slot(x, s))), sn
     ))
+})
+
+# A function by its code: the whole deparse, so primitives (NULL formals and
+# body) stay distinct. Not the closure itself, whose hash moves once the JIT
+# swaps in bytecode and which carries its whole environment. Without
+# "useSource", comments and layout do not count. Captured values are not seen:
+# two closures with the same code and different captures hash the same.
+#' @rdname fingerprint_data
+#' @export
+setMethod("fingerprint_data", signature("function"), function(x, ...) {
+    .fp_hash(deparse(x,
+        control = c("keepNA", "keepInteger", "niceNames", "showAttributes")))
 })
 
 # Pixels at display resolution, plus the placement. Identifying the source file

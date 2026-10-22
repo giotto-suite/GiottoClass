@@ -1,3 +1,11 @@
+# GiottoClass 0.7.21
+
+## new
+
+- `fingerprint_data()` fingerprints functions by their code, so a payload
+  holding one is no longer unfingerprinted. Values a closure captures are not
+  seen.
+
 # GiottoClass 0.7.20
 
 ## breaking changes
