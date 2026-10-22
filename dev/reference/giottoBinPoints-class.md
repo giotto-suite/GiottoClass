@@ -33,14 +33,17 @@ createGiottoBinPoints(expr_values, spatial_locs, feat_type = "rna")
 
 - `spatial`:
 
-  ANY (currently `SpatVector` only). Row-indexed spatial points
+  ANY. Row-indexed spatial points: a `SpatVector`, or on a backed object
+  a GiottoDisk points store keyed by the bin's row in `@counts`
 
 - `counts`:
 
   `data.table` with integer cols `i` and `j` mapping to `@fid` and
   `@bid` respectively. `x` is a numeric col standing for count or value
   of a feature for this bin point. Row indexing of this object is based
-  on this slot.
+  on this slot. On a backed object, a GiottoDisk expression store of
+  features x bins, with `@bid` and `@pmap` left empty since its cell IDs
+  are the bin IDs.
 
 - `bid`:
 

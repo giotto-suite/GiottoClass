@@ -60,7 +60,7 @@ for clusters."><meta property="og:image" content="https://giotto-suite.github.io
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -107,7 +107,7 @@ for clusters.</p>
 <span>  feat_type <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  expression_values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"normalized"</span>, <span class="st">"scaled"</span>, <span class="st">"custom"</span><span class="op">)</span>,</span>
 <span>  <span class="va">feat_clusters</span>,</span>
-<span>  stat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mean"</span>, <span class="st">"sum"</span>, <span class="st">"max"</span>, <span class="st">"min"</span><span class="op">)</span>,</span>
+<span>  stat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mean"</span>, <span class="st">"zmean"</span>, <span class="st">"sum"</span>, <span class="st">"max"</span>, <span class="st">"min"</span><span class="op">)</span>,</span>
 <span>  rescale_to <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"metafeat_"</span>, <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/is.function.html" class="external-link">is.function</a></span><span class="op">(</span><span class="va">stat</span><span class="op">)</span>, <span class="st">"custom"</span>, <span class="va">stat</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  return_gobject <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -142,7 +142,10 @@ for clusters.</p>
 <dt id="arg-stat">stat<a class="anchor" aria-label="anchor" href="#arg-stat"></a></dt>
 <dd><p>statistical transformation to calculate across the cluster
 features per cell to get the metafeature value. Provided defaults are
-"mean", 'sum', "max", and "min". If a function  is supplied instead,
+"mean", "zmean", "sum", "max", and "min". "zmean" averages the features
+after scaling each to mean 0 and standard deviation 1 across cells, so
+highly expressed features do not dominate the score; features without
+variance are left out. If a function is supplied instead,
 it will be run via <code>apply(MARGIN = 2)</code> across the expression matrix to
 calculate  the metafeature value.</p></dd>
 

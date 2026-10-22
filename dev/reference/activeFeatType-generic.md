@@ -6,10 +6,10 @@ feature type that the giotto object uses.
 ## Usage
 
 ``` r
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 activeFeatType(gobject)
 
-# S4 method for class 'giotto,character'
+# S4 method for class 'gAny,character'
 activeFeatType(gobject) <- value
 ```
 

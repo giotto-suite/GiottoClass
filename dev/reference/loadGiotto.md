@@ -55,8 +55,8 @@ Works together with
 [`saveGiotto`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md)
 to save and re-load Giotto objects. Additional load_params need to be
 provided as a list and will go to
-[`readRDS`](https://rdrr.io/r/base/readRDS.html) or `qread` You can set
-the python path, alternatively it will look for an existing Giotto
+[`readRDS`](https://rdrr.io/r/base/readRDS.html) or `qs_read` You can
+set the python path, alternatively it will look for an existing Giotto
 python environment.
 
 ## Examples

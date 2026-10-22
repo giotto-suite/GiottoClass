@@ -79,7 +79,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -440,8 +440,8 @@ contract.</p>
 <tr class="even">
 <td>features</td>
 <td><code>feat_ID</code></td>
-<td>not modelled; <code>resolveSubobject(featMetaObj)</code> returns its
-input untouched for this reason</td>
+<td>not modelled; <code>resolveRecipe(&lt;featMetaObj&gt;)</code>
+returns its input untouched for this reason</td>
 </tr>
 <tr class="odd">
 <td>subcellular points</td>
@@ -579,9 +579,9 @@ extent. Overridable per call.</li>
 <strong>Sample-uniform scope, deliberately.</strong> Within a
 sample, cells, polygons, points, images and spatial locations all move
 together. Per-element overrides are unsupported; the documented path is
-<code><a href="../reference/materialize.html">materialize()</a></code> plus per-element transforms afterwards. This
-does put image-versus-polygon registration — the hard alignment problem
-— out of scope.</li>
+<code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> plus per-element transforms afterwards.
+This does put image-versus-polygon registration — the hard alignment
+problem — out of scope.</li>
 <li>A <code>spaceTransform</code> step captures a call to an existing
 transform generic. At resolution the receiving object is spliced in as
 the first argument and <code><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call()</a></code> dispatches to the method
@@ -591,26 +591,281 @@ implementations</strong>.</li>
 </div>
 </div>
 <div class="section level2">
-<h2 id="materialize">
-<code>materialize()</code><a class="anchor" aria-label="anchor" href="#materialize"></a>
+<h2 id="resolverecipe">
+<code>resolveRecipe()</code><a class="anchor" aria-label="anchor" href="#resolverecipe"></a>
 </h2>
-<p><code>materialize(g, view, space)</code> resolves the recipes and
-returns a new gobject where ordinary accessors see the narrowed,
+<p><code>resolveRecipe(g, view =, space =)</code> resolves the recipes
+and returns a new gobject where ordinary accessors see the narrowed,
 reframed data — no recipe argument needed downstream.
-<code>slots =</code> limits which slots are materialized, and the
+<code>slots =</code> limits which slots are walked, and the
 <code>combine*()</code> family routes through it so one resolution is
 reused rather than recomputed. On a <code>giottoMulti</code> it walks
 participating children and applies each one’s step list. Its resolved
 surviving-ID set is what GiottoLens pre-renders as a view payload.</p>
-<p><code><a href="../reference/materialize.html">materialize()</a></code> is plumbing rather than a user verb: it is
-exported so that GiottoVisuals’ <code>.gg_materialize()</code> can call
-it, and the user-facing route to the same effect is the
+<p><code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> is plumbing rather than a user verb: it
+is exported so that GiottoVisuals’ <code>.gg_materialize()</code> can
+call it, and the user-facing route to the same effect is the
 <code>view =</code> / <code>space =</code> arguments on the ordinary
 accessors.</p>
-<p><strong>Open — image-slot semantics.</strong> Warp at materialize
-time, or keep images as references with the transform applied at render?
-Unresolved, and it matters for anything that exports a materialized
+<p><strong>Open — image-slot semantics.</strong> Warp at resolve time,
+or keep images as references with the transform applied at render?
+Unresolved, and it matters for anything that exports a resolved
 gobject.</p>
+<div class="section level3">
+<h3 id="one-generic-two-levels">One generic, two levels<a class="anchor" aria-label="anchor" href="#one-generic-two-levels"></a>
+</h3>
+<p><code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> is a single generic spanning the
+container and the leaf. It was two — <code><a href="../reference/materialize.html">materialize()</a></code> on the
+gobject and <code><a href="../reference/resolveSubobject.html">resolveSubobject()</a></code> on each subobject — which
+were the same operation under two names, split at the point where one
+called the other.</p>
+<p>The name changed because <code>materialize</code> was already
+load-bearing elsewhere with a different meaning: GiottoDisk uses it
+throughout for pulling lazy or backed data into memory. This function is
+backend-agnostic, selects a <code>parquetCoordinator</code> for backed
+objects, and returns a gobject whose subobjects are <em>still
+stores</em>. A reader arriving from GiottoDisk would read it as “force
+this into RAM”, which is the one thing it does not do. “Resolve” was
+already the subsystem’s own verb — the resolver,
+<code>.surviving_cell_ids()</code>, <code>dataTableCoordinator</code> /
+<code>parquetCoordinator</code> as resolver backends — and a view and a
+space are both recipes, so <code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> names the verb
+and what it acts on. The noun is not decoration: a bare
+<code>resolve()</code> collides with <code>future::resolve()</code>,
+which returns its input unchanged, so a script that attached future
+after Giotto would get an un-narrowed object with no error.
+<code>resolveView()</code> was considered and passed over because a call
+with only <code>space =</code> is valid, and “query” was avoided because
+GiottoDisk already uses it for a lazy arrow plan.</p>
+<p>Dispatch is on <code>(x, coordinator)</code>; everything past
+<code>x</code> is passed by name, so which formal occupies dispatch slot
+2 — the coordinator at a leaf, nothing at a container — never surfaces
+at a call site. Container methods register against <code>ANY</code>
+rather than <code>missing</code>, because a container does not dispatch
+on the coordinator (it picks one from <code>@source</code>) but must
+still accept one.</p>
+<p>Two consequences worth stating, because they look like losses until
+you see what they were:</p>
+<ul>
+<li>
+<strong><code>view</code> left the dispatch signature.</strong> The
+container used to have separate <code>character</code> and
+<code>NULL</code> methods for it. That is now a null check inside one
+method — which is what it always was, wearing dispatch. Keeping it would
+have meant a third always-<code>ANY</code> slot on every leaf, for a
+distinction only the container cares about.</li>
+<li>
+<strong><code><a href="../reference/resolveSubobject.html">resolveSubobject()</a></code>’s five-argument signature
+went.</strong> All 19 registrations across GiottoClass and GiottoDisk
+used only <code>(subobj, coordinator)</code>; the middle three were
+always <code>ANY</code> and made <code>findMethods()</code>
+unreadable.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="a-leaf-is-handed-its-context-not-the-gobject">A leaf is handed its context, not the gobject<a class="anchor" aria-label="anchor" href="#a-leaf-is-handed-its-context-not-the-gobject"></a>
+</h3>
+<p>Every GiottoClass leaf used the gobject for exactly one thing:
+deriving the surviving cell_ID set.
+<code>.apply_space_to_subobj()</code> took both the gobject and the
+coordinator <em>and referenced neither in its body</em> — they appeared
+on the signature line and nowhere else, which is the clearest sign the
+contract was passing context nothing consumed.</p>
+<p>Removing that one use exposed how far the habit reached: the
+coordinator had been threaded through the entire crop-carrier chain —
+<code>.crop_carriers()</code> → <code>.get_projected_spatlocs()</code> →
+<code>.gm_fused_spatlocs()</code> → <code>.get_projected_polys()</code>
+→ <code>.cells_in_crop_step()</code> — to reach that single call, and
+nothing else read it. The backed implementations of the same helpers had
+never taken one. It is gone from all five.
+<code>.surviving_cell_ids()</code> keeps its coordinator, because that
+one is a seam a backend <em>replaces</em> rather than parameterises, and
+the replacement genuinely takes one.</p>
+<p>It is worth being precise about why the gobject was there, because
+the obvious explanation is wrong. It is <strong>not</strong> that
+<code>view</code> / <code>space</code> arrive as names needing lookup —
+they are resolved to objects before the walk begins. What needs the
+gobject is <em>evaluating</em> the view into an ID set: filter
+predicates read metadata, crop steps need centroid carriers. That is
+data, not recipe, and it is precisely the thing that should happen once
+at the container.</p>
+<p>So a leaf now takes what the container computed:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/resolveRecipe.html">resolveRecipe</a></span><span class="op">(</span><span class="va">subobj</span>, <span class="va">coordinator</span>, keep <span class="op">=</span> <span class="va">k</span>, space <span class="op">=</span> <span class="va">s</span>, view <span class="op">=</span> <span class="va">v</span><span class="op">)</span></span></code></pre></div>
+<p><code>view</code> stays because
+<code>.apply_crops_geometrically()</code> reads its crop steps, and a
+recipe is inert data needing no gobject.</p>
+<p>Three things fall out:</p>
+<ul>
+<li>
+<strong>A leaf is callable, and testable, alone.</strong>
+<code>resolveSubobject(myExprObj, …)</code> needed a whole gobject and a
+view to do anything. <code>resolveRecipe(myExprObj, co, keep = k)</code>
+is a unit test.</li>
+<li>
+<strong>The <code>.cache</code> hack is gone from the leaf
+contract.</strong> Every leaf used to fish
+<code>cache &lt;- list(...)$.cache</code> out of the dots and memoise
+through a shared environment, because each independently re-derived a
+value the container already had. Computing it once in the container
+makes recomputation structurally impossible rather than merely
+avoided.</li>
+<li>
+<strong><code>keep</code> is a promise.</strong> The laziness the
+per-leaf cache bought is preserved without the leaf knowing a cache
+exists: a leaf that never reads <code>keep</code> — points, images,
+feature metadata — never triggers the ID computation, so
+<code>resolveRecipe(g, slots = "feat_info")</code> still costs nothing.
+R’s argument evaluation does the memoising the environment used to
+do.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="one-resolve-op-one-scope-one-keep">One resolve op, one scope, one <code>keep</code><a class="anchor" aria-label="anchor" href="#one-resolve-op-one-scope-one-keep"></a>
+</h3>
+<p>A resolve op is scoped to one <code>spat_unit</code> and one
+<code>feat_type</code> (the active ones unless named), and computes
+<strong>one</strong> surviving cell set, in that unit’s cell_ID
+vocabulary. Only subobjects in scope are walked; the rest are left
+untouched.</p>
+<p>The scope exists because two spat_units need not share IDs. Cells and
+nuclei, or cells and bins, are keyed independently, so a set computed in
+one cannot narrow the other: <code>%in%</code> over disjoint sets
+answers “empty”, not “error”, and the object still looks valid
+afterwards. The walk used to narrow every unit with one set computed in
+the active unit, which was correct only when every unit shared the
+active one’s vocabulary. The vizgen mini does, which is why it went
+unnoticed until a cells + nuclei object came back with no nuclei
+(#424).</p>
+<p>A set <em>per unit</em> was considered and is not needed.
+<code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> is plumbing for a consumer of one scope — a
+plot reads one spat_unit — and it answers only for the scope it was
+asked about. Content outside that scope is not kept consistent with the
+narrowed content, and a caller who wants two units calls twice.
+<code>feat_type</code> never splits the cell vocabulary (a unit’s rna
+and protein share cell_IDs); it only picks which metadata a filter’s
+columns are read from, so it is an input to the one set, not a reason
+for several. A filter across units — cells by a property of their nuclei
+— would still produce a subset of one unit’s IDs, so it changes how the
+set is evaluated, not how many there are. Until it exists, a filter step
+recorded on another unit is an error.</p>
+</div>
+<div class="section level3">
+<h3 id="keep-is-a-viewkeep-filled-for-every-coordinator-up-the-chain">
+<code>keep</code> is a <code>viewKeep</code>, filled for every
+coordinator up the chain<a class="anchor" aria-label="anchor" href="#keep-is-a-viewkeep-filled-for-every-coordinator-up-the-chain"></a>
+</h3>
+<p><code>resolveKeep(coordinator, gobject, view, spat_unit, feat_type)</code>
+evaluates the view and dispatches on the coordinator. It returns a
+<code>viewKeep</code>: an environment holding one form of the set per
+coordinator that reads it — <code>vector</code>, a character vector, for
+<code>dataTableCoordinator</code>; a backed coordinator adds the form
+its store joins against. The container calls it once, as a promise, and
+every leaf reads its own form.</p>
+<p>The rule is that a coordinator’s method fills in the forms of every
+coordinator its class extends, as well as its own. That is what makes
+inheritance safe. <code>parquetCoordinator</code> contains
+<code>dataTableCoordinator</code>, so an in-memory subobject inside a
+backed gobject lands on an in-memory leaf — explicitly through
+<code>callNextMethod()</code>, or implicitly for any class the backed
+package never registers. Either way the leaf finds <code>vector</code>.
+A coordinator with no fast path for some step can call the inherited
+method and promote the vector into its own form.</p>
+<p>The set is a way to narrow IDs, not necessarily the IDs themselves.
+In memory it is the vector, because the content is in memory anyway. A
+backed store wants its joins pushed down lazily, so its form can be the
+accumulated narrowing as a query that nothing runs until a target is
+read. That is why a <code>viewKeep</code> is an environment rather than
+a list: the inherited <code>vector</code> form of a lazy query can only
+be had by collecting it, and <code><a href="https://rdrr.io/r/base/delayedAssign.html" class="external-link">delayedAssign()</a></code> lets it be
+collected only if an in-memory leaf reads it. There is no constructor;
+each coordinator builds its own with
+<code>structure(list2env(forms, parent = emptyenv()), class = "viewKeep")</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="a-leaf-clipping-geometry-is-handed-spaces">A leaf clipping geometry is handed <code>@spaces</code><a class="anchor" aria-label="anchor" href="#a-leaf-clipping-geometry-is-handed-spaces"></a>
+</h3>
+<p>A crop step records the frame its region was drawn in, by name.
+Content with no cell axis (points, images) is clipped geometrically in
+the output frame, so the region has to be projected from the step’s
+frame into it (<code><a href="../reference/project_region.html">project_region()</a></code>). The name is looked up in
+the object’s <code>@spaces</code>, which the container hands to every
+leaf as <code>spaces =</code>: a list of recipes, inert data like the
+view itself, so the leaf still needs no gobject. On a
+<code>giottoMulti</code> the frames live on the parent, and each child
+is handed them scoped to itself, the way the output <code>space</code>
+already is.</p>
+</div>
+<div class="section level3">
+<h3 id="the-coordinator-protocol-was-a-layer-that-never-existed">The coordinator protocol was a layer that never existed<a class="anchor" aria-label="anchor" href="#the-coordinator-protocol-was-a-layer-that-never-existed"></a>
+</h3>
+<p>The 2026-05-28 sketch gave the coordinator three generics of its own:
+<code>prepareIds()</code> to promote an ID set into the backend’s form,
+<code>applyIdsFilter()</code> to apply it, and
+<code>translatePredicate()</code> to map an R predicate into the
+backend’s filter language. Only the first was ever written — as an
+exported identity transform for <code>dataTableCoordinator</code>, with
+zero call sites in any package.</p>
+<p>They were designed before the leaf generic dispatched on the
+coordinator. Once it does, all three select on exactly the same thing,
+one layer further down. A coordinator’s <code>resolveRecipe</code>
+methods already do the work each one describes, in the form its own
+storage wants, and share it between their own leaves with ordinary
+internal helpers — which is cheaper than an exported generic and does
+not commit the package to a signature before there is a second
+implementation to check it against.</p>
+<p><code>prepareIds()</code> was removed in 0.7.3. The other two stay
+unwritten. If a cross-backing case ever does need a shared vocabulary,
+it should be derived from two working backends rather than sketched
+ahead of one.</p>
+</div>
+<div class="section level3">
+<h3 id="both-old-names-survive-one-release">Both old names survive one release<a class="anchor" aria-label="anchor" href="#both-old-names-survive-one-release"></a>
+</h3>
+<p><code><a href="../reference/materialize.html">materialize()</a></code> and <code><a href="../reference/resolveSubobject.html">resolveSubobject()</a></code> are
+deprecated, not removed. GiottoDisk has 8 <code>resolveSubobject</code>
+registrations, <strong>zero</strong> call sites, and tracks
+<em>released</em> GiottoClass — so dropping the generic in the same
+release that introduces <code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> would unwire backed
+view resolution the moment it landed. <code>resolveSubobject</code>’s
+default method forwards to <code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code>, and the walk
+routes to <code>resolveSubobject</code> for any pair a downstream
+package still registers under that name, passing the gobject and the
+<code>.cache</code> those methods were written against. GiottoDisk
+switches against a release carrying both; then the alias goes.</p>
+<p><strong>The test for “still registered” cannot be “is there a
+<code>resolveRecipe</code> method”.</strong> Concrete coordinators
+<em>inherit</em> <code>dataTableCoordinator</code> —
+<code>parquetCoordinator</code> is declared
+<code>contains = "dataTableCoordinator"</code> so that an in-memory
+subobject sitting inside an otherwise-backed gobject falls through to
+the in-memory path. That inheritance means every leaf class already has
+a <code>resolveRecipe</code> method for a backed coordinator, by
+inheritance from the in-memory one. Asking that question answers “yes,
+use the new path” and quietly routes backed data through the leaf that
+materialises it, losing every pushdown and every lazy op, with no error.
+The walk asks the question that actually decides it instead: is a method
+registered under the old name for this pair, i.e. is the selected
+method’s <code>@defined</code> signature something other than
+all-<code>ANY</code>? When a downstream package switches it deletes that
+registration, and the check flips on its own — no version test, no
+flag.</p>
+<p>One thing that survey got wrong and is worth recording, because it
+changes what “hand the leaf its context” can mean downstream: the claim
+that <em>every</em> leaf uses the gobject only to derive
+<code>keep</code> holds for GiottoClass and not for GiottoDisk. Its
+leaves push the view down into the store as a predicate —
+<code>.narrow_store_by_predicate(…, gobject = …)</code>,
+<code>.crop_carriers(gobject, …)</code> — and in cache mode compute the
+surviving set as an <strong>arrow table</strong> rather than a character
+vector, scoped by spat_unit and feat_type. So the leaf contract’s
+<code>keep</code> is not “a character vector of IDs” but “the surviving
+set in whatever form this coordinator’s methods want”, which is what the
+forms of a <code>viewKeep</code> carry. The lazy cross-store join those
+leaves also have, for atlas-scale owners, does not need the gobject
+either: the narrowed owner store is lazy, so it is a form the container
+can build.</p>
+</div>
 <div class="section level3">
 <h3 id="a-view-on-a-giottomulti-is-evaluated-at-the-parent-and-nowhere-else">A view on a <code>giottoMulti</code> is evaluated at the parent and
 nowhere else<a class="anchor" aria-label="anchor" href="#a-view-on-a-giottomulti-is-evaluated-at-the-parent-and-nowhere-else"></a>
@@ -699,19 +954,20 @@ the two arguments then disagree about scope.</p>
 </h2>
 <p><code>view =</code> and <code>space =</code> are exposed on the
 ordinary API so recipes are built and applied through the natural verbs
-rather than only through <code><a href="../reference/materialize.html">materialize()</a></code>. The current reach
+rather than only through <code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code>. The current reach
 is roughly 57 formals across 20 files.</p>
 <p><strong>This surface is under review, and the question should be
 settled before it is relied on further</strong> — removing formals
 afterwards is a breaking change. Most sites are pass-through plumbing
 nobody will call with <code>space =</code>, and a getter-level
 <code>space =</code> is largely redundant with
-<code>materialize(g, space = ...)</code> followed by ordinary accessors,
-which is the pattern the user vignette already presents as primary.
-<code>view =</code> is the stronger case, since narrowing is reused and
-expensive to recompute. Trimming to <code><a href="../reference/materialize.html">materialize()</a></code> plus the
-plot entry points would remove most of the maintenance and documentation
-burden while keeping the capability.</p>
+<code>resolveRecipe(g, space = ...)</code> followed by ordinary
+accessors, which is the pattern the user vignette already presents as
+primary. <code>view =</code> is the stronger case, since narrowing is
+reused and expensive to recompute. Trimming to
+<code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> plus the plot entry points would remove
+most of the maintenance and documentation burden while keeping the
+capability.</p>
 <p>One data point for weighing it: GiottoLens is <strong>not</strong> a
 consumer of server-side spaces. It applies per-sample 3×3 affines
 client-side via deck.gl <code>modelMatrix</code> with no tile reload, so
@@ -768,13 +1024,13 @@ narrowing a single query. Further out on the same list: ephemeral
 analysis steps inside a view, so a recipe can carry a derived structure
 rather than only a narrowing.</p>
 <p><strong><code>attach_derived()</code>.</strong> The write direction.
-<code><a href="../reference/materialize.html">materialize()</a></code> projects a view into a new gobject where
+<code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> projects a view into a new gobject where
 derived outputs live; without a way back, anything computed on a
-materialized subset is stranded there and the only route to the parent
-is a manual key-based join. That join is exactly the operation the
-carry-keys discipline says must carry keys, so this is the natural place
-to enforce it rather than leaving each caller to get it right. The
-generic and a <code>giotto</code> method exist; the body is a stop.</p>
+resolved subset is stranded there and the only route to the parent is a
+manual key-based join. That join is exactly the operation the carry-keys
+discipline says must carry keys, so this is the natural place to enforce
+it rather than leaving each caller to get it right. The generic and a
+<code>giotto</code> method exist; the body is a stop.</p>
 <p><strong>Collapsing a space’s chain into one transform before applying
 it.</strong> Recording stays stepwise; the <em>application</em> should
 not be. <code>.apply_space_to_subobj()</code> is the only site that
@@ -852,8 +1108,8 @@ when someone hits an off-by-axis bug from misreading the 4-vector.</p>
 <code>R/classes-resolver.R</code>,
 <code>R/methods-resolver.R</code>
 </td>
-<td>the resolution engine, <code><a href="../reference/materialize.html">materialize()</a></code>,
-<code>.surviving_cell_ids()</code>
+<td>the resolution engine: the <code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> generic, its
+subobject leaves, <code>.surviving_cell_ids()</code>
 </td>
 </tr>
 </tbody>

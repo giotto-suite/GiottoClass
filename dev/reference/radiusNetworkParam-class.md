@@ -63,7 +63,8 @@ within `eps`. Below that it silently returns a truncated version, and
 nothing in the output says which you got.
 
 That threshold is the reason to prefer this, and it is not a speed
-argument. [`dbscan::kNN`](https://rdrr.io/pkg/dbscan/man/kNN.html)
+argument.
+[`dbscan::kNN`](http://michael.hahsler.net/dbscan/reference/kNN.md)
 prunes as it searches while `frNN` enumerates the whole ball, so a
 correctly sized kNN is usually the faster of the two. Measured at 50,000
 points, the crossover sits at `k` of roughly 150-200 and moves little
@@ -78,7 +79,8 @@ mean and you would rather not guess.
 
 ## Performance
 
-Backed by [`dbscan::frNN`](https://rdrr.io/pkg/dbscan/man/frNN.html),
+Backed by
+[`dbscan::frNN`](http://michael.hahsler.net/dbscan/reference/frNN.md),
 which is exact. At 200,000 points with mean degree 6 the search takes ~2
 s. `spatstat.geom::closepairs()` is roughly 28x faster and returns flat
 index vectors rather than the per-point lists `frNN` has to be flattened

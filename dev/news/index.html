@@ -58,7 +58,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -92,11 +92,210 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.19" id="giottoclass-0719">GiottoClass 0.7.19<a class="anchor" aria-label="anchor" href="#giottoclass-0719"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-7-19">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-19"></a></h3>
+<ul><li>
+<code><a href="../reference/subsetGiotto.html">subsetGiotto()</a></code> (and <code>filterGiotto()</code>, which calls it) no longer replaces the points of feature types it does not subset. Each one received the points of the feature type before it, so after the default <code>feat_type = "rna"</code> an object’s control-probe and codeword points were the <code>rna</code> points. Affects every object with more than one points feature type, in memory or disk-backed, since 0.5.1; re-run from before the subset to recover them.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.18" id="giottoclass-0718">GiottoClass 0.7.18<a class="anchor" aria-label="anchor" href="#giottoclass-0718"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-7-18">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-18"></a></h3>
+<ul><li><p>A polygon set on a disk-backed object no longer keeps terra centroids next to its store. They did not survive a snapshot, so <code>filterGiotto()</code> and <code><a href="../reference/subsetGiotto.html">subsetGiotto()</a></code> failed with “object ‘poly_ID’ not found” after <code><a href="../reference/saveGiotto.html">saveGiotto()</a></code>, for example with the cell outlines from a Stereo-seq reader. The centroids are derived from the store.</p></li>
+<li><p><code><a href="../reference/saveGiotto.html">saveGiotto()</a></code> errors when <code>foldername</code> is not a single folder name (it contains <code>/</code> or <code>\</code>, or is <code>.</code> or <code>..</code>) instead of creating the nested folders. Parent folders go in <code>dir</code>.</p></li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.17" id="giottoclass-0717">GiottoClass 0.7.17<a class="anchor" aria-label="anchor" href="#giottoclass-0717"></a></h2>
+<div class="section level3">
+<h3 id="changes-0-7-17">changes<a class="anchor" aria-label="anchor" href="#changes-0-7-17"></a></h3>
+<ul><li>
+<code><a href="../reference/loadGiotto.html">loadGiotto()</a></code> on a backend-managed project directory first upgrades the directory to the layout the installed backend reads (<code>sourceUpdate()</code>), so a project saved by an older backend version loads instead of being refused. Needs <code>GiottoDisk (&gt;= 0.0.0.6)</code> for such directories.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.16" id="giottoclass-0716">GiottoClass 0.7.16<a class="anchor" aria-label="anchor" href="#giottoclass-0716"></a></h2>
+<div class="section level3">
+<h3 id="new-0-7-16">new<a class="anchor" aria-label="anchor" href="#new-0-7-16"></a></h3>
+<ul><li>
+<code><a href="../reference/spatialSmoothParam.html">spatialSmoothParam()</a></code>: <code><a href="../reference/processData.html">processData()</a></code> averages each cell’s values with its neighbours’ in a spatial network, counting edges in both directions. The giotto method writes the result as new expression values. <code><a href="../reference/spatial_smooth_operator.html">spatial_smooth_operator()</a></code> returns the cells x cells matrix it applies, for backends that smooth themselves.</li>
+<li>
+<code><a href="../reference/featCorParam.html">featCorParam()</a></code>: <code><a href="../reference/analyzeData.html">analyzeData()</a></code> returns the feature x feature correlation, Pearson from moment sums or Spearman. With <code>smooth = spatialSmoothParam()</code> it correlates the smoothed values, which a backend can do without storing them. <code><a href="../reference/feat_cor_from_moments.html">feat_cor_from_moments()</a></code> turns the sums into the correlation.</li>
+<li>
+<code><a href="../reference/createMetafeats.html">createMetafeats()</a></code> computes <code>"mean"</code> and <code>"sum"</code> scores for all modules in one product, so a disk-backed store is read once rather than once per module.</li>
+<li>
+<code>createMetafeats(stat = "zmean")</code> averages features after scaling each to mean 0 and standard deviation 1.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-7-16">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-16"></a></h3>
+<ul><li>
+<code>createMetafeats(rescale_to =)</code> failed on a feature with the same value in every cell.</li>
+<li>
+<code><a href="../reference/compatible_spatial_network.html">compatible_spatial_network()</a></code> checked only the <code>from</code> ends of the edges.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.15" id="giottoclass-0715">GiottoClass 0.7.15<a class="anchor" aria-label="anchor" href="#giottoclass-0715"></a></h2>
+<div class="section level3">
+<h3 id="changes-0-7-15">changes<a class="anchor" aria-label="anchor" href="#changes-0-7-15"></a></h3>
+<ul><li>
+<code><a href="../reference/saveGiotto.html">saveGiotto()</a></code> and <code><a href="../reference/loadGiotto.html">loadGiotto()</a></code> use qs2 instead of qs, which is archived on CRAN and no longer builds: <code>method = "qs2"</code> writes <code>gobject.qs2</code>. The <code>"qs"</code> method is removed and <code>.qs</code> saves are no longer read. qs2 replaces qs in Suggests and in the CI workflow.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.14" id="giottoclass-0714">GiottoClass 0.7.14<a class="anchor" aria-label="anchor" href="#giottoclass-0714"></a></h2>
+<div class="section level3">
+<h3 id="new-0-7-14">new<a class="anchor" aria-label="anchor" href="#new-0-7-14"></a></h3>
+<ul><li>
+<code><a href="../reference/edgeStatsParam.html">edgeStatsParam()</a></code> and an <code><a href="../reference/analyzeData.html">analyzeData()</a></code> method for matrices return the per-feature sums over a spatial network that Moran’s I, Geary’s C and join counts are computed from. With <code>groups =</code> the result also carries the per-group sums and group-to-group edge tables a null conditioned on a cell grouping (library-size bins, cell types) needs.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.13" id="giottoclass-0713">GiottoClass 0.7.13<a class="anchor" aria-label="anchor" href="#giottoclass-0713"></a></h2>
+<div class="section level3">
+<h3 id="changes-0-7-13">changes<a class="anchor" aria-label="anchor" href="#changes-0-7-13"></a></h3>
+<ul><li>
+<code>giottoBinPoints</code> can be store-backed, as <code>giottoPoints</code> and <code>exprObj</code> are: on a backed object <code>@spatial</code> holds a GiottoDisk points store and <code>@counts</code> a GiottoDisk expression store. Its methods hand such objects to GiottoDisk (<code><a href="../reference/calculateOverlap.html">calculateOverlap()</a></code>, <code><a href="../reference/as.data.table.html">as.data.table()</a></code>, <code><a href="../reference/crop.html">crop()</a></code>, feature <code>[</code>), and <code><a href="../reference/setFeatureInfo.html">setFeatureInfo()</a></code> on a backed object writes in-memory bin points to the backend, as it does other feature info. <code>@counts</code> is typed <code>ANY</code>; in-memory bin points are unchanged.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.12" id="giottoclass-0712">GiottoClass 0.7.12<a class="anchor" aria-label="anchor" href="#giottoclass-0712"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-7-12">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-12"></a></h3>
+<ul><li>
+<code><a href="../reference/calculateOverlap.html">calculateOverlap()</a></code> of polygons with <code>giottoBinPoints</code> indexes the bins’ counts directly instead of copying and joining the whole counts table. It also works where it failed: a bin inside two overlapping polygons (a data.table cartesian error), and bin points whose bins have no counts left, which put empty rows in the overlap and made <code><a href="../reference/overlapToMatrix.html">overlapToMatrix()</a></code> fail.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.11" id="giottoclass-0711">GiottoClass 0.7.11<a class="anchor" aria-label="anchor" href="#giottoclass-0711"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-7-11">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-11"></a></h3>
+<ul><li>
+<code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> resolves <code>giottoBinPoints</code> as it does <code>giottoPoints</code> (space, then crops). A crop view, or any in-situ plot of a disk-backed object, holding bin points failed with “unable to find an inherited method for function ‘resolveRecipe’”.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.10" id="giottoclass-0710">GiottoClass 0.7.10<a class="anchor" aria-label="anchor" href="#giottoclass-0710"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-7-10">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-10"></a></h3>
+<ul><li>
+<code><a href="../reference/overlapToMatrix.html">overlapToMatrix()</a></code> and <code><a href="../reference/aggregateFeatures.html">aggregateFeatures()</a></code> sum a points <code>count</code> column by default, as <code><a href="../reference/calculateOverlap.html">calculateOverlap()</a></code> already detects one. They counted overlap rows unless <code>feat_count_column = "count"</code> was passed, so points or <code>giottoBinPoints</code> carrying counts were undercounted. <code>feat_count_column = FALSE</code> still counts rows, and on store-backed points <code>calculateOverlap(feat_count_column = FALSE)</code> now reaches the store method.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.9" id="giottoclass-079">GiottoClass 0.7.9<a class="anchor" aria-label="anchor" href="#giottoclass-079"></a></h2>
+<div class="section level3">
+<h3 id="changes-0-7-9">changes<a class="anchor" aria-label="anchor" href="#changes-0-7-9"></a></h3>
+<ul><li>The <code>gAny</code> virtual class is exported. It is the base class that <code>giotto</code> and <code>giottoMulti</code> share, so another package can define one method on <code>gAny</code> and have it apply to both.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.8" id="giottoclass-078">GiottoClass 0.7.8<a class="anchor" aria-label="anchor" href="#giottoclass-078"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-7-8">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-8"></a></h3>
+<ul><li>
+<code><a href="../reference/giotto_instructions.html">instructions()</a></code>, <code>instructions&lt;-()</code>, <code><a href="../reference/activeSpatUnit-generic.html">activeSpatUnit()</a></code> and <code><a href="../reference/activeFeatType-generic.html">activeFeatType()</a></code> (and their setters) work on a <code>giottoMulti</code>. The multi always had an <code>@instructions</code> slot, but the methods were defined for <code>giotto</code> only, so anything that read plot settings from the object (<code>plotUMAP()</code>, <code>plotPCA()</code>, <code>dimFeatPlot2D()</code>, …) failed on a multi. The multi’s instructions are its own; the samples keep theirs. With no active spatial unit or feature type set, the default still comes from the mapping.</li>
+<li>
+<code><a href="../reference/setGiotto.html">setGiotto()</a></code> works on a <code>giottoMulti</code>. It forwards each subobject to its typed setter, and those already handled the multi, but <code><a href="../reference/setGiotto.html">setGiotto()</a></code> itself was defined for <code>giotto</code> only, so every analysis function that saves its result through it (<code>normalizeGiotto()</code>, <code>runPCA()</code>, …) failed on a multi. Expression, metadata, dimension reductions, nearest-neighbor networks, spatial enrichments and cross-sample spatial networks are written to the multi. Locations, polygons, points and images are refused with the same error as their typed setters, because each belongs to one sample.</li>
+<li>
+<code><a href="../reference/setGiotto.html">setGiotto()</a></code> with a list restores the <code>giotto.init</code> and <code>giotto.check_valid</code> options when one of the items fails. They were switched off for the loop and left off for the rest of the session.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.7" id="giottoclass-077">GiottoClass 0.7.7<a class="anchor" aria-label="anchor" href="#giottoclass-077"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-7-7">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-7"></a></h3>
+<ul><li>
+<code><a href="../reference/spatValues.html">svkey()</a></code> takes <code>spat_enr_name</code> and forwards it. The class always had the slot, but the constructor didn’t accept the argument and <code>@get</code> never passed it on, so a key couldn’t point at a specific spatial enrichment.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.6" id="giottoclass-076">GiottoClass 0.7.6<a class="anchor" aria-label="anchor" href="#giottoclass-076"></a></h2>
+<div class="section level3">
+<h3 id="changes-0-7-6">changes<a class="anchor" aria-label="anchor" href="#changes-0-7-6"></a></h3>
+<ul><li>
+<strong><code>spatValues(svkey = )</code> takes a list of <code>svkey</code>s</strong> and joins the results on <code>cell_ID</code>. Each key carries its own location, so one call can pull the same name from several places, such as <code>raw</code> and <code>normalized</code> expression, or a feature and a same-named metadata column. It’s a full join. A value name returned by more than one key is prefixed with the key’s list name, or, in an unnamed list, with its location (e.g. <code>raw_CD3E</code>). Keys must resolve to one <code>spat_unit</code>. <code>view</code>, <code>space</code> and <code>samples</code> apply to every key.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.5" id="giottoclass-075">GiottoClass 0.7.5<a class="anchor" aria-label="anchor" href="#giottoclass-075"></a></h2>
+<div class="section level3">
+<h3 id="changes-0-7-5">changes<a class="anchor" aria-label="anchor" href="#changes-0-7-5"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/spatValues.html">spatValues()</a></code> gains <code>slot =</code>, mainly to scope the search to cell metadata</strong> with <code>slot = "cell_metadata"</code>. Every other slot is already scoped by passing its name param (<code>expression_values</code>, <code>spat_enr_name</code>, …), but cell metadata has no name to pass. An unscoped search checks expression first, so a metadata column that shares a feature’s name returned the feature. <code>slot</code> also accepts the other slot names, which scope to that slot while leaving its item at the default. A <code>slot</code> that contradicts a name param is an error. <code><a href="../reference/spatValues.html">svkey()</a></code> takes and forwards <code>slot</code> too.</li>
+<li>
+<strong><code><a href="../reference/calculateMetaTable.html">calculateMetaTable()</a></code> computes its means in one grouped <code>analyzeData(featStatsParam)</code> call</strong> instead of one pass per group, so a disk-backed expression store is read once rather than once per group. It reads the grouping columns with <code>spatValues(slot = "cell_metadata")</code>. The output is unchanged: same columns, same group and feature order, same values.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-7-5">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-5"></a></h3>
+<ul><li>
+<code><a href="../reference/calculateMetaTable.html">calculateMetaTable()</a></code> with a single <code>selected_feats</code> entry no longer errors. The subset dropped the matrix to a vector.</li>
+<li>
+<code><a href="../reference/calculateMetaTable.html">calculateMetaTable()</a></code> names any <code>metadata_cols</code> missing from cell metadata.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.4" id="giottoclass-074">GiottoClass 0.7.4<a class="anchor" aria-label="anchor" href="#giottoclass-074"></a></h2>
+<div class="section level3">
+<h3 id="changes-0-7-4">changes<a class="anchor" aria-label="anchor" href="#changes-0-7-4"></a></h3>
+<ul><li>
+<strong><code>allMatrix</code>, <code>featStatsParam</code> and <code>cellStatsParam</code> are defined here</strong>, moved down from Giotto together with the <code><a href="../reference/analyzeData.html">analyzeData()</a></code> methods for the two stats params. They are arithmetic summaries with no analysis choice in them, and packages that cannot depend on Giotto need them: per-group means for cluster heatmaps and trees, for example. <code>allMatrix</code> gains <code>DelayedArray</code> and BPCells’ <code>IterableMatrix</code> at load time when those are installed, as it did in Giotto. Giotto’s <code>analyzeParam("feat_stats")</code> / <code>analyzeParam("cell_stats")</code> still build them. Construct them directly with <code>new("featStatsParam", param = list(...))</code>; <code>detection_threshold</code> defaults to <code>0</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-7-4">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-4"></a></h3>
+<ul><li>
+<code>analyzeData(&lt;IterableMatrix&gt;, featStatsParam)</code> with a <code>detection_threshold</code> above 0 no longer errors computing <code>mean_expr_det</code>. It clamped through the <code>allMatrix</code> threshold method, which assigns into the matrix and is not supported for BPCells matrices; it now calls <code>BPCells::min_scalar()</code>.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.3" id="giottoclass-073">GiottoClass 0.7.3<a class="anchor" aria-label="anchor" href="#giottoclass-073"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-7-3">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-3"></a></h3>
+<ul><li>
+<strong>A <code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> op is scoped to one <code>spat_unit</code> and <code>feat_type</code></strong>, given by the new <code>spat_unit =</code> / <code>feat_type =</code> arguments and defaulting to the active ones. The surviving cell set is computed in that unit’s cell_ID vocabulary, and only subobjects in scope are narrowed; the rest are left untouched. Previously one set, computed in the active unit, narrowed every unit, so on an object whose units do not share IDs (cells and nuclei, say) every other unit came back empty. The getters resolve in the unit of the subobject they read, so <code>getSpatialLocations(g, spat_unit = "nucleus", view = )</code> narrows nuclei by their own coordinates. <code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> is plumbing for consumers of one scope; to narrow a whole object, use <code><a href="../reference/subsetGiotto.html">subsetGiotto()</a></code> or <code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code>.
+<ul><li>A filter step recorded against one <code>spat_unit</code> is an error when resolved for another. Filtering one unit by another’s values is not supported yet.</li>
+</ul></li>
+<li>A crop drawn in a named space now clips points and images in that frame. The region was applied to them as recorded, in whatever frame they were returned in, so a crop drawn in one space and read in another (or in the native frame) clipped the wrong area. The region is now projected from the step’s frame into the output frame first, through the new internal <code><a href="../reference/project_region.html">project_region()</a></code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="changes-0-7-3">changes<a class="anchor" aria-label="anchor" href="#changes-0-7-3"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> replaces <code><a href="../reference/materialize.html">materialize()</a></code> and <code><a href="../reference/resolveSubobject.html">resolveSubobject()</a></code></strong>, which were the same operation under two names, split at the point where one called the other. One generic now spans both levels of the walk: a container evaluates the recipe once and walks its slots, a subobject leaf applies the context it is handed. Dispatch is on <code>(x, coordinator)</code> and everything past <code>x</code> is passed by name — <code>resolveRecipe(g, view = "roi", space = "layout")</code>.
+<ul><li>
+<code>materialize</code> was the wrong word, and an already-taken one: it is used elsewhere in the stack for pulling lazy or backed data into memory, which is the one thing this does not do — a resolved gobject’s subobjects are still whatever they were. “Resolve” was already the subsystem’s own verb, and the recipe is what it resolves. The name carries the noun because a bare <code>resolve()</code> collides with <code>future::resolve()</code>, which returns its input unchanged, so a script attaching future after Giotto would silently get an un-narrowed object.</li>
+<li>
+<strong>A leaf no longer takes the parent gobject.</strong> It used it for exactly one thing, deriving the surviving cell_ID set, and that belongs at the container, which is the thing walking the nesting keys. A leaf now takes <code>keep</code>, <code>space</code> and <code>view</code>, so <code>resolveRecipe(myExprObj, co, keep = k)</code> is a unit test rather than a call needing a whole object graph. <code>keep</code> arrives as a promise, so a leaf that does not narrow by cell still never pays for it.</li>
+<li>The per-leaf <code>.cache</code> lookup through <code>...</code> is gone with it: the value is computed once where it is known, which makes recomputation structurally impossible rather than merely avoided.</li>
+<li>Removing the one use of a coordinator inside the space-application helper exposed that it had been threaded through the whole crop-carrier chain to reach it, and read nowhere else. Five internal helpers lose the argument.</li>
+<li>
+<strong><code><a href="../reference/resolveKeep.html">resolveKeep()</a></code> is the seam a coordinator replaces.</strong> It evaluates the view into the op’s surviving cell set and dispatches on the coordinator. The set travels as a <code>viewKeep</code>, an environment with one form per coordinator that reads it: <code>vector</code>, a character vector, for the in-memory one; a backed coordinator can add a lazy query. A coordinator that extends another fills in the inherited forms as well as its own, so a subobject that falls through to an inherited leaf finds the form that leaf reads, and the set is evaluated once. It is an environment so an inherited form can be installed with <code><a href="https://rdrr.io/r/base/delayedAssign.html" class="external-link">delayedAssign()</a></code> and computed only if a leaf reads it.</li>
+<li>
+<strong>A leaf that clips geometry is handed <code>spaces =</code></strong>, the object’s <code>@spaces</code> list, and looks up a crop step’s recorded frame there instead of reaching back into the gobject.</li>
+<li>
+<code><a href="../reference/resolveSubobject.html">resolveSubobject()</a></code>’s five-slot dispatch signature is gone. Every registration used only <code>(subobj, coordinator)</code>; the middle three were always <code>ANY</code>.</li>
+<li>
+<strong><code>prepareIds()</code> is removed</strong>, not deprecated. It was an exported identity transform with no call sites in any package, and the two companion generics its design note promised — one to apply a prepared ID set, one to translate a predicate — were never written. All three dispatched on the coordinator, which is now what the leaf generic dispatches on, so each coordinator’s <code>resolveRecipe</code> methods do that work directly.</li>
+<li>
+<strong>Both old names keep working for one release.</strong> <code><a href="../reference/resolveSubobject.html">resolveSubobject()</a></code> forwards to <code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code>, and the walk still routes through it for any coordinator that has not registered <code>resolveRecipe</code> methods yet — a coordinator registered outside this package has a release in which both names resolve before the alias is dropped. The routing test is whether a method is registered under the old name for that pair, not whether a <code>resolveRecipe</code> method exists — concrete coordinators inherit the in-memory one, so the latter is always true and would send backed data down the in-memory path without an error.</li>
+</ul></li>
+</ul></div>
+<div class="section level3">
+<h3 id="docs-0-7-3">docs<a class="anchor" aria-label="anchor" href="#docs-0-7-3"></a></h3>
+<ul><li>
+<code>design_view_space.Rmd</code> gains the record for the <code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code> merge: why the name changed, why <code>view</code> left the dispatch signature, and why a leaf is handed its context instead of the gobject.</li>
+<li>
+<code><a href="../reference/crop.html">crop()</a></code> on a gobject without <code>view =</code> now points to reading through <code>view =</code> on a getter or plot function, not to <code><a href="../reference/resolveRecipe.html">resolveRecipe()</a></code>, which is plumbing.</li>
+</ul></div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.7.2" id="giottoclass-072">GiottoClass 0.7.2<a class="anchor" aria-label="anchor" href="#giottoclass-072"></a></h2>
 <div class="section level3">
 <h3 id="bug-fixes-0-7-2">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-7-2"></a></h3>
 <ul><li><p><code><a href="../reference/plot-generic.html">plot()</a></code> on a <code>spatialNetworkObj</code> failed with igraph’s “Invalid vertex names” because it still indexed the coordinate columns the pre-0.6.0 edge table carried. A network stores edges between named cells and no geometry, so it now says that instead of guessing, and <code>plot(&lt;spatialNetworkObj&gt;, &lt;spatLocsObj&gt;)</code> draws it against the locations that supply the coordinates.</p></li>
 <li><p><code>gpoly[ids]</code> and <code>subset(gpoly, cell_ids = )</code> errored with “argument is of length zero” on a <code>giottoPolygon</code> carrying overlaps, because the <code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code> method passes <code>feat_type = NULL</code> and the <code>":all:"</code> check did not allow for it. With no <code>feat_type</code>, a polygon subset keeps every overlap for the kept polygons, as <code>[</code> did before the method existed.</p></li>
+<li><p>A relative <code>save_dir</code> instruction is made absolute when it is set, through <code><a href="../reference/giotto_instructions.html">createGiottoInstructions()</a></code> or <code>instructions&lt;-()</code>. It was stored as given and resolved against the working directory at save time, so plots from a knitted document, a parallel worker or code after <code><a href="https://rdrr.io/r/base/getwd.html" class="external-link">setwd()</a></code> could land in a different folder from the one named. Objects saved before this keep their relative <code>save_dir</code> until it is set again.</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="changes-0-7-2">changes<a class="anchor" aria-label="anchor" href="#changes-0-7-2"></a></h3>
@@ -106,7 +305,7 @@
 <li><p>Creating or cropping a <code>giottoLargeImage</code> samples the intensity range the same way, so opening a 10x JPEG-2000 <code>.ome.tif</code> no longer spends ~2 s on it. The estimate comes from block-averaged overview pixels and so under-reports outliers, so <code>max_intensity</code> comes out lower than before on images that have overviews. <code>plot(&lt;giottoLargeImage&gt;)</code> derives its default display range from the bit depth of <code>max_intensity</code>, so such an image can plot brighter by default – on the Atera breast DAPI the range drops from 0-16383 to 0-4095. Image layers in the ggplot-based spatial plots do not use <code>max_intensity</code> and are unaffected. Images small enough for terra to know their exact range, and images without overviews, are unaffected.</p></li>
 <li><p><strong><code>n_threads_build</code> is gone from <code><a href="../reference/hnswKNN.html">hnswKNN()</a></code>, <code><a href="../reference/kNNNetworkParam-class.html">kNNNetworkParam()</a></code>, <code><a href="../reference/sNNNetworkParam-class.html">sNNNetworkParam()</a></code> and <code><a href="../reference/createNearestNetwork.html">createNearestNetwork()</a></code>.</strong> The HNSW index build now always runs on one thread, and that is no longer a choice. It was briefly an argument whose only non-default value was the wrong one: a parallel build races on insertion order, and no seed can pin it, because the interleaving is not drawn from an RNG. On a 169,528-cell Atera section, two runs of an otherwise identical script with a parallel build disagreed on how many cell types there were – 34 against 33, ARI 0.7998 – while the serial build gave bit-identical neighbour lists across five runs. Passing <code>n_threads_build</code> still works and now warns, rather than being absorbed by <code>...</code> in silence and leaving the caller believing they had enabled something. <code>n_threads</code>, which controls the read-only search, is unaffected and stays parallel.</p></li>
 <li><p><strong><code>createNearestNetwork(type = "sNN")</code> now keeps the kNN it was derived from</strong>, under <code>kNN.&lt;dim_reduction_to_use&gt;</code>, controlled by the new <code>keep_knn</code> argument (default <code>TRUE</code>). An sNN is a transform of a kNN and the kNN is the expensive half, but it was previously computed, used once and dropped — so nothing else could share it, and anything wanting the same neighbourhood (<code>runUMAP()</code>, in particular) had to repeat an identical search. The search now runs once and both networks are built from it, which is what makes an embedding and a partition rest on one graph rather than on two that happen to agree. <code>.net_dt_knn()</code> gained the <code>nn_network</code> short-circuit <code>.net_dt_snn()</code> already had, and the validation both use is now shared.</p></li>
-<li><p><strong><code><a href="../reference/nnToUwot.html">nnToUwot()</a></code></strong>, converting a <code>kNN</code>/<code>NN</code> object from <code><a href="../reference/hnswKNN.html">hnswKNN()</a></code> or <code><a href="https://rdrr.io/pkg/dbscan/man/kNN.html" class="external-link">dbscan::kNN()</a></code> into the <code>list(idx =, dist =)</code> that <code>uwot::umap()</code> and <code>uwot::umap2()</code> take as <code>nn_method</code>. Two conventions have to be reconciled and uwot validates neither, so getting either wrong corrupts the embedding silently instead of erroring: uwot names the matrix <code>idx</code> where a <code>kNN</code> object names it <code>id</code>, and uwot requires each observation to be its own first neighbour – it drops column 1 when fitting the local connectivity offset – where both search functions <em>remove</em> self-matches. Handing their output over unchanged discards every observation’s true nearest neighbour. The converter refuses input that already carries self, and refuses unsorted distances.</p></li>
+<li><p><strong><code><a href="../reference/nnToUwot.html">nnToUwot()</a></code></strong>, converting a <code>kNN</code>/<code>NN</code> object from <code><a href="../reference/hnswKNN.html">hnswKNN()</a></code> or <code><a href="http://michael.hahsler.net/dbscan/reference/kNN.html" class="external-link">dbscan::kNN()</a></code> into the <code>list(idx =, dist =)</code> that <code>uwot::umap()</code> and <code>uwot::umap2()</code> take as <code>nn_method</code>. Two conventions have to be reconciled and uwot validates neither, so getting either wrong corrupts the embedding silently instead of erroring: uwot names the matrix <code>idx</code> where a <code>kNN</code> object names it <code>id</code>, and uwot requires each observation to be its own first neighbour – it drops column 1 when fitting the local connectivity offset – where both search functions <em>remove</em> self-matches. Handing their output over unchanged discards every observation’s true nearest neighbour. The converter refuses input that already carries self, and refuses unsorted distances.</p></li>
 <li>
 <p><strong><code><a href="../reference/annotateSpatialNetwork.html">annotateSpatialNetwork()</a></code>’s two annotations are now independent, and both are optional.</strong> A network stores only edges, so anything about the cells an edge runs between is attached rather than read back — and attaching a label and attaching a position turn out to be one operation on two sources: take a cell-keyed value, write it onto each end of the edge.</p>
 <ul><li>
@@ -222,7 +421,7 @@
 <div class="section level3">
 <h3 id="new-0-6-0">new<a class="anchor" aria-label="anchor" href="#new-0-6-0"></a></h3>
 <ul><li>
-<code><a href="../reference/radiusNetworkParam-class.html">radiusNetworkParam()</a></code> builds a fixed-radius spatial network: every pair of nodes within <code>eps</code> is joined, so degree follows local density rather than being fixed as it is for kNN. Backed by the exact <code><a href="https://rdrr.io/pkg/dbscan/man/frNN.html" class="external-link">dbscan::frNN</a></code>. <code>minimum_k</code> keeps a floor of nearest neighbours for nodes whose radius is empty, which otherwise drop out of the network entirely. Previously the only route to a distance-based network was kNN with a large <code>k</code> plus a <code>maximum_distance</code> filter, which reproduces the same graph but only once <code>k</code> reaches the largest neighbour count within the radius – below that it truncates silently, and the <code>k</code> needed is not knowable without computing it.</li>
+<code><a href="../reference/radiusNetworkParam-class.html">radiusNetworkParam()</a></code> builds a fixed-radius spatial network: every pair of nodes within <code>eps</code> is joined, so degree follows local density rather than being fixed as it is for kNN. Backed by the exact <code><a href="http://michael.hahsler.net/dbscan/reference/frNN.html" class="external-link">dbscan::frNN</a></code>. <code>minimum_k</code> keeps a floor of nearest neighbours for nodes whose radius is empty, which otherwise drop out of the network entirely. Previously the only route to a distance-based network was kNN with a large <code>k</code> plus a <code>maximum_distance</code> filter, which reproduces the same graph but only once <code>k</code> reaches the largest neighbour count within the radius – below that it truncates silently, and the <code>k</code> needed is not knowable without computing it.</li>
 <li>
 <code>createSpatialNetwork(method = "radius", radius = )</code> reaches <code><a href="../reference/radiusNetworkParam-class.html">radiusNetworkParam()</a></code> from the spatial wrapper, which previously offered only <code>"Delaunay"</code> and <code>"kNN"</code>.</li>
 <li>
@@ -243,7 +442,7 @@
 <code>ef</code> and <code>n_threads_build</code> are now exposed on <code><a href="../reference/kNNNetworkParam-class.html">kNNNetworkParam()</a></code>, <code><a href="../reference/sNNNetworkParam-class.html">sNNNetworkParam()</a></code> and <code><a href="../reference/createNearestNetwork.html">createNearestNetwork()</a></code> rather than only reachable through <code>...</code>. Both apply to <code>engine = "hnsw"</code> and are ignored by <code>"dbscan"</code>, so engines can be swapped without changing the call.
 <ul><li>
 <code>ef</code> (default <code>200</code>, was <code>50</code>) is the recall/speed dial. Measured on a 158,662-cell Xenium sample at <code>k = 30</code>: <code>ef = 50</code> reproduced 99.225% of the exact network’s undirected edges, <code>ef = 200</code> reproduced 99.995%, for 2.30s against 2.83s.</li>
-<li>The index build is always single-threaded and this is not adjustable. Only the build is nondeterministic – concurrent insertion makes the graph depend on thread interleaving, while the search is read-only and deterministic at any thread count, so <code>n_threads</code> stays parallel. Costs 2.82s -&gt; 11.8s, still 6.8x faster than the 79.85s exact <code><a href="https://rdrr.io/pkg/dbscan/man/kNN.html" class="external-link">dbscan::kNN()</a></code>, with accuracy unchanged (recall 0.999980).</li>
+<li>The index build is always single-threaded and this is not adjustable. Only the build is nondeterministic – concurrent insertion makes the graph depend on thread interleaving, while the search is read-only and deterministic at any thread count, so <code>n_threads</code> stays parallel. Costs 2.82s -&gt; 11.8s, still 6.8x faster than the 79.85s exact <code><a href="http://michael.hahsler.net/dbscan/reference/kNN.html" class="external-link">dbscan::kNN()</a></code>, with accuracy unchanged (recall 0.999980).</li>
 <li>An <code>engine = "auto"</code> that selects by dataset size is planned; for now prefer <code>"dbscan"</code> on small data, where it is both exact and faster.</li>
 </ul></li>
 <li>
@@ -269,7 +468,7 @@
 <h3 id="performance-0-6-0">performance<a class="anchor" aria-label="anchor" href="#performance-0-6-0"></a></h3>
 <ul><li>
 <code><a href="../reference/edge_distances.html">edge_distances()</a></code> is vectorized. It called <code><a href="https://rdrr.io/r/stats/dist.html" class="external-link">stats::dist()</a></code> once per edge, through a <code>2 x d x E</code> array built with an extra <code><a href="https://rdrr.io/r/base/aperm.html" class="external-link">aperm()</a></code> copy; it now makes one pass over the endpoint rows. Measured 556x faster at 600,000 edges. All network backends funnel through it, so this is what dominated once a fast triangulation was in use: Delaunay via <code>geometry</code> at 20,000 points went 0.47 s to 0.14 s. Results agree with the old implementation to ~1e-16 rather than bit-exactly – <code><a href="https://rdrr.io/r/stats/dist.html" class="external-link">stats::dist()</a></code> and <code>sqrt(rowSums(...))</code> accumulate in a different order – which is only observable for an edge sitting exactly on a <code>maximum_distance</code> cutoff. Non-euclidean metrics keep the general path.</li>
-<li>kNN networks no longer recompute distances when <code>maximum_distance</code> is set. <code><a href="https://rdrr.io/pkg/dbscan/man/kNN.html" class="external-link">dbscan::kNN</a></code> already returns them and the recompute went through the per-edge loop above, so asking for a cutoff cost 11x: at 50,000 points a spatial kNN network went 1.89 s with a cutoff against 0.17 s without. Both are now ~0.19 s. Using the search’s own distances is also the self-consistent choice – the cutoff now filters on whatever metric the search used.</li>
+<li>kNN networks no longer recompute distances when <code>maximum_distance</code> is set. <code><a href="http://michael.hahsler.net/dbscan/reference/kNN.html" class="external-link">dbscan::kNN</a></code> already returns them and the recompute went through the per-edge loop above, so asking for a cutoff cost 11x: at 50,000 points a spatial kNN network went 1.89 s with a cutoff against 0.17 s without. Both are now ~0.19 s. Using the search’s own distances is also the self-consistent choice – the cutoff now filters on whatever metric the search used.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-0-6-0">bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-6-0"></a></h3>

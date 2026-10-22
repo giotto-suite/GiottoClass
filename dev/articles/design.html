@@ -79,7 +79,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -598,12 +598,18 @@ results come back in is the explicit <code>space =</code> argument, with
 no fallback between them. That is what lets an ROI drawn on a rotated
 image select cells that are returned in native coordinates.</li>
 </ul>
-<p><code>materialize(g, view, space)</code> applies the recipes and
-returns a new gobject whose ordinary accessors see the narrowed,
+<p><code>resolveRecipe(g, view =, space =)</code> applies the recipes
+and returns a new gobject whose ordinary accessors see the narrowed,
 reframed data. It is plumbing rather than a user verb — exported so
 GiottoVisuals can call it — and the user-facing route is the
 <code>view =</code> / <code>space =</code> arguments on the accessors
-themselves.</p>
+themselves. One generic spans both levels of the walk: the same verb
+resolves a container and resolves one subobject, the leaf taking the
+context the container computed rather than the gobject it would have to
+recompute from. It was <code><a href="../reference/materialize.html">materialize()</a></code> plus
+<code><a href="../reference/resolveSubobject.html">resolveSubobject()</a></code> until 0.7.2; both survive as deprecated
+aliases for one release, because GiottoDisk registers against the
+latter.</p>
 <p><code>vignettes/view_and_space.Rmd</code> is the user-facing
 walkthrough. <code>vignettes/articles/design_view_space.Rmd</code> is
 the full design record: the space kinds and why the per-sample one is

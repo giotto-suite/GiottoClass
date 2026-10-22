@@ -6,10 +6,10 @@ spatial unit that the giotto object uses.
 ## Usage
 
 ``` r
-# S4 method for class 'giotto'
+# S4 method for class 'gAny'
 activeSpatUnit(gobject)
 
-# S4 method for class 'giotto,character'
+# S4 method for class 'gAny,character'
 activeSpatUnit(gobject) <- value
 ```
 

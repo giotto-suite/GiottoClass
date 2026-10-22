@@ -78,7 +78,7 @@ changed. Searching is unaffected and stays parallel over n_threads."><meta prope
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -115,10 +115,10 @@ changed. Searching is unaffected and stays parallel over n_threads."><meta prope
     <div class="ref-description section level2">
     <p>Find the <code>k</code> nearest neighbors of every row of <code>x</code> using an HNSW index
 (Hierarchical Navigable Small World), returning the same structure as
-<code><a href="https://rdrr.io/pkg/dbscan/man/kNN.html" class="external-link">dbscan::kNN()</a></code> so the two are interchangeable as the search step of
+<code><a href="http://michael.hahsler.net/dbscan/reference/kNN.html" class="external-link">dbscan::kNN()</a></code> so the two are interchangeable as the search step of
 network construction.</p>
 <p>HNSW is <em>approximate</em>: recall is high but not guaranteed to be 1.0. Use
-<code><a href="https://rdrr.io/pkg/dbscan/man/kNN.html" class="external-link">dbscan::kNN()</a></code> when exactness matters, or on small data where the exact
+<code><a href="http://michael.hahsler.net/dbscan/reference/kNN.html" class="external-link">dbscan::kNN()</a></code> when exactness matters, or on small data where the exact
 search is both faster and exact.</p>
 <p>Repeated calls are reproducible. The index build is the only
 nondeterministic phase – concurrent insertion makes the graph depend on
@@ -172,7 +172,7 @@ at the cost of memory and build time.</p></dd>
 <dt id="arg-ef">ef<a class="anchor" aria-label="anchor" href="#arg-ef"></a></dt>
 <dd><p>integer. Beam width during search (default 200). This is the
 recall/speed dial: higher <code>ef</code> searches more of the graph, bringing the
-result closer to the exact <code><a href="https://rdrr.io/pkg/dbscan/man/kNN.html" class="external-link">dbscan::kNN()</a></code> answer at the cost of query
+result closer to the exact <code><a href="http://michael.hahsler.net/dbscan/reference/kNN.html" class="external-link">dbscan::kNN()</a></code> answer at the cost of query
 time. Raised to at least <code>k + 1</code>. On 158,662 cells at <code>k = 30</code>, <code>ef = 50</code>
 reproduced 99.225% of the exact network's undirected edges and <code>ef = 200</code>
 reproduced 99.995%, for 2.30s against 2.83s.</p></dd>
@@ -186,14 +186,14 @@ threaded and is not configurable; see Details.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>unused, for signature compatibility with <code><a href="https://rdrr.io/pkg/dbscan/man/kNN.html" class="external-link">dbscan::kNN()</a></code>.</p></dd>
+<dd><p>unused, for signature compatibility with <code><a href="http://michael.hahsler.net/dbscan/reference/kNN.html" class="external-link">dbscan::kNN()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>object of class <code>c("kNN", "NN")</code> with elements <code>id</code> (integer
 matrix, <code>nrow(x)</code> x <code>k</code>), <code>dist</code> (numeric matrix, same shape), <code>k</code>,
-<code>sort</code> and <code>metric</code>. <code>id</code> and <code>dist</code> carry <code><a href="https://rdrr.io/pkg/dbscan/man/kNN.html" class="external-link">dbscan::kNN()</a></code>'s dimnames
+<code>sort</code> and <code>metric</code>. <code>id</code> and <code>dist</code> carry <code><a href="http://michael.hahsler.net/dbscan/reference/kNN.html" class="external-link">dbscan::kNN()</a></code>'s dimnames
 convention: <code>rownames(x)</code> on the rows, <code>"1".."k"</code> on the columns.</p>
     </div>
 

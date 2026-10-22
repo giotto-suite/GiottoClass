@@ -70,7 +70,7 @@ The graph is symmetric by construction, so it is undirected.'><meta property="og
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -168,7 +168,7 @@ only once <code>k</code> reaches the largest number of neighbours any node has w
 <code>eps</code>. Below that it silently returns a truncated version, and nothing in
 the output says which you got.</p>
 <p>That threshold is the reason to prefer this, and it is not a speed argument.
-<code><a href="https://rdrr.io/pkg/dbscan/man/kNN.html" class="external-link">dbscan::kNN</a></code> prunes as it searches while <code>frNN</code> enumerates the whole ball,
+<code><a href="http://michael.hahsler.net/dbscan/reference/kNN.html" class="external-link">dbscan::kNN</a></code> prunes as it searches while <code>frNN</code> enumerates the whole ball,
 so a correctly sized kNN is usually the faster of the two. Measured at
 50,000 points, the crossover sits at <code>k</code> of roughly 150-200 and moves little
 with density or point count – below it kNN wins by up to ~5x, above it
@@ -183,7 +183,7 @@ would rather not guess.</p>
     <h2 id="performance">Performance<a class="anchor" aria-label="anchor" href="#performance"></a></h2>
 
 
-<p>Backed by <code><a href="https://rdrr.io/pkg/dbscan/man/frNN.html" class="external-link">dbscan::frNN</a></code>, which is exact. At 200,000 points with mean degree
+<p>Backed by <code><a href="http://michael.hahsler.net/dbscan/reference/frNN.html" class="external-link">dbscan::frNN</a></code>, which is exact. At 200,000 points with mean degree
 6 the search takes ~2 s. <code>spatstat.geom::closepairs()</code> is roughly 28x faster
 and returns flat index vectors rather than the per-point lists <code>frNN</code> has to
 be flattened out of, but <span class="pkg">spatstat.geom</span> is not a Giotto dependency and

@@ -2,12 +2,12 @@
 
 Find the `k` nearest neighbors of every row of `x` using an HNSW index
 (Hierarchical Navigable Small World), returning the same structure as
-[`dbscan::kNN()`](https://rdrr.io/pkg/dbscan/man/kNN.html) so the two
-are interchangeable as the search step of network construction.
+[`dbscan::kNN()`](http://michael.hahsler.net/dbscan/reference/kNN.md) so
+the two are interchangeable as the search step of network construction.
 
 HNSW is *approximate*: recall is high but not guaranteed to be 1.0. Use
-[`dbscan::kNN()`](https://rdrr.io/pkg/dbscan/man/kNN.html) when
-exactness matters, or on small data where the exact search is both
+[`dbscan::kNN()`](http://michael.hahsler.net/dbscan/reference/kNN.md)
+when exactness matters, or on small data where the exact search is both
 faster and exact.
 
 Repeated calls are reproducible. The index build is the only
@@ -62,11 +62,11 @@ hnswKNN(
   integer. Beam width during search (default 200). This is the
   recall/speed dial: higher `ef` searches more of the graph, bringing
   the result closer to the exact
-  [`dbscan::kNN()`](https://rdrr.io/pkg/dbscan/man/kNN.html) answer at
-  the cost of query time. Raised to at least `k + 1`. On 158,662 cells
-  at `k = 30`, `ef = 50` reproduced 99.225% of the exact network's
-  undirected edges and `ef = 200` reproduced 99.995%, for 2.30s against
-  2.83s.
+  [`dbscan::kNN()`](http://michael.hahsler.net/dbscan/reference/kNN.md)
+  answer at the cost of query time. Raised to at least `k + 1`. On
+  158,662 cells at `k = 30`, `ef = 50` reproduced 99.225% of the exact
+  network's undirected edges and `ef = 200` reproduced 99.995%, for
+  2.30s against 2.83s.
 
 - n_threads:
 
@@ -79,15 +79,16 @@ hnswKNN(
 - ...:
 
   unused, for signature compatibility with
-  [`dbscan::kNN()`](https://rdrr.io/pkg/dbscan/man/kNN.html).
+  [`dbscan::kNN()`](http://michael.hahsler.net/dbscan/reference/kNN.md).
 
 ## Value
 
 object of class `c("kNN", "NN")` with elements `id` (integer matrix,
 `nrow(x)` x `k`), `dist` (numeric matrix, same shape), `k`, `sort` and
 `metric`. `id` and `dist` carry
-[`dbscan::kNN()`](https://rdrr.io/pkg/dbscan/man/kNN.html)'s dimnames
-convention: `rownames(x)` on the rows, `"1".."k"` on the columns.
+[`dbscan::kNN()`](http://michael.hahsler.net/dbscan/reference/kNN.md)'s
+dimnames convention: `rownames(x)` on the rows, `"1".."k"` on the
+columns.
 
 ## Examples
 

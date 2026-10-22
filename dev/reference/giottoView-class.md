@@ -1,19 +1,15 @@
 # Class for subset / narrowing recipes
 
-A `giottoView` is a deferred, read-only NARROWING of a
-[giotto](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto-class.md)
-or
-[giottoMulti](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoMulti-class.md)
-object: a recipe, re-resolved against the object's current state each
-time it is consumed, rather than a snapshot.
+A \`giottoView\` is a deferred, read-only NARROWING of a
+\[giotto-class\] or \[giottoMulti-class\] object: a recipe, re-resolved
+against the object's current state each time it is consumed, rather than
+a snapshot.
 
-Access it with `[` (class-preserving, so the result stays editable) and
-`[[` (extracts a step). Append to it with the builder verbs
-[`subset()`](https://rdrr.io/r/base/subset.html) (a filter step, or a
-sample step with `samples =`) and
-[`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md),
-or compose two with `+`. Export the plain nested form with
-[`as.list()`](https://rdrr.io/r/base/list.html).
+Access it with \`\[\` (class-preserving, so the result stays editable)
+and \`\[\[\` (extracts a step). Append to it with the builder verbs
+\[subset()\] (a filter step, or a sample step with \`samples =\`) and
+\[crop()\], or compose two with \`+\`. Export the plain nested form with
+\[as.list()\].
 
 ## Value
 

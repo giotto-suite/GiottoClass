@@ -64,7 +64,7 @@ of letting uwot run a second, independent search.'><meta property="og:image" con
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -99,7 +99,7 @@ of letting uwot run a second, independent search.'><meta property="og:image" con
     </div>
 
     <div class="ref-description section level2">
-    <p>Reshape a <code>c("kNN", "NN")</code> object – from <code><a href="hnswKNN.html">hnswKNN()</a></code> or <code><a href="https://rdrr.io/pkg/dbscan/man/kNN.html" class="external-link">dbscan::kNN()</a></code> –
+    <p>Reshape a <code>c("kNN", "NN")</code> object – from <code><a href="hnswKNN.html">hnswKNN()</a></code> or <code><a href="http://michael.hahsler.net/dbscan/reference/kNN.html" class="external-link">dbscan::kNN()</a></code> –
 into the <code>list(idx =, dist =)</code> that <code>uwot::umap()</code> and <code>uwot::umap2()</code>
 accept as <code>nn_method</code>, so a graph built once can be handed to UMAP instead
 of letting uwot run a second, independent search.</p>
@@ -132,7 +132,7 @@ error:</p><ul><li><p>uwot names the neighbor matrix <code>idx</code>; <code>kNN<
 <li><p>uwot requires each observation to be its own first neighbor
 (<code>idx[, 1] == seq_len(n)</code>, <code>dist[, 1] == 0</code>), because it drops column 1
 when fitting the local-connectivity offset. Both <code><a href="hnswKNN.html">hnswKNN()</a></code> and
-<code><a href="https://rdrr.io/pkg/dbscan/man/kNN.html" class="external-link">dbscan::kNN()</a></code> <em>remove</em> self-matches. Passing their output unchanged
+<code><a href="http://michael.hahsler.net/dbscan/reference/kNN.html" class="external-link">dbscan::kNN()</a></code> <em>remove</em> self-matches. Passing their output unchanged
 therefore discards every observation's true nearest neighbor and fits
 <code>rho</code> against a shifted distance set.</p></li>
 </ul><p>The returned matrices are <code>k + 1</code> columns wide: the self column plus the

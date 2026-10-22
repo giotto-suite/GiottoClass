@@ -12,6 +12,21 @@ analyses.
 
 ``` r
 processData(x, param, ...)
+
+# S4 method for class 'allMatrix,spatialSmoothParam'
+processData(x, param, ..., network)
+
+# S4 method for class 'giotto,spatialSmoothParam'
+processData(
+  x,
+  param,
+  ...,
+  spat_unit = NULL,
+  feat_type = NULL,
+  expression_values = "normalized",
+  spatial_network_name = "Delaunay_network",
+  feats = NULL
+)
 ```
 
 ## Arguments
@@ -29,6 +44,27 @@ processData(x, param, ...)
 - ...:
 
   additional arguments, for use in specific methods
+
+- network:
+
+  a spatial network: an `igraph` or a data.frame with `from`, `to` (cell
+  IDs) and, for `weighted = TRUE`, `weight`
+
+- spat_unit, feat_type:
+
+  spatial unit and feature type
+
+- expression_values:
+
+  expression values to smooth
+
+- spatial_network_name:
+
+  spatial network to smooth over
+
+- feats:
+
+  features to smooth (default all)
 
 ## Value
 

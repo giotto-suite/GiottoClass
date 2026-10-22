@@ -151,20 +151,20 @@ Get data from a Giotto Object
 
 Set (and replace) Giotto-native data objects in a Giotto Object
 
-- [`setGiotto(`*`<giotto>`*`,`*`<giottoBinPoints>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<list>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<cellMetaObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<featMetaObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<exprObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<giottoPoints>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<giottoPolygon>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<dimObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<spatLocsObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<spatEnrObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<nnNetObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<spatialNetworkObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<giottoLargeImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
-  [`setGiotto(`*`<giotto>`*`,`*`<giottoImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+- [`setGiotto(`*`<gAny>`*`,`*`<giottoBinPoints>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<list>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<cellMetaObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<featMetaObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<exprObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<giottoPoints>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<giottoPolygon>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<dimObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<spatLocsObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<spatEnrObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<nnNetObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<spatialNetworkObj>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<giottoLargeImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  [`setGiotto(`*`<gAny>`*`,`*`<giottoImage>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
   [`setGiotto(`*`<gAny>`*`,`*`<giottoView>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
   [`setGiotto(`*`<gAny>`*`,`*`<giottoSpace>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
   : Set giotto subobjects into giotto object
@@ -327,13 +327,13 @@ Set instructions for Giotto Object behavior
 
 - [`createGiottoInstructions()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
   [`instructions(`*`<missing>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
-  [`instructions(`*`<giotto>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
-  [`instructions(`*`<giotto>`*`,`*`<character>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
+  [`instructions(`*`<gAny>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
+  [`instructions(`*`<gAny>`*`,`*`<character>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
   [`instructions(`*`<giottoInstructions>`*`,`*`<character>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
-  [`` `instructions<-`( ``*`<giotto>`*`,`*`<missing>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
-  [`` `instructions<-`( ``*`<giotto>`*`,`*`<missing>`*`,`*`<logical>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
-  [`` `instructions<-`( ``*`<giotto>`*`,`*`<character>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
-  [`` `instructions<-`( ``*`<giotto>`*`,`*`<character>`*`,`*`<logical>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
+  [`` `instructions<-`( ``*`<gAny>`*`,`*`<missing>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
+  [`` `instructions<-`( ``*`<gAny>`*`,`*`<missing>`*`,`*`<logical>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
+  [`` `instructions<-`( ``*`<gAny>`*`,`*`<character>`*`,`*`<missing>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
+  [`` `instructions<-`( ``*`<gAny>`*`,`*`<character>`*`,`*`<logical>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
   [`` `instructions<-`( ``*`<giottoInstructions>`*`,`*`<character>`*`,`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
   : Giotto instructions
 
@@ -546,6 +546,9 @@ GiottoClass defined classes
 - [`affine2d-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine2d-class.md)
   [`affine2d`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine2d-class.md)
   : Affine Transform Object
+- [`allMatrix-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/allMatrix-class.md)
+  [`allMatrix`](https://giotto-suite.github.io/GiottoClass/dev/reference/allMatrix-class.md)
+  : allMatrix
 - [`analyzeParam-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/analyzeParam-class.md)
   [`analyzeParam`](https://giotto-suite.github.io/GiottoClass/dev/reference/analyzeParam-class.md)
   : Parameter Classes for Data Analysis Operations
@@ -561,12 +564,21 @@ GiottoClass defined classes
 - [`dimObj-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/dimObj-class.md)
   [`dimObj`](https://giotto-suite.github.io/GiottoClass/dev/reference/dimObj-class.md)
   : S4 dimObj Class
+- [`edgeStatsParam-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/edgeStatsParam-class.md)
+  : Edge statistics parameters
 - [`exprObj-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/exprObj-class.md)
   [`exprObj`](https://giotto-suite.github.io/GiottoClass/dev/reference/exprObj-class.md)
   : S4 exprObj
+- [`featCorParam-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/featCorParam-class.md)
+  : Feature correlation parameter
 - [`featMetaObj-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/featMetaObj-class.md)
   [`featMetaObj`](https://giotto-suite.github.io/GiottoClass/dev/reference/featMetaObj-class.md)
   : S4 featMetaObj
+- [`featStatsParam-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/featStatsParam-class.md)
+  [`featStatsParam`](https://giotto-suite.github.io/GiottoClass/dev/reference/featStatsParam-class.md)
+  [`cellStatsParam`](https://giotto-suite.github.io/GiottoClass/dev/reference/featStatsParam-class.md)
+  [`cellStatsParam-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/featStatsParam-class.md)
+  : Feature and cell summary statistics parameters
 - [`featureNetwork-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/featureNetwork-class.md)
   [`featureNetwork`](https://giotto-suite.github.io/GiottoClass/dev/reference/featureNetwork-class.md)
   : S4 giotto feature network Class
@@ -638,6 +650,8 @@ GiottoClass defined classes
   : S4 spatialGridObj Class
 - [`spatialNetworkObj-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatialNetworkObj-class.md)
   : S4 spatialNetworkObj Class
+- [`spatialSmoothParam-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatialSmoothParam-class.md)
+  : Spatial smoothing parameter
 - [`terraVectData-class`](https://giotto-suite.github.io/GiottoClass/dev/reference/terraVectData-class.md)
   [`terraVectData`](https://giotto-suite.github.io/GiottoClass/dev/reference/terraVectData-class.md)
   : Basic class for terra SpatVector-based objects
@@ -1034,11 +1048,11 @@ Standard generics for Giotto exported classes
 
 Hierarchical tagging generics for Giotto exported classes
 
-- [`activeFeatType(`*`<giotto>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/activeFeatType-generic.md)
-  [`` `activeFeatType<-`( ``*`<giotto>`*`,`*`<character>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/activeFeatType-generic.md)
+- [`activeFeatType(`*`<gAny>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/activeFeatType-generic.md)
+  [`` `activeFeatType<-`( ``*`<gAny>`*`,`*`<character>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/activeFeatType-generic.md)
   : Active feature type
-- [`activeSpatUnit(`*`<giotto>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/activeSpatUnit-generic.md)
-  [`` `activeSpatUnit<-`( ``*`<giotto>`*`,`*`<character>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/activeSpatUnit-generic.md)
+- [`activeSpatUnit(`*`<gAny>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/activeSpatUnit-generic.md)
+  [`` `activeSpatUnit<-`( ``*`<gAny>`*`,`*`<character>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/activeSpatUnit-generic.md)
   : Active spatial unit
 - [`spatUnit(`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_schema.md)
   [`spatUnit(`*`<giotto>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_schema.md)
@@ -1321,6 +1335,19 @@ present in the released version.
 - [`nnToUwot()`](https://giotto-suite.github.io/GiottoClass/dev/reference/nnToUwot.md)
   : Convert a kNN object to uwot's precomputed-neighbor format
 
+### Spatial smoothing, correlation and edge statistics
+
+- [`spatialSmoothParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatialSmoothParam.md)
+  : Smooth expression over a spatial network
+- [`spatial_smooth_operator()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatial_smooth_operator.md)
+  : Spatial smoothing operator
+- [`featCorParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/featCorParam.md)
+  : Correlation between features
+- [`feat_cor_from_moments()`](https://giotto-suite.github.io/GiottoClass/dev/reference/feat_cor_from_moments.md)
+  : Feature correlation from moment sums
+- [`edgeStatsParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/edgeStatsParam.md)
+  : Edge statistics parameters
+
 ### Multi-sample (giottoMulti)
 
 - [`createGiottoMulti()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoMulti.md)
@@ -1380,10 +1407,10 @@ present in the released version.
   : Build a coordinate frame directly
 - [`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
   : materialize a giottoView into a new gobject
+- [`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md)
+  : Resolve a view / space recipe
 - [`defaultViewCoordinator()`](https://giotto-suite.github.io/GiottoClass/dev/reference/defaultViewCoordinator.md)
   : defaultViewCoordinator
-- [`prepareIds()`](https://giotto-suite.github.io/GiottoClass/dev/reference/prepareIds.md)
-  : prepareIds
 - [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
   : resolveSubobject
 

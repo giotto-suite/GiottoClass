@@ -40,6 +40,7 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/aggregateStacksLocations.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/aggregateStacksPolygonOverlaps.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/aggregateStacksPolygons.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/allMatrix-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/analyzeData.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/analyzeParam-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/anndataToGiotto.html</loc></url>
@@ -188,6 +189,8 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-spline_poly.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-subset_giotto.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/dot-terra_writeraster_datatype.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/edgeStatsParam-class.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/edgeStatsParam.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/edge_distances.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/estimateImageBg.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/evaluate_input.html</loc></url>
@@ -195,11 +198,16 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/exprObj-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/ext.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/fDataDT.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/featCorParam-class.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/featCorParam.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/featMetaObj-class.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/featStatsParam-class.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/feat_cor_from_moments.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/featureNetwork-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/filterData.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/filterParam-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/flip.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/gAny-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/gefToGiotto.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/generate_grid.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/getCellMetadata.html</loc></url>
@@ -315,9 +323,9 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/plotGiottoImage.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/polyStamp.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/polygon_to_raster.html</loc></url>
-<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/prepareIds.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/processData.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/processParam-class.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/project_region.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/r_spatial_conversions.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/radiusNetworkParam-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/rbind-generic.html</loc></url>
@@ -354,6 +362,8 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/replace_dollar.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/rescale.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/rescalePolygons.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/resolveKeep.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/row-plus-colnames-generic.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/rowMeans_flex.html</loc></url>
@@ -412,7 +422,10 @@
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatialExperimentToGiotto.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatialGridObj-class.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatialNetworkObj-class.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatialSmoothParam-class.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatialSmoothParam.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatial_binary_ops.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatial_smooth_operator.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spatialdataToGiotto.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/spin.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoClass/dev/reference/splitGiotto.html</loc></url>

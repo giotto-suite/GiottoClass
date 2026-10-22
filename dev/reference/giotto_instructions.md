@@ -36,25 +36,25 @@ createGiottoInstructions(
 # S4 method for class 'missing,missing'
 instructions(gobject, param, ...)
 
-# S4 method for class 'giotto,missing'
+# S4 method for class 'gAny,missing'
 instructions(gobject)
 
-# S4 method for class 'giotto,character'
+# S4 method for class 'gAny,character'
 instructions(gobject, param)
 
 # S4 method for class 'giottoInstructions,character'
 instructions(gobject, param)
 
-# S4 method for class 'giotto,missing,missing'
+# S4 method for class 'gAny,missing,missing'
 instructions(gobject, initialize) <- value
 
-# S4 method for class 'giotto,missing,logical'
+# S4 method for class 'gAny,missing,logical'
 instructions(gobject, initialize) <- value
 
-# S4 method for class 'giotto,character,missing'
+# S4 method for class 'gAny,character,missing'
 instructions(gobject, param, initialize) <- value
 
-# S4 method for class 'giotto,character,logical'
+# S4 method for class 'gAny,character,logical'
 instructions(gobject, param, initialize) <- value
 
 # S4 method for class 'giottoInstructions,character,ANY'

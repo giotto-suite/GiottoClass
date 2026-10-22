@@ -58,7 +58,7 @@
 
     <a class="navbar-brand me-2" href="index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -113,7 +113,7 @@
 </tr><tr><td><code>vignettes/articles/design_gmulti.Rmd</code></td>
 <td>Multi-sample federation: <code>gAny</code>, <code>giottoMulti</code>, <code>@mapping</code> / <code>@groups</code>, joint slots, the narrowing contract, carry-keys.</td>
 </tr><tr><td><code>vignettes/articles/design_view_space.Rmd</code></td>
-<td>The <code>giottoView</code> / <code>giottoSpace</code> recipe subsystem: recording, step shape, frames, the crop invariant, <code><a href="reference/materialize.html">materialize()</a></code>.</td>
+<td>The <code>giottoView</code> / <code>giottoSpace</code> recipe subsystem: recording, step shape, frames, the crop invariant, the <code><a href="reference/resolveRecipe.html">resolveRecipe()</a></code> generic.</td>
 </tr><tr><td><code>vignettes/overview.Rmd</code></td>
 <td>User-facing walkthrough of the object model — nesting, accessors, subobjects.</td>
 </tr><tr><td><code>vignettes/view_and_space.Rmd</code></td>
@@ -143,7 +143,8 @@
 </tr></thead><tbody><tr><td><code>R/classes.R</code></td>
 <td>Core <code>giotto</code> S4 class definition (24 slots) + most subobject classes</td>
 </tr><tr><td><code>R/classes-virtuals.R</code></td>
-<td>Virtual/abstract base classes and class unions</td>
+<td>Virtual/abstract base classes and class unions, incl. <code>allMatrix</code>
+</td>
 </tr><tr><td><code>R/classes-points.R</code></td>
 <td>
 <code>giottoPoints</code>, <code>featureNetwork</code>
@@ -187,7 +188,11 @@
 </tr><tr><td><code>R/auxilliary.R</code></td>
 <td>Internal helper utilities</td>
 </tr><tr><td><code>R/zzz.R</code></td>
-<td>Package startup hooks, <code>allMatrix</code> class union</td>
+<td>Package startup hooks, including the load hook that adds <code>DelayedArray</code> / <code>IterableMatrix</code> to <code>allMatrix</code>
+</td>
+</tr><tr><td><code>R/analyze-featStats.R</code></td>
+<td>
+<code>featStatsParam</code> / <code>cellStatsParam</code> and their <code><a href="reference/analyzeData.html">analyzeData()</a></code> methods (the grouped featStats contract disk backends reproduce)</td>
 </tr></tbody></table><hr></div>
 </div>
 <div class="section level2">
@@ -273,7 +278,7 @@ spatGridData → spatialGridObj                miscData → has @misc</code></pr
 </tr><tr><td><code><a href="reference/analyzeData.html">analyzeData()</a></code></td>
 <td>computed outputs and summary statistics</td>
 </tr></tbody></table><p>A new algorithm is a <strong>new <code>Param</code> subclass plus a method in Giotto or GiottoDisk</strong> — not a new generic here. Route to the generic whose return contract matches, or fall through to the <code>ANY,ANY</code> catch-all. A method attached to the wrong generic silently never dispatches.</p>
-<p>GiottoClass defines these generics and the virtual <code>Param</code> classes and exports <strong>no methods</strong> for them.</p>
+<p>GiottoClass defines these generics and the virtual <code>Param</code> classes. The only methods it exports are arithmetic summaries other packages build on (<code>featStatsParam</code> / <code>cellStatsParam</code>, <code>labelProportionsParam</code>); analysis methods belong in Giotto or GiottoDisk.</p>
 <p>If a generic genuinely is new, it goes in <code>R/generics.R</code> with an <code>@rdname</code> tag and no implementation.</p>
 </div>
 <div class="section level3">

@@ -1,5 +1,393 @@
 # Changelog
 
+## GiottoClass 0.7.19
+
+### bug fixes
+
+- [`subsetGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/subsetGiotto.md)
+  (and `filterGiotto()`, which calls it) no longer replaces the points
+  of feature types it does not subset. Each one received the points of
+  the feature type before it, so after the default `feat_type = "rna"`
+  an object’s control-probe and codeword points were the `rna` points.
+  Affects every object with more than one points feature type, in memory
+  or disk-backed, since 0.5.1; re-run from before the subset to recover
+  them.
+
+## GiottoClass 0.7.18
+
+### bug fixes
+
+- A polygon set on a disk-backed object no longer keeps terra centroids
+  next to its store. They did not survive a snapshot, so
+  `filterGiotto()` and
+  [`subsetGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/subsetGiotto.md)
+  failed with “object ‘poly_ID’ not found” after
+  [`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md),
+  for example with the cell outlines from a Stereo-seq reader. The
+  centroids are derived from the store.
+
+- [`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md)
+  errors when `foldername` is not a single folder name (it contains `/`
+  or `\`, or is `.` or `..`) instead of creating the nested folders.
+  Parent folders go in `dir`.
+
+## GiottoClass 0.7.17
+
+### changes
+
+- [`loadGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/loadGiotto.md)
+  on a backend-managed project directory first upgrades the directory to
+  the layout the installed backend reads (`sourceUpdate()`), so a
+  project saved by an older backend version loads instead of being
+  refused. Needs `GiottoDisk (>= 0.0.0.6)` for such directories.
+
+## GiottoClass 0.7.16
+
+### new
+
+- [`spatialSmoothParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatialSmoothParam.md):
+  [`processData()`](https://giotto-suite.github.io/GiottoClass/dev/reference/processData.md)
+  averages each cell’s values with its neighbours’ in a spatial network,
+  counting edges in both directions. The giotto method writes the result
+  as new expression values.
+  [`spatial_smooth_operator()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatial_smooth_operator.md)
+  returns the cells x cells matrix it applies, for backends that smooth
+  themselves.
+- [`featCorParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/featCorParam.md):
+  [`analyzeData()`](https://giotto-suite.github.io/GiottoClass/dev/reference/analyzeData.md)
+  returns the feature x feature correlation, Pearson from moment sums or
+  Spearman. With `smooth = spatialSmoothParam()` it correlates the
+  smoothed values, which a backend can do without storing them.
+  [`feat_cor_from_moments()`](https://giotto-suite.github.io/GiottoClass/dev/reference/feat_cor_from_moments.md)
+  turns the sums into the correlation.
+- [`createMetafeats()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createMetafeats.md)
+  computes `"mean"` and `"sum"` scores for all modules in one product,
+  so a disk-backed store is read once rather than once per module.
+- `createMetafeats(stat = "zmean")` averages features after scaling each
+  to mean 0 and standard deviation 1.
+
+### bug fixes
+
+- `createMetafeats(rescale_to =)` failed on a feature with the same
+  value in every cell.
+- [`compatible_spatial_network()`](https://giotto-suite.github.io/GiottoClass/dev/reference/compatible_spatial_network.md)
+  checked only the `from` ends of the edges.
+
+## GiottoClass 0.7.15
+
+### changes
+
+- [`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md)
+  and
+  [`loadGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/loadGiotto.md)
+  use qs2 instead of qs, which is archived on CRAN and no longer builds:
+  `method = "qs2"` writes `gobject.qs2`. The `"qs"` method is removed
+  and `.qs` saves are no longer read. qs2 replaces qs in Suggests and in
+  the CI workflow.
+
+## GiottoClass 0.7.14
+
+### new
+
+- [`edgeStatsParam()`](https://giotto-suite.github.io/GiottoClass/dev/reference/edgeStatsParam.md)
+  and an
+  [`analyzeData()`](https://giotto-suite.github.io/GiottoClass/dev/reference/analyzeData.md)
+  method for matrices return the per-feature sums over a spatial network
+  that Moran’s I, Geary’s C and join counts are computed from. With
+  `groups =` the result also carries the per-group sums and
+  group-to-group edge tables a null conditioned on a cell grouping
+  (library-size bins, cell types) needs.
+
+## GiottoClass 0.7.13
+
+### changes
+
+- `giottoBinPoints` can be store-backed, as `giottoPoints` and `exprObj`
+  are: on a backed object `@spatial` holds a GiottoDisk points store and
+  `@counts` a GiottoDisk expression store. Its methods hand such objects
+  to GiottoDisk
+  ([`calculateOverlap()`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateOverlap.md),
+  [`as.data.table()`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.data.table.md),
+  [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md),
+  feature `[`), and
+  [`setFeatureInfo()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setFeatureInfo.md)
+  on a backed object writes in-memory bin points to the backend, as it
+  does other feature info. `@counts` is typed `ANY`; in-memory bin
+  points are unchanged.
+
+## GiottoClass 0.7.12
+
+### bug fixes
+
+- [`calculateOverlap()`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateOverlap.md)
+  of polygons with `giottoBinPoints` indexes the bins’ counts directly
+  instead of copying and joining the whole counts table. It also works
+  where it failed: a bin inside two overlapping polygons (a data.table
+  cartesian error), and bin points whose bins have no counts left, which
+  put empty rows in the overlap and made
+  [`overlapToMatrix()`](https://giotto-suite.github.io/GiottoClass/dev/reference/overlapToMatrix.md)
+  fail.
+
+## GiottoClass 0.7.11
+
+### bug fixes
+
+- [`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md)
+  resolves `giottoBinPoints` as it does `giottoPoints` (space, then
+  crops). A crop view, or any in-situ plot of a disk-backed object,
+  holding bin points failed with “unable to find an inherited method for
+  function ‘resolveRecipe’”.
+
+## GiottoClass 0.7.10
+
+### bug fixes
+
+- [`overlapToMatrix()`](https://giotto-suite.github.io/GiottoClass/dev/reference/overlapToMatrix.md)
+  and
+  [`aggregateFeatures()`](https://giotto-suite.github.io/GiottoClass/dev/reference/aggregateFeatures.md)
+  sum a points `count` column by default, as
+  [`calculateOverlap()`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateOverlap.md)
+  already detects one. They counted overlap rows unless
+  `feat_count_column = "count"` was passed, so points or
+  `giottoBinPoints` carrying counts were undercounted.
+  `feat_count_column = FALSE` still counts rows, and on store-backed
+  points `calculateOverlap(feat_count_column = FALSE)` now reaches the
+  store method.
+
+## GiottoClass 0.7.9
+
+### changes
+
+- The `gAny` virtual class is exported. It is the base class that
+  `giotto` and `giottoMulti` share, so another package can define one
+  method on `gAny` and have it apply to both.
+
+## GiottoClass 0.7.8
+
+### bug fixes
+
+- [`instructions()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md),
+  `instructions<-()`,
+  [`activeSpatUnit()`](https://giotto-suite.github.io/GiottoClass/dev/reference/activeSpatUnit-generic.md)
+  and
+  [`activeFeatType()`](https://giotto-suite.github.io/GiottoClass/dev/reference/activeFeatType-generic.md)
+  (and their setters) work on a `giottoMulti`. The multi always had an
+  `@instructions` slot, but the methods were defined for `giotto` only,
+  so anything that read plot settings from the object (`plotUMAP()`,
+  `plotPCA()`, `dimFeatPlot2D()`, …) failed on a multi. The multi’s
+  instructions are its own; the samples keep theirs. With no active
+  spatial unit or feature type set, the default still comes from the
+  mapping.
+- [`setGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  works on a `giottoMulti`. It forwards each subobject to its typed
+  setter, and those already handled the multi, but
+  [`setGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  itself was defined for `giotto` only, so every analysis function that
+  saves its result through it (`normalizeGiotto()`, `runPCA()`, …)
+  failed on a multi. Expression, metadata, dimension reductions,
+  nearest-neighbor networks, spatial enrichments and cross-sample
+  spatial networks are written to the multi. Locations, polygons, points
+  and images are refused with the same error as their typed setters,
+  because each belongs to one sample.
+- [`setGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md)
+  with a list restores the `giotto.init` and `giotto.check_valid`
+  options when one of the items fails. They were switched off for the
+  loop and left off for the rest of the session.
+
+## GiottoClass 0.7.7
+
+### bug fixes
+
+- [`svkey()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatValues.md)
+  takes `spat_enr_name` and forwards it. The class always had the slot,
+  but the constructor didn’t accept the argument and `@get` never passed
+  it on, so a key couldn’t point at a specific spatial enrichment.
+
+## GiottoClass 0.7.6
+
+### changes
+
+- **`spatValues(svkey = )` takes a list of `svkey`s** and joins the
+  results on `cell_ID`. Each key carries its own location, so one call
+  can pull the same name from several places, such as `raw` and
+  `normalized` expression, or a feature and a same-named metadata
+  column. It’s a full join. A value name returned by more than one key
+  is prefixed with the key’s list name, or, in an unnamed list, with its
+  location (e.g. `raw_CD3E`). Keys must resolve to one `spat_unit`.
+  `view`, `space` and `samples` apply to every key.
+
+## GiottoClass 0.7.5
+
+### changes
+
+- **[`spatValues()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatValues.md)
+  gains `slot =`, mainly to scope the search to cell metadata** with
+  `slot = "cell_metadata"`. Every other slot is already scoped by
+  passing its name param (`expression_values`, `spat_enr_name`, …), but
+  cell metadata has no name to pass. An unscoped search checks
+  expression first, so a metadata column that shares a feature’s name
+  returned the feature. `slot` also accepts the other slot names, which
+  scope to that slot while leaving its item at the default. A `slot`
+  that contradicts a name param is an error.
+  [`svkey()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatValues.md)
+  takes and forwards `slot` too.
+- **[`calculateMetaTable()`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateMetaTable.md)
+  computes its means in one grouped `analyzeData(featStatsParam)` call**
+  instead of one pass per group, so a disk-backed expression store is
+  read once rather than once per group. It reads the grouping columns
+  with `spatValues(slot = "cell_metadata")`. The output is unchanged:
+  same columns, same group and feature order, same values.
+
+### bug fixes
+
+- [`calculateMetaTable()`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateMetaTable.md)
+  with a single `selected_feats` entry no longer errors. The subset
+  dropped the matrix to a vector.
+- [`calculateMetaTable()`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateMetaTable.md)
+  names any `metadata_cols` missing from cell metadata.
+
+## GiottoClass 0.7.4
+
+### changes
+
+- **`allMatrix`, `featStatsParam` and `cellStatsParam` are defined
+  here**, moved down from Giotto together with the
+  [`analyzeData()`](https://giotto-suite.github.io/GiottoClass/dev/reference/analyzeData.md)
+  methods for the two stats params. They are arithmetic summaries with
+  no analysis choice in them, and packages that cannot depend on Giotto
+  need them: per-group means for cluster heatmaps and trees, for
+  example. `allMatrix` gains `DelayedArray` and BPCells’
+  `IterableMatrix` at load time when those are installed, as it did in
+  Giotto. Giotto’s `analyzeParam("feat_stats")` /
+  `analyzeParam("cell_stats")` still build them. Construct them directly
+  with `new("featStatsParam", param = list(...))`; `detection_threshold`
+  defaults to `0`.
+
+### bug fixes
+
+- `analyzeData(<IterableMatrix>, featStatsParam)` with a
+  `detection_threshold` above 0 no longer errors computing
+  `mean_expr_det`. It clamped through the `allMatrix` threshold method,
+  which assigns into the matrix and is not supported for BPCells
+  matrices; it now calls `BPCells::min_scalar()`.
+
+## GiottoClass 0.7.3
+
+### bug fixes
+
+- **A
+  [`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md)
+  op is scoped to one `spat_unit` and `feat_type`**, given by the new
+  `spat_unit =` / `feat_type =` arguments and defaulting to the active
+  ones. The surviving cell set is computed in that unit’s cell_ID
+  vocabulary, and only subobjects in scope are narrowed; the rest are
+  left untouched. Previously one set, computed in the active unit,
+  narrowed every unit, so on an object whose units do not share IDs
+  (cells and nuclei, say) every other unit came back empty. The getters
+  resolve in the unit of the subobject they read, so
+  `getSpatialLocations(g, spat_unit = "nucleus", view = )` narrows
+  nuclei by their own coordinates.
+  [`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md)
+  is plumbing for consumers of one scope; to narrow a whole object, use
+  [`subsetGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/subsetGiotto.md)
+  or [`subset()`](https://rdrr.io/r/base/subset.html).
+  - A filter step recorded against one `spat_unit` is an error when
+    resolved for another. Filtering one unit by another’s values is not
+    supported yet.
+- A crop drawn in a named space now clips points and images in that
+  frame. The region was applied to them as recorded, in whatever frame
+  they were returned in, so a crop drawn in one space and read in
+  another (or in the native frame) clipped the wrong area. The region is
+  now projected from the step’s frame into the output frame first,
+  through the new internal
+  [`project_region()`](https://giotto-suite.github.io/GiottoClass/dev/reference/project_region.md).
+
+### changes
+
+- **[`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md)
+  replaces
+  [`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
+  and
+  [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)**,
+  which were the same operation under two names, split at the point
+  where one called the other. One generic now spans both levels of the
+  walk: a container evaluates the recipe once and walks its slots, a
+  subobject leaf applies the context it is handed. Dispatch is on
+  `(x, coordinator)` and everything past `x` is passed by name —
+  `resolveRecipe(g, view = "roi", space = "layout")`.
+  - `materialize` was the wrong word, and an already-taken one: it is
+    used elsewhere in the stack for pulling lazy or backed data into
+    memory, which is the one thing this does not do — a resolved
+    gobject’s subobjects are still whatever they were. “Resolve” was
+    already the subsystem’s own verb, and the recipe is what it
+    resolves. The name carries the noun because a bare `resolve()`
+    collides with `future::resolve()`, which returns its input
+    unchanged, so a script attaching future after Giotto would silently
+    get an un-narrowed object.
+  - **A leaf no longer takes the parent gobject.** It used it for
+    exactly one thing, deriving the surviving cell_ID set, and that
+    belongs at the container, which is the thing walking the nesting
+    keys. A leaf now takes `keep`, `space` and `view`, so
+    `resolveRecipe(myExprObj, co, keep = k)` is a unit test rather than
+    a call needing a whole object graph. `keep` arrives as a promise, so
+    a leaf that does not narrow by cell still never pays for it.
+  - The per-leaf `.cache` lookup through `...` is gone with it: the
+    value is computed once where it is known, which makes recomputation
+    structurally impossible rather than merely avoided.
+  - Removing the one use of a coordinator inside the space-application
+    helper exposed that it had been threaded through the whole
+    crop-carrier chain to reach it, and read nowhere else. Five internal
+    helpers lose the argument.
+  - **[`resolveKeep()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveKeep.md)
+    is the seam a coordinator replaces.** It evaluates the view into the
+    op’s surviving cell set and dispatches on the coordinator. The set
+    travels as a `viewKeep`, an environment with one form per
+    coordinator that reads it: `vector`, a character vector, for the
+    in-memory one; a backed coordinator can add a lazy query. A
+    coordinator that extends another fills in the inherited forms as
+    well as its own, so a subobject that falls through to an inherited
+    leaf finds the form that leaf reads, and the set is evaluated once.
+    It is an environment so an inherited form can be installed with
+    [`delayedAssign()`](https://rdrr.io/r/base/delayedAssign.html) and
+    computed only if a leaf reads it.
+  - **A leaf that clips geometry is handed `spaces =`**, the object’s
+    `@spaces` list, and looks up a crop step’s recorded frame there
+    instead of reaching back into the gobject.
+  - [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)’s
+    five-slot dispatch signature is gone. Every registration used only
+    `(subobj, coordinator)`; the middle three were always `ANY`.
+  - **`prepareIds()` is removed**, not deprecated. It was an exported
+    identity transform with no call sites in any package, and the two
+    companion generics its design note promised — one to apply a
+    prepared ID set, one to translate a predicate — were never written.
+    All three dispatched on the coordinator, which is now what the leaf
+    generic dispatches on, so each coordinator’s `resolveRecipe` methods
+    do that work directly.
+  - **Both old names keep working for one release.**
+    [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
+    forwards to
+    [`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md),
+    and the walk still routes through it for any coordinator that has
+    not registered `resolveRecipe` methods yet — a coordinator
+    registered outside this package has a release in which both names
+    resolve before the alias is dropped. The routing test is whether a
+    method is registered under the old name for that pair, not whether a
+    `resolveRecipe` method exists — concrete coordinators inherit the
+    in-memory one, so the latter is always true and would send backed
+    data down the in-memory path without an error.
+
+### docs
+
+- `design_view_space.Rmd` gains the record for the
+  [`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md)
+  merge: why the name changed, why `view` left the dispatch signature,
+  and why a leaf is handed its context instead of the gobject.
+- [`crop()`](https://giotto-suite.github.io/GiottoClass/dev/reference/crop.md)
+  on a gobject without `view =` now points to reading through `view =`
+  on a getter or plot function, not to
+  [`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md),
+  which is plumbing.
+
 ## GiottoClass 0.7.2
 
 ### bug fixes
@@ -18,6 +406,16 @@
   `feat_type = NULL` and the `":all:"` check did not allow for it. With
   no `feat_type`, a polygon subset keeps every overlap for the kept
   polygons, as `[` did before the method existed.
+
+- A relative `save_dir` instruction is made absolute when it is set,
+  through
+  [`createGiottoInstructions()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_instructions.md)
+  or `instructions<-()`. It was stored as given and resolved against the
+  working directory at save time, so plots from a knitted document, a
+  parallel worker or code after
+  [`setwd()`](https://rdrr.io/r/base/getwd.html) could land in a
+  different folder from the one named. Objects saved before this keep
+  their relative `save_dir` until it is set again.
 
 ### changes
 
@@ -99,17 +497,18 @@
 - **[`nnToUwot()`](https://giotto-suite.github.io/GiottoClass/dev/reference/nnToUwot.md)**,
   converting a `kNN`/`NN` object from
   [`hnswKNN()`](https://giotto-suite.github.io/GiottoClass/dev/reference/hnswKNN.md)
-  or [`dbscan::kNN()`](https://rdrr.io/pkg/dbscan/man/kNN.html) into the
-  `list(idx =, dist =)` that `uwot::umap()` and `uwot::umap2()` take as
-  `nn_method`. Two conventions have to be reconciled and uwot validates
-  neither, so getting either wrong corrupts the embedding silently
-  instead of erroring: uwot names the matrix `idx` where a `kNN` object
-  names it `id`, and uwot requires each observation to be its own first
-  neighbour – it drops column 1 when fitting the local connectivity
-  offset – where both search functions *remove* self-matches. Handing
-  their output over unchanged discards every observation’s true nearest
-  neighbour. The converter refuses input that already carries self, and
-  refuses unsorted distances.
+  or
+  [`dbscan::kNN()`](http://michael.hahsler.net/dbscan/reference/kNN.md)
+  into the `list(idx =, dist =)` that `uwot::umap()` and `uwot::umap2()`
+  take as `nn_method`. Two conventions have to be reconciled and uwot
+  validates neither, so getting either wrong corrupts the embedding
+  silently instead of erroring: uwot names the matrix `idx` where a
+  `kNN` object names it `id`, and uwot requires each observation to be
+  its own first neighbour – it drops column 1 when fitting the local
+  connectivity offset – where both search functions *remove*
+  self-matches. Handing their output over unchanged discards every
+  observation’s true nearest neighbour. The converter refuses input that
+  already carries self, and refuses unsorted distances.
 
 - **[`annotateSpatialNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/annotateSpatialNetwork.md)’s
   two annotations are now independent, and both are optional.** A
@@ -606,7 +1005,7 @@ released version, so no stored object holds a recipe.
   builds a fixed-radius spatial network: every pair of nodes within
   `eps` is joined, so degree follows local density rather than being
   fixed as it is for kNN. Backed by the exact
-  [`dbscan::frNN`](https://rdrr.io/pkg/dbscan/man/frNN.html).
+  [`dbscan::frNN`](http://michael.hahsler.net/dbscan/reference/frNN.md).
   `minimum_k` keeps a floor of nearest neighbours for nodes whose radius
   is empty, which otherwise drop out of the network entirely. Previously
   the only route to a distance-based network was kNN with a large `k`
@@ -674,8 +1073,8 @@ released version, so no stored object holds a recipe.
     search is read-only and deterministic at any thread count, so
     `n_threads` stays parallel. Costs 2.82s -\> 11.8s, still 6.8x faster
     than the 79.85s exact
-    [`dbscan::kNN()`](https://rdrr.io/pkg/dbscan/man/kNN.html), with
-    accuracy unchanged (recall 0.999980).
+    [`dbscan::kNN()`](http://michael.hahsler.net/dbscan/reference/kNN.md),
+    with accuracy unchanged (recall 0.999980).
   - An `engine = "auto"` that selects by dataset size is planned; for
     now prefer `"dbscan"` on small data, where it is both exact and
     faster.
@@ -741,9 +1140,10 @@ released version, so no stored object holds a recipe.
   observable for an edge sitting exactly on a `maximum_distance` cutoff.
   Non-euclidean metrics keep the general path.
 - kNN networks no longer recompute distances when `maximum_distance` is
-  set. [`dbscan::kNN`](https://rdrr.io/pkg/dbscan/man/kNN.html) already
-  returns them and the recompute went through the per-edge loop above,
-  so asking for a cutoff cost 11x: at 50,000 points a spatial kNN
+  set.
+  [`dbscan::kNN`](http://michael.hahsler.net/dbscan/reference/kNN.md)
+  already returns them and the recompute went through the per-edge loop
+  above, so asking for a cutoff cost 11x: at 50,000 points a spatial kNN
   network went 1.89 s with a cutoff against 0.17 s without. Both are now
   ~0.19 s. Using the search’s own distances is also the self-consistent
   choice – the cutoff now filters on whatever metric the search used.

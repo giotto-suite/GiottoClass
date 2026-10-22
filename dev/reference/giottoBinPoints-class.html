@@ -62,7 +62,7 @@ once and mapping the sparse values information against the points."><meta proper
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -133,14 +133,16 @@ once and mapping the sparse values information against the points.</p>
 
 
 <dl><dt><code>spatial</code></dt>
-<dd><p>ANY (currently <code>SpatVector</code> only). Row-indexed spatial points</p></dd>
+<dd><p>ANY. Row-indexed spatial points: a <code>SpatVector</code>, or on a
+backed object a GiottoDisk points store keyed by the bin's row in <code>@counts</code></p></dd>
 
 
 <dt><code>counts</code></dt>
 <dd><p><code>data.table</code> with integer cols <code>i</code> and <code>j</code> mapping to <code>@fid</code>
 and <code>@bid</code> respectively. <code>x</code> is a numeric col standing for count or value of
 a feature for this bin point. Row indexing of this object is based on this
-slot.</p></dd>
+slot. On a backed object, a GiottoDisk expression store of features x bins,
+with <code>@bid</code> and <code>@pmap</code> left empty since its cell IDs are the bin IDs.</p></dd>
 
 
 <dt><code>bid</code></dt>

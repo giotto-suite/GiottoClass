@@ -22,7 +22,7 @@ walkthroughs live elsewhere:
 | `AGENTS.md` (this file) | Code navigation, constraints, conventions. Read first when modifying code. |
 | `vignettes/articles/design.Rmd` | Architectural rationale: two-tier object model, the schema, subobject hierarchy, `initialize()`, versioning, the five analysis verbs, the disk-backed arc. Summarises the two subsystem articles below. |
 | `vignettes/articles/design_gmulti.Rmd` | Multi-sample federation: `gAny`, `giottoMulti`, `@mapping` / `@groups`, joint slots, the narrowing contract, carry-keys. |
-| `vignettes/articles/design_view_space.Rmd` | The `giottoView` / `giottoSpace` recipe subsystem: recording, step shape, frames, the crop invariant, [`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md). |
+| `vignettes/articles/design_view_space.Rmd` | The `giottoView` / `giottoSpace` recipe subsystem: recording, step shape, frames, the crop invariant, the [`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md) generic. |
 | `vignettes/overview.Rmd` | User-facing walkthrough of the object model — nesting, accessors, subobjects. |
 | `vignettes/view_and_space.Rmd` | User-facing walkthrough of views and spaces. |
 | `adr/` | Architecture Decision Records: why a choice was made, what was rejected, what it costs. Dated and immutable — read when you are about to change a decision, not to learn current behaviour. |
@@ -57,7 +57,7 @@ it from the code you are about to edit.
 | File | Role |
 |----|----|
 | `R/classes.R` | Core `giotto` S4 class definition (24 slots) + most subobject classes |
-| `R/classes-virtuals.R` | Virtual/abstract base classes and class unions |
+| `R/classes-virtuals.R` | Virtual/abstract base classes and class unions, incl. `allMatrix` |
 | `R/classes-points.R` | `giottoPoints`, `featureNetwork` |
 | `R/classes-polygons.R` | `giottoPolygon` |
 | `R/classes-images.R` | `giottoImage`, `giottoLargeImage`, `giottoAffineImage` |
@@ -75,7 +75,8 @@ it from the code you are about to edit.
 | `R/flex_functions.R` | `*_flex` dispatch helpers (see *Dispatch outside S4* below) |
 | `R/package_imports.R` | All `@import`/`@importFrom` declarations (centralised) |
 | `R/auxilliary.R` | Internal helper utilities |
-| `R/zzz.R` | Package startup hooks, `allMatrix` class union |
+| `R/zzz.R` | Package startup hooks, including the load hook that adds `DelayedArray` / `IterableMatrix` to `allMatrix` |
+| `R/analyze-featStats.R` | `featStatsParam` / `cellStatsParam` and their [`analyzeData()`](https://giotto-suite.github.io/GiottoClass/dev/reference/analyzeData.md) methods (the grouped featStats contract disk backends reproduce) |
 
 ------------------------------------------------------------------------
 
@@ -246,8 +247,10 @@ GiottoDisk** — not a new generic here. Route to the generic whose return
 contract matches, or fall through to the `ANY,ANY` catch-all. A method
 attached to the wrong generic silently never dispatches.
 
-GiottoClass defines these generics and the virtual `Param` classes and
-exports **no methods** for them.
+GiottoClass defines these generics and the virtual `Param` classes. The
+only methods it exports are arithmetic summaries other packages build on
+(`featStatsParam` / `cellStatsParam`, `labelProportionsParam`); analysis
+methods belong in Giotto or GiottoDisk.
 
 If a generic genuinely is new, it goes in `R/generics.R` with an
 `@rdname` tag and no implementation.

@@ -66,7 +66,7 @@ getDimReduction(
 
   optional character(1) name of a slotted view; narrows returned cells
   via
-  [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
+  [`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md)
 
 - space:
 

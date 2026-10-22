@@ -275,7 +275,7 @@ nothing. That is what caused the narrowing bug above, and it is not
 merely a first-access window.
 
 Open: what signals eager materialization? Lazy is the default and
-[`materialize()`](https://giotto-suite.github.io/GiottoClass/dev/reference/materialize.md)
+[`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md)
 is the presumed trigger, but that is not formally the contract.
 
 ## The access layer

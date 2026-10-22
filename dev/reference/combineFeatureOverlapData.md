@@ -42,7 +42,7 @@ combineFeatureOverlapData(
   or the name of one slotted on `gobject`. Threaded through the
   underlying getFeatureMetadata / getPolygonInfo / getFeatureInfo calls
   — the returned table reflects the view-scoped subset. One resolver
-  pass is shared via `materialize(slots = ...)` so the predicate
+  pass is shared via `resolveRecipe(slots = ...)` so the predicate
   evaluates once.
 
 ## Value

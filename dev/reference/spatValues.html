@@ -66,7 +66,7 @@ slot it checks, see details."><meta property="og:image" content="https://giotto-
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -121,6 +121,7 @@ slot it checks, see details.</p>
 <span>  poly_info <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  dim_reduction_to_use <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  dim_reduction_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  slot <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  svkey <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  view <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  space <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -135,9 +136,11 @@ slot it checks, see details.</p>
 <span>  feat_type <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  expression_values <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  spat_loc_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  spat_enr_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  poly_info <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  dim_reduction_to_use <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  dim_reduction_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  slot <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -192,9 +195,24 @@ reduction to use</p></dd>
 to use</p></dd>
 
 
+<dt id="arg-slot">slot<a class="anchor" aria-label="anchor" href="#arg-slot"></a></dt>
+<dd><p>character. (optional) The <code>giotto</code> slot to search. Mainly
+<code>"cell_metadata"</code>: cell metadata has no name to pass, so this is the only
+way to scope the search to it. Use it when a metadata column could share a
+name with a feature, since an unscoped search checks expression first.
+The other slots are already scoped by passing their name param
+(<code>expression_values</code>, <code>spat_loc_name</code>, ...); <code>slot</code> also accepts
+<code>"expression"</code>, <code>"spatial_locs"</code>, <code>"spatial_enrichment"</code>,
+<code>"dimension_reduction"</code> and <code>"spatial_info"</code> (polygon info), which scope to
+that slot while leaving its item at the default. A <code>slot</code> that contradicts
+a name param is an error.</p></dd>
+
+
 <dt id="arg-svkey">svkey<a class="anchor" aria-label="anchor" href="#arg-svkey"></a></dt>
-<dd><p>use a <code>svkey</code>. Other params will be ignored. This is just
-syntactic sugar for <code>svkey@get(gobject)</code></p></dd>
+<dd><p>a <code>svkey</code>, or a list of them. A single <code>svkey</code> is syntactic
+sugar for <code>svkey@get(gobject)</code>, and other params are ignored. A list pulls
+each key and joins the results on <code>cell_ID</code> (see details); <code>view</code>, <code>space</code>
+and <code>samples</code> apply to every key, and the other params are ignored.</p></dd>
 
 
 <dt id="arg-samples">samples<a class="anchor" aria-label="anchor" href="#arg-samples"></a></dt>
@@ -230,8 +248,17 @@ spatValues searches through the set of available information within the
 <li><p>dimension reduction</p></li>
 <li><p>polygon info</p></li>
 </ol><p>If a specific name for one of the types of information is provided via a
-param such as <code>expression_values</code>, <code>spat_enr_name</code>, etc, then
-the search will only be performed on that type of data.<br><br><strong>[debug]</strong><br>
+param such as <code>expression_values</code>, <code>spat_enr_name</code>, etc, or a <code>slot</code> is
+given, then the search will only be performed on that type of data.<br><br><strong>[svkey lists]</strong><br>
+Each key carries its own location through its params, so a list can pull
+the same name from different slots, or from different items in one slot
+(e.g. <code>raw</code> and <code>normalized</code> expression), in one call. Results are joined
+on <code>cell_ID</code> as a full join: a cell missing from one key gets <code>NA</code> there.
+All keys must resolve to the same <code>spat_unit</code>, since cell IDs are not
+shared across units. When a value name comes back from more than one key,
+those columns are prefixed with the key's list name, or, for an unnamed
+list, with what locates the key (its <code>expression_values</code>, <code>slot</code>, etc.).
+If that still does not tell them apart, name the list.<br><br><strong>[debug]</strong><br>
 This function uses Giotto's accessor functions which can usually throw errors
 whenever a specific set of data or the features within that set do not
 exist. This function muffles those errors, and only sends an error that the
@@ -266,6 +293,9 @@ available.</p></li>
 <span></span>
 <span><span class="co"># cell meta</span></span>
 <span><span class="fu">spatValues</span><span class="op">(</span><span class="va">g</span>, spat_unit <span class="op">=</span> <span class="st">"aggregate"</span>, feats <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"nr_feats"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu">spatValues</span><span class="op">(</span><span class="va">g</span>, spat_unit <span class="op">=</span> <span class="st">"aggregate"</span>, feats <span class="op">=</span> <span class="st">"leiden_clus"</span>,</span>
+<span>    slot <span class="op">=</span> <span class="st">"cell_metadata"</span></span>
+<span><span class="op">)</span></span>
 <span></span></code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

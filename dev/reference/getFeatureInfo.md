@@ -61,7 +61,7 @@ getFeatureInfo(
 
   optional character(1) name of a slotted view; applies any crop step to
   the points via
-  [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md).
+  [`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md).
   Points are not cell-keyed so subset predicates do not cascade here.
 
 - space:

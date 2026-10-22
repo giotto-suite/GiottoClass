@@ -70,7 +70,7 @@ to implement those analyses."><meta property="og:image" content="https://giotto-
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -100,7 +100,7 @@ to implement those analyses."><meta property="og:image" content="https://giotto-
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Data Processing</h1>
-      <small class="dont-index">Source: <a href="https://github.com/giotto-suite/Giotto/blob/website/R/generics.R" class="external-link"><code>R/generics.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/giotto-suite/Giotto/blob/website/R/generics.R" class="external-link"><code>R/generics.R</code></a>, <a href="https://github.com/giotto-suite/Giotto/blob/website/R/process-spatialSmooth.R" class="external-link"><code>R/process-spatialSmooth.R</code></a></small>
       <div class="d-none name"><code>processData.Rd</code></div>
     </div>
 
@@ -116,7 +116,22 @@ to implement those analyses.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">processData</span><span class="op">(</span><span class="va">x</span>, <span class="va">param</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">processData</span><span class="op">(</span><span class="va">x</span>, <span class="va">param</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S4 method for class 'allMatrix,spatialSmoothParam'</span></span>
+<span><span class="fu">processData</span><span class="op">(</span><span class="va">x</span>, <span class="va">param</span>, <span class="va">...</span>, <span class="va">network</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S4 method for class 'giotto,spatialSmoothParam'</span></span>
+<span><span class="fu">processData</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  <span class="va">param</span>,</span>
+<span>  <span class="va">...</span>,</span>
+<span>  spat_unit <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  feat_type <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  expression_values <span class="op">=</span> <span class="st">"normalized"</span>,</span>
+<span>  spatial_network_name <span class="op">=</span> <span class="st">"Delaunay_network"</span>,</span>
+<span>  feats <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -133,6 +148,27 @@ to implement those analyses.</p>
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>additional arguments, for use in specific methods</p></dd>
+
+
+<dt id="arg-network">network<a class="anchor" aria-label="anchor" href="#arg-network"></a></dt>
+<dd><p>a spatial network: an <code>igraph</code> or a data.frame with
+<code>from</code>, <code>to</code> (cell IDs) and, for <code>weighted = TRUE</code>, <code>weight</code></p></dd>
+
+
+<dt id="arg-spat-unit-feat-type">spat_unit, feat_type<a class="anchor" aria-label="anchor" href="#arg-spat-unit-feat-type"></a></dt>
+<dd><p>spatial unit and feature type</p></dd>
+
+
+<dt id="arg-expression-values">expression_values<a class="anchor" aria-label="anchor" href="#arg-expression-values"></a></dt>
+<dd><p>expression values to smooth</p></dd>
+
+
+<dt id="arg-spatial-network-name">spatial_network_name<a class="anchor" aria-label="anchor" href="#arg-spatial-network-name"></a></dt>
+<dd><p>spatial network to smooth over</p></dd>
+
+
+<dt id="arg-feats">feats<a class="anchor" aria-label="anchor" href="#arg-feats"></a></dt>
+<dd><p>features to smooth (default all)</p></dd>
 
 </dl></div>
     <div class="section level2">

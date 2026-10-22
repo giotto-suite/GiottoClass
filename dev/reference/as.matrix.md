@@ -9,7 +9,7 @@ Coerce to matrix
 as.matrix(x, id_rownames = TRUE, ...)
 
 # S4 method for class 'overlapPointDT'
-as.matrix(x, feat_count_column = NULL, ...)
+as.matrix(x, feat_count_column = NULL, verbose = NULL, ...)
 
 # S4 method for class 'overlapIntensityDT'
 as.matrix(x, ...)
@@ -36,7 +36,12 @@ as.matrix(x, attr = NULL, ...)
 
   character. If provided, column in overlaps info that contains count
   information to take into account when generating matrix. This is
-  important when point detections represent more than one count.
+  important when point detections represent more than one count. When
+  `NULL`, a `count` column is used if present; `FALSE` counts rows.
+
+- verbose:
+
+  be verbose
 
 - attr:
 

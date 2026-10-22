@@ -12,7 +12,7 @@ saveGiotto(
   gobject,
   foldername = "saveGiottoDir",
   dir = getwd(),
-  method = c("RDS", "qs"),
+  method = c("RDS", "qs2"),
   method_params = list(),
   overwrite = FALSE,
   export_image = TRUE,
@@ -31,7 +31,8 @@ saveGiotto(
 
 - foldername:
 
-  Folder name (ignored when `gsource` is managed)
+  Folder name, created inside `dir`. A single folder: parent folders go
+  in `dir`. (ignored when `gsource` is managed)
 
 - dir:
 
@@ -40,11 +41,11 @@ saveGiotto(
 
 - method:
 
-  method to save main object
+  method to save main object: `"RDS"` or `"qs2"`
 
 - method_params:
 
-  additional method parameters for RDS or qs
+  additional method parameters for RDS or qs2
 
 - overwrite:
 
@@ -86,7 +87,7 @@ Works together with
 [`loadGiotto`](https://giotto-suite.github.io/GiottoClass/dev/reference/loadGiotto.md)
 to save and re-load Giotto objects. Additional method_params need to be
 provided as a list and will go to
-[`saveRDS`](https://rdrr.io/r/base/readRDS.html) or `qsave`
+[`saveRDS`](https://rdrr.io/r/base/readRDS.html) or `qs_save`
 
 ## Examples
 

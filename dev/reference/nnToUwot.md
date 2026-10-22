@@ -2,10 +2,10 @@
 
 Reshape a `c("kNN", "NN")` object – from
 [`hnswKNN()`](https://giotto-suite.github.io/GiottoClass/dev/reference/hnswKNN.md)
-or [`dbscan::kNN()`](https://rdrr.io/pkg/dbscan/man/kNN.html) – into the
-`list(idx =, dist =)` that `uwot::umap()` and `uwot::umap2()` accept as
-`nn_method`, so a graph built once can be handed to UMAP instead of
-letting uwot run a second, independent search.
+or [`dbscan::kNN()`](http://michael.hahsler.net/dbscan/reference/kNN.md)
+– into the `list(idx =, dist =)` that `uwot::umap()` and `uwot::umap2()`
+accept as `nn_method`, so a graph built once can be handed to UMAP
+instead of letting uwot run a second, independent search.
 
 ## Usage
 
@@ -37,7 +37,8 @@ an error:
   (`idx[, 1] == seq_len(n)`, `dist[, 1] == 0`), because it drops column
   1 when fitting the local-connectivity offset. Both
   [`hnswKNN()`](https://giotto-suite.github.io/GiottoClass/dev/reference/hnswKNN.md)
-  and [`dbscan::kNN()`](https://rdrr.io/pkg/dbscan/man/kNN.html)
+  and
+  [`dbscan::kNN()`](http://michael.hahsler.net/dbscan/reference/kNN.md)
   *remove* self-matches. Passing their output unchanged therefore
   discards every observation's true nearest neighbor and fits `rho`
   against a shifted distance set.

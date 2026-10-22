@@ -78,7 +78,7 @@ getExpression(
 
   optional character(1) name of a slotted view; when supplied, the
   returned expression is narrowed to the cell set the view defines via
-  [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
+  [`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md)
 
 - space:
 

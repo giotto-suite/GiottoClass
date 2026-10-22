@@ -1,49 +1,13 @@
 # resolveSubobject
 
-Apply a
-[giottoView](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoView.md)
-(and optional
-[giottoSpace](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoSpace.md))
-recipe to a single subobject, returning the projected subobject.
-Dispatch is on `(subobj, coordinator)` so different storage-bridging
-coordinators register different methods.
+Deprecated in 0.7.3. Superseded by
+[`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md),
+which is one generic for both the container and the leaf, and which
+hands a leaf its evaluated context instead of the parent gobject.
 
 ## Usage
 
 ``` r
-resolveSubobject(subobj, gobject, view, space, coordinator, ...)
-
-# S4 method for class 'cellMetaObj,ANY,ANY,ANY,dataTableCoordinator'
-resolveSubobject(subobj, gobject, view, space, coordinator, ...)
-
-# S4 method for class 'exprObj,ANY,ANY,ANY,dataTableCoordinator'
-resolveSubobject(subobj, gobject, view, space, coordinator, ...)
-
-# S4 method for class 'dimObj,ANY,ANY,ANY,dataTableCoordinator'
-resolveSubobject(subobj, gobject, view, space, coordinator, ...)
-
-# S4 method for class 'spatEnrObj,ANY,ANY,ANY,dataTableCoordinator'
-resolveSubobject(subobj, gobject, view, space, coordinator, ...)
-
-# S4 method for class 'featMetaObj,ANY,ANY,ANY,dataTableCoordinator'
-resolveSubobject(subobj, gobject, view, space, coordinator, ...)
-
-# S4 method for class 'spatLocsObj,ANY,ANY,ANY,dataTableCoordinator'
-resolveSubobject(subobj, gobject, view, space, coordinator, ...)
-
-# S4 method for class 'giottoPolygon,ANY,ANY,ANY,dataTableCoordinator'
-resolveSubobject(subobj, gobject, view, space, coordinator, ...)
-
-# S4 method for class 'giottoPoints,ANY,ANY,ANY,dataTableCoordinator'
-resolveSubobject(subobj, gobject, view, space, coordinator, ...)
-
-# S4 method for class 'giottoLargeImage,ANY,ANY,ANY,dataTableCoordinator'
-resolveSubobject(subobj, gobject, view, space, coordinator, ...)
-
-# S4 method for class 'giottoAffineImage,ANY,ANY,ANY,dataTableCoordinator'
-resolveSubobject(subobj, gobject, view, space, coordinator, ...)
-
-# S4 method for class 'giottoImage,ANY,ANY,ANY,dataTableCoordinator'
 resolveSubobject(subobj, gobject, view, space, coordinator, ...)
 ```
 
@@ -55,8 +19,7 @@ resolveSubobject(subobj, gobject, view, space, coordinator, ...)
 
 - gobject:
 
-  the parent `giotto` (needed for cross-slot lookups via
-  [`spatValues()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatValues.md))
+  the parent `giotto`
 
 - view:
 
@@ -74,7 +37,7 @@ resolveSubobject(subobj, gobject, view, space, coordinator, ...)
 
   a
   [viewCoordinator](https://giotto-suite.github.io/GiottoClass/dev/reference/viewCoordinator-class.md)-inheriting
-  object brokering IDs and joins between storage backings
+  object
 
 - ...:
 

@@ -64,7 +64,7 @@ getPolygonInfo(
 
   optional character(1) name of a slotted view; when supplied, returned
   polygons are narrowed by surviving cell set via
-  [`resolveSubobject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveSubobject.md)
+  [`resolveRecipe()`](https://giotto-suite.github.io/GiottoClass/dev/reference/resolveRecipe.md)
 
 - space:
 

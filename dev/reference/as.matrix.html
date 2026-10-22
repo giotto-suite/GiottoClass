@@ -58,7 +58,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.2</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.19</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -102,7 +102,7 @@
 <span><span class="fu">as.matrix</span><span class="op">(</span><span class="va">x</span>, id_rownames <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'overlapPointDT'</span></span>
-<span><span class="fu">as.matrix</span><span class="op">(</span><span class="va">x</span>, feat_count_column <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="fu">as.matrix</span><span class="op">(</span><span class="va">x</span>, feat_count_column <span class="op">=</span> <span class="cn">NULL</span>, verbose <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'overlapIntensityDT'</span></span>
 <span><span class="fu">as.matrix</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
@@ -130,7 +130,12 @@
 <dt id="arg-feat-count-column">feat_count_column<a class="anchor" aria-label="anchor" href="#arg-feat-count-column"></a></dt>
 <dd><p>character. If provided, column in overlaps info
 that contains count information to take into account when generating matrix.
-This is important when point detections represent more than one count.</p></dd>
+This is important when point detections represent more than one count.
+When <code>NULL</code>, a <code>count</code> column is used if present; <code>FALSE</code> counts rows.</p></dd>
+
+
+<dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
+<dd><p>be verbose</p></dd>
 
 
 <dt id="arg-attr">attr<a class="anchor" aria-label="anchor" href="#arg-attr"></a></dt>

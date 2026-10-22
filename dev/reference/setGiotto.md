@@ -5,46 +5,46 @@ Set giotto subobjects into giotto object
 ## Usage
 
 ``` r
-# S4 method for class 'giotto,giottoBinPoints'
+# S4 method for class 'gAny,giottoBinPoints'
 setGiotto(gobject, x, ...)
 
-# S4 method for class 'giotto,list'
+# S4 method for class 'gAny,list'
 setGiotto(gobject, x, verbose = TRUE, ...)
 
-# S4 method for class 'giotto,cellMetaObj'
+# S4 method for class 'gAny,cellMetaObj'
 setGiotto(gobject, x, ...)
 
-# S4 method for class 'giotto,featMetaObj'
+# S4 method for class 'gAny,featMetaObj'
 setGiotto(gobject, x, ...)
 
-# S4 method for class 'giotto,exprObj'
+# S4 method for class 'gAny,exprObj'
 setGiotto(gobject, x, ...)
 
-# S4 method for class 'giotto,giottoPoints'
+# S4 method for class 'gAny,giottoPoints'
 setGiotto(gobject, x, ...)
 
-# S4 method for class 'giotto,giottoPolygon'
+# S4 method for class 'gAny,giottoPolygon'
 setGiotto(gobject, x, ...)
 
-# S4 method for class 'giotto,dimObj'
+# S4 method for class 'gAny,dimObj'
 setGiotto(gobject, x, ...)
 
-# S4 method for class 'giotto,spatLocsObj'
+# S4 method for class 'gAny,spatLocsObj'
 setGiotto(gobject, x, ...)
 
-# S4 method for class 'giotto,spatEnrObj'
+# S4 method for class 'gAny,spatEnrObj'
 setGiotto(gobject, x, ...)
 
-# S4 method for class 'giotto,nnNetObj'
+# S4 method for class 'gAny,nnNetObj'
 setGiotto(gobject, x, ...)
 
-# S4 method for class 'giotto,spatialNetworkObj'
+# S4 method for class 'gAny,spatialNetworkObj'
 setGiotto(gobject, x, ...)
 
-# S4 method for class 'giotto,giottoLargeImage'
+# S4 method for class 'gAny,giottoLargeImage'
 setGiotto(gobject, x, ...)
 
-# S4 method for class 'giotto,giottoImage'
+# S4 method for class 'gAny,giottoImage'
 setGiotto(gobject, x, ...)
 
 # S4 method for class 'gAny,giottoView'
@@ -58,7 +58,9 @@ setGiotto(gobject, x, ...)
 
 - gobject:
 
-  giotto object
+  `giotto` or `giottoMulti` object. On a `giottoMulti`, locations,
+  polygons, points and images are refused, since each belongs to one
+  sample; set them on that sample instead
 
 - x:
 
