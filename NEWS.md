@@ -1,3 +1,11 @@
+# GiottoClass 0.7.25
+
+## new
+
+- `objManifest()` and `objHistory()` also take a manifest or history already
+  in hand, so it can be written (`file =`) or re-encoded
+  (`output = "json"` / `"ndjson"`) without its object.
+
 # GiottoClass 0.7.24
 
 ## new

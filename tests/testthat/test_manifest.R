@@ -317,6 +317,28 @@ describe("objManifest output and reading back", {
     })
 })
 
+describe("a manifest or history already in hand", {
+    it("writes and re-encodes a held manifest", {
+        m <- objManifest(g)
+        f <- tempfile(fileext = ".json")
+        expect_identical(objManifest(m, file = f), f)
+        expect_identical(objManifest(f), m)
+        expect_identical(objManifest(m, output = "json"),
+            GiottoClass:::.manifest_to_json(m))
+        expect_identical(objManifest(m), m)
+    })
+
+    it("writes and re-encodes a held history", {
+        h <- objHistory(g)
+        f <- tempfile(fileext = ".ndjson")
+        objHistory(h, file = f)
+        expect_identical(objHistory(f), h)
+        expect_identical(objHistory(h), h)
+        expect_identical(objHistory(h, output = "ndjson"),
+            objHistory(g, output = "ndjson"))
+    })
+})
+
 describe("reading a disk-backed project directory", {
     it("reads a snapshot through the project's source", {
         skip_if_not_installed("GiottoDisk")

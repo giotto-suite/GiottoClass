@@ -2,12 +2,21 @@
 % Please edit documentation in R/manifest.R
 \name{objManifest}
 \alias{objManifest}
+\alias{objManifest,gmanifest-method}
 \alias{objManifest,character-method}
 \title{Giotto object manifest}
 \usage{
 \S4method{objManifest}{gAny}(
   x,
   levels = FALSE,
+  output = c("gmanifest", "json"),
+  file = NULL,
+  pretty = TRUE,
+  ...
+)
+
+\S4method{objManifest}{gmanifest}(
+  x,
   output = c("gmanifest", "json"),
   file = NULL,
   pretty = TRUE,
@@ -23,8 +32,8 @@
 )
 }
 \arguments{
-\item{x}{giotto object, or the path to a \code{\link[=saveGiotto]{saveGiotto()}} folder or its
-\code{manifest.json}. A disk-backed project directory is read through its
+\item{x}{giotto object, a manifest from \code{objManifest()}, or the path to a
+\code{\link[=saveGiotto]{saveGiotto()}} folder or its \code{manifest.json}. A disk-backed project directory is read through its
 source: pass \code{name} to pick a snapshot (the most recent by default).}
 
 \item{levels}{logical. Whether to count the distinct values of each

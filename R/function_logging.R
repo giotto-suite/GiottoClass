@@ -145,8 +145,8 @@ print.ghistory_item <- function(x, ...) {
 #'
 #' The history is provenance, not state: only functions that opt in are
 #' recorded. What the object holds comes from [objManifest()].
-#' @param x giotto object, or the path to a [saveGiotto()] folder or its
-#' `history.ndjson`. A disk-backed project directory is read through its
+#' @param x giotto object, a history from `objHistory()`, or the path to a
+#' [saveGiotto()] folder or its `history.ndjson`. A disk-backed project directory is read through its
 #' source: pass `name` to pick a snapshot (the most recent by default).
 #' @param summarized logical. Whether to also print a summary of the steps and
 #' the names they used
@@ -169,6 +169,19 @@ setMethod("objHistory", signature("gAny"), function(
         ...) {
     output <- match.arg(output)
     .history_output(.history_build(x), summarized = summarized,
+        output = output, file = file)
+})
+
+setOldClass(c("ghistory", "list"))
+
+# A history already in hand, written or re-encoded without its object.
+#' @rdname objHistory
+#' @export
+setMethod("objHistory", signature("ghistory"), function(
+        x, summarized = FALSE, output = c("ghistory", "ndjson"), file = NULL,
+        ...) {
+    output <- match.arg(output)
+    .history_output(.history_records(x), summarized = summarized,
         output = output, file = file)
 })
 
@@ -379,9 +392,15 @@ recordGiottoStep <- function(gobject,
 setGeneric(".history_build", function(x, ...) standardGeneric(".history_build"))
 
 setMethod(".history_build", signature("giotto"), function(x, ...) {
-    p <- x@parameters
+    .history_records(x@parameters)
+})
+
+# Records from @parameters, which holds one character vector per step with
+# its record attached. A history from objHistory() is records already.
+.history_records <- function(p) {
     out <- lapply(names(p), function(nm) {
         item <- p[[nm]]
+        if (is.list(item) && !is.null(item$step_id)) return(item)
         step <- attr(item, "step")
         if (!is.null(step)) return(step)
         # legacy entry: no structured record was written at the time
@@ -397,7 +416,7 @@ setMethod(".history_build", signature("giotto"), function(x, ...) {
         )
     })
     .as_ghistory(out)
-})
+}
 
 .as_ghistory <- function(records) {
     names(records) <- vapply(records, function(r) r$step_id, character(1L))
