@@ -142,7 +142,7 @@ NULL
 # fields whose change is worth reporting; everything else is noise
 # Keys are not here: records are paired by them, so they never differ.
 .MANIFEST_CMP_FIELDS <- c(
-    "dtype", "method", "directed", "crs", "compact", "has_unfiltered",
+    "dtype", "method", "directed", "compact", "has_unfiltered",
     "overlaps_computed", "on_disk", "fingerprint", "columns", "provenance",
     "n_steps", "step_types"
 )

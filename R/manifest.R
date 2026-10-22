@@ -569,10 +569,6 @@ setMethod(".manifest_leaf", signature("terraVectData"), function(
         x, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     out <- .manifest_leaf_base(x, wenv, path)
-    out$crs <- g("crs", function() {
-        cr <- terra::crs(slot(x, "spatVector"), describe = TRUE)$name
-        if (is.na(cr)) NULL else cr
-    })
 
     if (inherits(x, "giottoPolygon")) {
         out$centroids_cached <- !is.null(
@@ -1015,7 +1011,6 @@ setMethod("fingerprint_data", signature("SpatRaster"), function(x, ...) {
     .fp_hash(list(
         dim = dim(x),
         ext = .fp_num(as.vector(terra::ext(x))),
-        crs = terra::crs(x),
         # layer names are dropped: a re-export renames layers without
         # touching a pixel
         vals = unname(terra::values(d, mat = TRUE))
