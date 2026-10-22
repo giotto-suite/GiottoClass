@@ -517,7 +517,7 @@ describe("views and spaces", {
 
 describe("history records", {
     it("reads legacy character entries", {
-        recs <- ghistory_records(g)
+        recs <- objHistory(g)
         expect_gt(length(recs), 0L)
         expect_true(all(vapply(recs, function(r) r$status, character(1L))
             == "ok"))
@@ -535,7 +535,7 @@ describe("history records", {
             fn = "direct slot assignment", status = "unattributed",
             diff = d$detail
         )
-        last <- tail(ghistory_records(g2), 1L)[[1L]]
+        last <- tail(objHistory(g2), 1L)[[1L]]
         expect_identical(last$status, "unattributed")
         expect_identical(last$fn, "direct slot assignment")
         expect_false(is.null(last$diff))
@@ -546,18 +546,54 @@ describe("history records", {
         g2 <- recordGiottoStep(
             g, fn = "runPCA", status = "error", error = "not enough features"
         )
-        last <- tail(ghistory_records(g2), 1L)[[1L]]
+        last <- tail(objHistory(g2), 1L)[[1L]]
         expect_identical(last$status, "error")
         expect_identical(last$error, "not enough features")
     })
 
     it("serializes as one JSON object per line", {
-        txt <- objHistory_ndjson(g)
+        txt <- objHistory(g, output = "ndjson")
         lines <- strsplit(txt, "\n")[[1]]
         expect_length(lines, length(objHistory(g)))
         parsed <- jsonlite::fromJSON(lines[[1]], simplifyVector = FALSE)
         expect_true(all(c("step_id", "fn", "params", "status") %in%
             names(parsed)))
+    })
+})
+
+describe("objHistory output and reading back", {
+    it("is a list of records named by step, and prints them", {
+        h <- objHistory(g)
+        expect_s3_class(h, "ghistory")
+        expect_identical(names(h), names(g@parameters))
+        expect_identical(h[[1L]]$step_id, names(h)[[1L]])
+        out <- capture.output(print(h), type = "output")
+        expect_true(any(grepl(names(h)[[1L]], out, fixed = TRUE)))
+    })
+
+    it("writes NDJSON to a file and returns the path invisibly", {
+        f <- tempfile(fileext = ".ndjson")
+        expect_invisible(res <- objHistory(g, file = f))
+        expect_identical(res, f)
+        expect_length(readLines(f), length(g@parameters))
+    })
+
+    it("reads back exactly the history it wrote", {
+        before <- objManifest(g)
+        g2 <- g
+        g2@expression$cell$rna$scaled <- NULL
+        d <- manifestDiff(before, objManifest(g2))
+        g2 <- recordGiottoStep(g2, fn = "direct slot assignment",
+            status = "unattributed", diff = d$detail)
+        g2 <- recordGiottoStep(g2, fn = "runPCA", status = "error",
+            error = "not enough features")
+        f <- tempfile(fileext = ".ndjson")
+        objHistory(g2, file = f)
+        expect_identical(objHistory(f), objHistory(g2))
+    })
+
+    it("errors on a folder without a history", {
+        expect_error(objHistory(tempdir()), "no history.ndjson")
     })
 })
 
@@ -567,7 +603,7 @@ describe("update_giotto_params structured record", {
             update_giotto_params(gobject, description = "_testfn")
         }
         g2 <- f(g)
-        last <- tail(ghistory_records(g2), 1L)[[1L]]
+        last <- tail(objHistory(g2), 1L)[[1L]]
         expect_identical(last$status, "ok")
         expect_identical(last$fn, "f")
         # the flattened character form reduces `1:30` to "1"; the structured
@@ -577,7 +613,7 @@ describe("update_giotto_params structured record", {
 
     it("leaves the legacy character entry untouched", {
         f <- function(gobject) update_giotto_params(gobject, "_legacy")
-        entry <- tail(objHistory(f(g)), 1L)[[1L]]
+        entry <- tail(f(g)@parameters, 1L)[[1L]]
         expect_s3_class(entry, "ghistory_item")
         expect_type(unclass(entry), "character")
     })
@@ -602,6 +638,11 @@ describe("save / load sidecars", {
         )
         expect_identical(sc$object$uid, .gobject_uid(g))
         expect_identical(.raw(sc)$class, "exprObj")
+    })
+
+    it("reads the manifest and history back from the folder", {
+        expect_false(manifestDiff(objManifest(saved), objManifest(g))$changed)
+        expect_identical(objHistory(saved), objHistory(g))
     })
 
     it("preserves the uid and data fingerprints through a round trip", {

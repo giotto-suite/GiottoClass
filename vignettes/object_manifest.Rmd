@@ -189,13 +189,12 @@ manifestDiff(mu, objManifest(gu))$summary
 
 ## The history log
 
-`ghistory_records()` returns the object's history as structured records rather
-than printed text:
+`objHistory()` returns the object's history as one record per step:
 
 ```{r}
 g <- subsetGiotto(g, cell_ids = head(spatIDs(g), 100))
 
-str(tail(ghistory_records(g), 1)[[1]], max.level = 1)
+str(tail(objHistory(g), 1)[[1]], max.level = 1)
 ```
 
 `params` holds the arguments the function actually ran with, as deparsed
@@ -259,8 +258,9 @@ manifestDiff(ms, objManifest(g_after))$summary
 ```
 
 `objManifest(output = "json")` returns the same document for any object as a
-string, and `objManifest(file = )` writes it; `objHistory_ndjson()` does the
-same for the history. The JSON follows a versioned schema that ships with the
+string, and `objManifest(file = )` writes it. `objHistory()` takes the same
+`output = "ndjson"` and `file` for the history, and reads `history.ndjson`
+back from the folder the same way. The JSON follows a versioned schema that ships with the
 package:
 
 ```{r}

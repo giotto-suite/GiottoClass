@@ -90,7 +90,30 @@ print.ghistory <- function(x, ...) {
     message("Steps and parameters used:")
     for (i in seq_along(x)) {
         cat(GiottoUtils::color_blue(sprintf("<%s>\n", names(x)[[i]])))
-        print(x[[i]])
+        item <- x[[i]]
+        # objHistory() records; @parameters itself holds ghistory_items
+        if (is.list(item) && !is.null(item$step_id)) {
+            .print_ghistory_record(item)
+        } else {
+            print(item)
+        }
+    }
+}
+
+# a subset of a history is still a history, so head() / tail() print as one
+#' @export
+#' @keywords internal
+`[.ghistory` <- function(x, i) {
+    structure(unclass(x)[i], class = class(x))
+}
+
+.print_ghistory_record <- function(r) {
+    if (length(r$params)) {
+        GiottoUtils::print_list(unlist(r$params), pre = "  ")
+    }
+    if (!identical(r$status, "ok")) {
+        cat(GiottoUtils::color_yellow(sprintf("  status: %s\n", r$status)))
+        if (!is.null(r$error)) cat(sprintf("  error: %s\n", r$error))
     }
 }
 
@@ -109,34 +132,54 @@ print.ghistory_item <- function(x, ...) {
 
 #' @title Giotto object history
 #' @name objHistory
-#' @description Print and return giotto object history
-#' @param object giotto object
-#' @param summarized logical. whether print should be summarized
-#' @returns list
+#' @description
+#' The steps recorded on a giotto object: one record per step, holding the
+#' function (`fn`), the parameters it ran with as deparsed expressions
+#' (`params`), and `timestamp`, `seed`, `status`, `error` and `diff`. Steps
+#' recorded before these records existed are reported with `status = "ok"`
+#' and the parameters they recorded.
+#'
+#' The history can also be read back without loading the object: pass the
+#' folder written by [saveGiotto()], or the path to its `history.ndjson`. The
+#' result is the same as `objHistory()` on the object at save time.
+#'
+#' The history is provenance, not state: only functions that opt in are
+#' recorded. What the object holds comes from [objManifest()].
+#' @param x giotto object, or the path to a [saveGiotto()] folder or its
+#' `history.ndjson`
+#' @param summarized logical. Whether to also print a summary of the steps and
+#' the names they used
+#' @param output character. `"ghistory"` (default) returns the records as a
+#' list; `"ndjson"` returns them as newline-delimited JSON, one step per line.
+#' @param file character. Optional path to write the history to as NDJSON.
+#' When given, the path is returned invisibly and `output` is ignored.
+#' @param ... additional params (none implemented)
+#' @returns list of class `ghistory`, an NDJSON string, or the `file` path
+#' invisibly
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
 #' objHistory(g)
 #' objHistory(g, summarized = TRUE)
+#' cat(substr(objHistory(g, output = "ndjson"), 1, 120))
 #' @export
-objHistory <- function(object, summarized = FALSE) {
-    p <- object@parameters
+setMethod("objHistory", signature("gAny"), function(
+        x, summarized = FALSE, output = c("ghistory", "ndjson"), file = NULL,
+        ...) {
+    output <- match.arg(output)
+    .history_output(.history_build(x), summarized = summarized,
+        output = output, file = file)
+})
 
-    if (summarized) {
-        message("Processing steps:")
-        for (step in names(p)) {
-            message(step)
-            sub_step <- p[[step]]
-            if (any(grepl("name", names(sub_step)) == TRUE)) {
-                selected_names <- grep("name", names(sub_step), value = TRUE)
-                wrap_msg("\t name info: ", sub_step[selected_names])
-            }
-        }
-    }
-    object@parameters
-}
-
-
+#' @rdname objHistory
+#' @export
+setMethod("objHistory", signature("character"), function(
+        x, summarized = FALSE, output = c("ghistory", "ndjson"), file = NULL,
+        ...) {
+    output <- match.arg(output)
+    .history_output(.history_read(x), summarized = summarized,
+        output = output, file = file)
+})
 
 #' @title showProcessingSteps
 #' @name showProcessingSteps
@@ -324,25 +367,13 @@ recordGiottoStep <- function(gobject,
     gobject
 }
 
-#' @title Structured giotto object history
-#' @name ghistory_records
-#' @description
-#' The `@parameters` history as structured records: `step_id`, `fn`, `params`,
-#' `timestamp`, `seed`, `status`, `error` and `diff`. Entries written before
-#' structured records existed are reported with `status = "ok"` and their
-#' recorded arguments, so old objects still read.
-#' @param object giotto object
-#' @returns list of records
-#' @examples
-#' g <- GiottoData::loadGiottoMini("visium")
-#'
-#' str(head(ghistory_records(g), 1))
-#' @export
-ghistory_records <- function(object) {
-    p <- object@parameters
-    if (length(p) == 0L) return(list())
+# Builds the records for one container class. objHistory() on gAny handles
+# output, so a container with no method here fails at dispatch.
+setGeneric(".history_build", function(x, ...) standardGeneric(".history_build"))
 
-    lapply(names(p), function(nm) {
+setMethod(".history_build", signature("giotto"), function(x, ...) {
+    p <- x@parameters
+    out <- lapply(names(p), function(nm) {
         item <- p[[nm]]
         step <- attr(item, "step")
         if (!is.null(step)) return(step)
@@ -358,36 +389,71 @@ ghistory_records <- function(object) {
             diff = NULL
         )
     })
+    .as_ghistory(out)
+})
+
+.as_ghistory <- function(records) {
+    names(records) <- vapply(records, function(r) r$step_id, character(1L))
+    class(records) <- c("ghistory", "list")
+    records
 }
 
-#' @title Giotto object history as NDJSON
-#' @name objHistory_ndjson
-#' @description
-#' Serialize [ghistory_records()] as newline-delimited JSON, one operation per
-#' line. Append-only by construction: writing later steps never rewrites
-#' earlier lines.
-#' @param object giotto object
-#' @param file character. Optional path to write to. When `NULL` the text is
-#' returned.
-#' @returns character scalar, or the file path invisibly when `file` is given
-#' @examples
-#' g <- GiottoData::loadGiottoMini("visium")
-#'
-#' cat(substr(objHistory_ndjson(g), 1, 120))
-#' @export
-objHistory_ndjson <- function(object, file = NULL) {
-    GiottoUtils::package_check("jsonlite", repository = "CRAN:jsonlite")
+.history_output <- function(h, summarized = FALSE, output = "ghistory",
+        file = NULL) {
+    if (isTRUE(summarized)) .history_summary(h)
+    if (!is.null(file)) {
+        writeLines(.history_ndjson_lines(h), con = file)
+        return(invisible(file))
+    }
+    if (identical(output, "ndjson")) {
+        lines <- .history_ndjson_lines(h)
+        if (!length(lines)) return("")
+        return(paste0(paste(lines, collapse = "\n"), "\n"))
+    }
+    h
+}
 
-    recs <- ghistory_records(object)
-    lines <- vapply(recs, function(r) {
+# step names, and any parameter naming what the step made
+.history_summary <- function(h) {
+    message("Processing steps:")
+    for (r in h) {
+        message(r$step_id)
+        nm <- grep("name", names(r$params), value = TRUE)
+        if (length(nm)) wrap_msg("\t name info: ", unlist(r$params[nm]))
+    }
+}
+
+# One step per line, so writing later steps never rewrites earlier lines.
+# Same encoding as the manifest JSON.
+.history_ndjson_lines <- function(h) {
+    GiottoUtils::package_check("jsonlite", repository = "CRAN:jsonlite")
+    vapply(unname(unclass(h)), function(r) {
         as.character(jsonlite::toJSON(
             .manifest_json_prep(r),
-            auto_unbox = TRUE, null = "null", na = "null"
+            auto_unbox = TRUE, null = "null", na = "null",
+            digits = I(17L), always_decimal = TRUE
         ))
     }, character(1L))
+}
 
-    if (is.null(file)) return(paste0(paste(lines, collapse = "\n"), "\n"))
-
-    writeLines(lines, con = file)
-    invisible(file)
+# A saveGiotto() folder, or a history.ndjson directly
+.history_read <- function(path) {
+    GiottoUtils::package_check("jsonlite", repository = "CRAN:jsonlite")
+    checkmate::assert_string(path)
+    f <- if (dir.exists(path)) file.path(path, "history.ndjson") else path
+    if (!file.exists(f)) {
+        stop("[objHistory] no history.ndjson in ", path, ". Objects saved ",
+            "before the history was written have to be saved again.",
+            call. = FALSE)
+    }
+    lines <- readLines(f, warn = FALSE)
+    lines <- lines[nzchar(lines)]
+    .as_ghistory(lapply(lines, function(l) {
+        raw <- jsonlite::fromJSON(l, simplifyVector = FALSE)
+        r <- .manifest_from_json(raw)
+        # params are deparsed expressions, always text: the expression `NA`
+        # is the string "NA", not a missing value
+        if (length(raw$params)) r$params <- lapply(raw$params, as.character)
+        r
+    }))
 }

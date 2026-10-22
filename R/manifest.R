@@ -872,10 +872,13 @@ setMethod("fingerprint_data", signature("NULL"), function(x, ...) NULL)
 # Fields the schema types as arrays. R has no scalar type, and the JSON writer
 # uses auto_unbox, so a length-1 vector would otherwise come out as a
 # bare value: `"provenance": "cell"` on one object and `["z0", "z1"]` on
-# another. These are kept arrays at any length.
+# another. These are kept arrays at any length, and read back as vectors even
+# when empty. The last three are manifestDiff() detail, which history records
+# carry in `diff`.
 .MANIFEST_ARRAY_FIELDS <- c(
     "spat_units", "feat_types", "warnings", "provenance", "columns",
-    "overlaps_computed", "resolution", "file_path", "step_types"
+    "overlaps_computed", "resolution", "file_path", "step_types",
+    "removed", "unfingerprinted", "fields"
 )
 
 # Explicit schema rule: NA / NaN / Inf are encoded as strings, not as JSON
