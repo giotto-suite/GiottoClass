@@ -2,10 +2,19 @@
 % Please edit documentation in R/function_logging.R
 \name{objHistory}
 \alias{objHistory}
+\alias{objHistory,ghistory-method}
 \alias{objHistory,character-method}
 \title{Giotto object history}
 \usage{
 \S4method{objHistory}{gAny}(
+  x,
+  summarized = FALSE,
+  output = c("ghistory", "ndjson"),
+  file = NULL,
+  ...
+)
+
+\S4method{objHistory}{ghistory}(
   x,
   summarized = FALSE,
   output = c("ghistory", "ndjson"),
@@ -22,8 +31,8 @@
 )
 }
 \arguments{
-\item{x}{giotto object, or the path to a \code{\link[=saveGiotto]{saveGiotto()}} folder or its
-\code{history.ndjson}. A disk-backed project directory is read through its
+\item{x}{giotto object, a history from \code{objHistory()}, or the path to a
+\code{\link[=saveGiotto]{saveGiotto()}} folder or its \code{history.ndjson}. A disk-backed project directory is read through its
 source: pass \code{name} to pick a snapshot (the most recent by default).}
 
 \item{summarized}{logical. Whether to also print a summary of the steps and

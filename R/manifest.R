@@ -165,8 +165,8 @@ NULL
 #' keys so two manifests of the same state serialize identically, and `NA`,
 #' `NaN` and `Inf` are encoded as the strings `"NA"`, `"NaN"`, `"Inf"` and
 #' `"-Inf"`.
-#' @param x giotto object, or the path to a [saveGiotto()] folder or its
-#' `manifest.json`. A disk-backed project directory is read through its
+#' @param x giotto object, a manifest from `objManifest()`, or the path to a
+#' [saveGiotto()] folder or its `manifest.json`. A disk-backed project directory is read through its
 #' source: pass `name` to pick a snapshot (the most recent by default).
 #' @param levels logical. Whether to count the distinct values of each
 #' metadata column (`n_levels`), which shows a clustering result with its number
@@ -196,6 +196,17 @@ setMethod("objManifest", signature("gAny"), function(
     output <- match.arg(output)
     .manifest_output(.manifest_build(x, levels = levels), output = output,
         file = file, pretty = pretty)
+})
+
+setOldClass(c("gmanifest", "list"))
+
+# A manifest already in hand, written or re-encoded without its object.
+#' @rdname objManifest
+#' @export
+setMethod("objManifest", signature("gmanifest"), function(
+        x, output = c("gmanifest", "json"), file = NULL, pretty = TRUE, ...) {
+    output <- match.arg(output)
+    .manifest_output(x, output = output, file = file, pretty = pretty)
 })
 
 #' @rdname objManifest
