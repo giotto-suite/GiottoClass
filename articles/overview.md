@@ -566,19 +566,17 @@ sessionInfo()
     ## loaded via a namespace (and not attached):
     ##  [1] Matrix_1.7-5        jsonlite_2.0.0      compiler_4.6.1     
     ##  [4] gtools_3.9.5        Rcpp_1.1.2          jquerylib_0.1.4    
-    ##  [7] png_0.1-9           IRanges_2.46.0      systemfonts_1.3.2  
-    ## [10] textshaping_1.0.5   yaml_2.3.12         fastmap_1.2.0      
-    ## [13] reticulate_1.47.0   lattice_0.22-9      R6_2.6.1           
-    ## [16] XVector_0.52.0      generics_0.1.4      igraph_2.3.3       
-    ## [19] knitr_1.52          BiocGenerics_0.58.1 backports_1.5.1    
-    ## [22] checkmate_2.3.4     desc_1.4.3          pillar_1.11.1      
-    ## [25] bslib_0.12.0        GiottoUtils_0.2.6   rlang_1.3.0        
-    ## [28] cachem_1.1.0        terra_1.9-50        xfun_0.61          
-    ## [31] fs_2.1.0            sass_0.4.10         otel_0.2.0         
-    ## [34] cli_3.6.6           withr_3.0.3         pkgdown_2.2.1      
-    ## [37] magrittr_2.0.5      digest_0.6.39       grid_4.6.1         
-    ## [40] rappdirs_0.3.4      lifecycle_1.0.5     vctrs_0.7.3        
-    ## [43] S4Vectors_0.50.3    glue_1.8.1          evaluate_1.0.5     
-    ## [46] data.table_1.18.6.1 codetools_0.2-20    ragg_1.5.2         
-    ## [49] stats4_4.6.1        GiottoData_0.3.7    rmarkdown_2.32     
-    ## [52] pkgconfig_2.0.3     tools_4.6.1         htmltools_0.5.9
+    ##  [7] systemfonts_1.3.2   textshaping_1.0.5   png_0.1-9          
+    ## [10] yaml_2.3.12         fastmap_1.2.0       reticulate_1.47.0  
+    ## [13] lattice_0.22-9      R6_2.6.1            igraph_2.3.4       
+    ## [16] knitr_1.52          backports_1.5.1     checkmate_2.3.4    
+    ## [19] desc_1.4.3          bslib_0.12.0        pillar_1.11.1      
+    ## [22] GiottoUtils_0.2.9   rlang_1.3.0         cachem_1.1.0       
+    ## [25] terra_1.9-50        xfun_0.62           fs_2.1.0           
+    ## [28] sass_0.4.10         otel_0.2.0          cli_3.6.6          
+    ## [31] pkgdown_2.2.1       withr_3.0.3         magrittr_2.0.5     
+    ## [34] digest_0.6.39       grid_4.6.1          rappdirs_0.3.4     
+    ## [37] lifecycle_1.0.5     vctrs_0.7.3         glue_1.8.1         
+    ## [40] evaluate_1.0.5      data.table_1.18.6.1 codetools_0.2-20   
+    ## [43] ragg_1.5.2          GiottoData_0.3.7    rmarkdown_2.32     
+    ## [46] pkgconfig_2.0.3     tools_4.6.1         htmltools_0.5.9

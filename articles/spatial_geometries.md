@@ -496,22 +496,20 @@ sessionInfo()
     ## [1] GiottoClass_0.5.1
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] sass_0.4.10          generics_0.1.4       class_7.3-23        
-    ##  [4] KernSmooth_2.23-26   gtools_3.9.5         lattice_0.22-9      
-    ##  [7] digest_0.6.39        magrittr_2.0.5       evaluate_1.0.5      
-    ## [10] grid_4.6.1           fastmap_1.2.0        jsonlite_2.0.0      
-    ## [13] Matrix_1.7-5         e1071_1.7-17         backports_1.5.1     
-    ## [16] DBI_1.3.0            GiottoData_0.3.7     codetools_0.2-20    
-    ## [19] textshaping_1.0.5    jquerylib_0.1.4      cli_3.6.6           
-    ## [22] rlang_1.3.0          units_1.0-1          XVector_0.52.0      
-    ## [25] cachem_1.1.0         yaml_2.3.12          otel_0.2.0          
-    ## [28] tools_4.6.1          raster_3.6-32        GiottoUtils_0.2.6   
-    ## [31] checkmate_2.3.4      BiocGenerics_0.58.1  exactextractr_0.10.1
-    ## [34] R6_2.6.1             stats4_4.6.1         proxy_0.4-29        
-    ## [37] lifecycle_1.0.5      classInt_0.4-11      S4Vectors_0.50.3    
-    ## [40] fs_2.1.0             IRanges_2.46.0       ragg_1.5.2          
-    ## [43] desc_1.4.3           pkgdown_2.2.1        terra_1.9-50        
-    ## [46] bslib_0.12.0         data.table_1.18.6.1  Rcpp_1.1.2          
-    ## [49] sf_1.1-3             systemfonts_1.3.2    xfun_0.61           
-    ## [52] knitr_1.52           htmltools_0.5.9      rmarkdown_2.32      
-    ## [55] compiler_4.6.1       sp_2.2-3
+    ##  [1] Matrix_1.7-5         jsonlite_2.0.0       compiler_4.6.1      
+    ##  [4] gtools_3.9.5         Rcpp_1.1.2           jquerylib_0.1.4     
+    ##  [7] systemfonts_1.3.2    textshaping_1.0.5    yaml_2.3.12         
+    ## [10] fastmap_1.2.0        lattice_0.22-9       R6_2.6.1            
+    ## [13] classInt_0.4-11      sf_1.1-3             knitr_1.52          
+    ## [16] backports_1.5.1      checkmate_2.3.4      units_1.0-1         
+    ## [19] desc_1.4.3           DBI_1.3.0            bslib_0.12.0        
+    ## [22] GiottoUtils_0.2.9    rlang_1.3.0          sp_2.2-4            
+    ## [25] cachem_1.1.0         terra_1.9-50         xfun_0.62           
+    ## [28] fs_2.1.0             sass_0.4.10          otel_0.2.0          
+    ## [31] cli_3.6.6            pkgdown_2.2.1        magrittr_2.0.5      
+    ## [34] class_7.3-23         digest_0.6.39        grid_4.6.1          
+    ## [37] lifecycle_1.0.5      KernSmooth_2.23-26   proxy_0.4-29        
+    ## [40] evaluate_1.0.5       data.table_1.18.6.1  raster_3.6-32       
+    ## [43] exactextractr_0.10.1 codetools_0.2-20     ragg_1.5.2          
+    ## [46] e1071_1.7-17         GiottoData_0.3.7     rmarkdown_2.32      
+    ## [49] tools_4.6.1          htmltools_0.5.9
