@@ -2,23 +2,49 @@
 % Please edit documentation in R/manifest.R
 \name{objManifest}
 \alias{objManifest}
+\alias{objManifest,character-method}
 \title{Giotto object manifest}
 \usage{
-\S4method{objManifest}{giotto}(x, levels = FALSE, ...)
+\S4method{objManifest}{gAny}(
+  x,
+  levels = FALSE,
+  output = c("gmanifest", "json"),
+  file = NULL,
+  pretty = TRUE,
+  ...
+)
+
+\S4method{objManifest}{character}(
+  x,
+  output = c("gmanifest", "json"),
+  file = NULL,
+  pretty = TRUE,
+  ...
+)
 }
 \arguments{
-\item{x}{giotto object}
+\item{x}{giotto object, or the path to a \code{\link[=saveGiotto]{saveGiotto()}} folder or its
+\code{manifest.json}}
 
 \item{levels}{logical. Whether to count the distinct values of each
 metadata column (\code{n_levels}), which shows a clustering result with its number
 of groups. Off by default: it is a full pass over every column, and the
 per-column fingerprints already detect the change. The id column is never
-counted.}
+counted. Not used when reading from a path.}
+
+\item{output}{character. \code{"gmanifest"} (default) returns the manifest as an
+R list; \code{"json"} returns it as a JSON string.}
+
+\item{file}{character. Optional path to write the manifest to as JSON.
+When given, the path is returned invisibly and \code{output} is ignored.}
+
+\item{pretty}{logical. Whether to indent JSON output}
 
 \item{...}{additional params (none implemented)}
 }
 \value{
-list of class \code{gmanifest}
+list of class \code{gmanifest}, a JSON string, or the \code{file} path
+invisibly
 }
 \description{
 Machine-readable inventory of a \code{giotto} object's contents: identity,
@@ -42,10 +68,24 @@ pixels at display resolution. Geometry is stride-sampled, with coordinates
 compared to 12 significant digits so a shapefile round trip does not read
 as a change. Sizes and extents are not reported: on a disk-backed object
 they cost a scan.
+
+A manifest can also be read back without loading the object: pass the
+folder written by \code{\link[=saveGiotto]{saveGiotto()}}, or the path to its \code{manifest.json}. The
+result is the manifest as it was at save time, in the same form
+\code{objManifest()} returns for a live object, so it can go to
+\code{\link[=manifestDiff]{manifestDiff()}}.
+
+The JSON form follows the schema shipped in
+\verb{inst/schema/giotto-manifest-<version>.json}. Records are sorted by their
+keys so two manifests of the same state serialize identically, and \code{NA},
+\code{NaN} and \code{Inf} are encoded as the strings \code{"NA"}, \code{"NaN"}, \code{"Inf"} and
+\code{"-Inf"}.
 }
 \examples{
 g <- GiottoData::loadGiottoMini("visium")
 
 m <- objManifest(g)
 names(m$slots)
+
+cat(substr(objManifest(g, output = "json"), 1, 200))
 }

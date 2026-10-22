@@ -1,3 +1,25 @@
+# GiottoClass 0.7.23
+
+## breaking changes
+
+- `objManifest_json()` is removed. Use `objManifest(x, output = "json")`, or
+  `objManifest(x, file = )` to write the file.
+
+## new
+
+- `objManifest()` takes `output = "json"` and `file =`, and dispatches on
+  `gAny`. A `giottoMulti` method is not written yet.
+- `objManifest(<path>)` reads the manifest saved by `saveGiotto()` back,
+  given the save folder or its `manifest.json`, without loading the object.
+  It is the same as the live manifest at save time, so it can go to
+  `manifestDiff()`.
+
+## changes
+
+- Manifest JSON writes doubles with 17 significant digits and always with a
+  decimal point, and keeps the finite values in an array numeric when others
+  are `NA`, `NaN` or `Inf`, so a manifest reads back unchanged.
+
 # GiottoClass 0.7.22
 
 ## new

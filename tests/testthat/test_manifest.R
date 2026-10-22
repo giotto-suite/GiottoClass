@@ -200,9 +200,9 @@ describe("manifest fingerprints", {
     })
 })
 
-describe("objManifest_json", {
+describe("objManifest JSON output", {
     it("round-trips through JSON", {
-        j <- objManifest_json(g)
+        j <- objManifest(g, output = "json")
         back <- jsonlite::fromJSON(j, simplifyVector = FALSE)
         expect_identical(back$schema_version, "0.2.0")
         expect_identical(.raw(back)$class, "exprObj")
@@ -212,7 +212,7 @@ describe("objManifest_json", {
         prepped <- .manifest_json_prep(list(
             a = c(1, NA, NaN, Inf, -Inf), b = NA_character_, c = 1.5
         ))
-        expect_identical(prepped$a, c("1", "NA", "NaN", "Inf", "-Inf"))
+        expect_identical(prepped$a, list(1, "NA", "NaN", "Inf", "-Inf"))
         expect_identical(prepped$b, "NA")
         expect_identical(prepped$c, 1.5)
     })
@@ -234,7 +234,7 @@ describe("objManifest_json", {
         gv <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
         gv <- spatShift(gv, dx = 1, space = "s")
         for (obj in list(g, gv)) {
-            back <- jsonlite::fromJSON(objManifest_json(obj),
+            back <- jsonlite::fromJSON(objManifest(obj, output = "json"),
                 simplifyVector = FALSE)
             found <- arrays(back)
             expect_gt(length(found), 0L)
@@ -248,7 +248,7 @@ describe("objManifest_json", {
             }
         }
         # the single-valued cases that used to unbox
-        back <- jsonlite::fromJSON(objManifest_json(g), simplifyVector = FALSE)
+        back <- jsonlite::fromJSON(objManifest(g, output = "json"), simplifyVector = FALSE)
         expect_identical(back$summary$spat_units, list("cell"))
         expect_identical(back$warnings, list())
     })
@@ -260,9 +260,60 @@ describe("objManifest_json", {
         )
         skip_if(!nzchar(schema_path))
         schema <- jsonlite::fromJSON(schema_path, simplifyVector = FALSE)
-        m <- jsonlite::fromJSON(objManifest_json(g), simplifyVector = FALSE)
+        m <- jsonlite::fromJSON(objManifest(g, output = "json"), simplifyVector = FALSE)
         expect_true(all(unlist(schema$required) %in% names(m)))
         expect_identical(m$schema_version, schema$properties$schema_version$const)
+    })
+})
+
+describe("objManifest output and reading back", {
+    it("writes the JSON to a file and returns the path invisibly", {
+        f <- tempfile(fileext = ".json")
+        expect_invisible(res <- objManifest(g, file = f))
+        expect_identical(res, f)
+        expect_identical(
+            jsonlite::fromJSON(f, simplifyVector = FALSE)$schema_version,
+            "0.2.0"
+        )
+    })
+
+    it("reads back exactly the manifest it wrote", {
+        gv <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
+        gv <- spatShift(gv, dx = 1, space = "s")
+        for (obj in list(g, gv)) {
+            m <- objManifest(obj)
+            f <- tempfile(fileext = ".json")
+            GiottoClass:::.manifest_output(m, file = f)
+            expect_identical(objManifest(f), m)
+        }
+    })
+
+    it("restores missing and non-finite values", {
+        m <- list(a = c(1.5, NA, NaN, Inf, -Inf), b = c("x", NA),
+            i = c(1L, NA), n = 3L, d = 3)
+        j <- jsonlite::toJSON(GiottoClass:::.manifest_json_prep(m),
+            auto_unbox = TRUE, digits = I(17L), always_decimal = TRUE)
+        back <- GiottoClass:::.manifest_from_json(
+            jsonlite::fromJSON(j, simplifyVector = FALSE))
+        expect_identical(back, m)
+    })
+
+    it("reads a saveGiotto() folder without loading the object", {
+        td <- tempfile()
+        dir.create(td)
+        saveGiotto(g, dir = td, foldername = "saved", verbose = FALSE)
+        ms <- objManifest(file.path(td, "saved"))
+        expect_s3_class(ms, "gmanifest")
+        expect_false(manifestDiff(ms, objManifest(g))$changed)
+        expect_type(objManifest(file.path(td, "saved"), output = "json"),
+            "character")
+    })
+
+    it("errors on a folder without a manifest or another schema", {
+        expect_error(objManifest(tempdir()), "no manifest.json")
+        f <- tempfile(fileext = ".json")
+        writeLines('{"schema_version": "0.1.0"}', f)
+        expect_error(objManifest(f), "schema 0.1.0")
     })
 })
 
@@ -281,7 +332,7 @@ describe("object uid", {
 describe("object source", {
     it("is null for an in-memory object, and stays a key in the JSON", {
         expect_null(objManifest(g)$object$source)
-        back <- jsonlite::fromJSON(objManifest_json(g), simplifyVector = FALSE)
+        back <- jsonlite::fromJSON(objManifest(g, output = "json"), simplifyVector = FALSE)
         expect_true("source" %in% names(back$object))
         expect_null(back$object$source)
     })

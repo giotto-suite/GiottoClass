@@ -241,26 +241,27 @@ list.files(saved)
 ```
 
 The point of the sidecar is that it answers questions about the object without
-loading it:
+loading it. `objManifest()` reads it back from the folder, in the same form it
+returns for a live object:
 
 ```{r, eval = requireNamespace("jsonlite", quietly = TRUE)}
-sc <- jsonlite::fromJSON(file.path(saved, "manifest.json"),
-                         simplifyVector = FALSE)
-
-unlist(sc$summary$spat_units)
-unlist(sc$summary$n_cells)
-vapply(sc$slots$expression, function(r) {
-    paste(r$keys$spat_unit, r$keys$name, sep = "/")
-}, character(1))
+ms <- objManifest(saved)
+unlist(ms$summary$n_cells)
 ```
 
-Fingerprints survive the round trip: an object saved and loaded back has the
-same fingerprints as the one that was saved, so a diff across a save reports
-only what actually changed.
+So a saved object can be diffed against a live one, or against another save,
+without loading either. Fingerprints survive the round trip, so the diff
+reports only what changed since the save:
 
-`objManifest_json()` and `objHistory_ndjson()` produce the same two documents
-for any object, whether or not you are saving it. The JSON follows a versioned
-schema that ships with the package:
+```{r, eval = requireNamespace("jsonlite", quietly = TRUE)}
+g_after <- createSpatialNetwork(g, name = "after_save", method = "Delaunay")
+manifestDiff(ms, objManifest(g_after))$summary
+```
+
+`objManifest(output = "json")` returns the same document for any object as a
+string, and `objManifest(file = )` writes it; `objHistory_ndjson()` does the
+same for the history. The JSON follows a versioned schema that ships with the
+package:
 
 ```{r}
 system.file("schema", "giotto-manifest-0.2.0.json", package = "GiottoClass")
