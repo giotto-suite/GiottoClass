@@ -189,11 +189,19 @@ manifestDiff(mu, objManifest(gu))$summary
 
 ## The history log
 
-`objHistory()` returns the object's history as one record per step:
+`objHistory()` returns the object's history as one record per step. Printed
+as a whole, it shows each step and the arguments it ran with:
 
 ```{r}
 g <- subsetGiotto(g, cell_ids = head(spatIDs(g), 100))
 
+tail(objHistory(g), 2)
+```
+
+A single step is a plain list holding the whole record: the function, its
+arguments, when it ran, the RNG state, and whether it succeeded:
+
+```{r}
 str(tail(objHistory(g), 1)[[1]], max.level = 1)
 ```
 
@@ -257,11 +265,24 @@ g_after <- createSpatialNetwork(g, name = "after_save", method = "Delaunay")
 manifestDiff(ms, objManifest(g_after))$summary
 ```
 
-`objManifest(output = "json")` returns the same document for any object as a
-string, and `objManifest(file = )` writes it. `objHistory()` takes the same
-`output = "ndjson"` and `file` for the history, and reads `history.ndjson`
-back from the folder the same way. The JSON follows a versioned schema that ships with the
-package:
+The history reads back the same way, and matches the object's history at the
+time it was saved:
+
+```{r, eval = requireNamespace("jsonlite", quietly = TRUE)}
+hs <- objHistory(saved)
+tail(names(hs), 2)
+```
+
+Both functions return the same three forms, whether given an object or a
+saved folder:
+
+| Call | Returns |
+|---|---|
+| `objManifest(x)` / `objHistory(x)` | the R list (`gmanifest` / `ghistory`) |
+| `objManifest(x, output = "json")` / `objHistory(x, output = "ndjson")` | the document as a string |
+| `objManifest(x, file = )` / `objHistory(x, file = )` | writes the document, returns the path |
+
+The manifest JSON follows a versioned schema that ships with the package:
 
 ```{r}
 system.file("schema", "giotto-manifest-0.2.0.json", package = "GiottoClass")
