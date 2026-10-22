@@ -10,6 +10,7 @@
 \alias{fingerprint_data,igraph-method}
 \alias{fingerprint_data,SpatVector-method}
 \alias{fingerprint_data,affine2d-method}
+\alias{fingerprint_data,function-method}
 \alias{fingerprint_data,SpatRaster-method}
 \title{Fingerprint a subobject payload}
 \usage{
@@ -28,6 +29,8 @@
 \S4method{fingerprint_data}{SpatVector}(x, k = .MANIFEST_FP_N, ...)
 
 \S4method{fingerprint_data}{affine2d}(x, ...)
+
+\S4method{fingerprint_data}{function}(x, ...)
 
 \S4method{fingerprint_data}{SpatRaster}(x, ...)
 }
@@ -58,5 +61,9 @@ A method returns a hash or errors; it never returns \code{NULL} for a payload it
 was given. The default method errors, and the manifest reports that as an
 unreadable fingerprint in its \code{warnings} rather than treating the payload
 as unchanged. Only an absent payload (\code{NULL}) has no fingerprint.
+
+A function is fingerprinted by its code. Values a closure captures are not
+seen, so two closures that differ only in a captured value share a
+fingerprint.
 }
 \keyword{internal}

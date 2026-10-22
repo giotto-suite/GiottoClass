@@ -569,10 +569,6 @@ setMethod(".manifest_leaf", signature("terraVectData"), function(
         x, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     out <- .manifest_leaf_base(x, wenv, path)
-    out$crs <- g("crs", function() {
-        cr <- terra::crs(slot(x, "spatVector"), describe = TRUE)$name
-        if (is.na(cr)) NULL else cr
-    })
 
     if (inherits(x, "giottoPolygon")) {
         out$centroids_cached <- !is.null(
@@ -733,6 +729,10 @@ setMethod(".manifest_leaf", signature("giottoImage"), function(
 #' was given. The default method errors, and the manifest reports that as an
 #' unreadable fingerprint in its `warnings` rather than treating the payload
 #' as unchanged. Only an absent payload (`NULL`) has no fingerprint.
+#'
+#' A function is fingerprinted by its code. Values a closure captures are not
+#' seen, so two closures that differ only in a captured value share a
+#' fingerprint.
 #' @param x a payload
 #' @param ... additional params (none implemented)
 #' @returns character scalar, or `NULL` for a `NULL` payload
@@ -979,6 +979,18 @@ setMethod("fingerprint_data", signature("affine2d"), function(x, ...) {
     ))
 })
 
+# A function by its code: the whole deparse, so primitives (NULL formals and
+# body) stay distinct. Not the closure itself, whose hash moves once the JIT
+# swaps in bytecode and which carries its whole environment. Without
+# "useSource", comments and layout do not count. Captured values are not seen:
+# two closures with the same code and different captures hash the same.
+#' @rdname fingerprint_data
+#' @export
+setMethod("fingerprint_data", signature("function"), function(x, ...) {
+    .fp_hash(deparse(x,
+        control = c("keepNA", "keepInteger", "niceNames", "showAttributes")))
+})
+
 # Pixels at display resolution, plus the placement. Identifying the source file
 # instead gave the same pixels a new fingerprint whenever they moved to a new
 # file - a saveGiotto() export, or the temp file terra spills an arithmetic
@@ -999,7 +1011,6 @@ setMethod("fingerprint_data", signature("SpatRaster"), function(x, ...) {
     .fp_hash(list(
         dim = dim(x),
         ext = .fp_num(as.vector(terra::ext(x))),
-        crs = terra::crs(x),
         # layer names are dropped: a re-export renames layers without
         # touching a pixel
         vals = unname(terra::values(d, mat = TRUE))

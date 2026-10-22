@@ -389,6 +389,18 @@ describe("fingerprint_data methods", {
         expect_error(fingerprint_data(list(new.env())), "no method")
     })
 
+    it("identifies a function by its code", {
+        mk <- function(k) function(x) x * k
+        f <- mk(2)
+        fp <- fingerprint_data(f)
+        for (i in 1:3) f(1) # JIT-compiled after a few calls
+        expect_identical(fingerprint_data(f), fp)
+        expect_false(identical(fp, fingerprint_data(function(x) x + k)))
+        expect_false(identical(fingerprint_data(sum), fingerprint_data(max)))
+        # captured values are not part of it
+        expect_identical(fingerprint_data(mk(3)), fp)
+    })
+
     it("has no fingerprint only for an absent payload", {
         expect_null(fingerprint_data(NULL))
         expect_error(fingerprint_data(new.env()), "no method")

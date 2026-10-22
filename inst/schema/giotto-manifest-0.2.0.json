@@ -141,7 +141,6 @@
           ]
         },
         "col_desc": { "type": "object" },
-        "crs": { "type": "string" },
         "centroids_cached": { "type": "boolean" },
         "overlaps_computed": {
           "type": "array",
