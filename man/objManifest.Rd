@@ -24,7 +24,8 @@
 }
 \arguments{
 \item{x}{giotto object, or the path to a \code{\link[=saveGiotto]{saveGiotto()}} folder or its
-\code{manifest.json}}
+\code{manifest.json}. A disk-backed project directory is read through its
+source: pass \code{name} to pick a snapshot (the most recent by default).}
 
 \item{levels}{logical. Whether to count the distinct values of each
 metadata column (\code{n_levels}), which shows a clustering result with its number
