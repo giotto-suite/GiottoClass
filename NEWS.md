@@ -1,3 +1,11 @@
+# GiottoClass 0.7.24
+
+## new
+
+- `objManifest(<path>)` and `objHistory(<path>)` also take a disk-backed
+  project directory. It is detected as a source, and the snapshot is read
+  through it (`name =`, the most recent by default).
+
 # GiottoClass 0.7.23
 
 ## breaking changes

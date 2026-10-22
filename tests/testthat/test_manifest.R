@@ -317,6 +317,25 @@ describe("objManifest output and reading back", {
     })
 })
 
+describe("reading a disk-backed project directory", {
+    it("reads a snapshot through the project's source", {
+        skip_if_not_installed("GiottoDisk")
+        skip_if_not(methods::existsMethod("objManifest", "gDirSource"))
+        td <- tempfile("proj_")
+        dir.create(td)
+        on.exit(unlink(td, recursive = TRUE), add = TRUE)
+        gb <- g
+        gb@source <- GiottoDisk::gDirSource(td)
+        GiottoDisk::snapshotSave(gb@source, gb, name = "snap1",
+            verbose = FALSE)
+
+        expect_identical(objManifest(td, name = "snap1"),
+            objManifest(gb@source, name = "snap1"))
+        expect_false(manifestDiff(objManifest(td), objManifest(gb))$changed)
+        expect_identical(objHistory(td, name = "snap1"), objHistory(gb))
+    })
+})
+
 describe("object uid", {
     it("is minted at creation and is unique per object", {
         expect_false(is.null(.gobject_uid(g)))

@@ -23,7 +23,8 @@
 }
 \arguments{
 \item{x}{giotto object, or the path to a \code{\link[=saveGiotto]{saveGiotto()}} folder or its
-\code{history.ndjson}}
+\code{history.ndjson}. A disk-backed project directory is read through its
+source: pass \code{name} to pick a snapshot (the most recent by default).}
 
 \item{summarized}{logical. Whether to also print a summary of the steps and
 the names they used}

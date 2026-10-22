@@ -146,7 +146,8 @@ print.ghistory_item <- function(x, ...) {
 #' The history is provenance, not state: only functions that opt in are
 #' recorded. What the object holds comes from [objManifest()].
 #' @param x giotto object, or the path to a [saveGiotto()] folder or its
-#' `history.ndjson`
+#' `history.ndjson`. A disk-backed project directory is read through its
+#' source: pass `name` to pick a snapshot (the most recent by default).
 #' @param summarized logical. Whether to also print a summary of the steps and
 #' the names they used
 #' @param output character. `"ghistory"` (default) returns the records as a
@@ -177,6 +178,12 @@ setMethod("objHistory", signature("character"), function(
         x, summarized = FALSE, output = c("ghistory", "ndjson"), file = NULL,
         ...) {
     output <- match.arg(output)
+    # a project directory is read through its source, which finds the snapshot
+    src <- .resolve_source(x)
+    if (!isFALSE(src)) {
+        return(objHistory(src, summarized = summarized, output = output,
+            file = file, ...))
+    }
     .history_output(.history_read(x), summarized = summarized,
         output = output, file = file)
 })

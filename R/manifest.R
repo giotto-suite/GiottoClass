@@ -166,7 +166,8 @@ NULL
 #' `NaN` and `Inf` are encoded as the strings `"NA"`, `"NaN"`, `"Inf"` and
 #' `"-Inf"`.
 #' @param x giotto object, or the path to a [saveGiotto()] folder or its
-#' `manifest.json`
+#' `manifest.json`. A disk-backed project directory is read through its
+#' source: pass `name` to pick a snapshot (the most recent by default).
 #' @param levels logical. Whether to count the distinct values of each
 #' metadata column (`n_levels`), which shows a clustering result with its number
 #' of groups. Off by default: it is a full pass over every column, and the
@@ -202,9 +203,23 @@ setMethod("objManifest", signature("gAny"), function(
 setMethod("objManifest", signature("character"), function(
         x, output = c("gmanifest", "json"), file = NULL, pretty = TRUE, ...) {
     output <- match.arg(output)
+    # a project directory is read through its source, which finds the snapshot
+    src <- .resolve_source(x)
+    if (!isFALSE(src)) {
+        return(objManifest(src, output = output, file = file,
+            pretty = pretty, ...))
+    }
     .manifest_output(.manifest_read(x), output = output, file = file,
         pretty = pretty)
 })
+
+# The gsource a path is the project directory of, or FALSE (as
+# GiottoDisk::resolveSource(), which owns the detection). FALSE without
+# GiottoDisk, since only it writes project directories.
+.resolve_source <- function(path) {
+    if (!requireNamespace("GiottoDisk", quietly = TRUE)) return(FALSE)
+    GiottoDisk::resolveSource(path)
+}
 
 # Builds the manifest for one container class. objManifest() on gAny handles
 # output, so a container that has no method here fails at dispatch rather
