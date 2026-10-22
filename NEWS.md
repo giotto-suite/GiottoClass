@@ -1,3 +1,32 @@
+# GiottoClass 0.7.23
+
+## breaking changes
+
+- `objManifest_json()` is removed. Use `objManifest(x, output = "json")`, or
+  `objManifest(x, file = )` to write the file.
+- `objHistory()` returns one record per step (`fn`, `params`, `status`,
+  `error`, `diff`, ...) instead of `@parameters`' character vectors. It prints
+  the same step view, now with the parameters as written (`1:30`) and the
+  status of a failed step. `ghistory_records()` and `objHistory_ndjson()` are
+  removed; use `objHistory()` and `objHistory(output = "ndjson")`.
+
+## new
+
+- `objManifest()` takes `output = "json"` and `file =`, and dispatches on
+  `gAny`. A `giottoMulti` method is not written yet.
+- `objManifest(<path>)` reads the manifest saved by `saveGiotto()` back,
+  given the save folder or its `manifest.json`, without loading the object.
+  It is the same as the live manifest at save time, so it can go to
+  `manifestDiff()`.
+- `objHistory()` is a generic on `gAny` with the same `output` and `file`, and
+  `objHistory(<path>)` reads `history.ndjson` back from a save folder.
+
+## changes
+
+- Manifest JSON writes doubles with 17 significant digits and always with a
+  decimal point, and keeps the finite values in an array numeric when others
+  are `NA`, `NaN` or `Inf`, so a manifest reads back unchanged.
+
 # GiottoClass 0.7.22
 
 ## new

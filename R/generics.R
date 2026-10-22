@@ -226,6 +226,10 @@ setGeneric("objName<-", function(x, value) standardGeneric("objName<-"))
 # Documentation and methods found in manifest.R
 setGeneric("objManifest", function(x, ...) standardGeneric("objManifest"))
 
+## objHistory() generic ####
+# Documentation and methods found in function_logging.R
+setGeneric("objHistory", function(x, ...) standardGeneric("objHistory"))
+
 ## fingerprint_data() generic ####
 # Documentation and methods found in manifest.R
 setGeneric("fingerprint_data",

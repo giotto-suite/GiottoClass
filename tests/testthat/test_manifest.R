@@ -200,9 +200,9 @@ describe("manifest fingerprints", {
     })
 })
 
-describe("objManifest_json", {
+describe("objManifest JSON output", {
     it("round-trips through JSON", {
-        j <- objManifest_json(g)
+        j <- objManifest(g, output = "json")
         back <- jsonlite::fromJSON(j, simplifyVector = FALSE)
         expect_identical(back$schema_version, "0.2.0")
         expect_identical(.raw(back)$class, "exprObj")
@@ -212,7 +212,7 @@ describe("objManifest_json", {
         prepped <- .manifest_json_prep(list(
             a = c(1, NA, NaN, Inf, -Inf), b = NA_character_, c = 1.5
         ))
-        expect_identical(prepped$a, c("1", "NA", "NaN", "Inf", "-Inf"))
+        expect_identical(prepped$a, list(1, "NA", "NaN", "Inf", "-Inf"))
         expect_identical(prepped$b, "NA")
         expect_identical(prepped$c, 1.5)
     })
@@ -234,7 +234,7 @@ describe("objManifest_json", {
         gv <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
         gv <- spatShift(gv, dx = 1, space = "s")
         for (obj in list(g, gv)) {
-            back <- jsonlite::fromJSON(objManifest_json(obj),
+            back <- jsonlite::fromJSON(objManifest(obj, output = "json"),
                 simplifyVector = FALSE)
             found <- arrays(back)
             expect_gt(length(found), 0L)
@@ -248,7 +248,7 @@ describe("objManifest_json", {
             }
         }
         # the single-valued cases that used to unbox
-        back <- jsonlite::fromJSON(objManifest_json(g), simplifyVector = FALSE)
+        back <- jsonlite::fromJSON(objManifest(g, output = "json"), simplifyVector = FALSE)
         expect_identical(back$summary$spat_units, list("cell"))
         expect_identical(back$warnings, list())
     })
@@ -260,9 +260,60 @@ describe("objManifest_json", {
         )
         skip_if(!nzchar(schema_path))
         schema <- jsonlite::fromJSON(schema_path, simplifyVector = FALSE)
-        m <- jsonlite::fromJSON(objManifest_json(g), simplifyVector = FALSE)
+        m <- jsonlite::fromJSON(objManifest(g, output = "json"), simplifyVector = FALSE)
         expect_true(all(unlist(schema$required) %in% names(m)))
         expect_identical(m$schema_version, schema$properties$schema_version$const)
+    })
+})
+
+describe("objManifest output and reading back", {
+    it("writes the JSON to a file and returns the path invisibly", {
+        f <- tempfile(fileext = ".json")
+        expect_invisible(res <- objManifest(g, file = f))
+        expect_identical(res, f)
+        expect_identical(
+            jsonlite::fromJSON(f, simplifyVector = FALSE)$schema_version,
+            "0.2.0"
+        )
+    })
+
+    it("reads back exactly the manifest it wrote", {
+        gv <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
+        gv <- spatShift(gv, dx = 1, space = "s")
+        for (obj in list(g, gv)) {
+            m <- objManifest(obj)
+            f <- tempfile(fileext = ".json")
+            GiottoClass:::.manifest_output(m, file = f)
+            expect_identical(objManifest(f), m)
+        }
+    })
+
+    it("restores missing and non-finite values", {
+        m <- list(a = c(1.5, NA, NaN, Inf, -Inf), b = c("x", NA),
+            i = c(1L, NA), n = 3L, d = 3)
+        j <- jsonlite::toJSON(GiottoClass:::.manifest_json_prep(m),
+            auto_unbox = TRUE, digits = I(17L), always_decimal = TRUE)
+        back <- GiottoClass:::.manifest_from_json(
+            jsonlite::fromJSON(j, simplifyVector = FALSE))
+        expect_identical(back, m)
+    })
+
+    it("reads a saveGiotto() folder without loading the object", {
+        td <- tempfile()
+        dir.create(td)
+        saveGiotto(g, dir = td, foldername = "saved", verbose = FALSE)
+        ms <- objManifest(file.path(td, "saved"))
+        expect_s3_class(ms, "gmanifest")
+        expect_false(manifestDiff(ms, objManifest(g))$changed)
+        expect_type(objManifest(file.path(td, "saved"), output = "json"),
+            "character")
+    })
+
+    it("errors on a folder without a manifest or another schema", {
+        expect_error(objManifest(tempdir()), "no manifest.json")
+        f <- tempfile(fileext = ".json")
+        writeLines('{"schema_version": "0.1.0"}', f)
+        expect_error(objManifest(f), "schema 0.1.0")
     })
 })
 
@@ -281,7 +332,7 @@ describe("object uid", {
 describe("object source", {
     it("is null for an in-memory object, and stays a key in the JSON", {
         expect_null(objManifest(g)$object$source)
-        back <- jsonlite::fromJSON(objManifest_json(g), simplifyVector = FALSE)
+        back <- jsonlite::fromJSON(objManifest(g, output = "json"), simplifyVector = FALSE)
         expect_true("source" %in% names(back$object))
         expect_null(back$object$source)
     })
@@ -466,7 +517,7 @@ describe("views and spaces", {
 
 describe("history records", {
     it("reads legacy character entries", {
-        recs <- ghistory_records(g)
+        recs <- objHistory(g)
         expect_gt(length(recs), 0L)
         expect_true(all(vapply(recs, function(r) r$status, character(1L))
             == "ok"))
@@ -484,7 +535,7 @@ describe("history records", {
             fn = "direct slot assignment", status = "unattributed",
             diff = d$detail
         )
-        last <- tail(ghistory_records(g2), 1L)[[1L]]
+        last <- tail(objHistory(g2), 1L)[[1L]]
         expect_identical(last$status, "unattributed")
         expect_identical(last$fn, "direct slot assignment")
         expect_false(is.null(last$diff))
@@ -495,18 +546,54 @@ describe("history records", {
         g2 <- recordGiottoStep(
             g, fn = "runPCA", status = "error", error = "not enough features"
         )
-        last <- tail(ghistory_records(g2), 1L)[[1L]]
+        last <- tail(objHistory(g2), 1L)[[1L]]
         expect_identical(last$status, "error")
         expect_identical(last$error, "not enough features")
     })
 
     it("serializes as one JSON object per line", {
-        txt <- objHistory_ndjson(g)
+        txt <- objHistory(g, output = "ndjson")
         lines <- strsplit(txt, "\n")[[1]]
         expect_length(lines, length(objHistory(g)))
         parsed <- jsonlite::fromJSON(lines[[1]], simplifyVector = FALSE)
         expect_true(all(c("step_id", "fn", "params", "status") %in%
             names(parsed)))
+    })
+})
+
+describe("objHistory output and reading back", {
+    it("is a list of records named by step, and prints them", {
+        h <- objHistory(g)
+        expect_s3_class(h, "ghistory")
+        expect_identical(names(h), names(g@parameters))
+        expect_identical(h[[1L]]$step_id, names(h)[[1L]])
+        out <- capture.output(print(h), type = "output")
+        expect_true(any(grepl(names(h)[[1L]], out, fixed = TRUE)))
+    })
+
+    it("writes NDJSON to a file and returns the path invisibly", {
+        f <- tempfile(fileext = ".ndjson")
+        expect_invisible(res <- objHistory(g, file = f))
+        expect_identical(res, f)
+        expect_length(readLines(f), length(g@parameters))
+    })
+
+    it("reads back exactly the history it wrote", {
+        before <- objManifest(g)
+        g2 <- g
+        g2@expression$cell$rna$scaled <- NULL
+        d <- manifestDiff(before, objManifest(g2))
+        g2 <- recordGiottoStep(g2, fn = "direct slot assignment",
+            status = "unattributed", diff = d$detail)
+        g2 <- recordGiottoStep(g2, fn = "runPCA", status = "error",
+            error = "not enough features")
+        f <- tempfile(fileext = ".ndjson")
+        objHistory(g2, file = f)
+        expect_identical(objHistory(f), objHistory(g2))
+    })
+
+    it("errors on a folder without a history", {
+        expect_error(objHistory(tempdir()), "no history.ndjson")
     })
 })
 
@@ -516,7 +603,7 @@ describe("update_giotto_params structured record", {
             update_giotto_params(gobject, description = "_testfn")
         }
         g2 <- f(g)
-        last <- tail(ghistory_records(g2), 1L)[[1L]]
+        last <- tail(objHistory(g2), 1L)[[1L]]
         expect_identical(last$status, "ok")
         expect_identical(last$fn, "f")
         # the flattened character form reduces `1:30` to "1"; the structured
@@ -526,7 +613,7 @@ describe("update_giotto_params structured record", {
 
     it("leaves the legacy character entry untouched", {
         f <- function(gobject) update_giotto_params(gobject, "_legacy")
-        entry <- tail(objHistory(f(g)), 1L)[[1L]]
+        entry <- tail(f(g)@parameters, 1L)[[1L]]
         expect_s3_class(entry, "ghistory_item")
         expect_type(unclass(entry), "character")
     })
@@ -551,6 +638,11 @@ describe("save / load sidecars", {
         )
         expect_identical(sc$object$uid, .gobject_uid(g))
         expect_identical(.raw(sc)$class, "exprObj")
+    })
+
+    it("reads the manifest and history back from the folder", {
+        expect_false(manifestDiff(objManifest(saved), objManifest(g))$changed)
+        expect_identical(objHistory(saved), objHistory(g))
     })
 
     it("preserves the uid and data fingerprints through a round trip", {

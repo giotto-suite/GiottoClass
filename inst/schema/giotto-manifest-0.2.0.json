@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://giotto-suite.github.io/schema/giotto-manifest-0.2.0.json",
   "title": "Giotto object manifest",
-  "description": "Machine-readable inventory of a giotto object, emitted by GiottoClass::objManifest_json(). Derived from the object on demand, never stored on it. Companion document: history.ndjson, one operation per line, from objHistory_ndjson().",
+  "description": "Machine-readable inventory of a giotto object, emitted by GiottoClass::objManifest(output = \"json\"). Derived from the object on demand, never stored on it. Companion document: history.ndjson, one operation per line, from objHistory(output = \"ndjson\").",
   "type": "object",
   "required": ["schema_version", "generated_by", "object", "summary", "slots"],
   "additionalProperties": false,

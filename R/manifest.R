@@ -153,23 +153,67 @@ NULL
 #' compared to 12 significant digits so a shapefile round trip does not read
 #' as a change. Sizes and extents are not reported: on a disk-backed object
 #' they cost a scan.
-#' @param x giotto object
+#'
+#' A manifest can also be read back without loading the object: pass the
+#' folder written by [saveGiotto()], or the path to its `manifest.json`. The
+#' result is the manifest as it was at save time, in the same form
+#' `objManifest()` returns for a live object, so it can go to
+#' [manifestDiff()].
+#'
+#' The JSON form follows the schema shipped in
+#' `inst/schema/giotto-manifest-<version>.json`. Records are sorted by their
+#' keys so two manifests of the same state serialize identically, and `NA`,
+#' `NaN` and `Inf` are encoded as the strings `"NA"`, `"NaN"`, `"Inf"` and
+#' `"-Inf"`.
+#' @param x giotto object, or the path to a [saveGiotto()] folder or its
+#' `manifest.json`
 #' @param levels logical. Whether to count the distinct values of each
 #' metadata column (`n_levels`), which shows a clustering result with its number
 #' of groups. Off by default: it is a full pass over every column, and the
 #' per-column fingerprints already detect the change. The id column is never
-#' counted.
+#' counted. Not used when reading from a path.
+#' @param output character. `"gmanifest"` (default) returns the manifest as an
+#' R list; `"json"` returns it as a JSON string.
+#' @param file character. Optional path to write the manifest to as JSON.
+#' When given, the path is returned invisibly and `output` is ignored.
+#' @param pretty logical. Whether to indent JSON output
 #' @param ... additional params (none implemented)
-#' @returns list of class `gmanifest`
+#' @returns list of class `gmanifest`, a JSON string, or the `file` path
+#' invisibly
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
 #' m <- objManifest(g)
 #' names(m$slots)
+#'
+#' cat(substr(objManifest(g, output = "json"), 1, 200))
 #' @export
-setMethod("objManifest", signature("giotto"), function(
-        x, levels = FALSE, ...) {
+setMethod("objManifest", signature("gAny"), function(
+        x, levels = FALSE, output = c("gmanifest", "json"), file = NULL,
+        pretty = TRUE, ...) {
     checkmate::assert_flag(levels)
+    output <- match.arg(output)
+    .manifest_output(.manifest_build(x, levels = levels), output = output,
+        file = file, pretty = pretty)
+})
+
+#' @rdname objManifest
+#' @export
+setMethod("objManifest", signature("character"), function(
+        x, output = c("gmanifest", "json"), file = NULL, pretty = TRUE, ...) {
+    output <- match.arg(output)
+    .manifest_output(.manifest_read(x), output = output, file = file,
+        pretty = pretty)
+})
+
+# Builds the manifest for one container class. objManifest() on gAny handles
+# output, so a container that has no method here fails at dispatch rather
+# than reading slots it does not have.
+setGeneric(".manifest_build",
+    function(x, ...) standardGeneric(".manifest_build"))
+
+setMethod(".manifest_build", signature("giotto"), function(
+        x, levels = FALSE, ...) {
     wenv <- .manifest_wenv()
 
     slots <- .manifest_items(x, wenv = wenv, levels = levels)
@@ -825,13 +869,16 @@ setMethod("fingerprint_data", signature("NULL"), function(x, ...) NULL)
 
 ## serialization ####
 
-# Fields the schema types as arrays. R has no scalar type, and objManifest_json()
-# writes with auto_unbox, so a length-1 vector would otherwise come out as a
+# Fields the schema types as arrays. R has no scalar type, and the JSON writer
+# uses auto_unbox, so a length-1 vector would otherwise come out as a
 # bare value: `"provenance": "cell"` on one object and `["z0", "z1"]` on
-# another. These are kept arrays at any length.
+# another. These are kept arrays at any length, and read back as vectors even
+# when empty. The last three are manifestDiff() detail, which history records
+# carry in `diff`.
 .MANIFEST_ARRAY_FIELDS <- c(
     "spat_units", "feat_types", "warnings", "provenance", "columns",
-    "overlaps_computed", "resolution", "file_path", "step_types"
+    "overlaps_computed", "resolution", "file_path", "step_types",
+    "removed", "unfingerprinted", "fields"
 )
 
 # Explicit schema rule: NA / NaN / Inf are encoded as strings, not as JSON
@@ -859,11 +906,15 @@ setMethod("fingerprint_data", signature("NULL"), function(x, ...) NULL)
     if (is.numeric(x)) {
         bad <- !is.finite(x)
         if (any(bad)) {
-            out <- as.character(x)
-            out[is.na(x) & !is.nan(x)] <- "NA"
-            out[is.nan(x)] <- "NaN"
-            out[!is.na(x) & is.infinite(x) & x > 0] <- "Inf"
-            out[!is.na(x) & is.infinite(x) & x < 0] <- "-Inf"
+            special <- rep("NA", length(x))
+            special[is.nan(x)] <- "NaN"
+            special[!is.na(x) & is.infinite(x) & x > 0] <- "Inf"
+            special[!is.na(x) & is.infinite(x) & x < 0] <- "-Inf"
+            if (length(x) == 1L) return(special)
+            # the finite values stay numbers, so a reader can tell 1.5 from
+            # "1.5": [1.5, "NA", "NaN"]
+            out <- as.list(x)
+            out[bad] <- as.list(special[bad])
             return(out)
         }
         return(x)
@@ -875,38 +926,103 @@ setMethod("fingerprint_data", signature("NULL"), function(x, ...) NULL)
     x
 }
 
-#' @name objManifest_json
-#' @title Giotto object manifest as JSON
-#' @description
-#' Serialize the manifest from [objManifest()]. Keys are emitted in canonical
-#' (sorted) order and `NA`/`NaN`/`Inf` are encoded as the strings `"NA"`,
-#' `"NaN"`, `"Inf"` and `"-Inf"` by schema rule.
-#' @param x giotto object or a `gmanifest` from [objManifest()]
-#' @param file character. Optional path to write to. When `NULL` (default) the
-#' JSON is returned as a character scalar.
-#' @param pretty logical. Whether to indent the output
-#' @param ... additional params passed to [objManifest()] when `x` is a
-#' `giotto` object
-#' @returns character scalar of JSON, or the file path, invisibly, when
-#' `file` is given
-#' @examples
-#' g <- GiottoData::loadGiottoMini("visium")
-#'
-#' cat(substr(objManifest_json(g), 1, 200))
-#' @export
-objManifest_json <- function(x, file = NULL, pretty = TRUE, ...) {
-    GiottoUtils::package_check("jsonlite", repository = "CRAN:jsonlite")
+# The one place a manifest becomes output, for every objManifest() method.
+.manifest_output <- function(m, output = "gmanifest", file = NULL,
+        pretty = TRUE) {
+    if (!is.null(file)) {
+        writeLines(.manifest_to_json(m, pretty = pretty), con = file)
+        return(invisible(file))
+    }
+    if (identical(output, "json")) return(.manifest_to_json(m, pretty = pretty))
+    m
+}
 
-    m <- if (inherits(x, "gmanifest")) x else objManifest(x, ...)
-    txt <- jsonlite::toJSON(
+# 17 significant digits and a decimal point on every double, so a manifest
+# read back has the same numbers, and the same integer / double types, as the
+# one written.
+.manifest_to_json <- function(m, pretty = TRUE) {
+    GiottoUtils::package_check("jsonlite", repository = "CRAN:jsonlite")
+    as.character(jsonlite::toJSON(
         .manifest_json_prep(unclass(m)),
         auto_unbox = TRUE, null = "null", na = "null", pretty = pretty,
-        digits = NA
-    )
-    if (is.null(file)) return(as.character(txt))
+        digits = I(17L), always_decimal = TRUE
+    ))
+}
 
-    writeLines(as.character(txt), con = file)
-    invisible(file)
+## reading back ####
+
+# A saveGiotto() folder, or a manifest.json directly
+.manifest_read <- function(path) {
+    GiottoUtils::package_check("jsonlite", repository = "CRAN:jsonlite")
+    checkmate::assert_string(path)
+    f <- if (dir.exists(path)) file.path(path, "manifest.json") else path
+    if (!file.exists(f)) {
+        stop("[objManifest] no manifest.json in ", path, ". Objects saved ",
+            "before manifests were written have to be saved again.",
+            call. = FALSE)
+    }
+    raw <- jsonlite::fromJSON(f, simplifyVector = FALSE)
+    if (!identical(raw$schema_version, .MANIFEST_SCHEMA_VERSION)) {
+        stop("[objManifest] ", f, " is manifest schema ",
+            raw$schema_version %||% "<none>", "; this GiottoClass reads ",
+            .MANIFEST_SCHEMA_VERSION, call. = FALSE)
+    }
+    out <- .manifest_from_json(raw)
+    class(out) <- c("gmanifest", "list")
+    out
+}
+
+# JSON has one array type, so jsonlite gives back lists where the manifest
+# held vectors. An array of scalars becomes a vector again, and the strings
+# the writer used for missing values become values. An array mixing numbers
+# with "NaN" / "Inf" is numeric; in an all-string array only "NA" is
+# converted, so a real string "NA" reads back as missing.
+.manifest_from_json <- function(x, field = NULL) {
+    if (!is.list(x)) return(.manifest_json_unvalue(list(x)))
+    if (!is.null(names(x))) {
+        out <- lapply(seq_along(x), function(i) {
+            .manifest_from_json(x[[i]], field = names(x)[[i]])
+        })
+        names(out) <- names(x)
+        return(out)
+    }
+    if (length(x) == 0L) {
+        return(if (isTRUE(field %in% .MANIFEST_ARRAY_FIELDS)) {
+            character(0)
+        } else {
+            list()
+        })
+    }
+    scalar <- vapply(x, function(v) {
+        !is.list(v) && !is.null(v) && length(v) == 1L
+    }, logical(1L))
+    if (all(scalar)) return(.manifest_json_unvalue(x))
+    lapply(x, .manifest_from_json)
+}
+
+.MANIFEST_JSON_SPECIAL <- c(
+    `NA` = NA_real_, `NaN` = NaN, `Inf` = Inf, `-Inf` = -Inf
+)
+
+.manifest_json_unvalue <- function(vals) {
+    special <- vapply(vals, function(v) {
+        is.character(v) && v %in% names(.MANIFEST_JSON_SPECIAL)
+    }, logical(1L))
+    is_num <- vapply(vals, is.numeric, logical(1L))
+    if (any(is_num) && all(is_num | special)) {
+        # integer unless a double or a NaN / Inf says otherwise
+        as_int <- all(vapply(vals[is_num], is.integer, logical(1L))) &&
+            all(unlist(vals[special]) == "NA")
+        out <- rep(if (as_int) NA_integer_ else NA_real_, length(vals))
+        out[is_num] <- unlist(vals[is_num])
+        if (!as_int) {
+            out[special] <- .MANIFEST_JSON_SPECIAL[unlist(vals[special])]
+        }
+        return(out)
+    }
+    out <- unlist(vals)
+    if (is.character(out)) out[out == "NA"] <- NA_character_
+    out
 }
 
 #' @export

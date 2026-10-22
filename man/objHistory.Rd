@@ -2,24 +2,62 @@
 % Please edit documentation in R/function_logging.R
 \name{objHistory}
 \alias{objHistory}
+\alias{objHistory,character-method}
 \title{Giotto object history}
 \usage{
-objHistory(object, summarized = FALSE)
+\S4method{objHistory}{gAny}(
+  x,
+  summarized = FALSE,
+  output = c("ghistory", "ndjson"),
+  file = NULL,
+  ...
+)
+
+\S4method{objHistory}{character}(
+  x,
+  summarized = FALSE,
+  output = c("ghistory", "ndjson"),
+  file = NULL,
+  ...
+)
 }
 \arguments{
-\item{object}{giotto object}
+\item{x}{giotto object, or the path to a \code{\link[=saveGiotto]{saveGiotto()}} folder or its
+\code{history.ndjson}}
 
-\item{summarized}{logical. whether print should be summarized}
+\item{summarized}{logical. Whether to also print a summary of the steps and
+the names they used}
+
+\item{output}{character. \code{"ghistory"} (default) returns the records as a
+list; \code{"ndjson"} returns them as newline-delimited JSON, one step per line.}
+
+\item{file}{character. Optional path to write the history to as NDJSON.
+When given, the path is returned invisibly and \code{output} is ignored.}
+
+\item{...}{additional params (none implemented)}
 }
 \value{
-list
+list of class \code{ghistory}, an NDJSON string, or the \code{file} path
+invisibly
 }
 \description{
-Print and return giotto object history
+The steps recorded on a giotto object: one record per step, holding the
+function (\code{fn}), the parameters it ran with as deparsed expressions
+(\code{params}), and \code{timestamp}, \code{seed}, \code{status}, \code{error} and \code{diff}. Steps
+recorded before these records existed are reported with \code{status = "ok"}
+and the parameters they recorded.
+
+The history can also be read back without loading the object: pass the
+folder written by \code{\link[=saveGiotto]{saveGiotto()}}, or the path to its \code{history.ndjson}. The
+result is the same as \code{objHistory()} on the object at save time.
+
+The history is provenance, not state: only functions that opt in are
+recorded. What the object holds comes from \code{\link[=objManifest]{objManifest()}}.
 }
 \examples{
 g <- GiottoData::loadGiottoMini("visium")
 
 objHistory(g)
 objHistory(g, summarized = TRUE)
+cat(substr(objHistory(g, output = "ndjson"), 1, 120))
 }
