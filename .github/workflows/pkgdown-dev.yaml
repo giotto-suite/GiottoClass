@@ -1,9 +1,14 @@
 # Builds the DEVELOPMENT site: https://giotto-suite.github.io/GiottoClass/dev/
 #
-# The release site documents this `website` branch, which tracks main at
-# v0.5.1. The gsource line adds ~35 exports on top -- filterData, reduceData,
-# hnswKNN, the *Param classes, the S4 accessors -- documented nowhere else.
-# This publishes them without claiming they are released.
+# The release site documents this `website` branch (the released main line).
+# The gsource line adds exports on top -- filterData, reduceData, hnswKNN, the
+# *Param classes, the S4 accessors -- documented nowhere else. This publishes
+# them without claiming they are released.
+#
+# WHEN DOES IT REBUILD?
+# On a push here, and whenever gsource changes: .github/workflows/
+# pkgdown-dev-trigger.yaml on gsource dispatches this workflow. Without that,
+# the dev site only moved when this branch did and fell weeks behind gsource.
 #
 # WHICH REF DOES THIS DOCUMENT?
 # package-ref below. This branch owns the website content; the package source
@@ -11,8 +16,8 @@
 # is retired, change that one word.
 #
 # No ref pinning is needed: GiottoClass@gsource's only Remote is a bare
-# giotto-suite/GiottoUtils, which resolves to main -- v0.2.5, satisfying its
-# own `GiottoUtils (>= 0.2.5)`.
+# giotto-suite/GiottoUtils, which resolves to main and satisfies its
+# GiottoUtils floor.
 #
 # The dev-only config surgery lives in pkgdown/pre-build.sh, which the shared
 # workflow runs after assembling.
@@ -45,4 +50,6 @@ jobs:
       # vignettes need GiottoData (Suggests). Pinned without dependencies: its
       # bare giotto-suite/GiottoClass Remote would otherwise replace gsource.
       pins: giotto-suite/GiottoData
-      expect-versions: "GiottoClass=0.7.2"
+      # a floor, not an exact version: gsource bumps its own version often,
+      # and an exact match failed the first build after every bump
+      expect-versions: "GiottoClass>=0.7.0"

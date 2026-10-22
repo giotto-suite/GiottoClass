@@ -30,6 +30,13 @@
   # removed on gsource; replaced by an as.igraph() method
   - as.igraph
   - nnToUwot
+- subtitle: Spatial smoothing, correlation and edge statistics
+- contents:
+  - spatialSmoothParam
+  - spatial_smooth_operator
+  - featCorParam
+  - feat_cor_from_moments
+  - edgeStatsParam
 - subtitle: Multi-sample (giottoMulti)
 - contents:
   - createGiottoMulti
@@ -45,8 +52,8 @@
   - giottoSpace-access
   - space-constructors
   - materialize
+  - resolveRecipe
   - defaultViewCoordinator
-  - prepareIds
   - resolveSubobject
 - subtitle: History and manifests
 - contents:
