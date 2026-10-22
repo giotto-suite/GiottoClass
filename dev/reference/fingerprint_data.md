@@ -21,6 +21,10 @@ as an unreadable fingerprint in its `warnings` rather than treating the
 payload as unchanged. Only an absent payload (`NULL`) has no
 fingerprint.
 
+A function is fingerprinted by its code. Values a closure captures are
+not seen, so two closures that differ only in a captured value share a
+fingerprint.
+
 ## Usage
 
 ``` r
@@ -46,6 +50,9 @@ fingerprint_data(x, ...)
 fingerprint_data(x, k = .MANIFEST_FP_N, ...)
 
 # S4 method for class 'affine2d'
+fingerprint_data(x, ...)
+
+# S4 method for class 'function'
 fingerprint_data(x, ...)
 
 # S4 method for class 'SpatRaster'

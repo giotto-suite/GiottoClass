@@ -12,7 +12,10 @@ external pointers or environments hash by instance, not by content.
 A method returns a hash or errors; it never returns NULL for a payload it
 was given. The default method errors, and the manifest reports that as an
 unreadable fingerprint in its warnings rather than treating the payload
-as unchanged. Only an absent payload (NULL) has no fingerprint."><meta property="og:description" content="Extension point for objManifest(). Returns a short hash identifying the
+as unchanged. Only an absent payload (NULL) has no fingerprint.
+A function is fingerprinted by its code. Values a closure captures are not
+seen, so two closures that differ only in a captured value share a
+fingerprint."><meta property="og:description" content="Extension point for objManifest(). Returns a short hash identifying the
 content of a payload - the matrix, table, graph or store a subobject holds -
 so that a manifest diff can tell when it changed.
 GiottoClass hashes the in-memory payloads it knows itself. A package that
@@ -25,7 +28,10 @@ external pointers or environments hash by instance, not by content.
 A method returns a hash or errors; it never returns NULL for a payload it
 was given. The default method errors, and the manifest reports that as an
 unreadable fingerprint in its warnings rather than treating the payload
-as unchanged. Only an absent payload (NULL) has no fingerprint."><meta property="og:image" content="https://giotto-suite.github.io/GiottoClass/logo.png"><meta name="robots" content="noindex"></head><body>
+as unchanged. Only an absent payload (NULL) has no fingerprint.
+A function is fingerprinted by its code. Values a closure captures are not
+seen, so two closures that differ only in a captured value share a
+fingerprint."><meta property="og:image" content="https://giotto-suite.github.io/GiottoClass/logo.png"><meta name="robots" content="noindex"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
     <!--
   Banner shown ONLY on the development site
@@ -84,7 +90,7 @@ as unchanged. Only an absent payload (NULL) has no fingerprint."><meta property=
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.20</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.21</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -133,6 +139,9 @@ external pointers or environments hash by instance, not by content.</p>
 was given. The default method errors, and the manifest reports that as an
 unreadable fingerprint in its <code>warnings</code> rather than treating the payload
 as unchanged. Only an absent payload (<code>NULL</code>) has no fingerprint.</p>
+<p>A function is fingerprinted by its code. Values a closure captures are not
+seen, so two closures that differ only in a captured value share a
+fingerprint.</p>
     </div>
 
     <div class="section level2">
@@ -159,6 +168,9 @@ as unchanged. Only an absent payload (<code>NULL</code>) has no fingerprint.</p>
 <span><span class="fu">fingerprint_data</span><span class="op">(</span><span class="va">x</span>, k <span class="op">=</span> <span class="va">.MANIFEST_FP_N</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'affine2d'</span></span>
+<span><span class="fu">fingerprint_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S4 method for class 'function'</span></span>
 <span><span class="fu">fingerprint_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S4 method for class 'SpatRaster'</span></span>

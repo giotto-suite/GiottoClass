@@ -1,5 +1,19 @@
 # Changelog
 
+## GiottoClass 0.7.21
+
+### new
+
+- [`fingerprint_data()`](https://giotto-suite.github.io/GiottoClass/dev/reference/fingerprint_data.md)
+  fingerprints functions by their code, so a payload holding one is no
+  longer unfingerprinted. Values a closure captures are not seen.
+
+### changes
+
+- Manifests leave out CRS: polygon and point records drop `crs`, and
+  image fingerprints no longer include it. Store-backed geometry no
+  longer lists `crs` in `warnings`.
+
 ## GiottoClass 0.7.20
 
 ### breaking changes

@@ -487,7 +487,7 @@ sessionInfo()
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] GiottoClass_0.7.20
+    ## [1] GiottoClass_0.7.21
     ## 
     ## loaded via a namespace (and not attached):
     ##  [1] sass_0.4.10           generics_0.1.4        class_7.3-23         
