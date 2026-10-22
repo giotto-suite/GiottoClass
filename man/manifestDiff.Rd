@@ -13,7 +13,10 @@ manifestDiff(before, after)
 }
 \value{
 list with \code{changed} (logical), \code{summary} (character scalar) and
-\code{detail} (added / removed / modified / object)
+\code{detail} (added / removed / modified / counts / object / unfingerprinted).
+\code{changed} reports detected changes only: a record that carries no
+fingerprint on either side is listed in \code{unfingerprinted}, and named in
+\code{summary}, because it could have changed without the diff seeing it.
 }
 \description{
 Compare two manifests from \code{\link[=objManifest]{objManifest()}} and report what changed, both as

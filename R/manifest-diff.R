@@ -18,32 +18,40 @@ NULL
     dimension_reduction = "dim reduction",
     nn_network = "NN network",
     spatial_network = "spatial network",
-    spatial_grid = "spatial grid",
     spatial_enrichment = "spatial enrichment",
     images = "image",
+    view = "view",
+    spaces = "space",
     cell_ID = "cell IDs",
     feat_ID = "feature IDs"
 )
 
-# Flatten a manifest's `slots` into leaves keyed by dotted path, e.g.
-# "expression.cell.rna.normalized". A node is a leaf once it carries a
-# `class` field (or, for the id slots, an `n` field).
-.manifest_flatten <- function(node, prefix = character()) {
-    if (!is.list(node)) return(list())
-    # `[[` rather than `$`: partial matching would make the `slots` list itself
-    # look like a leaf, because `slots$n` resolves to `nn_network`
-    if (!is.null(node[["class"]]) || !is.null(node[["n"]])) {
-        # Carry the final key alongside the joined path. Splitting the path
-        # back apart loses any key that itself contains a dot, and Giotto
-        # names routinely do - an `sNN.pca` network read as "pca".
-        attr(node, "key") <- if (length(prefix)) prefix[[length(prefix)]] else ""
-        out <- list(node)
-        names(out) <- paste(prefix, collapse = ".")
-        return(out)
-    }
+# Key a manifest's `slots` records by identity, e.g.
+# "expression.cell.rna.normalized", so two manifests can be paired record by
+# record.
+.manifest_flatten <- function(slots) {
     out <- list()
-    for (nm in names(node)) {
-        out <- c(out, .manifest_flatten(node[[nm]], c(prefix, nm)))
+    for (sn in names(slots)) {
+        for (rec in slots[[sn]]) {
+            if (!is.list(rec)) next
+            # Carry the display name alongside the identity. Splitting the id
+            # back apart loses any key that itself contains a dot, and Giotto
+            # names routinely do - an `sNN.pca` network read as "pca".
+            keys <- rec$keys
+            attr(rec, "key") <- keys[["name"]] %||%
+                if (length(keys)) keys[[length(keys)]] else ""
+            # a duplicate identity (flagged in the manifest's warnings) must
+            # not overwrite its twin, or one record silently drops out of the
+            # comparison
+            id <- .manifest_item_id(sn, rec)
+            n <- 1L
+            base <- id
+            while (!is.null(out[[id]])) {
+                n <- n + 1L
+                id <- paste0(base, "#", n)
+            }
+            out[[id]] <- rec
+        }
     }
     out
 }
@@ -72,14 +80,30 @@ NULL
     if (is.null(cols) || length(cols) == 0L) {
         return(stats::setNames(integer(0), character(0)))
     }
+    # column names only, for the slots whose columns are not described
     if (is.character(cols)) {
         return(stats::setNames(rep(NA_integer_, length(cols)), cols))
     }
-    nms <- vapply(cols, function(cc) cc$name %||% NA_character_, character(1L))
-    lv <- vapply(cols, function(cc) {
+    vapply(cols, function(cc) {
         as.integer(cc$n_levels %||% NA_integer_)
     }, integer(1L))
-    stats::setNames(lv, nms)
+}
+
+# columns of a metadata leaf, as a named vector of fingerprints (NA when the
+# manifest carried none)
+.manifest_colfp <- function(leaf) {
+    cols <- leaf$columns
+    if (is.null(cols) || length(cols) == 0L || is.character(cols)) {
+        return(stats::setNames(character(0), character(0)))
+    }
+    vapply(cols, function(cc) cc$fingerprint %||% NA_character_, character(1L))
+}
+
+# Level counts are opt-in, so a column may carry one on one side only. Compare
+# them only where both sides counted; otherwise a manifest with counts against
+# one without would report every column as re-levelled.
+.manifest_levels_moved <- function(b, a) {
+    !is.na(b) && !is.na(a) && !identical(b, a)
 }
 
 # Is a level count worth saying out loud?
@@ -95,11 +119,15 @@ NULL
     n < 0.1 * nrow
 }
 
-# rows of the table a metadata leaf describes, for the test above
-.manifest_leaf_nrow <- function(leaf) {
-    shp <- leaf[["shape"]]
-    if (is.null(shp) || length(shp) == 0L) return(NULL)
-    as.integer(shp[[1L]])
+# rows of the table a metadata leaf describes, for the test above: its cell or
+# feature count, read from the summary block
+.manifest_leaf_nrow <- function(leaf, path, summary) {
+    n <- switch(.manifest_slot_of(path),
+        cell_metadata = summary$n_cells[[leaf$keys$spat_unit %||% ""]],
+        feat_metadata = summary$n_features[[leaf$keys$feat_type %||% ""]],
+        NULL
+    )
+    if (is.null(n)) NULL else as.integer(n)
 }
 
 # "name (N levels)" when the count means something, otherwise just "name"
@@ -112,10 +140,11 @@ NULL
 }
 
 # fields whose change is worth reporting; everything else is noise
+# Keys are not here: records are paired by them, so they never differ.
 .MANIFEST_CMP_FIELDS <- c(
-    "shape", "dtype", "sparse", "nnz", "n_geom", "n_nodes", "n_edges",
-    "n_points", "n", "method", "reduction_method", "nn_type", "bbox",
-    "extent", "fingerprint", "columns", "provenance", "on_disk"
+    "dtype", "method", "directed", "crs", "compact", "has_unfiltered",
+    "overlaps_computed", "on_disk", "fingerprint", "columns", "provenance",
+    "n_steps", "step_types"
 )
 
 #' @name manifestDiff
@@ -131,7 +160,10 @@ NULL
 #' @param before `gmanifest` or `NULL` (treated as "object did not exist")
 #' @param after `gmanifest`
 #' @returns list with `changed` (logical), `summary` (character scalar) and
-#' `detail` (added / removed / modified / object)
+#' `detail` (added / removed / modified / counts / object / unfingerprinted).
+#' `changed` reports detected changes only: a record that carries no
+#' fingerprint on either side is listed in `unfingerprinted`, and named in
+#' `summary`, because it could have changed without the diff seeing it.
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
@@ -171,11 +203,19 @@ manifestDiff <- function(before, after) {
         fields <- character()
         for (f in .MANIFEST_CMP_FIELDS) {
             if (identical(f, "columns")) {
-                # compare as name -> level count, so a reordered column list
-                # is not reported as a change while a changed level count is
+                # compare by column name, so a reordered column list is not
+                # reported as a change while an added, dropped, re-levelled or
+                # rewritten column is
                 cb <- .manifest_colmap(fb[[p]])
                 ca <- .manifest_colmap(fa[[p]])
-                if (!identical(cb[sort(names(cb))], ca[sort(names(ca))])) {
+                fb_ <- .manifest_colfp(fb[[p]])
+                fa_ <- .manifest_colfp(fa[[p]])
+                kept <- intersect(names(cb), names(ca))
+                if (!setequal(names(cb), names(ca)) ||
+                    any(vapply(kept, function(cc) {
+                        .manifest_levels_moved(cb[[cc]], ca[[cc]])
+                    }, logical(1L))) ||
+                    !identical(fb_[sort(names(fb_))], fa_[sort(names(fa_))])) {
                     fields <- c(fields, f)
                 }
                 next
@@ -191,9 +231,16 @@ manifestDiff <- function(before, after) {
         }
     }
 
+    # Records with no fingerprint on either side could have changed without
+    # the diff seeing it, so "no state change" must not be claimed for them.
+    unfingerprinted <- shared[vapply(shared, function(p) {
+        is.null(fb[[p]]$fingerprint) && is.null(fa[[p]]$fingerprint)
+    }, logical(1L))]
+
     phrases <- .manifest_diff_phrases(
         fb, fa, added, removed, modified,
-        counts = .manifest_count_changes(before, after)
+        counts = .manifest_count_changes(before, after),
+        summary = after$summary
     )
 
     obj <- list()
@@ -207,20 +254,24 @@ manifestDiff <- function(before, after) {
         removed = removed,
         modified = modified,
         counts = .manifest_count_changes(before, after),
-        object = obj
+        object = obj,
+        unfingerprinted = unfingerprinted
     )
     changed <- length(added) > 0L || length(removed) > 0L ||
         length(modified) > 0L || length(obj) > 0L
 
-    list(
-        changed = changed,
-        summary = if (length(phrases)) {
-            paste(phrases, collapse = " | ")
-        } else {
-            "no state change"
-        },
-        detail = detail
-    )
+    n_unfp <- length(unfingerprinted)
+    unfp_note <- sprintf("%d %s unfingerprinted", n_unfp,
+        if (n_unfp == 1L) "item" else "items")
+    summary <- if (length(phrases)) {
+        paste(c(phrases, if (n_unfp) unfp_note), collapse = " | ")
+    } else if (n_unfp) {
+        sprintf("no detected change (%s)", unfp_note)
+    } else {
+        "no state change"
+    }
+
+    list(changed = changed, summary = summary, detail = detail)
 }
 
 # Object-level count changes, read from the summary block rather than inferred
@@ -245,12 +296,12 @@ manifestDiff <- function(before, after) {
 # Build the one-sentence rendering. Grouped by slot so a step that adds one
 # matrix reads "expression added: normalized" rather than a path dump.
 #
-# When the object's cell or feature counts moved, every leaf's shape moved with
-# them. Enumerating all of those turns one subset into sixteen clauses, so the
-# count change is stated once and the resized leaves are collapsed to a tally.
-# `detail` still carries every leaf.
+# When the object's cell or feature counts moved, nearly every leaf's content
+# moved with them. Enumerating all of those turns one subset into sixteen
+# clauses, so the count change is stated once and the leaves whose only change
+# is their content are collapsed to a tally. `detail` still carries every leaf.
 .manifest_diff_phrases <- function(fb, fa, added, removed, modified,
-    counts = list()) {
+    counts = list(), summary = list()) {
     phrases <- character()
 
     for (cc in counts) {
@@ -291,7 +342,7 @@ manifestDiff <- function(before, after) {
         label <- .manifest_label(p)
 
         # Tracks whether this leaf has been accounted for - by a phrase or by
-        # the resize tally. A modified leaf that goes unaccounted reads as
+        # the tally. A modified leaf that goes unaccounted reads as
         # "no state change", which is the one thing a diff must never say
         # when something did change.
         accounted <- FALSE
@@ -302,7 +353,7 @@ manifestDiff <- function(before, after) {
         if ("columns" %in% fields) {
             cb <- .manifest_colmap(fb[[p]])
             ca <- .manifest_colmap(fa[[p]])
-            nrow_a <- .manifest_leaf_nrow(fa[[p]])
+            nrow_a <- .manifest_leaf_nrow(fa[[p]], p, summary)
             new_cols <- setdiff(names(ca), names(cb))
             gone_cols <- setdiff(names(cb), names(ca))
             if (length(new_cols)) {
@@ -319,16 +370,20 @@ manifestDiff <- function(before, after) {
                     paste(gone_cols, collapse = ", ")
                 ))
             }
-            # a column that stayed but was re-levelled: re-clustering writes
-            # its result into the existing column, and the count is the whole
-            # story ("leiden_clus 5 -> 14 levels")
+            # a column that stayed but whose level count or content moved:
+            # re-clustering writes into the existing column ("leiden_clus
+            # 5 -> 14 levels"), and an in-place edit leaves the count alone
+            # and shows in the column's fingerprint only
             kept <- intersect(names(cb), names(ca))
+            fpb <- .manifest_colfp(fb[[p]])
+            fpa <- .manifest_colfp(fa[[p]])
             relev <- kept[vapply(kept, function(cc) {
-                !identical(cb[[cc]], ca[[cc]])
+                .manifest_levels_moved(cb[[cc]], ca[[cc]]) ||
+                    !identical(fpb[cc], fpa[cc])
             }, logical(1L))]
-            # A subset re-levels every column at once. That is the count
-            # change already stated, not news about the columns, so it joins
-            # the resize tally instead of listing itself.
+            # A subset changes every column at once. That is the count change
+            # already stated, not news about the columns, so it joins the
+            # tally instead of listing itself.
             if (length(relev)) {
                 if (length(counts)) {
                     resized <- resized + 1L
@@ -338,7 +393,7 @@ manifestDiff <- function(before, after) {
                         paste(vapply(relev, function(cc) {
                             keep <- .manifest_levels_informative(
                                 ca[[cc]], nrow_a
-                            )
+                            ) && .manifest_levels_moved(cb[[cc]], ca[[cc]])
                             if (!keep) return(cc)
                             sprintf("%s (%s -> %s levels)", cc,
                                 cb[[cc]], ca[[cc]])
@@ -350,49 +405,25 @@ manifestDiff <- function(before, after) {
                 length(relev) > 0L
         }
 
-        # a column change already implies the shape change; saying both is
-        # noise
-        if ("shape" %in% fields && !("columns" %in% fields)) {
-            accounted <- TRUE
-            if (length(counts)) {
+        # Anything else the leaf changed - most often just the fingerprint,
+        # meaning a step overwrote content in place while leaving every name
+        # identical. Alongside a count change, a content-only change is the
+        # count change again and joins the tally.
+        if (!accounted) {
+            if (length(counts) && identical(fields, "fingerprint")) {
                 resized <- resized + 1L
             } else {
-                sb <- modified[[p]]$before$shape
-                sa <- modified[[p]]$after$shape
                 phrases <- c(phrases, sprintf(
-                    "%s %s dimensions %s -> %s",
-                    label, .manifest_display_name(fa[[p]], p),
-                    paste(sb, collapse = " x "), paste(sa, collapse = " x ")
-                ))
-            }
-        }
-
-        if ("n" %in% fields) {
-            accounted <- TRUE
-            if (!length(counts)) {
-                phrases <- c(phrases, sprintf(
-                    "%s %s: %s -> %s", label,
+                    "%s %s modified (%s)", label,
                     .manifest_display_name(fa[[p]], p),
-                    modified[[p]]$before$n, modified[[p]]$after$n
+                    paste(fields, collapse = ", ")
                 ))
             }
-        }
-
-        # Anything else the leaf changed - most often just the fingerprint,
-        # meaning a step overwrote content in place while leaving every shape
-        # and name identical.
-        if (!accounted) {
-            rest <- setdiff(fields, c("shape", "n"))
-            phrases <- c(phrases, sprintf(
-                "%s %s modified (%s)", label,
-                .manifest_display_name(fa[[p]], p),
-                paste(rest, collapse = ", ")
-            ))
         }
     }
 
     if (resized > 0L) {
-        phrases <- c(phrases, sprintf("%d objects resized", resized))
+        phrases <- c(phrases, sprintf("%d objects changed", resized))
     }
 
     phrases

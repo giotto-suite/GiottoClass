@@ -4,8 +4,8 @@ NULL
 #### giotto object manifest ####
 
 # The manifest is a machine-readable inventory of what a giotto object
-# contains: a nested description mirroring the object's own
-# spat_unit x feat_type nesting, with cheap per-leaf statistics and optional
+# contains: one record per subobject, grouped by slot, keyed by the accessor
+# arguments that retrieve it, with cheap per-record statistics and optional
 # content fingerprints. It is DERIVED, never stored, so it cannot go stale.
 #
 # DESIGN RULE (do not relax): every accessor call is individually guarded. An
@@ -13,14 +13,50 @@ NULL
 # `warnings`; it never errors the manifest. A state report that crashes is
 # worse than no state report.
 
-.MANIFEST_SCHEMA_VERSION <- "0.1.0"
+.MANIFEST_SCHEMA_VERSION <- "0.2.0"
 
-# slots inventoried, in emission order. `cell_ID`/`feat_ID` are handled
-# separately since they hold plain character vectors rather than subobjects.
+# Slots read through as.list(giotto), and the slot each subobject class is
+# filed under. as.list() flattens the slot nesting away, so the slot is
+# recovered from the class. `cell_ID`/`feat_ID` are handled separately since
+# they hold plain character vectors rather than subobjects. `multiomics` is
+# left out: it holds bare results, not subobjects.
 .MANIFEST_SLOTS <- c(
     "expression", "spatial_locs", "spatial_info", "feat_info",
     "cell_metadata", "feat_metadata", "dimension_reduction", "nn_network",
-    "spatial_network", "spatial_grid", "spatial_enrichment", "images"
+    "spatial_network", "spatial_enrichment", "images"
+)
+
+# checked in order with inherits(), so a subclass resolves to its parent's slot
+.MANIFEST_CLASS_SLOT <- c(
+    exprObj = "expression",
+    spatLocsObj = "spatial_locs",
+    giottoPolygon = "spatial_info",
+    giottoPoints = "feat_info",
+    giottoBinPoints = "feat_info",
+    cellMetaObj = "cell_metadata",
+    featMetaObj = "feat_metadata",
+    dimObj = "dimension_reduction",
+    nnNetObj = "nn_network",
+    spatialNetworkObj = "spatial_network",
+    spatEnrObj = "spatial_enrichment",
+    giottoLargeImage = "images",
+    giottoImage = "images"
+)
+
+# Record fields that identify an item within its slot, in identity order.
+# These are the accessor arguments, so a record's `keys` map straight to a
+# getter call. A record carries only the ones that apply to it.
+.MANIFEST_KEY_FIELDS <- c(
+    "reduction", "spat_unit", "feat_type", "reduction_method", "nn_type",
+    "name"
+)
+
+# Slots whose getter takes fewer keys than the subobject's tags. A polygon
+# set's spat_unit is its name (getPolygonInfo() takes `name`), and a point
+# set's name is its feat_type (getFeatureInfo() takes `feat_type`).
+.MANIFEST_SLOT_KEYS <- list(
+    spatial_info = "name",
+    feat_info = "feat_type"
 )
 
 ## guarded field collection ####
@@ -97,9 +133,10 @@ NULL
 #' @title Giotto object manifest
 #' @description
 #' Machine-readable inventory of a `giotto` object's contents: identity,
-#' a summary block, and a slot-by-slot description nested the same way the
-#' object is (`spat_unit` x `feat_type` x name). Derived on demand, so it is
-#' always current.
+#' a summary block, and one record per subobject grouped by slot. Each record
+#' carries the keys that retrieve it under `keys` (`spat_unit`, `feat_type`,
+#' `name`, and `reduction` / `reduction_method` / `nn_type` where they apply),
+#' named as the accessor arguments. Derived on demand, so it is always current.
 #'
 #' Companion to [objHistory()], which records *why* an object looks the way it
 #' does. The manifest records *what it is*. Object state is never reconstructed
@@ -108,22 +145,20 @@ NULL
 #' Every accessor used is individually guarded: a field that cannot be read
 #' becomes `NULL` and its path is listed in the `warnings` element, rather than
 #' erroring the manifest.
+#' Every record carries a content fingerprint from [fingerprint_data()]. That
+#' is what detects a step that overwrites a matrix or a column in place, which
+#' leaves every name unchanged. In-memory content is hashed in full;
+#' disk-backed payloads are identified from their handle; images from their
+#' pixels at display resolution. Geometry is stride-sampled, with coordinates
+#' compared to 12 significant digits so a shapefile round trip does not read
+#' as a change. Sizes and extents are not reported: on a disk-backed object
+#' they cost a scan.
 #' @param x giotto object
-#' @param level character. `"summary"` (default) omits fingerprints.
-#' `"full"` adds them, which is what detects an operation that overwrites a
-#' matrix or a column in place - a change `"summary"` cannot see, since the
-#' shape and the names are identical on both sides. Sampled fingerprints cost
-#' little: they read a fixed number of values regardless of object size.
-#' @param fingerprint character. `"none"`, `"sample"` (hash of a deterministic
-#' fixed-stride slice of the content) or `"full"` (hash of all content).
-#' Defaults to `"none"` for `level = "summary"` and `"sample"` for
-#' `level = "full"`. Overrides `level` when given.
-#'
-#' Numbers are compared to 12 significant digits, so a fingerprint identifies
-#' values rather than bit patterns. Re-reading a saved object does not report a
-#' change when a storage format has dropped the last bits of a double, and by
-#' the same token a difference below roughly 1e-12 relative is not reported at
-#' all.
+#' @param levels logical. Whether to count the distinct values of each
+#' metadata column (`n_levels`), which shows a clustering result with its number
+#' of groups. Off by default: it is a full pass over every column, and the
+#' per-column fingerprints already detect the change. The id column is never
+#' counted.
 #' @param ... additional params (none implemented)
 #' @returns list of class `gmanifest`
 #' @examples
@@ -133,23 +168,14 @@ NULL
 #' names(m$slots)
 #' @export
 setMethod("objManifest", signature("giotto"), function(
-        x, level = c("summary", "full"), fingerprint = NULL, ...) {
-    level <- match.arg(level)
-    if (is.null(fingerprint)) {
-        fingerprint <- if (level == "full") "sample" else "none"
-    }
-    fingerprint <- match.arg(fingerprint, c("none", "sample", "full"))
-
+        x, levels = FALSE, ...) {
+    checkmate::assert_flag(levels)
     wenv <- .manifest_wenv()
 
-    slots <- list()
-    for (sn in .MANIFEST_SLOTS) {
-        node <- .mfield(wenv, sn, function() slot(x, sn))
-        walked <- .manifest_walk(node, fp = fingerprint, wenv = wenv, path = sn)
-        if (!is.null(walked) && length(walked) > 0L) slots[[sn]] <- walked
-    }
+    slots <- .manifest_items(x, wenv = wenv, levels = levels)
+    slots <- c(slots, .manifest_recipes(x, wenv = wenv))
 
-    ids <- .manifest_ids(x, wenv)
+    ids <- .manifest_ids(x, wenv = wenv)
     if (length(ids) > 0L) slots <- c(slots, ids)
 
     out <- list(
@@ -177,9 +203,20 @@ setMethod("objManifest", signature("giotto"), function(
         # package_version objects do not survive JSON encoding
         lapply(v, function(i) if (is.null(i)) NULL else as.character(i))
     })
+    # class of the backing source, NULL when in memory. Only the class: a
+    # source's path is machine-specific and would read as a change on move
+    source <- if (!methods::.hasSlot(x, "source")) {
+        NULL
+    } else {
+        .mfield(wenv, "object.source", function() {
+            s <- slot(x, "source")
+            if (is.null(s)) NULL else class(s)[[1]]
+        })
+    }
     list(
         uid = .mfield(wenv, "object.uid", function() .gobject_uid(x)),
         class = class(x)[[1]],
+        source = source,
         versions = versions[order(names(versions %||% list()))]
     )
 }
@@ -232,51 +269,123 @@ setMethod("objManifest", signature("giotto"), function(
 }
 
 # cell_ID / feat_ID hold plain character vectors keyed by spat_unit /
-# feat_type. Report counts rather than the ids themselves: an id vector is
-# millions of entries wide and defeats the point of a manifest.
+# feat_type. Fingerprint the ids rather than listing them: an id vector is
+# millions of entries wide and defeats the point of a manifest. Their counts
+# are in the summary block.
 .manifest_ids <- function(x, wenv) {
+    key <- c(cell_ID = "spat_unit", feat_ID = "feat_type")
     out <- list()
-    for (sn in c("cell_ID", "feat_ID")) {
+    for (sn in names(key)) {
         node <- .mfield(wenv, sn, function() slot(x, sn))
         if (is.null(node) || length(node) == 0L) next
-        entry <- lapply(node, function(ids) list(n = length(ids)))
-        out[[sn]] <- entry[order(names(entry))]
+        nms <- sort(names(node))
+        out[[sn]] <- lapply(nms, function(nm) {
+            rec <- list(keys = stats::setNames(list(nm), key[[sn]]))
+            rec$fingerprint <- .manifest_fp(node[[nm]], wenv,
+                paste(sn, nm, sep = "."))
+            rec
+        })
     }
     out
 }
 
-## walker ####
+## items ####
 
-# Recurse the plain nested lists of a slot and describe each subobject leaf.
-# Nesting keys are the list names, so the manifest mirrors the object exactly
-# without hardcoding any slot's nesting depth. Names are sorted at every level
-# so output is canonical and diffs are stable.
-.manifest_walk <- function(node, fp, wenv, path) {
-    if (is.null(node)) return(NULL)
-    if (isS4(node) || is.object(node)) {
-        return(.manifest_leaf(node, fp = fp, wenv = wenv, path = path))
-    }
-    if (is.list(node)) {
-        nms <- names(node)
-        if (is.null(nms)) return(NULL)
-        out <- list()
-        for (nm in nms) {
-            child <- .manifest_walk(
-                node[[nm]], fp = fp, wenv = wenv,
-                path = paste(path, nm, sep = ".")
-            )
-            if (!is.null(child)) out[[nm]] <- child
-        }
-        if (length(out) == 0L) return(NULL)
-        return(out[order(names(out))])
+# Move a described record's key fields under `keys`, in identity order. What is
+# in `keys` is the identity and nothing else is, so a reader needs no list of
+# which fields identify and which describe. Done once here rather than in every
+# leaf describer.
+.manifest_keyed <- function(rec, slot = NULL) {
+    kf <- intersect(.MANIFEST_KEY_FIELDS, names(rec))
+    keys <- rec[intersect(.MANIFEST_SLOT_KEYS[[slot %||% ""]] %||% kf, kf)]
+    # an empty named list, so a record with no keys still serializes `{}`
+    if (!length(keys)) keys <- stats::setNames(list(), character(0))
+    c(list(keys = keys), rec[setdiff(names(rec), kf)])
+}
+
+# Identity of a record within the manifest: its slot, then its keys. Used to
+# sort records, to prefix the warnings they raise, and by manifestDiff() to
+# pair records across manifests.
+.manifest_item_id <- function(slot, rec) {
+    keys <- vapply(rec$keys, function(k) paste(k, collapse = ","),
+        character(1L))
+    paste(c(slot, keys), collapse = ".")
+}
+
+.manifest_class_slot <- function(obj) {
+    for (cl in names(.MANIFEST_CLASS_SLOT)) {
+        if (inherits(obj, cl)) return(.MANIFEST_CLASS_SLOT[[cl]])
     }
     NULL
+}
+
+# One record per subobject from as.list(giotto), grouped by slot. Each record
+# is described with a private warnings collector first, since its identity is
+# only known once its key fields have been read; the warnings are then filed
+# under that identity. Records are sorted by identity so output is canonical
+# and diffs are stable.
+.manifest_items <- function(x, wenv, levels = FALSE) {
+    objs <- .mfield(wenv, "slots", function() {
+        as.list(x, slots = .MANIFEST_SLOTS)
+    })
+    out <- list()
+    ids <- list()
+    for (obj in objs) {
+        sn <- .manifest_class_slot(obj)
+        if (is.null(sn)) {
+            .mwarn(wenv, paste0("slots.", class(obj)[[1L]]))
+            next
+        }
+        iw <- .manifest_wenv()
+        rec <- .manifest_keyed(
+            .manifest_leaf(obj, wenv = iw, path = "", levels = levels),
+            slot = sn
+        )
+        id <- .manifest_item_id(sn, rec)
+        for (w in iw$warnings) .mwarn(wenv, paste0(id, w))
+        out[[sn]] <- c(out[[sn]], list(rec))
+        ids[[sn]] <- c(ids[[sn]], id)
+    }
+    for (sn in names(out)) {
+        # Keys come from each subobject's own tags. Two subobjects tagged
+        # alike - one placed by direct slot assignment under a key its tags do
+        # not match - share an identity, which no getter call can tell apart.
+        for (id in unique(ids[[sn]][duplicated(ids[[sn]])])) {
+            .mwarn(wenv, paste0(id, " (duplicate identity)"))
+        }
+        out[[sn]] <- out[[sn]][order(ids[[sn]])]
+    }
+    out
+}
+
+# Views and spaces are recipes, not data: plain-list steps kept by name in
+# `@view` / `@spaces`. as.list(giotto) does not return them, and their name
+# is the list key rather than a tag on the object, so they are read here by key.
+.manifest_recipes <- function(x, wenv) {
+    out <- list()
+    for (sn in c("view", "spaces")) {
+        if (!methods::.hasSlot(x, sn)) next
+        lst <- .mfield(wenv, sn, function() slot(x, sn))
+        if (length(lst) == 0L) next
+        recs <- lapply(sort(names(lst)), function(nm) {
+            iw <- .manifest_wenv()
+            rec <- .manifest_keyed(c(
+                list(name = nm),
+                .manifest_leaf(lst[[nm]], wenv = iw, path = "")
+            ))
+            id <- .manifest_item_id(sn, rec)
+            for (w in iw$warnings) .mwarn(wenv, paste0(id, w))
+            rec
+        })
+        out[[sn]] <- recs
+    }
+    out
 }
 
 ## leaf describers ####
 
 # Internal generic. One method per subobject family; every field guarded.
-setGeneric(".manifest_leaf", function(x, fp, wenv, path, ...) {
+setGeneric(".manifest_leaf", function(x, wenv, path, ...) {
     standardGeneric(".manifest_leaf")
 })
 
@@ -310,169 +419,156 @@ setGeneric(".manifest_leaf", function(x, fp, wenv, path, ...) {
     out[!vapply(out, .is_blank, logical(1L))]
 }
 
-# describe the columns of a data.table: name, type, and distinct count so
-# that an added cluster column is visible with its number of levels
-.manifest_columns <- function(dt) {
+# Metadata id columns: one distinct value per row, so a level count says
+# nothing and is the costliest to take.
+.MANIFEST_ID_COLS <- c("cell_ID", "feat_ID")
+
+# describe the columns of a data.table: name, type and fingerprint. Each column
+# carries its own fingerprint, so a diff can name the column an edit touched
+# instead of only the table. With `levels`, also its distinct count, so an
+# added cluster column is visible with its number of groups; that is a full
+# pass over every column, so it is opt-in.
+.manifest_columns <- function(dt, wenv = NULL, path = "", levels = FALSE) {
     if (!inherits(dt, "data.frame")) return(NULL)
-    lapply(colnames(dt), function(cn) {
-        col <- dt[[cn]]
+    # entries are keyed by column name; data.table allows a name twice, which
+    # would collide, so a repeat is renamed and reported rather than dropped
+    cns <- colnames(dt)
+    if (anyDuplicated(cns)) {
+        .mwarn(wenv, paste(path, "columns (duplicate column names)", sep = "."))
+    }
+    out <- lapply(seq_along(cns), function(i) {
+        cn <- cns[[i]]
+        col <- dt[[i]]
         entry <- list(
-            name = cn,
             dtype = class(col)[[1]],
-            n_levels = tryCatch(
-                as.integer(data.table::uniqueN(col)),
-                error = function(e) NULL
-            )
+            n_levels = if (!isTRUE(levels) || cn %in% .MANIFEST_ID_COLS) {
+                NULL
+            } else {
+                tryCatch(
+                    as.integer(data.table::uniqueN(col)),
+                    error = function(e) NULL
+                )
+            }
         )
         if (is.factor(col)) entry$levels <- as.integer(nlevels(col))
+        entry$fingerprint <- .manifest_fp(col, wenv,
+            paste(path, "columns", cn, sep = "."))
         entry[!vapply(entry, is.null, logical(1L))]
     })
+    stats::setNames(out, make.unique(cns))
 }
 
-.manifest_ext <- function(x) {
-    e <- ext(x)
-    v <- as.vector(e)
-    list(xmin = v[["xmin"]], xmax = v[["xmax"]],
-        ymin = v[["ymin"]], ymax = v[["ymax"]])
-}
-
-setMethod(".manifest_leaf", signature("ANY"), function(x, fp, wenv, path, ...) {
-    list(
-        class = class(x)[[1]],
-        length = .mfield(wenv, paste(path, "length", sep = "."),
-            function() length(x))
-    )
+setMethod(".manifest_leaf", signature("ANY"), function(x, wenv, path, ...) {
+    list(class = class(x)[[1]])
 })
 
 setMethod(".manifest_leaf", signature("exprData"), function(
-        x, fp, wenv, path, ...) {
+        x, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     m <- g("exprMat", function() slot(x, "exprMat"))
 
     out <- .manifest_leaf_base(x, wenv, path)
-    out$shape <- g("shape", function() as.integer(dim(x)))
     out$dtype <- if (is.null(m)) NULL else class(m)[[1]]
-    if (!is.null(m) && inherits(m, "sparseMatrix")) {
-        nnz <- g("nnz", function() length(slot(m, "x")))
-        out$sparse <- TRUE
-        out$nnz <- nnz
-        out$density <- g("density", function() {
-            d <- dim(m)
-            round(nnz / (as.numeric(d[[1L]]) * as.numeric(d[[2L]])), 6L)
-        })
-    } else if (!is.null(m)) {
-        out$sparse <- FALSE
-    }
-    out$fingerprint <- .manifest_fp(x, fp, wenv, path)
+    out$fingerprint <- .manifest_fp(m, wenv, path)
     out
 })
 
 setMethod(".manifest_leaf", signature("metaData"), function(
-        x, fp, wenv, path, ...) {
+        x, wenv, path, levels = FALSE, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     dt <- g("metaDT", function() slot(x, "metaDT"))
 
     out <- .manifest_leaf_base(x, wenv, path)
-    out$shape <- g("shape", function() as.integer(dim(x)))
-    out$columns <- g("columns", function() .manifest_columns(dt))
+    out$columns <- g("columns", function() {
+        .manifest_columns(dt, wenv = wenv, path = path, levels = levels)
+    })
     out$col_desc <- g("col_desc", function() {
         cd <- slot(x, "col_desc")
         if (length(cd) == 1L && is.na(cd)) NULL else as.list(cd)
     })
-    out$fingerprint <- .manifest_fp(x, fp, wenv, path)
+    # The table's fingerprint is built from its columns' rather than hashing
+    # the table again. A table that is not in memory is identified whole.
+    out$fingerprint <- if (inherits(dt, "data.frame")) {
+        fps <- lapply(out$columns, `[[`, "fingerprint")
+        if (any(vapply(fps, is.null, logical(1L)))) {
+            NULL
+        } else {
+            .fp_hash(unname(fps))
+        }
+    } else {
+        .manifest_fp(dt, wenv, path)
+    }
     out
 })
 
 setMethod(".manifest_leaf", signature("coordDataDT"), function(
-        x, fp, wenv, path, ...) {
+        x, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     dt <- g("coordinates", function() slot(x, "coordinates"))
 
     out <- .manifest_leaf_base(x, wenv, path)
-    out$shape <- g("shape", function() as.integer(dim(x)))
     out$columns <- if (is.null(dt)) NULL else colnames(dt)
-    out$bbox <- g("bbox", function() .manifest_ext(x))
-    out$fingerprint <- .manifest_fp(x, fp, wenv, path)
+    out$fingerprint <- .manifest_fp(dt, wenv, path)
     out
 })
 
 setMethod(".manifest_leaf", signature("dimObj"), function(
-        x, fp, wenv, path, ...) {
+        x, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     out <- .manifest_leaf_base(x, wenv, path)
     out$reduction <- g("reduction", function() slot(x, "reduction"))
     out$reduction_method <- g("reduction_method",
         function() slot(x, "reduction_method"))
-    out$shape <- g("shape", function() {
-        as.integer(dim(slot(x, "coordinates")))
-    })
-    out$fingerprint <- .manifest_fp(x, fp, wenv, path)
+    # the component names, which is how a reader learns how many there are
+    out$columns <- g("columns", function() colnames(slot(x, "coordinates")))
+    out$fingerprint <- .manifest_fp(slot(x, "coordinates"), wenv, path)
     out
 })
 
 setMethod(".manifest_leaf", signature("nnData"), function(
-        x, fp, wenv, path, ...) {
+        x, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     net <- g("network", function() slot(x, "network"))
 
     out <- .manifest_leaf_base(x, wenv, path)
     out$nn_type <- g("nn_type", function() slot(x, "nn_type"))
-    out$n_nodes <- g("n_nodes", function() .net_n_nodes(net))
-    out$n_edges <- g("n_edges", function() .net_n_edges(net))
     out$directed <- g("directed", function() {
         if (inherits(net, "igraph")) igraph::is_directed(net) else NULL
     })
-    out$fingerprint <- .manifest_fp(x, fp, wenv, path)
+    out$fingerprint <- .manifest_fp(net, wenv, path)
     out
 })
 
 setMethod(".manifest_leaf", signature("spatNetData"), function(
-        x, fp, wenv, path, ...) {
+        x, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     net <- g("network", function() slot(x, "network"))
 
     out <- .manifest_leaf_base(x, wenv, path)
     out$method <- g("method", function() slot(x, "method"))
-    out$n_nodes <- g("n_nodes", function() .net_n_nodes(net))
-    out$n_edges <- g("n_edges", function() .net_n_edges(net))
     out$has_unfiltered <- !is.null(
         tryCatch(slot(x, "unfiltered"), error = function(e) NULL)
     )
-    out$fingerprint <- .manifest_fp(x, fp, wenv, path)
+    out$fingerprint <- .manifest_fp(net, wenv, path)
     out
 })
 
 setMethod(".manifest_leaf", signature("enrData"), function(
-        x, fp, wenv, path, ...) {
+        x, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     dt <- g("enrichDT", function() slot(x, "enrichDT"))
 
     out <- .manifest_leaf_base(x, wenv, path)
     out$method <- g("method", function() slot(x, "method"))
-    out$shape <- g("shape", function() as.integer(dim(x)))
     out$columns <- if (is.null(dt)) NULL else colnames(dt)
-    out$fingerprint <- .manifest_fp(x, fp, wenv, path)
-    out
-})
-
-setMethod(".manifest_leaf", signature("spatGridData"), function(
-        x, fp, wenv, path, ...) {
-    g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
-    dt <- g("gridDT", function() slot(x, "gridDT"))
-
-    out <- .manifest_leaf_base(x, wenv, path)
-    out$method <- g("method", function() slot(x, "method"))
-    out$shape <- if (is.null(dt)) NULL else as.integer(dim(dt))
-    out$fingerprint <- .manifest_fp(x, fp, wenv, path)
+    out$fingerprint <- .manifest_fp(dt, wenv, path)
     out
 })
 
 setMethod(".manifest_leaf", signature("terraVectData"), function(
-        x, fp, wenv, path, ...) {
+        x, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     out <- .manifest_leaf_base(x, wenv, path)
-    out$n_geom <- g("n_geom", function() as.integer(nrow(x)))
-    out$extent <- g("extent", function() .manifest_ext(x))
     out$crs <- g("crs", function() {
         cr <- terra::crs(slot(x, "spatVector"), describe = TRUE)$name
         if (is.na(cr)) NULL else cr
@@ -487,7 +583,7 @@ setMethod(".manifest_leaf", signature("terraVectData"), function(
             if (is.null(o)) NULL else names(o)
         })
     }
-    out$fingerprint <- .manifest_fp(x, fp, wenv, path)
+    out$fingerprint <- .manifest_fp(slot(x, "spatVector"), wenv, path)
     out
 })
 
@@ -498,37 +594,26 @@ setMethod(".manifest_leaf", signature("terraVectData"), function(
 # `@spatial` and its detections in `@counts`, which is why the generic
 # terra describer does not fit it.
 setMethod(".manifest_leaf", signature("giottoBinPoints"), function(
-        x, fp, wenv, path, ...) {
+        x, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     out <- .manifest_leaf_base(x, wenv, path)
-    out$n_geom <- g("n_geom", function() {
-        as.integer(nrow(slot(x, "spatial")))
-    })
-    # one record per (bin, feature) detection, which is what nrow() reports
-    out$n_records <- g("n_records", function() as.integer(nrow(x)))
-    out$n_bins <- g("n_bins", function() {
-        if (.gbp_is_backed(x)) as.integer(nrow(x)) else length(slot(x, "bid"))
-    })
-    out$n_feats <- g("n_feats", function() length(slot(x, "fid")))
     out$compact <- g("compact", function() isTRUE(slot(x, "compact")))
-    out$extent <- g("extent", function() .manifest_ext(x))
-    out$fingerprint <- .manifest_fp(x, fp, wenv, path)
+    # detections in @counts, geometry in @spatial, and the bin / feature ids
+    out$fingerprint <- .manifest_fp(list(
+        counts = slot(x, "counts"), spatial = slot(x, "spatial"),
+        bid = slot(x, "bid"), fid = slot(x, "fid")
+    ), wenv, path)
     out
 })
 
 setMethod(".manifest_leaf", signature("giottoLargeImage"), function(
-        x, fp, wenv, path, ...) {
+        x, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     r <- g("raster_object", function() slot(x, "raster_object"))
 
     out <- list(
         class = class(x)[[1]],
         name = g("name", function() objName(x)),
-        dims = g("dims", function() {
-            as.integer(c(terra::ncol(r), terra::nrow(r), terra::nlyr(r)))
-        }),
-        extent = g("extent", function() .manifest_ext(x)),
-        resolution = g("resolution", function() slot(x, "resolution")),
         file_path = g("file_path", function() {
             p <- slot(x, "file_path")
             if (is.null(p) || all(is.na(p))) NULL else as.character(p)
@@ -537,17 +622,44 @@ setMethod(".manifest_leaf", signature("giottoLargeImage"), function(
             any(nzchar(terra::sources(r)))
         })
     )
-    if (inherits(x, "giottoAffineImage")) {
-        out$affine <- g("affine", function() {
-            as.numeric(slot(slot(x, "affine"), "affine"))
-        })
+    # an affine image's placement lives in @affine, not in the raster
+    payload <- if (inherits(x, "giottoAffineImage")) {
+        list(raster = r, affine = slot(x, "affine"))
+    } else {
+        r
     }
-    out$fingerprint <- .manifest_fp(x, fp, wenv, path)
+    out$fingerprint <- .manifest_fp(payload, wenv, path)
     out[!vapply(out, is.null, logical(1L))]
 })
 
+# a recipe: its kind is the class, its content the step list
+.manifest_leaf_recipe <- function(x, wenv, path) {
+    g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
+    steps <- g("steps", function() slot(x, "steps"))
+    out <- list(
+        class = class(x)[[1]],
+        n_steps = length(steps),
+        step_types = g("step_types", function() {
+            unique(vapply(steps, function(s) s$type %||% NA_character_,
+                character(1L)))
+        })
+    )
+    out$fingerprint <- .manifest_fp(steps, wenv, path)
+    out[!vapply(out, is.null, logical(1L))]
+}
+
+setMethod(".manifest_leaf", signature("giottoView"), function(
+        x, wenv, path, ...) {
+    .manifest_leaf_recipe(x, wenv, path)
+})
+
+setMethod(".manifest_leaf", signature("giottoSpace"), function(
+        x, wenv, path, ...) {
+    .manifest_leaf_recipe(x, wenv, path)
+})
+
 setMethod(".manifest_leaf", signature("giottoImage"), function(
-        x, fp, wenv, path, ...) {
+        x, wenv, path, ...) {
     g <- function(nm, f) .mfield(wenv, paste(path, nm, sep = "."), f)
     out <- list(
         class = class(x)[[1]],
@@ -563,7 +675,8 @@ setMethod(".manifest_leaf", signature("giottoImage"), function(
 
 ## fingerprints ####
 
-# Number of values sampled per object at fingerprint = "sample".
+# Geometries sampled per SpatVector, the one in-memory payload that is
+# stride-sampled rather than hashed in full.
 .MANIFEST_FP_N <- 1000L
 
 # Significant digits a fingerprint compares numbers to.
@@ -581,175 +694,65 @@ setMethod(".manifest_leaf", signature("giottoImage"), function(
     if (is.double(x)) signif(x, .MANIFEST_FP_DIGITS) else x
 }
 
-# Deterministic fixed-stride slice. No RNG, so the user's seed is untouched
-# and two calls on unchanged content always agree.
-.fp_stride <- function(v, k = .MANIFEST_FP_N) {
-    n <- length(v)
-    if (n == 0L) return(v)
-    if (is.infinite(k) || n <= k) return(v)
-    v[unique(as.integer(seq.int(1L, n, length.out = k)))]
-}
-
-# A digest of NULL is a constant, so hashing "nothing" would make every
+# Every fingerprint is hashed here, so the algorithm is chosen in one place:
+# fingerprints compare only when they come from the same hash.
+# A hash of NULL is a constant, so hashing "nothing" would make every
 # object whose content could not be read look identical to every other - and
 # permanently unchanged. Absent is reported as absent.
 .fp_hash <- function(parts) {
     if (is.null(parts)) return(NULL)
-    digest::digest(parts, algo = "xxhash64")
+    rlang::hash(parts)
 }
 
-.fp_n <- function(fp) if (identical(fp, "full")) Inf else .MANIFEST_FP_N
-
-# Sampled values of an in-memory matrix. NULL for representations that would
-# have to be materialised (DelayedArray, BPCells, on-disk stores) - those
-# degrade to no fingerprint rather than pulling gigabytes through memory.
-#
-# Never flattens the matrix first: `as.vector()` on a dense expression matrix
-# copies the whole thing to sample a thousand values from it. Matrix classes
-# expose their values as an `x` slot (sparse and dense alike); a base matrix
-# is indexed linearly at the strided positions.
-.fp_matrix_sample <- function(m, k) {
-    if (methods::.hasSlot(m, "x")) {
-        return(.fp_num(.fp_stride(slot(m, "x"), k)))
-    }
-    if (is.matrix(m)) {
-        n <- length(m)
-        if (n == 0L) return(numeric(0))
-        idx <- if (is.infinite(k) || n <= k) {
-            seq_len(n)
-        } else {
-            unique(as.integer(seq.int(1L, n, length.out = k)))
-        }
-        return(.fp_num(m[idx]))
-    }
-    NULL
-}
-
-.fp_dt <- function(dt, k) {
-    if (!inherits(dt, "data.frame")) return(NULL)
-    list(
-        cols = colnames(dt),
-        n = nrow(dt),
-        # stride first: converting a whole column to sample a thousandth of it
-        # is work thrown away
-        vals = lapply(dt, function(col) {
-            as.character(.fp_num(.fp_stride(col, k)))
-        })
-    )
-}
-
-# Dispatcher used by the leaf describers. Never errors: a missing {digest},
-# an unfingerprintable representation, or an accessor failure all degrade to
-# NULL with the path recorded in `warnings`.
-.manifest_fp <- function(x, fp, wenv, path) {
-    if (identical(fp, "none")) return(NULL)
-    if (!requireNamespace("digest", quietly = TRUE)) {
-        .mwarn(wenv, paste(path, "fingerprint", sep = "."))
-        return(NULL)
-    }
+# Used by the leaf describers, each handing over its payload. Never errors:
+# an unrecognised payload (fingerprint_data()'s ANY method errors) or an
+# accessor failure degrades to NULL with the path recorded in `warnings`.
+# `payload` is a promise, so a slot read that fails is caught here too.
+.manifest_fp <- function(payload, wenv, path) {
     .mfield(wenv, paste(path, "fingerprint", sep = "."), function() {
-        .fingerprint(x, fp = fp)
+        fingerprint_data(payload)
     })
 }
 
-setGeneric(".fingerprint", function(x, fp, ...) standardGeneric(".fingerprint"))
+#' @name fingerprint_data
+#' @title Fingerprint a subobject payload
+#' @description
+#' Extension point for [objManifest()]. Returns a short hash identifying the
+#' content of a payload - the matrix, table, graph or store a subobject holds -
+#' so that a manifest diff can tell when it changed.
+#'
+#' GiottoClass hashes the in-memory payloads it knows itself. A package that
+#' provides another payload representation, such as a disk-backed store,
+#' registers a method here. The method must answer from handle state (ids,
+#' recorded operations, schema, file metadata) and must never read the data:
+#' an identical handle has to mean identical content, and a changed one
+#' different content. Never hash the payload object directly. Objects holding
+#' external pointers or environments hash by instance, not by content.
+#'
+#' A method returns a hash or errors; it never returns `NULL` for a payload it
+#' was given. The default method errors, and the manifest reports that as an
+#' unreadable fingerprint in its `warnings` rather than treating the payload
+#' as unchanged. Only an absent payload (`NULL`) has no fingerprint.
+#' @param x a payload
+#' @param ... additional params (none implemented)
+#' @returns character scalar, or `NULL` for a `NULL` payload
+#' @keywords internal
+#' @export
+NULL
 
-setMethod(".fingerprint", signature("ANY"), function(x, fp, ...) NULL)
-
-setMethod(".fingerprint", signature("exprData"), function(x, fp, ...) {
-    m <- slot(x, "exprMat")
-    vals <- .fp_matrix_sample(m, .fp_n(fp))
-    if (is.null(vals)) return(NULL)
-    .fp_hash(list(
-        dim = dim(m),
-        rn = rownames(m), cn = colnames(m),
-        vals = vals
-    ))
+# A payload nothing recognises is an error, which .manifest_fp() turns into a
+# warning: a missing fingerprint must be visible, never read as "unchanged".
+#' @rdname fingerprint_data
+#' @export
+setMethod("fingerprint_data", signature("ANY"), function(x, ...) {
+    stop("[fingerprint_data] no method for payload class ", class(x)[[1L]],
+        call. = FALSE)
 })
 
-setMethod(".fingerprint", signature("metaData"), function(x, fp, ...) {
-    .fp_hash(.fp_dt(slot(x, "metaDT"), .fp_n(fp)))
-})
-
-setMethod(".fingerprint", signature("coordDataDT"), function(x, fp, ...) {
-    .fp_hash(.fp_dt(slot(x, "coordinates"), .fp_n(fp)))
-})
-
-setMethod(".fingerprint", signature("dimObj"), function(x, fp, ...) {
-    co <- slot(x, "coordinates")
-    .fp_hash(list(
-        dim = dim(co),
-        rn = rownames(co), cn = colnames(co),
-        vals = .fp_matrix_sample(co, .fp_n(fp))
-    ))
-})
-
-# A network slot holds an igraph since 0.6.0, but objects saved before the
-# migration still hold a data.table of edges. Both carriers are described the
-# same way, so a migrated object and an unmigrated one do not read as
-# different kinds of thing.
-.net_n_nodes <- function(net) {
-    if (is.null(net)) return(NULL)
-    if (inherits(net, "igraph")) return(as.integer(igraph::vcount(net)))
-    NULL
-}
-
-.net_n_edges <- function(net) {
-    if (is.null(net)) return(NULL)
-    if (inherits(net, "igraph")) return(as.integer(igraph::ecount(net)))
-    if (inherits(net, "data.frame")) return(as.integer(nrow(net)))
-    NULL
-}
-
-.fp_network <- function(net, k) {
-    if (is.null(net)) return(NULL)
-    if (inherits(net, "igraph")) {
-        el <- igraph::as_edgelist(net, names = TRUE)
-        return(list(
-            v = igraph::vcount(net), e = igraph::ecount(net),
-            edges = .fp_stride(apply(el, 1L, paste, collapse = ">"), k)
-        ))
-    }
-    .fp_dt(net, k)
-}
-
-setMethod(".fingerprint", signature("nnData"), function(x, fp, ...) {
-    .fp_hash(.fp_network(slot(x, "network"), .fp_n(fp)))
-})
-
-setMethod(".fingerprint", signature("spatNetData"), function(x, fp, ...) {
-    .fp_hash(.fp_network(slot(x, "network"), .fp_n(fp)))
-})
-
-setMethod(".fingerprint", signature("enrData"), function(x, fp, ...) {
-    .fp_hash(.fp_dt(slot(x, "enrichDT"), .fp_n(fp)))
-})
-
-setMethod(".fingerprint", signature("spatGridData"), function(x, fp, ...) {
-    .fp_hash(.fp_dt(slot(x, "gridDT"), .fp_n(fp)))
-})
-
-# terra objects are external pointers and do not hash stably, so hash a
-# canonical extraction instead: geometry is subset FIRST, then materialised,
-# so a 3M-point object never pulls all its coordinates into memory.
-setMethod(".fingerprint", signature("terraVectData"), function(x, fp, ...) {
-    sv <- slot(x, "spatVector")
-    if (is.null(sv)) return(NULL)
-    n <- terra::nrow(sv)
-    k <- .fp_n(fp)
-    idx <- if (is.infinite(k) || n <= k) {
-        seq_len(n)
-    } else {
-        unique(as.integer(seq.int(1L, n, length.out = k)))
-    }
-    sub <- sv[idx]
-    .fp_hash(list(
-        n = n,
-        ext = .fp_num(as.vector(terra::ext(sv))),
-        crds = .fp_canonical_crds(sub),
-        att = lapply(terra::values(sub), function(cc) as.character(.fp_num(cc)))
-    ))
-})
+# an absent payload is not an error
+#' @rdname fingerprint_data
+#' @export
+setMethod("fingerprint_data", signature("NULL"), function(x, ...) NULL)
 
 # Coordinates as a canonical multiset: same vertices in the same order
 # regardless of how the geometry happens to be laid out.
@@ -768,49 +771,38 @@ setMethod(".fingerprint", signature("terraVectData"), function(x, fp, ...) {
     cr[order(cr[, 1L], cr[, 2L]), , drop = FALSE]
 }
 
-# The counts table is what changes when a binpoints object is rewritten, and
-# it is already an in-memory data.table - so hash that plus the id vectors and
-# the extent, and leave `@spatial` alone. Materialising the geometry would be
-# the expensive half of the object for no added signal.
-setMethod(".fingerprint", signature("giottoBinPoints"), function(x, fp, ...) {
-    k <- .fp_n(fp)
-    # store-backed counts: their shape and IDs, as for a store-backed exprObj
-    counts <- slot(x, "counts")
-    .fp_hash(list(
-        counts = if (data.table::is.data.table(counts)) {
-            .fp_dt(counts, k)
-        } else {
-            list(dim = dim(counts), rn = rownames(counts))
-        },
-        bid = .fp_stride(slot(x, "bid"), k),
-        fid = .fp_stride(slot(x, "fid"), k),
-        ext = tryCatch(.fp_num(as.vector(ext(x))), error = function(e) NULL)
-    ))
-})
-
-# An image's payload is its file. Hash the source identity rather than the
-# pixels, matching how GiottoDisk hashes a delayed representation.
-setMethod(".fingerprint", signature("giottoLargeImage"), function(x, fp, ...) {
-    r <- slot(x, "raster_object")
-    src <- terra::sources(r)
-    src <- src[nzchar(src)]
-    if (length(src) == 0L) return(NULL)
-    info <- file.info(src)
-    .fp_hash(list(
-        src = src,
-        size = info$size,
-        mtime = as.character(info$mtime),
-        ext = .fp_num(as.vector(terra::ext(r)))
-    ))
-})
-
 ## serialization ####
+
+# Fields the schema types as arrays. R has no scalar type, and objManifest_json()
+# writes with auto_unbox, so a length-1 vector would otherwise come out as a
+# bare value: `"provenance": "cell"` on one object and `["z0", "z1"]` on
+# another. These are kept arrays at any length.
+.MANIFEST_ARRAY_FIELDS <- c(
+    "spat_units", "feat_types", "warnings", "provenance", "columns",
+    "overlaps_computed", "resolution", "file_path", "step_types"
+)
 
 # Explicit schema rule: NA / NaN / Inf are encoded as strings, not as JSON
 # null (jsonlite's default), so a missing value and a not-a-number stay
 # distinguishable on the far side of the contract.
-.manifest_json_prep <- function(x) {
-    if (is.list(x)) return(lapply(x, .manifest_json_prep))
+.manifest_json_prep <- function(x, field = NULL) {
+    if (is.list(x)) {
+        nms <- names(x)
+        out <- lapply(seq_along(x), function(i) {
+            .manifest_json_prep(x[[i]], field = nms[i])
+        })
+        names(out) <- nms
+        return(out)
+    }
+    x <- .manifest_json_value(x)
+    if (!is.null(field) && !is.na(field) && field %in% .MANIFEST_ARRAY_FIELDS &&
+        is.atomic(x)) {
+        x <- I(x)
+    }
+    x
+}
+
+.manifest_json_value <- function(x) {
     if (is.factor(x)) x <- as.character(x)
     if (is.numeric(x)) {
         bad <- !is.finite(x)
@@ -865,32 +857,151 @@ objManifest_json <- function(x, file = NULL, pretty = TRUE, ...) {
     invisible(file)
 }
 
-# count of described leaves under a manifest slot
-.manifest_n_leaves <- function(node) {
-    if (!is.list(node)) return(0L)
-    # `n` rather than `class` identifies the cell_ID / feat_ID leaves
-    if (!is.null(node[["class"]]) || !is.null(node[["n"]])) return(1L)
-    sum(vapply(node, .manifest_n_leaves, integer(1L)))
-}
-
 #' @export
 #' @keywords internal
 print.gmanifest <- function(x, ...) {
-    cat(sprintf("<gmanifest> schema %s\n", x$schema_version))
-    cat(sprintf("  uid: %s\n", x$object$uid %||% "<none>"))
+    # what the object holds, by the keys that retrieve it. Content is left to
+    # manifestDiff(); a hash per record says nothing on its own.
     s <- x$summary
-    cat(sprintf(
-        "  spat_units: %s | feat_types: %s\n",
-        paste(s$spat_units, collapse = ", "),
-        paste(s$feat_types, collapse = ", ")
-    ))
-    for (sn in names(x$slots)) {
-        cat(sprintf("  %s: %d\n", sn, .manifest_n_leaves(x$slots[[sn]])))
+    counts <- function(n) {
+        if (!length(n)) return("none")
+        paste(names(n), unlist(n), collapse = ", ")
+    }
+    cat(sprintf("<gmanifest> schema %s
+", x$schema_version))
+    cat(sprintf("  uid: %s | source: %s
+", x$object$uid %||% "<none>",
+        x$object$source %||% "in memory"))
+    cat(sprintf("  cells: %s | features: %s
+",
+        counts(s$n_cells), counts(s$n_features)))
+    # the id slots are the counts above
+    for (sn in setdiff(names(x$slots), c("cell_ID", "feat_ID"))) {
+        cat(sprintf("  %s\n", sn))
+        for (rec in x$slots[[sn]]) {
+            cat(sprintf("    %s\n", paste(unlist(rec$keys), collapse = " / ")))
+        }
     }
     if (length(x$warnings)) {
-        cat(sprintf(
-            "  unreadable fields: %s\n", paste(x$warnings, collapse = ", ")
-        ))
+        cat(sprintf("  unreadable (%d): %s\n", length(x$warnings),
+            paste(x$warnings, collapse = ", ")))
     }
     invisible(x)
 }
+
+
+# fingerprint_data() methods ####
+
+# Payloads GiottoClass itself understands. Content is hashed from extracted
+# atomic data, never from the payload object: an object holding external
+# pointers or environments hashes by instance (a SpatRaster read twice from one
+# file gives two hashes), and incidental attributes - a data.table key, a
+# Matrix factor cache - would read as content. .fp_hash() uses rlang::hash(),
+# which streams into the hasher without building a serialized copy.
+
+# atomic content hashes in full, names and dimnames included. A list is the
+# hash of its elements' fingerprints, so an element nothing recognises makes
+# the whole list unidentifiable.
+#' @rdname fingerprint_data
+#' @export
+setMethod("fingerprint_data", signature("vector"), function(x, ...) {
+    if (is.atomic(x)) return(.fp_hash(x))
+    if (!is.list(x)) callNextMethod()
+    .fp_hash(list(names = names(x), parts = lapply(x, fingerprint_data)))
+})
+
+# by column, so a data.table key or index does not read as a change
+#' @rdname fingerprint_data
+#' @export
+setMethod("fingerprint_data", signature("data.frame"), function(x, ...) {
+    .fp_hash(list(names = names(x), cols = lapply(x, fingerprint_data)))
+})
+
+# Matrix classes are plain S4 over atomic slots (@x, @i, @p, @Dim, ...), so
+# every slot is hashed except the cached factorizations
+#' @rdname fingerprint_data
+#' @export
+setMethod("fingerprint_data", signature("Matrix"), function(x, ...) {
+    sn <- setdiff(methods::slotNames(x), "factors")
+    .fp_hash(c(
+        list(class = class(x)[[1L]]),
+        stats::setNames(lapply(sn, function(s) slot(x, s)), sn)
+    ))
+})
+
+setOldClass("igraph")
+
+# integer edge list plus attributes; vertex names travel in the attributes
+#' @rdname fingerprint_data
+#' @export
+setMethod("fingerprint_data", signature("igraph"), function(x, ...) {
+    .fp_hash(list(
+        n = igraph::vcount(x),
+        directed = igraph::is_directed(x),
+        edges = igraph::as_edgelist(x, names = FALSE),
+        vattr = igraph::vertex_attr(x),
+        eattr = igraph::edge_attr(x)
+    ))
+})
+
+# Stride-sampled: geometry lives behind a pointer and extracting all of it is
+# the cost this avoids. `k` values are read regardless of size (Inf reads
+# all). Coordinates are compared as a canonical multiset and to 12
+# significant digits, so a shapefile round trip does not read as a change.
+#' @rdname fingerprint_data
+#' @param k numeric. SpatVector only: number of geometries sampled
+#' @export
+setMethod("fingerprint_data", signature("SpatVector"), function(
+        x, k = .MANIFEST_FP_N, ...) {
+    n <- terra::nrow(x)
+    idx <- if (is.infinite(k) || n <= k) {
+        seq_len(n)
+    } else {
+        unique(as.integer(seq.int(1L, n, length.out = k)))
+    }
+    sub <- x[idx]
+    .fp_hash(list(
+        n = n,
+        ext = .fp_num(as.vector(terra::ext(x))),
+        crds = .fp_canonical_crds(sub),
+        att = lapply(terra::values(sub), function(cc) as.character(.fp_num(cc)))
+    ))
+})
+
+# a deferred affine transform: every slot is plain numeric / character, so all
+# of them are hashed (the matrix, its decomposition, and the anchor extent)
+#' @rdname fingerprint_data
+#' @export
+setMethod("fingerprint_data", signature("affine2d"), function(x, ...) {
+    sn <- methods::slotNames(x)
+    .fp_hash(stats::setNames(
+        lapply(sn, function(s) fingerprint_data(slot(x, s))), sn
+    ))
+})
+
+# Pixels at display resolution, plus the placement. Identifying the source file
+# instead gave the same pixels a new fingerprint whenever they moved to a new
+# file - a saveGiotto() export, or the temp file terra spills an arithmetic
+# result to - and none at all to a raster held in memory.
+#
+# method = "display" is what plot() reads: it uses the overviews where a file
+# has them, so a pyramid or COG never reads full-resolution tiles. Its values
+# depend on the format (overview pixels are resampled), so two fingerprints
+# compare only for the same image in the same format; that is the only
+# comparison a diff makes. It can miss a local edit finer than the grid.
+.MANIFEST_FP_RASTER_N <- 10000L
+
+#' @rdname fingerprint_data
+#' @export
+setMethod("fingerprint_data", signature("SpatRaster"), function(x, ...) {
+    d <- terra::spatSample(x, size = .MANIFEST_FP_RASTER_N,
+        method = "display")
+    .fp_hash(list(
+        dim = dim(x),
+        ext = .fp_num(as.vector(terra::ext(x))),
+        crs = terra::crs(x),
+        # layer names are dropped: a re-export renames layers without
+        # touching a pixel
+        vals = unname(terra::values(d, mat = TRUE))
+    ))
+})
