@@ -13,6 +13,8 @@ A method returns a hash or errors; it never returns NULL for a payload it
 was given. The default method errors, and the manifest reports that as an
 unreadable fingerprint in its warnings rather than treating the payload
 as unchanged. Only an absent payload (NULL) has no fingerprint.
+BPCells and HDF5Array matrices are fingerprinted from their handle: the
+delayed operations, and the names and sizes of their backing files.
 A function is fingerprinted by its code. Values a closure captures are not
 seen, so two closures that differ only in a captured value share a
 fingerprint."><meta property="og:description" content="Extension point for objManifest(). Returns a short hash identifying the
@@ -29,6 +31,8 @@ A method returns a hash or errors; it never returns NULL for a payload it
 was given. The default method errors, and the manifest reports that as an
 unreadable fingerprint in its warnings rather than treating the payload
 as unchanged. Only an absent payload (NULL) has no fingerprint.
+BPCells and HDF5Array matrices are fingerprinted from their handle: the
+delayed operations, and the names and sizes of their backing files.
 A function is fingerprinted by its code. Values a closure captures are not
 seen, so two closures that differ only in a captured value share a
 fingerprint."><meta property="og:image" content="https://giotto-suite.github.io/GiottoClass/logo.png"><meta name="robots" content="noindex"></head><body>
@@ -90,7 +94,7 @@ fingerprint."><meta property="og:image" content="https://giotto-suite.github.io/
 
     <a class="navbar-brand me-2" href="../index.html">GiottoClass</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.21</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.7.22</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -139,6 +143,8 @@ external pointers or environments hash by instance, not by content.</p>
 was given. The default method errors, and the manifest reports that as an
 unreadable fingerprint in its <code>warnings</code> rather than treating the payload
 as unchanged. Only an absent payload (<code>NULL</code>) has no fingerprint.</p>
+<p>BPCells and HDF5Array matrices are fingerprinted from their handle: the
+delayed operations, and the names and sizes of their backing files.</p>
 <p>A function is fingerprinted by its code. Values a closure captures are not
 seen, so two closures that differ only in a captured value share a
 fingerprint.</p>

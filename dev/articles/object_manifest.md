@@ -21,7 +21,7 @@ activeSpatUnit(g) <- "aggregate"
 
 objManifest(g)
 #> <gmanifest> schema 0.2.0
-#>   uid: g-20261022201959-41fa471b80ed | source: in memory
+#>   uid: g-20261022202917-405419191f55 | source: in memory
 #>   cells: z0 498, z1 504, aggregate 462 | features: rna 337
 #>   cell_metadata
 #>     aggregate / rna
@@ -238,6 +238,7 @@ How a fingerprint is computed depends on what the subobject holds:
 | polygons and points | a fixed-stride sample of the geometries and their attributes, plus the overall extent |
 | images | the pixels read at display resolution, plus extent |
 | disk-backed stores | the store’s handle: its identity, recorded operations and schema |
+| BPCells and HDF5Array matrices | their delayed operations, and the names and sizes of their backing files |
 | functions | their code; values a closure captures are not seen |
 
 A fingerprint is never a hash of the R object itself. Objects that hold
@@ -293,7 +294,7 @@ str(tail(ghistory_records(g), 1)[[1]], max.level = 1)
 #>  $ step_id  : chr "19_subset"
 #>  $ fn       : chr "subsetGiotto"
 #>  $ params   :List of 12
-#>  $ timestamp: chr "2026-10-22T20:20:06Z"
+#>  $ timestamp: chr "2026-10-22T20:29:24Z"
 #>  $ seed     :List of 2
 #>  $ status   : chr "ok"
 #>  $ error    : NULL

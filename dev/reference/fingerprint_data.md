@@ -21,6 +21,9 @@ as an unreadable fingerprint in its `warnings` rather than treating the
 payload as unchanged. Only an absent payload (`NULL`) has no
 fingerprint.
 
+BPCells and HDF5Array matrices are fingerprinted from their handle: the
+delayed operations, and the names and sizes of their backing files.
+
 A function is fingerprinted by its code. Values a closure captures are
 not seen, so two closures that differ only in a captured value share a
 fingerprint.
