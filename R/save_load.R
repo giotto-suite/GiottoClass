@@ -232,10 +232,7 @@ saveGiotto <- function(
     }
     tryCatch(
         {
-            objManifest_json(
-                gobject,
-                file = file.path(dir, "manifest.json"), level = "full"
-            )
+            objManifest_json(gobject, file = file.path(dir, "manifest.json"))
             objHistory_ndjson(
                 gobject,
                 file = file.path(dir, "history.ndjson")

@@ -3,53 +3,141 @@
 
 g <- GiottoData::loadGiottoMini("visium", verbose = FALSE)
 
+# the one record in `slot` whose key fields match `...`
+.rec <- function(m, slot, ...) {
+    keys <- list(...)
+    hit <- Filter(function(r) {
+        all(vapply(names(keys), function(k) identical(r$keys[[k]], keys[[k]]),
+            logical(1L)))
+    }, m$slots[[slot]])
+    if (length(hit) != 1L) stop("expected one record, found ", length(hit))
+    hit[[1L]]
+}
+
+# values of one key field across a slot's records
+.keyvals <- function(m, slot, field) {
+    unlist(lapply(m$slots[[slot]], function(r) r$keys[[field]]))
+}
+
+.raw <- function(m) {
+    .rec(m, "expression", spat_unit = "cell", feat_type = "rna", name = "raw")
+}
+
 describe("objManifest", {
     m <- objManifest(g)
 
     it("emits the documented top-level shape", {
         expect_s3_class(m, "gmanifest")
-        expect_identical(m$schema_version, "0.1.0")
+        expect_identical(m$schema_version, "0.2.0")
         expect_true(all(c("object", "summary", "slots", "warnings") %in%
             names(m)))
         expect_match(m$generated_by, "^GiottoClass ")
     })
 
-    it("nests slots the way the object nests them", {
+    it("lists one record per subobject, keyed by accessor arguments", {
         expect_true("expression" %in% names(m$slots))
-        expect_named(m$slots$expression, "cell")
-        expect_named(m$slots$expression$cell, "rna")
-        expect_true("raw" %in% names(m$slots$expression$cell$rna))
-        expect_identical(m$slots$expression$cell$rna$raw$class, "exprObj")
+        expect_null(names(m$slots$expression))
+        expect_setequal(
+            .keyvals(m, "expression", "name"), c("raw", "normalized", "scaled")
+        )
+        expect_identical(.raw(m)$class, "exprObj")
     })
 
-    it("reports expression shape as features x cells", {
-        expect_identical(
-            m$slots$expression$cell$rna$raw$shape,
-            as.integer(dim(g))
+    it("carries the extra keys a dim reduction is retrieved by", {
+        pca <- .rec(m, "dimension_reduction", name = "pca")
+        expect_identical(pca$keys$reduction, "cells")
+        expect_identical(pca$keys$reduction_method, "pca")
+        # identity lives in keys and nowhere else
+        expect_null(pca$name)
+        expect_null(pca$spat_unit)
+    })
+
+    it("gives polygons and points only the key their getter takes", {
+        gv <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
+        mv <- objManifest(gv)
+        poly <- mv$slots$spatial_info[[1]]
+        pts <- mv$slots$feat_info[[1]]
+        expect_named(poly$keys, "name")
+        expect_named(pts$keys, "feat_type")
+        expect_s4_class(
+            do.call(getPolygonInfo, c(list(gv), poly$keys,
+                list(return_giottoPolygon = TRUE))),
+            "giottoPolygon"
+        )
+        expect_s4_class(
+            do.call(getFeatureInfo, c(list(gv), pts$keys,
+                list(return_giottoPoints = TRUE))),
+            "giottoPoints"
         )
     })
 
-    it("counts ids rather than listing them", {
-        expect_identical(m$slots$cell_ID$cell$n, length(spatIDs(g)))
-        expect_null(m$slots$cell_ID$cell$ids)
+    it("maps a record's keys straight onto a getter call", {
+        pca <- .rec(m, "dimension_reduction", name = "pca")
+        got <- do.call(getDimReduction,
+            c(list(g), pca$keys, list(output = "dimObj")))
+        expect_s4_class(got, "dimObj")
+        expect_identical(objName(got), "pca")
     })
 
-    it("describes metadata columns with their level counts", {
-        cols <- m$slots$cell_metadata$cell$rna$columns
-        nms <- vapply(cols, function(cc) cc$name, character(1L))
-        expect_true("leiden_clus" %in% nms)
-        lc <- cols[[which(nms == "leiden_clus")]]
+    it("carries no shape or count fields on its records", {
+        # sizes cost a scan on disk-backed payloads; the counts that matter
+        # are in the summary block
+        expect_null(.raw(m)$shape)
+        expect_identical(m$summary$n_cells$cell, length(spatIDs(g)))
+    })
+
+    it("fingerprints ids rather than listing them", {
+        ids <- .rec(objManifest(g), "cell_ID",
+            spat_unit = "cell")
+        expect_type(ids$fingerprint, "character")
+        expect_null(ids$ids)
+    })
+
+    it("names a dim reduction's components", {
+        pca <- .rec(m, "dimension_reduction", name = "pca")
+        expect_identical(pca$columns,
+            colnames(g@dimension_reduction$cells$cell$rna$pca$pca@coordinates))
+    })
+
+    it("counts metadata levels only when asked, and never the id column", {
+        col <- function(mm, nm) {
+            cols <- .rec(mm, "cell_metadata", spat_unit = "cell",
+                feat_type = "rna")$columns
+            cols[[nm]]
+        }
+        expect_null(col(m, "leiden_clus")$n_levels)
+        expect_type(col(m, "leiden_clus")$fingerprint, "character")
+
+        ml <- objManifest(g, levels = TRUE)
         expect_identical(
-            lc$n_levels, length(unique(pDataDT(g)$leiden_clus))
+            col(ml, "leiden_clus")$n_levels,
+            length(unique(pDataDT(g)$leiden_clus))
         )
+        expect_null(col(ml, "cell_ID")$n_levels)
     })
 
-    it("sorts keys at every level so output is canonical", {
+    it("does not read a manifest with level counts as a change", {
+        d <- manifestDiff(m, objManifest(g, levels = TRUE))
+        expect_false(d$changed)
+        expect_identical(d$summary, "no state change")
+    })
+
+    it("sorts slots and records so output is canonical", {
         expect_identical(names(m$slots), sort(names(m$slots)))
-        expect_identical(
-            names(m$slots$expression$cell$rna),
-            sort(names(m$slots$expression$cell$rna))
-        )
+        ids <- vapply(m$slots$expression, function(r) {
+            .manifest_item_id("expression", r)
+        }, character(1L))
+        expect_identical(ids, sort(ids))
+    })
+
+    it("prints each slot's records by their keys, without content", {
+        out <- capture.output(print(m))
+        expect_true("  expression" %in% out)
+        expect_true("    cell / rna / raw" %in% out)
+        # a polygon set's spat_unit and name are the same value
+        expect_true("    cell" %in% out)
+        expect_false("    cell / cell" %in% out)
+        expect_false(any(grepl(.raw(objManifest(g))$fingerprint, out)))
     })
 
     it("reads a clean object without unreadable fields", {
@@ -66,48 +154,39 @@ describe("objManifest", {
 describe("objManifest accessor guarding", {
     it("degrades one field to NULL and records its path", {
         testthat::local_mocked_bindings(
-            .manifest_ext = function(x) stop("accessor exploded")
+            .manifest_columns = function(...) stop("accessor exploded")
         )
         m <- objManifest(g)
-        expect_null(m$slots$spatial_locs$cell$raw$bbox)
-        expect_true("spatial_locs.cell.raw.bbox" %in% m$warnings)
+        meta <- .rec(m, "cell_metadata", spat_unit = "cell", feat_type = "rna")
+        expect_null(meta$columns)
+        expect_true("cell_metadata.cell.rna.columns" %in% m$warnings)
         # and the rest of the manifest is intact
-        expect_identical(m$slots$expression$cell$rna$raw$class, "exprObj")
+        expect_identical(.raw(m)$class, "exprObj")
     })
 })
 
 describe("manifest fingerprints", {
-    it("are absent at summary level and present at full level", {
-        expect_null(objManifest(g)$slots$expression$cell$rna$raw$fingerprint)
-        expect_type(
-            objManifest(g, level = "full")$
-                slots$expression$cell$rna$raw$fingerprint,
-            "character"
-        )
+    it("are always present", {
+        expect_type(.raw(objManifest(g))$fingerprint, "character")
     })
 
     it("are stable across repeated calls", {
         expect_identical(
-            objManifest(g, level = "full")$slots,
-            objManifest(g, level = "full")$slots
+            objManifest(g)$slots,
+            objManifest(g)$slots
         )
     })
 
     it("change when content changes but the shape does not", {
-        before <- objManifest(g, level = "full")
+        before <- objManifest(g)
         g2 <- g
         e <- g2@expression$cell$rna$raw
         e@exprMat[1, 1] <- e@exprMat[1, 1] + 1000
         g2@expression$cell$rna$raw <- e
-        after <- objManifest(g2, level = "full")
+        after <- objManifest(g2)
 
-        expect_identical(
-            before$slots$expression$cell$rna$raw$shape,
-            after$slots$expression$cell$rna$raw$shape
-        )
         expect_false(identical(
-            before$slots$expression$cell$rna$raw$fingerprint,
-            after$slots$expression$cell$rna$raw$fingerprint
+            .raw(before)$fingerprint, .raw(after)$fingerprint
         ))
         expect_match(manifestDiff(before, after)$summary, "fingerprint")
     })
@@ -116,7 +195,7 @@ describe("manifest fingerprints", {
         set.seed(42)
         target <- runif(3)
         set.seed(42)
-        invisible(objManifest(g, level = "full"))
+        invisible(objManifest(g))
         expect_identical(runif(3), target)
     })
 })
@@ -125,10 +204,8 @@ describe("objManifest_json", {
     it("round-trips through JSON", {
         j <- objManifest_json(g)
         back <- jsonlite::fromJSON(j, simplifyVector = FALSE)
-        expect_identical(back$schema_version, "0.1.0")
-        expect_identical(
-            back$slots$expression$cell$rna$raw$class, "exprObj"
-        )
+        expect_identical(back$schema_version, "0.2.0")
+        expect_identical(.raw(back)$class, "exprObj")
     })
 
     it("encodes NA, NaN and Inf as strings rather than null", {
@@ -140,9 +217,45 @@ describe("objManifest_json", {
         expect_identical(prepped$c, 1.5)
     })
 
+    it("writes list-valued fields as arrays at any length", {
+        # auto_unbox turned a length-1 vector into a bare value, so these
+        # changed shape with the data: "cell" here, ["z0", "z1"] there
+        arrays <- function(node, out = list()) {
+            if (!is.list(node)) return(out)
+            for (nm in names(node)) {
+                if (nm %in% GiottoClass:::.MANIFEST_ARRAY_FIELDS &&
+                    !is.null(node[[nm]])) {
+                    out[[length(out) + 1L]] <- list(nm, node[[nm]])
+                }
+            }
+            for (child in node) out <- arrays(child, out)
+            out
+        }
+        gv <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
+        gv <- spatShift(gv, dx = 1, space = "s")
+        for (obj in list(g, gv)) {
+            back <- jsonlite::fromJSON(objManifest_json(obj),
+                simplifyVector = FALSE)
+            found <- arrays(back)
+            expect_gt(length(found), 0L)
+            for (f in found) {
+                # a metadata record's columns is an object keyed by name
+                expect_true(is.list(f[[2]]), info = f[[1]])
+                if (identical(f[[1]], "columns") && !is.null(names(f[[2]]))) {
+                    next
+                }
+                expect_null(names(f[[2]]), info = f[[1]])
+            }
+        }
+        # the single-valued cases that used to unbox
+        back <- jsonlite::fromJSON(objManifest_json(g), simplifyVector = FALSE)
+        expect_identical(back$summary$spat_units, list("cell"))
+        expect_identical(back$warnings, list())
+    })
+
     it("validates against the shipped schema's required fields", {
         schema_path <- system.file(
-            "schema", "giotto-manifest-0.1.0.json",
+            "schema", "giotto-manifest-0.2.0.json",
             package = "GiottoClass"
         )
         skip_if(!nzchar(schema_path))
@@ -162,6 +275,150 @@ describe("object uid", {
     it("survives a copy", {
         g2 <- g
         expect_identical(.gobject_uid(g2), .gobject_uid(g))
+    })
+})
+
+describe("object source", {
+    it("is null for an in-memory object, and stays a key in the JSON", {
+        expect_null(objManifest(g)$object$source)
+        back <- jsonlite::fromJSON(objManifest_json(g), simplifyVector = FALSE)
+        expect_true("source" %in% names(back$object))
+        expect_null(back$object$source)
+    })
+
+    it("reports the class of a backing source", {
+        gb <- g
+        gb@source <- structure(list(), class = c("fakeSource", "list"))
+        expect_identical(objManifest(gb)$object$source, "fakeSource")
+    })
+})
+
+describe("fingerprint_data extension point", {
+    gs <- g
+    e <- gs@expression$cell$rna$raw
+    e@exprMat <- structure(list(), class = "fakeStore")
+    gs@expression$cell$rna$raw <- e
+
+    it("reports an unrecognised payload as unreadable, not unchanged", {
+        m <- objManifest(gs)
+        expect_null(.raw(m)$fingerprint)
+        expect_true("expression.cell.rna.raw.fingerprint" %in% m$warnings)
+    })
+
+    it("uses a method registered for the payload class", {
+        setOldClass("fakeStore")
+        setMethod("fingerprint_data", "fakeStore", function(x, ...) "abc123")
+        on.exit(removeMethod("fingerprint_data", "fakeStore"), add = TRUE)
+
+        m <- objManifest(gs)
+        expect_type(.raw(m)$fingerprint, "character")
+        expect_false("expression.cell.rna.raw.fingerprint" %in% m$warnings)
+    })
+})
+
+describe("metadata column fingerprints", {
+    it("names the column a one-cell edit touched", {
+        # relabelling one cell to an existing cluster moves no level count;
+        # only the column's fingerprint can see it
+        before <- objManifest(g)
+        cm <- getCellMetadata(g, output = "cellMetaObj")
+        lv <- unique(cm[]$leiden_clus)
+        cm[]$leiden_clus[1L] <- setdiff(lv, cm[]$leiden_clus[1L])[[1L]]
+        g2 <- setGiotto(g, cm, verbose = FALSE)
+        d <- manifestDiff(before, objManifest(g2))
+        expect_match(d$summary, "cell metadata changed: leiden_clus")
+        expect_false(grepl("total_expr", d$summary))
+    })
+})
+
+describe("fingerprint_data methods", {
+    it("identifies a sparse matrix by its content, not its object", {
+        e <- g@expression$cell$rna$raw@exprMat
+        rebuilt <- Matrix::Matrix(as.matrix(e), sparse = TRUE)
+        expect_identical(fingerprint_data(e), fingerprint_data(rebuilt))
+        e2 <- e
+        e2@x[1] <- e2@x[1] + 1
+        expect_false(identical(fingerprint_data(e), fingerprint_data(e2)))
+    })
+
+    it("ignores a data.table index but not a value", {
+        dt <- pDataDT(g)
+        d2 <- data.table::copy(dt)
+        data.table::setindex(d2, leiden_clus)
+        expect_identical(fingerprint_data(dt), fingerprint_data(d2))
+        d2[1L, leiden_clus := leiden_clus + 1]
+        expect_false(identical(fingerprint_data(dt), fingerprint_data(d2)))
+    })
+
+    it("follows the pixels, not the file they sit in", {
+        r <- g@images$image@raster_object
+        # the same pixels in another file, as when terra spills a result to a
+        # temp file. INT2U because 255 is GDAL's default no-data value for an
+        # 8-bit TIFF, which would turn this image's alpha band into NaN.
+        spilled <- terra::writeRaster(r, tempfile(fileext = ".tif"),
+            datatype = "INT2U")
+        expect_identical(fingerprint_data(r), fingerprint_data(spilled))
+        renamed <- r
+        names(renamed) <- paste0("band_", seq_len(terra::nlyr(r)))
+        expect_identical(fingerprint_data(r), fingerprint_data(renamed))
+        expect_false(identical(fingerprint_data(r), fingerprint_data(r + 1)))
+    })
+
+    it("sees a change to an affine image's placement", {
+        img <- g@images$image
+        a <- spin(img, 30)
+        leaf <- function(x) {
+            .manifest_leaf(x, wenv = NULL, path = "t")$fingerprint
+        }
+        expect_type(leaf(a), "character")
+        expect_false(identical(leaf(a), leaf(spin(img, 45))))
+        expect_false(identical(leaf(a), leaf(img)))
+    })
+
+    it("gives two handles on one image file the same fingerprint", {
+        r <- g@images$image@raster_object
+        src <- terra::sources(r)[[1L]]
+        skip_if(!nzchar(src))
+        r2 <- suppressWarnings(terra::rast(src))
+        expect_identical(fingerprint_data(r), fingerprint_data(r2))
+    })
+
+    it("does not identify a list holding something it cannot hash", {
+        expect_type(fingerprint_data(list(a = 1, b = list("x", NULL))),
+            "character")
+        expect_error(fingerprint_data(list(new.env())), "no method")
+    })
+
+    it("has no fingerprint only for an absent payload", {
+        expect_null(fingerprint_data(NULL))
+        expect_error(fingerprint_data(new.env()), "no method")
+    })
+})
+
+describe("views and spaces", {
+    gr <- subset(g, nr_feats > 300, view = "qc")
+    gr <- spatShift(gr, dx = 10, space = "shifted")
+    m <- objManifest(gr)
+
+    it("lists each recipe by name with its kind and steps", {
+        v <- .rec(m, "view", name = "qc")
+        expect_identical(v$class, "giottoView")
+        expect_identical(v$n_steps, 1L)
+        expect_identical(v$step_types, "filter")
+        sp <- .rec(m, "spaces", name = "shifted")
+        expect_identical(sp$class, "perSampleSpace")
+        expect_identical(sp$step_types, "transform")
+    })
+
+    it("reports a recipe added, and a step recorded onto it", {
+        d <- manifestDiff(objManifest(g), m)
+        expect_match(d$summary, "view added: qc")
+        expect_match(d$summary, "space added: shifted")
+
+        gr2 <- spin(gr, 30, space = "shifted")
+        d2 <- manifestDiff(m, objManifest(gr2))
+        expect_match(d2$summary, "space shifted modified")
+        expect_false(grepl("view", d2$summary))
     })
 })
 
@@ -251,27 +508,25 @@ describe("save / load sidecars", {
             file.path(saved, "manifest.json"), simplifyVector = FALSE
         )
         expect_identical(sc$object$uid, .gobject_uid(g))
-        expect_identical(
-            sc$slots$expression$cell$rna$raw$shape[[2]], ncol(g)
-        )
+        expect_identical(.raw(sc)$class, "exprObj")
     })
 
     it("preserves the uid and data fingerprints through a round trip", {
         g2 <- loadGiotto(saved, verbose = FALSE)
         expect_identical(.gobject_uid(g2), .gobject_uid(g))
 
-        a <- objManifest(g, level = "full")
-        b <- objManifest(g2, level = "full")
+        a <- objManifest(g)
+        b <- objManifest(g2)
+        expect_identical(.raw(a)$fingerprint, .raw(b)$fingerprint)
+        meta <- function(m) {
+            .rec(m, "cell_metadata", spat_unit = "cell", feat_type = "rna")
+        }
+        expect_identical(meta(a)$fingerprint, meta(b)$fingerprint)
+        # saveGiotto exports images to new files; the pixels are unchanged
         expect_identical(
-            a$slots$expression$cell$rna$raw$fingerprint,
-            b$slots$expression$cell$rna$raw$fingerprint
+            lapply(a$slots$images, `[[`, "fingerprint"),
+            lapply(b$slots$images, `[[`, "fingerprint")
         )
-        expect_identical(
-            a$slots$cell_metadata$cell$rna$fingerprint,
-            b$slots$cell_metadata$cell$rna$fingerprint
-        )
-        # images are deliberately re-fingerprinted: saveGiotto exports them to
-        # new files, so their source identity legitimately changes
     })
 })
 
@@ -281,10 +536,8 @@ describe("network slots", {
         # before that hold an edge data.table. Both must describe the same way
         sn <- g@spatial_network$cell$Delaunay_network
         skip_if(is.null(sn))
-        m <- objManifest(g, level = "full")
-        leaf <- m$slots$spatial_network$cell$Delaunay_network
-        expect_false(is.null(leaf$n_edges))
-        expect_gt(leaf$n_edges, 0L)
+        m <- objManifest(g)
+        leaf <- .rec(m, "spatial_network", name = "Delaunay_network")
         expect_type(leaf$fingerprint, "character")
     })
 
@@ -295,8 +548,7 @@ describe("network slots", {
         nn <- g@nn_network$cell$rna$sNN$sNN.pca
         skip_if(is.null(sn) || is.null(nn))
         expect_false(identical(
-            GiottoClass:::.fingerprint(sn, fp = "sample"),
-            GiottoClass:::.fingerprint(nn, fp = "sample")
+            fingerprint_data(sn@network), fingerprint_data(nn@network)
         ))
     })
 
@@ -304,25 +556,10 @@ describe("network slots", {
         sn <- g@spatial_network$cell$Delaunay_network
         skip_if(is.null(sn))
         sn@network <- NULL
-        expect_null(GiottoClass:::.fingerprint(sn, fp = "sample"))
-    })
-})
-
-describe("fingerprint sampling", {
-    it("samples a dense matrix without copying it", {
-        m <- matrix(seq_len(1e6), nrow = 1000)
-        expect_length(GiottoClass:::.fp_matrix_sample(m, 1000L), 1000L)
-        # Matrix classes expose values through @x, sparse and dense alike
-        mm <- Matrix::Matrix(m[1:50, 1:50])
-        expect_length(GiottoClass:::.fp_matrix_sample(mm, 1000L), 1000L)
-    })
-
-    it("reads a fixed number of values regardless of object size", {
-        small <- Matrix::rsparsematrix(100, 100, density = 0.5)
-        big <- Matrix::rsparsematrix(5000, 5000, density = 0.5)
-        expect_length(GiottoClass:::.fp_matrix_sample(small, 1000L),
-            min(1000L, length(small@x)))
-        expect_length(GiottoClass:::.fp_matrix_sample(big, 1000L), 1000L)
+        w <- .manifest_wenv()
+        leaf <- .manifest_leaf(sn, wenv = w, path = "t")
+        expect_null(leaf$fingerprint)
+        expect_identical(w$warnings, character(0))
     })
 })
 
@@ -336,8 +573,8 @@ describe("summary block", {
 
         m <- objManifest(gv)
         expect_true("z1" %in% m$summary$spat_units)
-        expect_true("z1" %in% names(m$slots$spatial_info))
-        expect_false("z1" %in% names(m$slots$expression))
+        expect_true("z1" %in% .keyvals(m, "spatial_info", "name"))
+        expect_false("z1" %in% .keyvals(m, "expression", "spat_unit"))
     })
 
     it("omits units that hold no ids", {
@@ -359,38 +596,50 @@ describe("giottoBinPoints leaf", {
         createGiottoBinPoints(createExprObj(m), sl)
     }
 
-    it("describes counts, bins, features and extent", {
+    it("describes its keys, form and content", {
         gbp <- make_gbp()
-        leaf <- .manifest_leaf(gbp, fp = "sample", wenv = NULL, path = "t")
+        leaf <- .manifest_leaf(gbp, wenv = NULL, path = "t")
 
         expect_identical(leaf$class, "giottoBinPoints")
-        expect_identical(leaf$n_bins, 50L)
-        expect_identical(leaf$n_feats, 10L)
-        expect_identical(leaf$n_records, as.integer(nrow(gbp)))
         expect_type(leaf$compact, "logical")
-        expect_named(leaf$extent, c("xmin", "xmax", "ymin", "ymax"))
         expect_type(leaf$fingerprint, "character")
     })
 
     it("no longer falls through to the ANY fallback", {
-        leaf <- .manifest_leaf(make_gbp(), fp = "none", wenv = NULL, path = "t")
+        leaf <- .manifest_leaf(make_gbp(), wenv = NULL, path = "t")
         expect_false(identical(names(leaf), c("class", "length")))
     })
 
     it("fingerprints differently when the content differs", {
-        a <- .fingerprint(make_gbp(seed = 1L), fp = "sample")
-        b <- .fingerprint(make_gbp(seed = 2L), fp = "sample")
+        fp <- function(x) {
+            .manifest_leaf(x, wenv = NULL, path = "t")$fingerprint
+        }
+        a <- fp(make_gbp(seed = 1L))
+        b <- fp(make_gbp(seed = 2L))
         expect_type(a, "character")
         expect_false(identical(a, b))
     })
 
     it("is visible to a diff when set on a giotto object", {
         gv <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
-        before <- objManifest(gv, level = "full")
-        gv@feat_info$binpoints <- make_gbp()
-        d <- manifestDiff(before, objManifest(gv, level = "full"))
+        before <- objManifest(gv)
+        # the manifest keys records by their own tags, so the object is
+        # tagged as the slot key it is assigned under
+        gbp <- make_gbp()
+        featType(gbp) <- "binpoints"
+        gv@feat_info$binpoints <- gbp
+        d <- manifestDiff(before, objManifest(gv))
         expect_true(d$changed)
         expect_match(d$summary, "points added: binpoints")
+    })
+
+    it("flags two records sharing an identity and keeps both", {
+        # direct assignment under a key the object's tags do not match
+        gv <- GiottoData::loadGiottoMini("vizgen", verbose = FALSE)
+        gv@feat_info$dup <- gv@feat_info$rna
+        m <- objManifest(gv)
+        expect_true("feat_info.rna (duplicate identity)" %in% m$warnings)
+        expect_length(.manifest_flatten(m$slots["feat_info"]), 2L)
     })
 })
 
@@ -409,7 +658,7 @@ describe("geometry fingerprints", {
         # winding and start vertex normalised. A positional hash called every
         # saved-and-reloaded object modified.
         gp <- make_poly()
-        a <- GiottoClass:::.fingerprint(gp, fp = "sample")
+        a <- fingerprint_data(gp@spatVector)
 
         sv <- gp@spatVector
         gp2 <- gp
@@ -421,17 +670,17 @@ describe("geometry fingerprints", {
                        terra::crds(gp2@spatVector)[, 2]))
         ), "reordering changed the vertex multiset")
 
-        expect_identical(GiottoClass:::.fingerprint(gp2, fp = "sample"), a)
+        expect_identical(fingerprint_data(gp2@spatVector), a)
     })
 
     it("still changes when a vertex actually moves", {
         gp <- make_poly()
-        a <- GiottoClass:::.fingerprint(gp, fp = "sample")
+        a <- fingerprint_data(gp@spatVector)
 
         moved <- terra::shift(gp@spatVector, dx = 0.5)
         gp2 <- gp
         gp2@spatVector <- moved
-        expect_false(identical(GiottoClass:::.fingerprint(gp2, fp = "sample"), a))
+        expect_false(identical(fingerprint_data(gp2@spatVector), a))
     })
 
     it("survives a saveGiotto / loadGiotto round trip", {
@@ -445,65 +694,34 @@ describe("geometry fingerprints", {
             overwrite = TRUE)
         gv2 <- loadGiotto(file.path(td, "obj"), verbose = FALSE)
 
-        a <- objManifest(gv, level = "full")
-        b <- objManifest(gv2, level = "full")
+        a <- objManifest(gv)
+        b <- objManifest(gv2)
         # points as well as polygons: a lossy attribute table is what made
         # feat_info report a change on every save/load
         for (slot_nm in c("spatial_info", "feat_info")) {
-            for (nm in names(a$slots[[slot_nm]])) {
-                expect_identical(
-                    a$slots[[slot_nm]][[nm]]$fingerprint,
-                    b$slots[[slot_nm]][[nm]]$fingerprint
-                )
-            }
+            fps <- function(m) lapply(m$slots[[slot_nm]], `[[`, "fingerprint")
+            expect_gt(length(fps(a)), 0L)
+            expect_identical(fps(a), fps(b))
         }
     })
 })
 
 describe("numeric tolerance", {
-    # Serialization drops the last bits of a double - shapefile DBF stores
-    # numerics as text - and hashing that reported a reloaded object as
-    # modified in the same words as a real edit.
     ulp <- function(x) x + .Machine$double.eps * abs(x)
 
-    it("ignores a one-ulp change in a metadata column", {
-        cm <- GiottoData::loadSubObjectMini("cellMetaObj")
-        cm[]$total_expr <- as.double(seq_len(nrow(cm)))
-        a <- GiottoClass:::.fingerprint(cm, fp = "full")
-
-        cm2 <- cm
-        cm2[]$total_expr <- ulp(cm2[]$total_expr)
-        expect_false(identical(cm[]$total_expr, cm2[]$total_expr))
-        expect_identical(GiottoClass:::.fingerprint(cm2, fp = "full"), a)
+    it("compares in-memory content exactly", {
+        # metadata and matrices round-trip exactly through saveGiotto (RDS),
+        # so they carry no tolerance and a one-ulp change is a change
+        dt <- data.table::data.table(v = as.double(1:10))
+        d2 <- data.table::copy(dt)
+        d2$v <- ulp(d2$v)
+        expect_false(identical(fingerprint_data(dt), fingerprint_data(d2)))
     })
 
-    it("still sees a change of 1e-9 in a metadata column", {
-        cm <- GiottoData::loadSubObjectMini("cellMetaObj")
-        cm[]$total_expr <- as.double(seq_len(nrow(cm)))
-        a <- GiottoClass:::.fingerprint(cm, fp = "full")
-
-        cm2 <- cm
-        cm2[]$total_expr <- cm2[]$total_expr + 1e-9
-        expect_false(identical(GiottoClass:::.fingerprint(cm2, fp = "full"), a))
-    })
-
-    it("applies the same rule to expression values", {
-        ex <- GiottoData::loadSubObjectMini("exprObj")
-        ex[] <- ex[] * 1.0 # ensure double storage
-        a <- GiottoClass:::.fingerprint(ex, fp = "full")
-
-        nudged <- ex
-        nudged[]@x <- ulp(nudged[]@x)
-        expect_identical(GiottoClass:::.fingerprint(nudged, fp = "full"), a)
-
-        changed <- ex
-        changed[]@x <- changed[]@x + 1e-9
-        expect_false(
-            identical(GiottoClass:::.fingerprint(changed, fp = "full"), a)
-        )
-    })
-
-    it("applies the same rule to SpatVector attributes", {
+    it("tolerates the last bits a shapefile drops from geometry attributes", {
+        # Serialization drops the last bits of a double - shapefile DBF stores
+        # numerics as text - and hashing that reported a reloaded object as
+        # modified in the same words as a real edit.
         d <- data.table::data.table(
             poly_ID = rep(c("a", "b"), each = 4L),
             x = c(0, 4, 4, 0, 10, 14, 14, 10),
@@ -511,17 +729,15 @@ describe("numeric tolerance", {
         )
         gp <- createGiottoPolygon(d)
         gp@spatVector$score <- c(1.4511308670043945, 2.5)
-        a <- GiottoClass:::.fingerprint(gp, fp = "full")
+        a <- fingerprint_data(gp@spatVector)
 
         nudged <- gp
         # the exact value DBF returns for that first score
         nudged@spatVector$score <- c(1.451130867004395, 2.5)
-        expect_identical(GiottoClass:::.fingerprint(nudged, fp = "full"), a)
+        expect_identical(fingerprint_data(nudged@spatVector), a)
 
         changed <- gp
         changed@spatVector$score <- c(1.4511308680043945, 2.5)
-        expect_false(
-            identical(GiottoClass:::.fingerprint(changed, fp = "full"), a)
-        )
+        expect_false(identical(fingerprint_data(changed@spatVector), a))
     })
 })

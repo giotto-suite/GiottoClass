@@ -4,27 +4,16 @@
 \alias{objManifest}
 \title{Giotto object manifest}
 \usage{
-\S4method{objManifest}{giotto}(x, level = c("summary", "full"), fingerprint = NULL, ...)
+\S4method{objManifest}{giotto}(x, levels = FALSE, ...)
 }
 \arguments{
 \item{x}{giotto object}
 
-\item{level}{character. \code{"summary"} (default) omits fingerprints.
-\code{"full"} adds them, which is what detects an operation that overwrites a
-matrix or a column in place - a change \code{"summary"} cannot see, since the
-shape and the names are identical on both sides. Sampled fingerprints cost
-little: they read a fixed number of values regardless of object size.}
-
-\item{fingerprint}{character. \code{"none"}, \code{"sample"} (hash of a deterministic
-fixed-stride slice of the content) or \code{"full"} (hash of all content).
-Defaults to \code{"none"} for \code{level = "summary"} and \code{"sample"} for
-\code{level = "full"}. Overrides \code{level} when given.
-
-Numbers are compared to 12 significant digits, so a fingerprint identifies
-values rather than bit patterns. Re-reading a saved object does not report a
-change when a storage format has dropped the last bits of a double, and by
-the same token a difference below roughly 1e-12 relative is not reported at
-all.}
+\item{levels}{logical. Whether to count the distinct values of each
+metadata column (\code{n_levels}), which shows a clustering result with its number
+of groups. Off by default: it is a full pass over every column, and the
+per-column fingerprints already detect the change. The id column is never
+counted.}
 
 \item{...}{additional params (none implemented)}
 }
@@ -33,9 +22,10 @@ list of class \code{gmanifest}
 }
 \description{
 Machine-readable inventory of a \code{giotto} object's contents: identity,
-a summary block, and a slot-by-slot description nested the same way the
-object is (\code{spat_unit} x \code{feat_type} x name). Derived on demand, so it is
-always current.
+a summary block, and one record per subobject grouped by slot. Each record
+carries the keys that retrieve it under \code{keys} (\code{spat_unit}, \code{feat_type},
+\code{name}, and \code{reduction} / \code{reduction_method} / \code{nn_type} where they apply),
+named as the accessor arguments. Derived on demand, so it is always current.
 
 Companion to \code{\link[=objHistory]{objHistory()}}, which records \emph{why} an object looks the way it
 does. The manifest records \emph{what it is}. Object state is never reconstructed
@@ -44,6 +34,14 @@ by replaying history.
 Every accessor used is individually guarded: a field that cannot be read
 becomes \code{NULL} and its path is listed in the \code{warnings} element, rather than
 erroring the manifest.
+Every record carries a content fingerprint from \code{\link[=fingerprint_data]{fingerprint_data()}}. That
+is what detects a step that overwrites a matrix or a column in place, which
+leaves every name unchanged. In-memory content is hashed in full;
+disk-backed payloads are identified from their handle; images from their
+pixels at display resolution. Geometry is stride-sampled, with coordinates
+compared to 12 significant digits so a shapefile round trip does not read
+as a change. Sizes and extents are not reported: on a disk-backed object
+they cost a scan.
 }
 \examples{
 g <- GiottoData::loadGiottoMini("visium")

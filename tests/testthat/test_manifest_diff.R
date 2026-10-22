@@ -6,7 +6,7 @@
     n_features = list(rna = 50L), uid = "g-test") {
     structure(
         list(
-            schema_version = "0.1.0",
+            schema_version = "0.2.0",
             object = list(uid = uid, class = "giotto"),
             summary = list(n_cells = n_cells, n_features = n_features),
             slots = slots,
@@ -16,37 +16,37 @@
     )
 }
 
-.expr <- function(name, shape = c(50L, 100L), fp = "aaaa") {
-    list(class = "exprObj", name = name, shape = shape, dtype = "dgCMatrix",
-        sparse = TRUE, fingerprint = fp)
+.expr <- function(name, fp = "aaaa") {
+    list(keys = list(spat_unit = "cell", feat_type = "rna", name = name),
+        class = "exprObj", dtype = "dgCMatrix", fingerprint = fp)
 }
 
-.meta <- function(cols, shape = c(100L, length(cols))) {
+.meta <- function(cols) {
     list(
-        class = "cellMetaObj", shape = shape,
-        columns = lapply(names(cols), function(cc) {
-            list(name = cc, dtype = "numeric", n_levels = cols[[cc]])
+        keys = list(spat_unit = "cell", feat_type = "rna"),
+        class = "cellMetaObj",
+        columns = lapply(cols, function(n) {
+            list(dtype = "numeric", n_levels = n)
         })
     )
 }
 
+.ids <- function(fp) {
+    list(cell_ID = list(list(keys = list(spat_unit = "cell"),
+        fingerprint = fp)))
+}
+
 describe("manifestDiff", {
     it("reports no change for identical manifests", {
-        m <- .mf(list(expression = list(cell = list(rna = list(
-            raw = .expr("raw")
-        )))))
+        m <- .mf(list(expression = list(.expr("raw"))))
         d <- manifestDiff(m, m)
         expect_false(d$changed)
         expect_identical(d$summary, "no state change")
     })
 
     it("reports an added leaf by name", {
-        b <- .mf(list(expression = list(cell = list(rna = list(
-            raw = .expr("raw")
-        )))))
-        a <- .mf(list(expression = list(cell = list(rna = list(
-            raw = .expr("raw"), normalized = .expr("normalized")
-        )))))
+        b <- .mf(list(expression = list(.expr("raw"))))
+        a <- .mf(list(expression = list(.expr("raw"), .expr("normalized"))))
         d <- manifestDiff(b, a)
         expect_true(d$changed)
         expect_match(d$summary, "expression added: normalized")
@@ -54,74 +54,58 @@ describe("manifestDiff", {
     })
 
     it("reports a removed leaf", {
-        b <- .mf(list(expression = list(cell = list(rna = list(
-            raw = .expr("raw"), scaled = .expr("scaled")
-        )))))
-        a <- .mf(list(expression = list(cell = list(rna = list(
-            raw = .expr("raw")
-        )))))
+        b <- .mf(list(expression = list(.expr("raw"), .expr("scaled"))))
+        a <- .mf(list(expression = list(.expr("raw"))))
         d <- manifestDiff(b, a)
         expect_match(d$summary, "expression removed: scaled")
         expect_identical(d$detail$removed, "expression.cell.rna.scaled")
     })
 
     it("names a new metadata column with its level count", {
-        b <- .mf(list(cell_metadata = list(cell = list(rna =
-            .meta(list(cell_ID = 100L, total_expr = 100L))))))
-        a <- .mf(list(cell_metadata = list(cell = list(rna =
-            .meta(list(cell_ID = 100L, total_expr = 100L,
-                leiden_clus = 14L))))))
+        b <- .mf(list(cell_metadata = list(
+            .meta(list(cell_ID = 100L, total_expr = 100L))
+        )))
+        a <- .mf(list(cell_metadata = list(
+            .meta(list(cell_ID = 100L, total_expr = 100L, leiden_clus = 14L))
+        )))
         d <- manifestDiff(b, a)
         expect_match(d$summary, "leiden_clus \\(14 levels\\)")
     })
 
-    it("does not repeat the shape change a column change implies", {
-        b <- .mf(list(cell_metadata = list(cell = list(rna =
-            .meta(list(cell_ID = 100L))))))
-        a <- .mf(list(cell_metadata = list(cell = list(rna =
-            .meta(list(cell_ID = 100L, leiden_clus = 14L))))))
-        expect_false(grepl("dimensions", manifestDiff(b, a)$summary))
-    })
-
-    it("states a cell count change once and tallies the resized objects", {
-        leaves <- function(n) list(
-            expression = list(cell = list(rna = list(
-                raw = .expr("raw", c(50L, n)),
-                normalized = .expr("normalized", c(50L, n))
-            ))),
-            spatial_locs = list(cell = list(
-                raw = list(class = "spatLocsObj", shape = c(n, 3L))
-            ))
+    it("states a cell count change once and tallies the changed objects", {
+        leaves <- function(fp) list(
+            expression = list(
+                .expr("raw", fp),
+                .expr("normalized", fp)
+            ),
+            spatial_locs = list(
+                list(keys = list(spat_unit = "cell", name = "raw"),
+                    class = "spatLocsObj", fingerprint = fp)
+            )
         )
         d <- manifestDiff(
-            .mf(leaves(100L), n_cells = list(cell = 100L)),
-            .mf(leaves(40L), n_cells = list(cell = 40L))
+            .mf(leaves("aaaa"), n_cells = list(cell = 100L)),
+            .mf(leaves("bbbb"), n_cells = list(cell = 40L))
         )
         expect_match(d$summary, "cells \\[cell\\]: 100 -> 40")
-        expect_match(d$summary, "3 objects resized")
+        expect_match(d$summary, "3 objects changed")
+        expect_false(grepl("modified", d$summary))
         # the per-leaf detail is still complete
         expect_length(d$detail$modified, 3L)
     })
 
-    it("spells out shape changes when no count changed", {
-        b <- .mf(list(expression = list(cell = list(rna = list(
-            raw = .expr("raw", c(50L, 100L))
-        )))))
-        a <- .mf(list(expression = list(cell = list(rna = list(
-            raw = .expr("raw", c(20L, 100L))
-        )))))
-        expect_match(
-            manifestDiff(b, a)$summary, "dimensions 50 x 100 -> 20 x 100"
-        )
+    it("still names a non-content change alongside a count change", {
+        b <- .mf(list(expression = list(.expr("raw"))),
+            n_cells = list(cell = 100L))
+        a_rec <- .expr("raw", fp = "bbbb")
+        a_rec$dtype <- "parquetExprStore"
+        a <- .mf(list(expression = list(a_rec)), n_cells = list(cell = 40L))
+        expect_match(manifestDiff(b, a)$summary, "raw modified \\(dtype")
     })
 
-    it("detects content changes that leave the shape untouched", {
-        b <- .mf(list(expression = list(cell = list(rna = list(
-            raw = .expr("raw", fp = "aaaa")
-        )))))
-        a <- .mf(list(expression = list(cell = list(rna = list(
-            raw = .expr("raw", fp = "bbbb")
-        )))))
+    it("detects content changes that keep every name", {
+        b <- .mf(list(expression = list(.expr("raw", fp = "aaaa"))))
+        a <- .mf(list(expression = list(.expr("raw", fp = "bbbb"))))
         d <- manifestDiff(b, a)
         expect_true(d$changed)
         expect_match(d$summary, "modified \\(fingerprint\\)")
@@ -141,34 +125,33 @@ describe("manifestDiff", {
         expect_match(manifestDiff(m, NULL)$summary, "object removed")
     })
 
-    it("keeps id-slot counts out of the resize tally when nothing else moved", {
-        b <- .mf(list(cell_ID = list(cell = list(n = 100L))),
-            n_cells = list(cell = 100L))
-        a <- .mf(list(cell_ID = list(cell = list(n = 40L))),
-            n_cells = list(cell = 40L))
+    it("states the count once when only the ids moved", {
+        b <- .mf(.ids("aaaa"), n_cells = list(cell = 100L))
+        a <- .mf(.ids("bbbb"), n_cells = list(cell = 40L))
         d <- manifestDiff(b, a)
         expect_match(d$summary, "cells \\[cell\\]: 100 -> 40")
     })
 
-    it("does not mistake the slots list itself for a leaf", {
-        # `slots$n` partial-matches `nn_network`, which once collapsed every
-        # manifest to a single unnamed leaf and reported "no state change"
-        # for a subset that dropped 84% of the cells
-        m <- .mf(list(nn_network = list(cell = list(rna = list(sNN = list(
-            sNN.pca = list(class = "nnNetObj", n_nodes = 100L, n_edges = 300L)
-        ))))))
+    it("keys a record by its slot and identity fields", {
+        m <- .mf(list(nn_network = list(list(
+            keys = list(spat_unit = "cell", feat_type = "rna",
+                nn_type = "sNN", name = "sNN.pca"),
+            class = "nnNetObj"
+        ))))
         flat <- .manifest_flatten(m$slots)
         expect_named(flat, "nn_network.cell.rna.sNN.sNN.pca")
     })
 
     it("never reports 'no state change' for a leaf it marked modified", {
         # a re-clustering rewrites an existing column in place: same column
-        # set, same shape, different values. The leaf was modified, so the
+        # set, different values. The leaf was modified, so the
         # sentence must say so.
-        b <- .mf(list(cell_metadata = list(cell = list(rna =
-            .meta(list(cell_ID = 100L, leiden_clus = 5L))))))
-        a <- .mf(list(cell_metadata = list(cell = list(rna =
-            .meta(list(cell_ID = 100L, leiden_clus = 14L))))))
+        b <- .mf(list(cell_metadata = list(
+            .meta(list(cell_ID = 100L, leiden_clus = 5L))
+        )))
+        a <- .mf(list(cell_metadata = list(
+            .meta(list(cell_ID = 100L, leiden_clus = 14L))
+        )))
         d <- manifestDiff(b, a)
         expect_true(d$changed)
         expect_false(identical(d$summary, "no state change"))
@@ -177,49 +160,73 @@ describe("manifestDiff", {
 
     it("does not treat a reordered column list as a change", {
         cols <- function(order) {
-            list(class = "cellMetaObj", shape = c(100L, 2L),
-                columns = lapply(order, function(cc) {
-                    list(name = cc, dtype = "numeric", n_levels = 5L)
-                }))
+            list(keys = list(spat_unit = "cell", feat_type = "rna"),
+                class = "cellMetaObj",
+                columns = stats::setNames(lapply(order, function(cc) {
+                    list(dtype = "numeric", n_levels = 5L)
+                }), order))
         }
-        b <- .mf(list(cell_metadata = list(cell = list(rna = cols(c("a", "b"))))))
-        a <- .mf(list(cell_metadata = list(cell = list(rna = cols(c("b", "a"))))))
+        b <- .mf(list(cell_metadata = list(cols(c("a", "b")))))
+        a <- .mf(list(cell_metadata = list(cols(c("b", "a")))))
         expect_false(manifestDiff(b, a)$changed)
     })
 
     it("reports a content-only change on any leaf type", {
-        leaf <- function(fp) list(class = "spatialNetworkObj",
-            name = "Delaunay_network", method = "deldir",
-            n_edges = 1400L, fingerprint = fp)
+        leaf <- function(fp) list(
+            keys = list(spat_unit = "cell", name = "Delaunay_network"),
+            class = "spatialNetworkObj", method = "deldir", fingerprint = fp)
         d <- manifestDiff(
-            .mf(list(spatial_network = list(cell = list(
-                Delaunay_network = leaf("aaaa"))))),
-            .mf(list(spatial_network = list(cell = list(
-                Delaunay_network = leaf("bbbb")))))
+            .mf(list(spatial_network = list(leaf("aaaa")))),
+            .mf(list(spatial_network = list(leaf("bbbb"))))
         )
         expect_match(d$summary, "modified \\(fingerprint\\)")
     })
 
-    it("keeps the resize tally free of spurious extra phrases", {
-        leaves <- function(n) list(expression = list(cell = list(rna = list(
-            raw = .expr("raw", c(50L, n))))))
+    it("keeps the tally free of spurious extra phrases", {
+        leaves <- function(fp) list(expression = list(.expr("raw", fp)))
         d <- manifestDiff(
-            .mf(leaves(100L), n_cells = list(cell = 100L)),
-            .mf(leaves(40L), n_cells = list(cell = 40L))
+            .mf(leaves("aaaa"), n_cells = list(cell = 100L)),
+            .mf(leaves("bbbb"), n_cells = list(cell = 40L))
         )
-        expect_match(d$summary, "1 objects resized")
+        expect_match(d$summary, "1 objects changed")
         expect_false(grepl("modified \\(\\)", d$summary))
     })
 })
 
+describe("records the diff cannot see into", {
+    nofp <- function() list(cell_metadata = list(list(
+        keys = list(spat_unit = "cell", feat_type = "rna"),
+        class = "cellMetaObj"
+    )))
+
+    it("does not claim no change for a record with no fingerprint", {
+        m <- .mf(nofp())
+        d <- manifestDiff(m, m)
+        expect_false(d$changed)
+        expect_identical(d$summary, "no detected change (1 item unfingerprinted)")
+        expect_identical(d$detail$unfingerprinted, "cell_metadata.cell.rna")
+    })
+
+})
+
 describe("level counts in the sentence", {
+    # the row count comes from the summary block, as it does for a real
+    # manifest
     .meta_n <- function(cols, nrow) {
-        list(class = "cellMetaObj", shape = c(nrow, length(cols)),
-            columns = lapply(names(cols), function(cc) {
-                list(name = cc, dtype = "numeric", n_levels = cols[[cc]])
-            }))
+        structure(list(keys = list(spat_unit = "cell", feat_type = "rna"),
+            class = "cellMetaObj",
+            columns = lapply(cols, function(n) {
+                list(dtype = "numeric", n_levels = n)
+            })), nrow = nrow)
     }
-    wrap <- function(leaf) .mf(list(cell_metadata = list(cell = list(rna = leaf))))
+    wrap <- function(leaf) {
+        .mf(list(cell_metadata = list(unclass_nrow(leaf))),
+            n_cells = list(cell = attr(leaf, "nrow")))
+    }
+    unclass_nrow <- function(leaf) {
+        attr(leaf, "nrow") <- NULL
+        leaf
+    }
 
     it("keeps the count for a categorical column", {
         d <- manifestDiff(
@@ -259,30 +266,29 @@ describe("level counts in the sentence", {
 
 describe("display names", {
     it("does not truncate a leaf name that contains a dot", {
-        # nn_network paths end ".sNN.sNN.pca", so splitting on the last dot
+        # nn_network ids end ".sNN.sNN.pca", so splitting on the last dot
         # reported an sNN.pca network as "pca"
-        leaf <- function(fp) list(class = "nnNetObj", name = "sNN.pca",
-            nn_type = "sNN", n_edges = 100L, fingerprint = fp)
-        wrap <- function(l) .mf(list(nn_network = list(cell = list(rna = list(
-            sNN = list(sNN.pca = l))))))
+        leaf <- function(fp) list(
+            keys = list(spat_unit = "cell", feat_type = "rna",
+                nn_type = "sNN", name = "sNN.pca"),
+            class = "nnNetObj", fingerprint = fp)
+        wrap <- function(l) .mf(list(nn_network = list(l)))
         d <- manifestDiff(wrap(leaf("aaaa")), wrap(leaf("bbbb")))
         expect_match(d$summary, "sNN\\.pca modified")
     })
 
-    it("names an added leaf by the key it sits under", {
-        after <- .mf(list(expression = list(cell = list(rna = list(
-            raw = .expr("raw"), pearson.resid = .expr("pearson.resid")
-        )))))
-        before <- .mf(list(expression = list(cell = list(rna = list(
-            raw = .expr("raw")
-        )))))
+    it("names an added leaf by its name", {
+        after <- .mf(list(expression = list(
+            .expr("raw"), .expr("pearson.resid")
+        )))
+        before <- .mf(list(expression = list(.expr("raw"))))
         expect_match(manifestDiff(before, after)$summary,
             "expression added: pearson\\.resid")
     })
 
-    it("falls back to the path when a leaf carries no name", {
-        b <- .mf(list(cell_ID = list(cell = list(n = 100L))))
-        a <- .mf(list(cell_ID = list(cell = list(n = 40L))))
+    it("falls back to the last key when a leaf carries no name", {
+        b <- .mf(.ids("aaaa"))
+        a <- .mf(.ids("bbbb"))
         expect_match(manifestDiff(b, a)$summary, "cell IDs cell")
     })
 })
