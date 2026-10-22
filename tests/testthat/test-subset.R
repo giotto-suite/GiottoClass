@@ -241,3 +241,26 @@ test_that("giottoPolygon subset by cell ID keeps the kept polygons' overlaps", {
 
 
 # subsetGiottoSubcellular ####
+
+test_that("subsetGiotto leaves feature types it does not subset untouched", {
+    rlang::local_options(lifecycle_verbosity = "quiet")
+    set.seed(1)
+    pts <- data.frame(
+        x = runif(200), y = runif(200),
+        feat_ID = sample(c(paste0("g", 1:5), paste0("NegControlProbe_", 1:2)),
+            200, replace = TRUE)
+    )
+    gpts <- createGiottoPoints(pts,
+        feat_type = c("rna", "NegControlProbe"),
+        split_keyword = list("NegControlProbe")
+    )
+    g2 <- setGiotto(giotto(), gpts, verbose = FALSE)
+
+    sub_g <- subsetGiotto(g2, feat_type = "rna", feat_ids = c("g1", "g2"))
+
+    expect_setequal(featIDs(sub_g[["feat_info", "rna"]][[1]]), c("g1", "g2"))
+    expect_identical(
+        sub_g[["feat_info", "NegControlProbe"]][[1]],
+        g2[["feat_info", "NegControlProbe"]][[1]]
+    )
+})

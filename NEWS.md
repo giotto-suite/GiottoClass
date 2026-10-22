@@ -1,3 +1,15 @@
+# GiottoClass 0.7.19
+
+## bug fixes
+
+- `subsetGiotto()` (and `filterGiotto()`, which calls it) no longer replaces
+  the points of feature types it does not subset. Each one received the
+  points of the feature type before it, so after the default
+  `feat_type = "rna"` an object's control-probe and codeword points were the
+  `rna` points. Affects every object with more than one points feature type,
+  in memory or disk-backed, since 0.5.1; re-run from before the subset to
+  recover them.
+
 # GiottoClass 0.7.18
 
 ## bug fixes
