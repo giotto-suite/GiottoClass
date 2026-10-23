@@ -3647,6 +3647,14 @@ spatValues <- function(gobject,
         }
         present
     }
+    # Name the pulled values in the progress message; long lists truncate.
+    .feat_label <- function(present) {
+        n <- length(present)
+        lab <- paste(sprintf("'%s'", utils::head(present, 3L)),
+            collapse = ", ")
+        if (n > 3L) lab <- sprintf("%s (+%d more)", lab, n - 3L)
+        lab
+    }
 
     check_expr <- function(vals) { # %%%%%%%%%%%%%%%%%%%%% EXPR %%%%%%
         if (!is.null(vals)) {
@@ -3676,8 +3684,8 @@ spatValues <- function(gobject,
         vmsg(
             .v = verbose,
             sprintf(
-                "Getting values from [%s][%s][%s] expression",
-                spatUnit(e), featType(e), objName(e)
+                "Getting %s from [%s][%s][%s] expression",
+                .feat_label(present), spatUnit(e), featType(e), objName(e)
             )
         )
         return(vals)
@@ -3705,8 +3713,8 @@ spatValues <- function(gobject,
         vmsg(
             .v = verbose,
             sprintf(
-                "Getting values from [%s][%s] cell metadata",
-                spatUnit(cx), featType(cx)
+                "Getting %s from [%s][%s] cell metadata",
+                .feat_label(present), spatUnit(cx), featType(cx)
             )
         )
         return(vals)
@@ -3737,8 +3745,8 @@ spatValues <- function(gobject,
         vmsg(
             .v = verbose,
             sprintf(
-                "Getting values from [%s][%s] spatial locations",
-                spatUnit(sl), objName(sl)
+                "Getting %s from [%s][%s] spatial locations",
+                .feat_label(present), spatUnit(sl), objName(sl)
             )
         )
         return(vals)
@@ -3765,8 +3773,9 @@ spatValues <- function(gobject,
         vmsg(
             .v = verbose,
             sprintf(
-                "Getting values from [%s][%s][%s] spatial enrichment",
-                spatUnit(enr), featType(enr), objName(enr)
+                "Getting %s from [%s][%s][%s] spatial enrichment",
+                .feat_label(present), spatUnit(enr), featType(enr),
+                objName(enr)
             )
         )
         return(vals)
@@ -3797,8 +3806,8 @@ spatValues <- function(gobject,
         vmsg(
             .v = verbose,
             sprintf(
-                "Getting values from [%s][%s][%s][%s] dim reduction",
-                spatUnit(dr), featType(dr),
+                "Getting %s from [%s][%s][%s][%s] dim reduction",
+                .feat_label(present), spatUnit(dr), featType(dr),
                 dr@reduction_method, objName(dr)
             )
         )
@@ -3826,8 +3835,8 @@ spatValues <- function(gobject,
         vmsg(
             .v = verbose,
             sprintf(
-                "Getting values from [%s] polygon info",
-                spatUnit(p)
+                "Getting %s from [%s] polygon info",
+                .feat_label(present), spatUnit(p)
             )
         )
         return(vals[, unique(c("cell_ID", present)), with = FALSE])
