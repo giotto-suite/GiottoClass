@@ -1200,6 +1200,27 @@ edge_distances <- function(x, y, x_node_ids = NULL) {
 #'   * **top_shared:** keep this number of the top shared neighbours,
 #'   irrespective of minimum_shared setting
 #'
+#' @section Recorded inputs:
+#' A stored network records the matrix it was searched on in
+#' `@misc$nn_input`, so a later step can check that a graph it reuses was
+#' built from the same input. The name alone cannot say: `kNN.pca` is built
+#' from *some* PCA, with *some* dimensions. The record holds:
+#'   * **dim_reduction_to_use**, **dim_reduction_name:** the reduction
+#'   searched, or `NULL` when the network was built from expression values.
+#'   * **dimensions_to_use:** the dimensions actually used, after dropping
+#'   any the reduction does not have.
+#'   * **expression_values**, **feats_to_use:** set instead when
+#'   `dim_reduction_to_use = NULL`. `feats_to_use` is the features used, or
+#'   `NULL` for all of them.
+#'   * **k:** neighbours searched per cell, after capping at the number of
+#'   cells minus one.
+#'   * **engine**, **ef**, **distance:** the search backend; `ef` is `NULL`
+#'   unless `engine = "hnsw"`.
+#'
+#' Under `keep_knn = TRUE` the kNN stored alongside an sNN carries the same
+#' record, since both come from one search. Networks created before the
+#' record existed have no `nn_input`.
+#'
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
@@ -1267,6 +1288,18 @@ createNearestNetwork <- function(
             name = dim_reduction_name, output = "dimObj"
         )
         provenance <- prov(dim_obj)
+        dim_size <- dim(dim_obj[])
+        dims_used <- if (is.null(dimensions_to_use)) {
+            seq_len(dim_size[[2L]])
+        } else {
+            dimensions_to_use[dimensions_to_use %in% seq_len(dim_size[[2L]])]
+        }
+        nn_input <- .nn_input_record(
+            dim_reduction_to_use = dim_reduction_to_use,
+            dim_reduction_name = dim_reduction_name,
+            dimensions_to_use = dims_used,
+            n_obs = dim_size[[1L]], k = k, engine = engine, ef = ef, ...
+        )
 
         # An sNN is a transform of a kNN, and the kNN is the expensive half.
         # It used to be computed here, used once and dropped, which left
@@ -1276,14 +1309,11 @@ createNearestNetwork <- function(
         # embedding and the partition demonstrably rest on one graph rather
         # than on two that happen to agree.
         if (type == "sNN" && keep_knn) {
-            coords <- dim_obj[]
-            if (!is.null(dimensions_to_use)) {
-                du <- dimensions_to_use[
-                    dimensions_to_use %in% seq_len(ncol(coords))
-                ]
-                coords <- coords[, du, drop = FALSE]
-            }
-            knn_obj <- .nn_search(coords, k = k, engine = engine, ef = ef)
+            coords <- dim_obj[][, dims_used, drop = FALSE]
+            # `...` reaches the search here as it does on the other branch,
+            # so e.g. an hnsw `distance` means the same for kNN and sNN.
+            knn_obj <- .nn_search(coords, k = k, engine = engine, ef = ef,
+                ...)
             nn_igraph <- createNetwork(coords, param,
                 node_ids = rownames(coords), nn_network = knn_obj,
                 verbose = verbose, ...
@@ -1296,7 +1326,7 @@ createNearestNetwork <- function(
             )
         } else {
             nn_igraph <- createNetwork(dim_obj, param,
-                dimensions_to_use = dimensions_to_use, verbose = verbose, ...
+                dimensions_to_use = dims_used, verbose = verbose, ...
             )
         }
     } else {
@@ -1315,6 +1345,11 @@ createNearestNetwork <- function(
             expr_mat <- expr_mat[rownames(expr_mat) %in% feats_to_use, ]
         }
         matrix_to_use <- t_flex(expr_mat) # cells as rows
+        nn_input <- .nn_input_record(
+            expression_values = expression_values,
+            feats_to_use = if (!is.null(feats_to_use)) rownames(expr_mat),
+            n_obs = nrow(matrix_to_use), k = k, engine = engine, ef = ef, ...
+        )
         nn_igraph <- createNetwork(matrix_to_use, param,
             node_ids = rownames(matrix_to_use), verbose = verbose, ...
         )
@@ -1333,7 +1368,8 @@ createNearestNetwork <- function(
         network = nn_igraph,
         spat_unit = spat_unit,
         feat_type = feat_type,
-        provenance = provenance
+        provenance = provenance,
+        misc = list(nn_input = nn_input)
     )
     nn_names <- names(gobject@nn_network[[spat_unit]][[type]])
     if (name %in% nn_names) {
@@ -1356,7 +1392,8 @@ createNearestNetwork <- function(
                 network = knn_igraph,
                 spat_unit = spat_unit,
                 feat_type = feat_type,
-                provenance = provenance
+                provenance = provenance,
+                misc = list(nn_input = nn_input)
             ),
             spat_unit = spat_unit, feat_type = feat_type,
             nn_type = "kNN", name = knn_name,
@@ -1366,6 +1403,34 @@ createNearestNetwork <- function(
 
     gobject <- update_giotto_params(gobject, description = "_nn_network", toplevel = 1L)
     gobject
+}
+
+# What `createNearestNetwork()` searched, stored on the network as
+# `@misc$nn_input` (see its "Recorded inputs" section). `...` is the dots the
+# search received, read only for hnsw's `distance`; dbscan::kNN() is always
+# euclidean.
+.nn_input_record <- function(dim_reduction_to_use = NULL,
+        dim_reduction_name = NULL, dimensions_to_use = NULL,
+        expression_values = NULL, feats_to_use = NULL,
+        n_obs, k, engine, ef, ...) {
+    distance <- "euclidean"
+    if (identical(engine, "hnsw")) {
+        distance <- match.arg(list(...)[["distance"]] %null% "euclidean",
+            eval(formals(hnswKNN)$distance))
+    }
+    list(
+        dim_reduction_to_use = dim_reduction_to_use,
+        dim_reduction_name = dim_reduction_name,
+        dimensions_to_use = if (!is.null(dimensions_to_use)) {
+            as.integer(dimensions_to_use)
+        },
+        expression_values = expression_values,
+        feats_to_use = feats_to_use,
+        k = min(as.integer(k), as.integer(n_obs) - 1L),
+        engine = engine,
+        ef = if (identical(engine, "hnsw")) ef,
+        distance = distance
+    )
 }
 
 
