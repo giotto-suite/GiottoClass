@@ -122,6 +122,31 @@ For sNN networks two additional parameters can be set:
 irrespective of minimum_shared setting
 }
 }
+\section{Recorded inputs}{
+
+A stored network records the matrix it was searched on in
+\verb{@misc$nn_input}, so a later step can check that a graph it reuses was
+built from the same input. The name alone cannot say: \code{kNN.pca} is built
+from \emph{some} PCA, with \emph{some} dimensions. The record holds:
+\itemize{
+\item \strong{dim_reduction_to_use}, \strong{dim_reduction_name:} the reduction
+searched, or \code{NULL} when the network was built from expression values.
+\item \strong{dimensions_to_use:} the dimensions actually used, after dropping
+any the reduction does not have.
+\item \strong{expression_values}, \strong{feats_to_use:} set instead when
+\code{dim_reduction_to_use = NULL}. \code{feats_to_use} is the features used, or
+\code{NULL} for all of them.
+\item \strong{k:} neighbours searched per cell, after capping at the number of
+cells minus one.
+\item \strong{engine}, \strong{ef}, \strong{distance:} the search backend; \code{ef} is \code{NULL}
+unless \code{engine = "hnsw"}.
+}
+
+Under \code{keep_knn = TRUE} the kNN stored alongside an sNN carries the same
+record, since both come from one search. Networks created before the
+record existed have no \code{nn_input}.
+}
+
 \examples{
 g <- GiottoData::loadGiottoMini("visium")
 

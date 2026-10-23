@@ -1,3 +1,22 @@
+# GiottoClass 0.7.26
+
+## new
+
+- `createNearestNetwork()` records what it searched in the stored network's
+  `@misc$nn_input`: the reduction and its name, the dimensions actually used
+  (or the expression values and features), `k`, and the engine, `ef` and
+  distance. A step that reuses a stored graph, such as `runUMAP()`, can now
+  check that it was built from the same input; the name `kNN.pca` alone says
+  only that it came from some PCA. The kNN kept with an sNN carries the same
+  record. See the "Recorded inputs" section of `?createNearestNetwork`.
+
+## bug fixes
+
+- `createNearestNetwork(type = "sNN")` now passes `...` to the search behind
+  the kNN it keeps (`keep_knn = TRUE`), as the other paths already did. Under
+  `engine = "hnsw"`, `distance = "cosine"` used to be dropped there, so the
+  kept kNN, and the sNN built from it, were searched with euclidean distance.
+
 # GiottoClass 0.7.25
 
 ## new

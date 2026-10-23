@@ -597,6 +597,82 @@ describe("Network Creation Functions", {
     })
 
 
+    describe("createNearestNetwork() records its inputs", {
+
+        nn_input <- function(gobject, nn_type, name) {
+            getNearestNetwork(gobject, nn_type = nn_type, name = name,
+                output = "nnNetObj")@misc$nn_input
+        }
+
+        it("records the reduction, dimensions and search", {
+            g@nn_network <- NULL
+            res <- createNearestNetwork(g, type = "kNN", k = 12,
+                dimensions_to_use = 2:6, verbose = FALSE)
+            rec <- nn_input(res, "kNN", "kNN.pca")
+
+            expect_identical(rec$dim_reduction_to_use, "pca")
+            expect_identical(rec$dim_reduction_name, "pca")
+            expect_identical(rec$dimensions_to_use, 2:6)
+            expect_identical(rec$k, 12L)
+            expect_identical(rec$engine, "dbscan")
+            expect_null(rec$ef)
+            expect_identical(rec$distance, "euclidean")
+            expect_null(rec$expression_values)
+            expect_null(rec$feats_to_use)
+        })
+
+        it("records the dimensions used, not the ones asked for", {
+            g@nn_network <- NULL
+            n_dims <- ncol(getDimReduction(g, reduction_method = "pca",
+                name = "pca", output = "dimObj")[])
+            res <- createNearestNetwork(g, type = "kNN", k = 5,
+                dimensions_to_use = c(1:3, n_dims + 1L), verbose = FALSE)
+            expect_identical(nn_input(res, "kNN", "kNN.pca")$dimensions_to_use,
+                1:3)
+        })
+
+        it("gives an sNN and the kNN kept with it the same record", {
+            g@nn_network <- NULL
+            res <- createNearestNetwork(g, type = "sNN", k = 8,
+                dimensions_to_use = 1:5, verbose = FALSE)
+            rec_snn <- nn_input(res, "sNN", "sNN.pca")
+            expect_identical(rec_snn$dimensions_to_use, 1:5)
+            expect_identical(rec_snn$k, 8L)
+            expect_identical(nn_input(res, "kNN", "kNN.pca"), rec_snn)
+        })
+
+        it("records expression input when built without a reduction", {
+            g@nn_network <- NULL
+            # createNetwork() has no method for Matrix classes yet, so the
+            # expression path only runs on a base matrix.
+            ex <- getExpression(g, values = "normalized", output = "exprObj")
+            ex[] <- as.matrix(ex[])
+            g <- setExpression(g, ex, verbose = FALSE)
+            feats <- head(featIDs(g), 20)
+            res <- createNearestNetwork(g, type = "kNN", k = 5,
+                dim_reduction_to_use = NULL, feats_to_use = feats,
+                verbose = FALSE)
+            nets <- list_nearest_networks(res)
+            rec <- nn_input(res, "kNN", nets$name[[1]])
+
+            expect_null(rec$dim_reduction_to_use)
+            expect_null(rec$dimensions_to_use)
+            expect_identical(rec$expression_values, "normalized")
+            expect_setequal(rec$feats_to_use, feats)
+        })
+
+        it("records k as capped to the number of cells", {
+            g@nn_network <- NULL
+            n <- length(spatIDs(g))
+            res <- createNearestNetwork(g, type = "kNN", k = n + 10,
+                verbose = FALSE)
+            expect_identical(nn_input(res, "kNN", "kNN.pca")$k,
+                as.integer(n) - 1L)
+        })
+
+    })
+
+
     describe("radius networks", {
 
         it("createNetwork builds a radius network end to end", {

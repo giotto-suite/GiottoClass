@@ -215,3 +215,26 @@ test_that("an sNN build keeps the kNN it was derived from", {
         keep_knn = FALSE, verbose = FALSE)
     expect_false("kNN.pca" %in% list_nearest_networks(g2)$name)
 })
+
+test_that("an sNN build searches its kept kNN with the requested distance", {
+    skip_if_not_installed("GiottoData")
+    g <- GiottoData::loadGiottoMini("visium", verbose = FALSE)
+    g <- createNearestNetwork(g, type = "sNN", dimensions_to_use = 1:10,
+        k = 10, engine = "hnsw", ef = 150, distance = "cosine",
+        verbose = FALSE)
+
+    knn <- getNearestNetwork(g, nn_type = "kNN", name = "kNN.pca",
+                             output = "nnNetObj")
+    rec <- knn@misc$nn_input
+    expect_identical(rec$engine, "hnsw")
+    expect_identical(rec$ef, 150)
+    expect_identical(rec$distance, "cosine")
+
+    # `distance` used to reach only the sNN's own search, so the kept kNN was
+    # euclidean whatever was asked for. Cosine distances are bounded by 2;
+    # euclidean ones in PCA space are not.
+    pcs <- getDimReduction(g, reduction_method = "pca", name = "pca",
+                           output = "dimObj")[][, 1:10, drop = FALSE]
+    expect_gt(max(hnswKNN(pcs, k = 10)$dist), 2)
+    expect_lte(max(knn[]$distance), 2)
+})
