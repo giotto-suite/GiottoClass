@@ -234,6 +234,53 @@ points can carry tracked transcript IDs and are subject to feature subsets, so
 once those axes land a points crop resolves to an ID set like any other. Features
 and subcellular points are deferred together to a v2 of the coordinators.
 
+## What a crop selects
+
+**A crop selects measurement units by membership, and the default rule is the
+area centroid in the region.** Cells, nuclei, spots and bins are kept or dropped
+whole; their geometry is never altered by a crop or a view. Points and images
+are clipped, as above. The point tested is the unit's spatial location, which
+for polygon units is the area centroid (`.calculate_centroids_polygons()`), and
+which a backed polygon store keeps as `x_index` / `y_index`.
+
+This differs from `terra::crop()` and `sf::st_crop()`, which clip, and from the
+vector-GIS habit of selecting by *intersects*. Spatial transcriptomics sits
+closer to the raster tradition, where a pixel belongs to the region holding its
+centre:
+
+- A cell's expression, area and metadata were computed over its whole
+  footprint. Clipping it leaves those stale; a clipped cell is a new
+  measurement unit, made by re-aggregation, not by cropping.
+- Centroid membership **partitions**: tiles or adjacent regions split the cells
+  exactly once each. Under *intersects*, a boundary cell belongs to both
+  neighbours and per-region counts no longer sum to the total.
+- It needs spatial locations only, so it works for spots, bins and objects with
+  no polygons loaded, and it gives the same answer on every backend.
+- The area centroid commutes with affine transforms, which is what lets a space
+  be applied to a stored centroid; a bounding-box centre does not under
+  rotation.
+
+Where cells are partitioned (tiles, a grid of regions) a shared boundary must be
+half-open, so a centroid on an edge lands on one side. Region-annotation
+polygons, whose geometry is itself the quantity, are the exception that should
+clip; they need a role marking them as regions rather than units, which does
+not exist yet.
+
+**Planned: `crop(mode = c("centroid", "intersects", "clip"))`,** replacing the
+step's `geom` argument. `"centroid"` is today's `geom = "centroid"`;
+`"intersects"` is `geom = "poly", relation = "intersects"` (whole units
+touching the region); `"clip"` alters geometry and is guarded on cell-keyed
+units. Other relations stay with `spatRelate()`. GiottoDisk ADR 0021 records the
+decision and the alternatives (clip by default, intersects by default, a
+`clip = TRUE/FALSE` flag, renaming `crop()` to mean clip).
+
+**A view is a selection, not a viewport.** The region a plot shows (`ext`,
+`xlim` / `ylim`) is a rendering concern, decided in GiottoVisuals: a centroid
+subset of the view's cells widened by a margin taken from the data (cell reach,
+marker size), drawn and clipped at the viewport, with legends and statistics
+counting only the cells whose centroid lies inside it. It is never recorded as a
+view step.
+
 ## Space kinds, and the frame that has no name
 
 `giottoSpace` is virtual and the **kind of frame is the class**. A handle holds
@@ -599,6 +646,34 @@ formal is added to a gmulti getter: `view` and `space` were falling into `...`
 and being forwarded to each child *as a name*, which the child then looked up in
 its own empty `@view` / `@spaces` and failed on. A parent-level recipe reaching a
 child by name cannot work.
+
+## Planning a resolution: logical, then physical
+
+Resolution is planned at two levels, and they must not overlap.
+
+| | `resolveRecipe()` (logical) | GiottoDisk `storeRead()` (physical) |
+|---|---|---|
+| works on | the recipe: steps, slots, spaces | the ops attached to one store |
+| decides | the surviving ID set (once, shared across slots); which constraint each slot gets; one composed transform per slot; eager or lazy per carrier | tile pruning, centroid pushdown, the pad each relation needs, predicate order, engine |
+| produces | lazy ops on each carrier | the executed read |
+| must not | do physical work | change meaning |
+
+`resolveRecipe()` only records constraints; `storeRead()` only decides how to
+satisfy them. Two rules make the physical side safe:
+
+- **A cull returns a superset, and only the refinement decides membership.**
+  Every crop mode is the same plan, cull on centroids within the region's
+  bounding box widened by the mode's pad, then refine. No public operation is
+  used as a cull: GiottoDisk's `spatRelate()` pre-culling with `crop()` (centroid
+  membership in front of an `intersects` test) is the bug this rule names.
+- **A consumer may only widen a cull.** A plot's draw margin, a density
+  bandwidth or a tile halo is a constraint that widens the read; rows read only
+  because of it come back flagged as context, so they are drawn but not counted.
+
+Two items under "Deliberately not done" below belong to the logical planner:
+collapsing a space's chain into one transform, and lowering a whole recipe to
+one sedona plan. Both levels should have an explain that prints the plan before
+it runs; most bugs found in this area were plan bugs.
 
 ## Where a selection can come from
 
