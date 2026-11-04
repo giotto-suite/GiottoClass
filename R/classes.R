@@ -163,6 +163,12 @@ updateGiottoObject <- function(gobject) {
         gobject <- .update_spaces_slot(gobject)
     }
 
+    # GiottoClass 0.7.27 adds bin geometry (@bin_width, @bin_offset,
+    # @bin_overlap) to giottoBinPoints
+    if (.gversion(gobject) < "0.7.27") {
+        gobject <- .update_binpoints_slots(gobject)
+    }
+
     # -------------------------------------------------------------------------#
 
     # subobject updates
@@ -354,6 +360,25 @@ updateGiottoObject <- function(gobject) {
         nn_list <- lapply(nn_list, .migrate_nn_net_obj)
         gobject <- setGiotto(gobject, nn_list, initialize = FALSE)
     }
+    gobject
+}
+
+# Fill the bin geometry slots of giottoBinPoints saved before they existed
+# with the class defaults: width unknown, point at the bin centre, "inside".
+.update_binpoints_slots <- function(gobject) {
+    fi <- attr(gobject, "feat_info")
+    if (!length(fi)) return(gobject)
+    is_bp <- vapply(fi, methods::is, logical(1L), "giottoBinPoints")
+    for (k in which(is_bp)) {
+        bp <- fi[[k]]
+        defaults <- list(bin_width = NA_real_, bin_offset = c(0, 0),
+            bin_overlap = "inside")
+        for (s in names(defaults)) {
+            if (!methods::.hasSlot(bp, s)) attr(bp, s) <- defaults[[s]]
+        }
+        fi[[k]] <- bp
+    }
+    attr(gobject, "feat_info") <- fi
     gobject
 }
 

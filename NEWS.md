@@ -1,3 +1,29 @@
+# GiottoClass 0.7.27
+
+## new
+
+- Bin points carry their geometry: `bin_width`, `bin_offset` (from a bin's
+  point to its centre) and `bin_overlap`, the rule `calculateOverlap()` uses
+  for them unless told otherwise. `createGiottoBinPoints()` takes all three;
+  readers set them for their platform. Objects saved earlier get the defaults
+  (`NA`, `c(0, 0)`, `"inside"`) from `updateGiottoObject()`.
+- `calculateOverlap()` on bin points takes `bin_overlap = "area"`: a bin goes
+  to the one polygon holding its centre or, failing that, covering most of
+  it, so every bin is counted once. `"inside"` (the bin's point) stays the
+  default. The rule is `extract_bin_overlap()`; GiottoDisk applies it to
+  store-backed bins.
+- `binOverlaps()` gives the polygon of each bin from a stored overlap, for
+  in-memory and store-backed bin points alike.
+- `as.data.table()` on bin points takes `bin_id = TRUE`.
+
+## changes
+
+- Polygon constructors repair invalid geometries (such as self-intersecting
+  outlines) by default: `make_valid` now defaults to the `giotto.make_valid`
+  option, `TRUE` when unset. `options(giotto.make_valid = FALSE)` turns it off
+  for every reader. Valid geometries are left as they are, and only the
+  invalid ones are checked and repaired.
+
 # GiottoClass 0.7.26
 
 ## new

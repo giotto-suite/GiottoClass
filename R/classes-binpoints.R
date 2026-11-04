@@ -28,6 +28,12 @@
 #' relationship). When `FALSE`, they may contain bins not present in `@counts`
 #' (unidirectional: every bin in counts has spatial, but not every spatial has
 #' counts).
+#' @slot bin_width `numeric`. Side of a (square) bin, in the units of
+#' `@spatial`. `NA` when unknown.
+#' @slot bin_offset `numeric(2)`. Offset from a bin's point to its centre.
+#' @slot bin_overlap `character`. How [calculateOverlap()] assigns a bin to a
+#' polygon unless told otherwise: `"inside"` or `"area"`; see
+#' [extract_bin_overlap()]. Set by the reader for its platform.
 #' @export
 setClass("giottoBinPoints",
     contains = c("featData", "giottoSubobject"),
@@ -37,13 +43,30 @@ setClass("giottoBinPoints",
         bid = "character", # bin ID (static)
         pmap = "integer", # point IDs by mapping onto bid
         fid = "character", # feature ID
-        compact = "logical" # state of compaction
+        compact = "logical", # state of compaction
+        bin_width = "numeric", # bin side, in the units of @spatial
+        bin_offset = "numeric", # from a bin's point to its centre
+        bin_overlap = "character" # default rule for calculateOverlap()
     ),
     prototype = list(
         counts = data.table::data.table(),
-        compact = TRUE
+        compact = TRUE,
+        bin_width = NA_real_,
+        bin_offset = c(0, 0),
+        bin_overlap = "inside"
     )
 )
+
+# The bin geometry, with the class defaults for objects saved before the
+# geometry slots existed
+.gbp_geom <- function(x) {
+    get <- function(s, default) {
+        if (methods::.hasSlot(x, s)) methods::slot(x, s) else default
+    }
+    list(width = get("bin_width", NA_real_),
+        offset = get("bin_offset", c(0, 0)),
+        overlap = get("bin_overlap", "inside"))
+}
 
 # Points and counts held as GiottoDisk stores (backed object) rather than a
 # SpatVector and a data.table
@@ -157,13 +180,26 @@ setMethod("plot", signature("giottoBinPoints", "missing"), function(x,
     do.call(terra::plot, a)
 })
 
+#' @rdname calculateOverlap
+#' @param bin_overlap,bin_width,bin_offset for bin points: how a bin is
+#' assigned to a polygon (see [extract_bin_overlap()]). `NULL` takes the bin
+#' points' own setting, which the reader sets for its platform.
+#' @export
 setMethod("calculateOverlap", signature("giottoPolygon", "giottoBinPoints"),
     function(x, y,
         name_overlap = NULL,
         poly_subset_ids = NULL,
         return_gpolygon = TRUE,
+        bin_overlap = NULL,
+        bin_width = NULL,
+        bin_offset = NULL,
         verbose = NULL,
         ...) {
+        geom <- .gbp_geom(y)
+        bin_overlap <- match.arg(bin_overlap %null% geom$overlap,
+            c("inside", "area"))
+        bin_width <- bin_width %null% geom$width
+        bin_offset <- bin_offset %null% geom$offset
         checkmate::assert_character(poly_subset_ids, null.ok = TRUE)
         if (!is.null(poly_subset_ids)) {
             x <- x[x$poly_ID %in% poly_subset_ids]
@@ -172,7 +208,8 @@ setMethod("calculateOverlap", signature("giottoPolygon", "giottoBinPoints"),
         if (.gbp_is_backed(y)) {
             # store-backed bins: GiottoDisk overlaps the polygons with the
             # bins and keeps their counts for overlapToMatrix()
-            res <- calculateOverlap(x[], y, ...)
+            res <- calculateOverlap(x[], y, bin_overlap = bin_overlap,
+                bin_width = bin_width, bin_offset = bin_offset, ...)
         } else {
             # On a project-managed giotto the polygons are store-backed, and
             # terra::extract() has no method for a store. Materialize them
@@ -188,7 +225,9 @@ setMethod("calculateOverlap", signature("giottoPolygon", "giottoBinPoints"),
                 )
                 px[] <- GiottoDisk::storeRead(px[], output = "terra")
             }
-            overlap_data <- terra::extract(px[], y@spatial)
+            overlap_data <- extract_bin_overlap(px[], y@spatial,
+                bin_overlap = bin_overlap, bin_width = bin_width,
+                bin_offset = bin_offset)
             # res <- terra::relate(x[], y@spatial,
             #     relation = "intersects", pairs = TRUE) |>
             #     data.table::as.data.table()
@@ -360,23 +399,27 @@ setMethod("rbind2", signature("giottoBinPoints", "giottoBinPoints"),
             pmap = c(x@pmap, y@pmap + offset),
             fid = all_fid,
             feat_type = x@feat_type,  # take from x
-            compact = TRUE
+            compact = TRUE,
+            bin_width = .gbp_geom(x)$width,
+            bin_offset = .gbp_geom(x)$offset,
+            bin_overlap = .gbp_geom(x)$overlap
         )
     })
 
 #' @rdname as.data.table
 #' @method as.data.table giottoBinPoints
 #' @export
-as.data.table.giottoBinPoints <- function(x, geom, ...) {
+as.data.table.giottoBinPoints <- function(x, geom, bin_id = FALSE, ...) {
     if (.gbp_is_backed(x)) {
         GiottoUtils::package_check(
             "GiottoDisk",
             repository = "github:giotto-suite/GiottoDisk"
         )
         return(GiottoDisk::binPointsTable(x,
-            geom = if (missing(geom)) "" else geom))
+            geom = if (missing(geom)) "" else geom, bin_id = bin_id))
     }
     d <- data.table::copy(x@counts)
+    if (isTRUE(bin_id)) data.table::set(d, j = "bin_ID", value = x@bid[d$j])
     data.table::setnames(d, old = c("i", "x"), new = c("feat_ID", "count"))
     if (!missing(geom)) {
         sv <- x@spatial[match(d$j, x@pmap),]
@@ -398,6 +441,8 @@ as.data.table.giottoBinPoints <- function(x, geom, ...) {
 #' @param expr_values `exprObj` Bin counts/values
 #' @param spatial_locs `spatLocsObj` Spatial locations of bins
 #' @param feat_type `character` (default = "rna"). Feature type of the data
+#' @param bin_width,bin_offset,bin_overlap bin geometry and the default rule
+#' for [calculateOverlap()]; see the slots of the same names
 #' @examples
 #' ids <- sprintf("bin_%d", 1:50)
 #' sl <- createSpatLocsObj(rnorm(100))
@@ -445,7 +490,13 @@ as.data.table.giottoBinPoints <- function(x, geom, ...) {
 #' force(m)
 #' @export
 createGiottoBinPoints <- function(expr_values, spatial_locs,
-    feat_type = "rna") {
+    feat_type = "rna",
+    bin_width = NA_real_,
+    bin_offset = c(0, 0),
+    bin_overlap = c("inside", "area")) {
+    bin_overlap <- match.arg(bin_overlap)
+    checkmate::assert_number(bin_width, lower = 0, na.ok = TRUE)
+    checkmate::assert_numeric(bin_offset, len = 2L, any.missing = FALSE)
     ids_p <- spatial_locs$cell_ID
     spatial_locs[] <- spatial_locs[][, c("sdimx", "sdimy")] # drop point IDs col
     sl_points <- as.points(spatial_locs)
@@ -472,7 +523,10 @@ createGiottoBinPoints <- function(expr_values, spatial_locs,
         pmap = match(ids_p, ids_m),
         fid = rownames(M),
         feat_type = feat_type,
-        compact = TRUE
+        compact = TRUE,
+        bin_width = as.numeric(bin_width),
+        bin_offset = as.numeric(bin_offset),
+        bin_overlap = bin_overlap
     )
     .gbp_compact(x, ids_p = ids_p, exist_j = exist_j)
 }
@@ -652,4 +706,177 @@ createGiottoBinPoints <- function(expr_values, spatial_locs,
     odt@data <- res
 
     odt
+}
+
+#' @title Assign bins to polygons
+#' @name extract_bin_overlap
+#' @description
+#' Which polygon each bin belongs to, in the form `terra::extract()` reports
+#' points in polygons: one row per bin hit (`id.y`, the bin's row in `bins`)
+#' with the polygon's attributes, `NA` for bins outside every polygon.
+#'
+#' * `"inside"`: the polygons that contain the bin's point
+#'   (`terra::extract(polys, bins)`).
+#' * `"area"`: a bin is the square of side `bin_width` centred on its point
+#'   plus `bin_offset`, and goes to one polygon: the one containing the
+#'   square's centre or, when none or several do, the one covering the
+#'   largest part of the square (ties: the lowest `poly_id_col`). A polygon
+#'   that only meets the square's edge does not count. This matches cell
+#'   masks that give each bin to a cell whose outline crosses it (Stereo-seq
+#'   cellbin).
+#'
+#' GiottoDisk's engines apply the same rule to store-backed bins.
+#' @param polys `SpatVector` polygons
+#' @param bins `SpatVector` points, one per bin
+#' @param bin_overlap `"inside"` or `"area"`
+#' @param bin_width bin side in the units of `bins` (needed for `"area"`)
+#' @param bin_offset offset `c(dx, dy)` from a bin's point to its centre
+#' @param poly_id_col polygon ID attribute, used to break ties
+#' @returns a `data.frame`: `id.y` and the attributes of `polys`
+#' @examples
+#' sq <- terra::vect("POLYGON ((0 0, 3 0, 3 3, 0 3, 0 0))")
+#' sq$poly_ID <- "a"
+#' bins <- terra::vect(cbind(c(1.5, 3.4, 5), 1.5), type = "points")
+#' extract_bin_overlap(sq, bins) # only the first bin's point is inside
+#' extract_bin_overlap(sq, bins, "area", bin_width = 1) # and the second bin
+#' @export
+extract_bin_overlap <- function(polys, bins,
+    bin_overlap = c("inside", "area"),
+    bin_width = NULL,
+    bin_offset = c(0, 0),
+    poly_id_col = "poly_ID") {
+    bin_overlap <- match.arg(bin_overlap)
+    if (bin_overlap == "inside") return(terra::extract(polys, bins))
+    checkmate::assert_number(bin_width, lower = 0, finite = TRUE)
+    checkmate::assert_numeric(bin_offset, len = 2L, finite = TRUE,
+        any.missing = FALSE)
+    xy <- terra::crds(bins)
+    cx <- xy[, 1L] + bin_offset[[1L]]
+    cy <- xy[, 2L] + bin_offset[[2L]]
+    n <- length(cx)
+    crs <- terra::crs(bins)
+    best <- rep(NA_integer_, n) # row of polys per bin
+
+    # 1. the one polygon holding the centre
+    ctr <- terra::vect(cbind(cx, cy), type = "points", crs = crs)
+    hit <- terra::relate(ctr, polys, relation = "intersects", pairs = TRUE)
+    one <- .pairs_single(hit)
+    best[one[, 1L]] <- one[, 2L]
+
+    # 2. otherwise the polygon covering most of the square
+    h <- bin_width / 2
+    pe <- terra::ext(polys)
+    todo <- setdiff(seq_len(n), one[, 1L])
+    todo <- todo[cx[todo] + h > pe$xmin & cx[todo] - h < pe$xmax &
+        cy[todo] + h > pe$ymin & cy[todo] - h < pe$ymax]
+    if (length(todo)) {
+        best[todo] <- .bin_most_area(cx[todo], cy[todo], h, polys,
+            poly_id_col = poly_id_col, crs = crs)
+    }
+    attrs <- terra::values(polys)
+    cbind(data.frame(id.y = seq_len(n)), attrs[best, , drop = FALSE],
+        row.names = NULL)
+}
+
+# Rows of a pairs matrix whose first index occurs once
+.pairs_single <- function(p) {
+    p[!p[, 1L] %in% p[duplicated(p[, 1L]), 1L], , drop = FALSE]
+}
+
+# For squares (centres cx, cy; half side h), the row of `polys` covering the
+# largest part of each, or NA. Edge contact alone is no hit; ties go to the
+# lowest `poly_id_col` (byte order, as in GiottoDisk's SQL engines).
+.bin_most_area <- function(cx, cy, h, polys, poly_id_col, crs) {
+    n <- length(cx)
+    m <- cbind(
+        geom = rep(seq_len(n), each = 5L), part = 1L,
+        x = as.vector(rbind(cx - h, cx + h, cx + h, cx - h, cx - h)),
+        y = as.vector(rbind(cy - h, cy - h, cy + h, cy + h, cy - h)),
+        hole = 0L
+    )
+    sq <- terra::vect(m, type = "polygons", crs = crs)
+    key <- function(p) paste(p[, 1L], p[, 2L])
+    hit <- terra::relate(sq, polys, relation = "intersects", pairs = TRUE)
+    edge <- terra::relate(sq, polys, relation = "touches", pairs = TRUE)
+    hit <- hit[!key(hit) %in% key(edge), , drop = FALSE]
+    best <- rep(NA_integer_, n)
+    one <- .pairs_single(hit)
+    best[one[, 1L]] <- one[, 2L]
+    multi <- hit[!hit[, 1L] %in% one[, 1L], , drop = FALSE]
+    if (nrow(multi)) {
+        s1 <- sq[unique(multi[, 1L])]
+        terra::values(s1) <- data.frame(.s = unique(multi[, 1L]))
+        p1 <- polys[unique(multi[, 2L])]
+        terra::values(p1) <- data.frame(.p = unique(multi[, 2L]))
+        ix <- terra::intersect(s1, p1)
+        a <- data.frame(s = ix$.s, p = ix$.p, a = .planar_area(ix))
+        a <- a[key(cbind(a$s, a$p)) %in% key(multi), , drop = FALSE]
+        ids <- if (poly_id_col %in% names(polys)) {
+            as.character(polys[[poly_id_col]][, 1L])
+        } else {
+            sprintf("%012d", seq_len(nrow(polys)))
+        }
+        a <- a[order(a$s, -a$a, ids[a$p], method = "radix"), , drop = FALSE]
+        a <- a[!duplicated(a$s), , drop = FALSE]
+        best[a$s] <- a$p
+    }
+    best
+}
+
+# planar areas; Giotto polygons usually carry no CRS, which terra warns about
+.planar_area <- function(x) {
+    withCallingHandlers(terra::expanse(x, transform = FALSE),
+        warning = function(w) {
+            if (grepl("unknown CRS", conditionMessage(w))) {
+                invokeRestart("muffleWarning")
+            }
+        })
+}
+
+#' @title Bins in polygons
+#' @name binOverlaps
+#' @description The polygon each bin lies in, from the overlap of `x` with
+#' the bin points `y` stored by [calculateOverlap()]. Works the same for
+#' in-memory and store-backed bin points.
+#' @param x `giottoPolygon` carrying the overlap
+#' @param y the `giottoBinPoints` the overlap was calculated with
+#' @param name name of the overlap (default: the feature type of `y`)
+#' @returns a `data.table` with `poly_ID` and `bin_ID`, one row per bin and
+#'   polygon
+#' @examples
+#' xy <- expand.grid(x = 0:3 + 0.5, y = 0:3 + 0.5)
+#' ids <- paste0("bin", seq_len(nrow(xy)))
+#' m <- Matrix::sparseMatrix(i = rep(1L, nrow(xy)), j = seq_len(nrow(xy)),
+#'     x = 1, dimnames = list("g1", ids))
+#' bp <- createGiottoBinPoints(createExprObj(m), createSpatLocsObj(
+#'     data.frame(sdimx = xy$x, sdimy = xy$y, cell_ID = ids)))
+#' gp <- createGiottoPolygon(data.frame(poly_ID = "a",
+#'     x = c(0, 2, 2, 0), y = c(0, 0, 2, 2)))
+#' binOverlaps(calculateOverlap(gp, bp), bp)
+#' @export
+binOverlaps <- function(x, y, name = NULL) {
+    checkmate::assert_class(x, "giottoPolygon")
+    checkmate::assert_class(y, "giottoBinPoints")
+    name <- name %null% objName(y)
+    ov <- overlaps(x, name = name)
+    if (is.null(ov)) {
+        stop(sprintf("[binOverlaps] no overlap \"%s\" on the polygons; ",
+            name), "run calculateOverlap() first", call. = FALSE)
+    }
+    if (.gbp_is_backed(y)) {
+        GiottoUtils::package_check(
+            "GiottoDisk",
+            repository = "github:giotto-suite/GiottoDisk"
+        )
+        return(GiottoDisk::binOverlapsTable(ov))
+    }
+    d <- ov@data
+    if (length(d$feat) && max(d$feat) > nrow(y@counts)) {
+        stop("[binOverlaps] `y` is not the bin points this overlap was ",
+            "calculated with", call. = FALSE)
+    }
+    unique(data.table::data.table(
+        poly_ID = ov@spat_ids[d$poly],
+        bin_ID = y@bid[y@counts$j[d$feat]]
+    ))
 }

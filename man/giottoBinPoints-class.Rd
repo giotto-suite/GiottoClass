@@ -6,7 +6,14 @@
 \alias{createGiottoBinPoints}
 \title{Binned point class}
 \usage{
-createGiottoBinPoints(expr_values, spatial_locs, feat_type = "rna")
+createGiottoBinPoints(
+  expr_values,
+  spatial_locs,
+  feat_type = "rna",
+  bin_width = NA_real_,
+  bin_offset = c(0, 0),
+  bin_overlap = c("inside", "area")
+)
 }
 \arguments{
 \item{expr_values}{\code{exprObj} Bin counts/values}
@@ -14,6 +21,9 @@ createGiottoBinPoints(expr_values, spatial_locs, feat_type = "rna")
 \item{spatial_locs}{\code{spatLocsObj} Spatial locations of bins}
 
 \item{feat_type}{\code{character} (default = "rna"). Feature type of the data}
+
+\item{bin_width, bin_offset, bin_overlap}{bin geometry and the default rule
+for \code{\link[=calculateOverlap]{calculateOverlap()}}; see the slots of the same names}
 }
 \description{
 S4 class allowing point detection-like access patterns for binned spatial
@@ -53,6 +63,15 @@ and \verb{@spatial} contain only bins that appear in \verb{@counts} (bidirection
 relationship). When \code{FALSE}, they may contain bins not present in \verb{@counts}
 (unidirectional: every bin in counts has spatial, but not every spatial has
 counts).}
+
+\item{\code{bin_width}}{\code{numeric}. Side of a (square) bin, in the units of
+\verb{@spatial}. \code{NA} when unknown.}
+
+\item{\code{bin_offset}}{\code{numeric(2)}. Offset from a bin's point to its centre.}
+
+\item{\code{bin_overlap}}{\code{character}. How \code{\link[=calculateOverlap]{calculateOverlap()}} assigns a bin to a
+polygon unless told otherwise: \code{"inside"} or \code{"area"}; see
+\code{\link[=extract_bin_overlap]{extract_bin_overlap()}}. Set by the reader for its platform.}
 }}
 
 \examples{

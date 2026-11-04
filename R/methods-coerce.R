@@ -17,6 +17,7 @@ NULL
 #' Well-Known-Text or hexadecimal notation.
 #' @param include_values whether to include attributes information when geom
 #' is 'XY'
+#' @param bin_id giottoBinPoints: add the bin each row belongs to (`bin_ID`)
 #' @param \dots additional arguments to pass
 #' @family As coercion functions
 #' @returns data.table

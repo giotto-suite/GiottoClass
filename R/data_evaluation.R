@@ -803,6 +803,20 @@ evaluate_input <- function(type, x, ...) {
     n_in <- nrow(x)
     if (n_in == 0L) return(x)
 
+    # `makeValid()` returns valid geometries unchanged, so only the invalid
+    # ones (and empty ones, which report no area) are repaired, and put back
+    # in their original order
+    a <- .planar_area(x)
+    bad <- !terra::is.valid(x) | is.na(a) | a <= 0
+    if (!any(bad)) return(x)
+    if (!all(bad)) {
+        x$.mv_row <- seq_len(n_in)
+        out <- rbind(x[!bad], .make_valid(x[bad], verbose = verbose))
+        out <- out[order(out$.mv_row)]
+        out$.mv_row <- NULL
+        return(out)
+    }
+
     # `makeValid()` discards any geometry that GEOS repairs into a
     # non-polygonal result (a degenerate ring becomes a LINESTRING) without
     # discarding its attribute row, which shifts every attribute after the
@@ -866,6 +880,10 @@ evaluate_input <- function(type, x, ...) {
     terra::set.crs(input_sv, NULL)
     # ensure valid
     if (make_valid) input_sv <- .make_valid(input_sv, verbose = verbose)
+    # nothing left to evaluate (every geometry was degenerate)
+    if (nrow(input_sv) == 0L) {
+        return(list(spatvector = input_sv, unique_IDs = character()))
+    }
 
     col_classes <- vapply(
         sample(x = input_sv, size = 1L),

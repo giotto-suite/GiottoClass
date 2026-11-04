@@ -62,6 +62,15 @@ describe(".make_valid", {
         expect_equal(nrow(terra::values(res)), 0)
     })
 
+    it("repairs only the invalid geometries, in place", {
+        sv <- make_sv(c("good", "bowtie", "spike", "dupnode"))
+        res <- .make_valid(sv, verbose = FALSE)
+        expect_identical(res$poly_ID, c("good", "bowtie", "spike", "dupnode"))
+        expect_true(all(terra::is.valid(res)))
+        ok <- terra::is.valid(sv)
+        expect_identical(terra::geom(res[ok]), terra::geom(sv[ok]))
+    })
+
     it("passes non-polygon geometries through", {
         pts <- terra::vect(cbind(seq_len(3), seq_len(3)))
         expect_identical(terra::geomtype(.make_valid(pts)), "points")
@@ -106,6 +115,34 @@ describe("createGiottoPolygon(make_valid = TRUE)", {
         ))
         expect_equal(nrow(gp[]), 3)
         expect_identical(gp[]$poly_ID, c("cellA", "cellB", "cellC"))
+    })
+})
+
+
+describe("giotto.make_valid option", {
+    sv <- terra::vect(c("POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))",
+        "POLYGON ((0 0, 2 2, 2 0, 0 2, 0 0))"))
+    sv$poly_ID <- c("good", "bowtie")
+
+    it("repairs invalid polygons by default", {
+        gp <- createGiottoPolygon(sv, verbose = FALSE)
+        expect_true(all(terra::is.valid(gp[])))
+        expect_identical(gp[]$poly_ID, c("good", "bowtie"))
+    })
+
+    it("gives an empty giottoPolygon when every polygon is degenerate", {
+        gp <- suppressWarnings(createGiottoPolygon(
+            terra::vect("POLYGON ((0 0, 1 1, 0 0))"), verbose = FALSE))
+        expect_s4_class(gp, "giottoPolygon")
+        expect_equal(nrow(gp[]), 0)
+    })
+
+    it("can be turned off", {
+        withr::local_options(giotto.make_valid = FALSE)
+        expect_false(all(terra::is.valid(createGiottoPolygon(sv,
+            verbose = FALSE)[])))
+        expect_true(all(terra::is.valid(createGiottoPolygon(sv,
+            make_valid = TRUE, verbose = FALSE)[])))
     })
 })
 

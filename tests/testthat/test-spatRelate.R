@@ -55,7 +55,7 @@ test_that("spatRelate() predicate choice affects the narrowing", {
 test_that("spatRelate() with no matches returns an empty giottoSpatial", {
     # Build a small polygon far outside the data extent so nothing matches.
     far_poly <- createGiottoPolygon(
-        terra::vect("POLYGON ((1e9 1e9, 1e9 1e9.1, 1e9.1 1e9.1, 1e9.1 1e9, 1e9 1e9))"),
+        terra::vect("POLYGON ((1e9 1e9, 1e9 1.1e9, 1.1e9 1.1e9, 1.1e9 1e9, 1e9 1e9))"),
         verbose = FALSE
     )
     res <- spatRelate(gpoints_small, far_poly, relation = "intersects")
