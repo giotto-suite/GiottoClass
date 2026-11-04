@@ -12,7 +12,7 @@
 \alias{as.data.table.nnNetObj}
 \title{Coerce to data.table}
 \usage{
-\method{as.data.table}{giottoBinPoints}(x, geom, ...)
+\method{as.data.table}{giottoBinPoints}(x, geom, bin_id = FALSE, ...)
 
 \method{as.data.table}{SpatVector}(
   x,
@@ -41,6 +41,8 @@
 \item{geom}{character or NULL. If not NULL, either "XY", "WKT", or "HEX", to
 get the geometry included in coordinates of each point or vertex,
 Well-Known-Text or hexadecimal notation.}
+
+\item{bin_id}{giottoBinPoints: add the bin each row belongs to (\code{bin_ID})}
 
 \item{\dots}{additional arguments to pass}
 

@@ -2251,9 +2251,12 @@ create_giotto_points_object <- function(feat_type = "rna",
 #' be the name of the spatial unit that they define. See [giotto_schema]
 #' @param calc_centroids logical. (default `FALSE`) calculate centroids for
 #' polygons
-#' @param make_valid logical. (default `FALSE`) Whether to run
-#' [terra::makeValid()] on the geometries. Polygons that cannot be repaired
-#' into a polygon are dropped along with their attributes.
+#' @param make_valid logical. Whether to repair invalid geometries (such as
+#' self-intersecting outlines) with [terra::makeValid()]; valid ones are left
+#' as they are. Polygons that cannot be repaired into a polygon are dropped
+#' along with their attributes. Defaults to the `giotto.make_valid` option
+#' (`TRUE` when unset); `options(giotto.make_valid = FALSE)` turns it off for
+#' every reader.
 #' @param verbose be verbose
 #' @param \dots additional params to pass. For character method, params pass to
 #' SpatRaster or SpatVector methods, depending on whether x was a filepath to
@@ -2354,7 +2357,7 @@ setMethod(
     function(x,
         remove_background_polygon = TRUE,
         background_algo = "range",
-        make_valid = FALSE,
+        make_valid = getOption("giotto.make_valid", TRUE),
         verbose = TRUE,
         ...) {
         checkmate::assert_file_exists(x)
@@ -2407,8 +2410,15 @@ setMethod(
 #' @export
 setMethod(
     "createGiottoPolygon", signature("SpatVector"),
-    function(x, name = "cell", calc_centroids = FALSE, verbose = TRUE) {
-        res_list <- .evaluate_gpoly_spatvector(input_sv = x, verbose = verbose)
+    function(x,
+    name = "cell",
+    calc_centroids = FALSE,
+    make_valid = getOption("giotto.make_valid", TRUE),
+    verbose = TRUE) {
+        res_list <- .evaluate_gpoly_spatvector(input_sv = x,
+            make_valid = make_valid,
+            verbose = verbose
+        )
         spatvector <- res_list$spatvector
         unique_IDs <- res_list$unique_IDs
 
@@ -2485,7 +2495,7 @@ setMethod(
     skip_eval_dfr = FALSE,
     copy_dt = TRUE,
     verbose = TRUE,
-    make_valid = FALSE,
+    make_valid = getOption("giotto.make_valid", TRUE),
     ...) {
         createGiottoPolygonsFromDfr(
             segmdfr = x,
@@ -2785,7 +2795,7 @@ createGiottoPolygonsFromDfr <- function(segmdfr,
     name = "cell",
     part_col = NULL,
     calc_centroids = FALSE,
-    make_valid = FALSE,
+    make_valid = getOption("giotto.make_valid", TRUE),
     verbose = TRUE,
     skip_eval_dfr = FALSE,
     copy_dt = TRUE) {
@@ -2834,7 +2844,7 @@ createGiottoPolygonsFromDfr <- function(segmdfr,
 createGiottoPolygonsFromGeoJSON <- function(GeoJSON,
     name = "cell",
     calc_centroids = FALSE,
-    make_valid = FALSE,
+    make_valid = getOption("giotto.make_valid", TRUE),
     remove_background_polygon = TRUE,
     background_algo = "range",
     verbose = TRUE) {
