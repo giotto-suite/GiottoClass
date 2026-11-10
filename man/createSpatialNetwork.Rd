@@ -12,7 +12,7 @@ createSpatialNetwork(
   spat_loc_name = NULL,
   dimensions = "all",
   method = c("Delaunay", "kNN", "radius"),
-  delaunay_method = c("deldir", "delaunayn_geometry", "RTriangle"),
+  delaunay_method = c("delaunayn_geometry", "deldir", "RTriangle"),
   maximum_distance_delaunay = "auto",
   options = "Pp",
   Y = TRUE,
@@ -51,9 +51,8 @@ regions more neighbours than sparse ones.}
 \item{delaunay_method}{method to use to generate Delaunay network. All
 three give the identical triangulation; \code{"delaunayn_geometry"} is far faster
 above a few thousand points (0.94 s vs ~363 s at 200,000) and is the only
-one that handles 3D. \code{"deldir"} remains the default for backward
-compatibility. See the \emph{Choosing a Delaunay backend} section of
-\code{\link[=createSpatialDelaunayNetwork]{createSpatialDelaunayNetwork()}}.}
+one that handles 3D. It is the default. See the \emph{Choosing a Delaunay backend}
+section of \code{\link[=createSpatialDelaunayNetwork]{createSpatialDelaunayNetwork()}}.}
 
 \item{maximum_distance_delaunay}{distance cutoff for nearest neighbors to
 consider for Delaunay network. If "auto", "upper whisker" value of the

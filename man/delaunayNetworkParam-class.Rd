@@ -7,7 +7,7 @@
 \title{delaunayNetworkParam — Delaunay Network Param}
 \usage{
 delaunayNetworkParam(
-  method = c("deldir", "RTriangle", "geometry"),
+  method = c("geometry", "deldir", "RTriangle"),
   maximum_distance = "auto",
   minimum_k = 0L,
   weight_fun = function(d) 1/d,
@@ -21,7 +21,8 @@ delaunayNetworkParam(
 )
 }
 \arguments{
-\item{method}{backend: \code{"deldir"}, \code{"RTriangle"}, or \code{"geometry"}}
+\item{method}{backend: \code{"geometry"} (default), \code{"deldir"}, or
+\code{"RTriangle"}}
 
 \item{maximum_distance}{maximum edge length, or \code{"auto"}, or \code{NULL}}
 

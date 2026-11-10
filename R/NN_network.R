@@ -185,7 +185,8 @@ sNNNetworkParam <- function(k = 30L, top_shared = 3L, minimum_shared = 5L,
 }
 
 #' @rdname delaunayNetworkParam-class
-#' @param method backend: `"deldir"`, `"RTriangle"`, or `"geometry"`
+#' @param method backend: `"geometry"` (default), `"deldir"`, or
+#'   `"RTriangle"`
 #' @param maximum_distance maximum edge length, or `"auto"`, or `NULL`
 #' @param minimum_k minimum neighbours per node when filtering
 #' @param weight_fun function mapping distance to weight
@@ -195,7 +196,7 @@ sNNNetworkParam <- function(k = 30L, top_shared = 3L, minimum_shared = 5L,
 #' @param Y,j,S *RTriangle only.* passed to `RTriangle::triangulate`
 #' @export
 delaunayNetworkParam <- function(
-        method = c("deldir", "RTriangle", "geometry"),
+        method = c("geometry", "deldir", "RTriangle"),
         maximum_distance = "auto", minimum_k = 0L,
         weight_fun = function(d) 1 / d,
         include_weight = TRUE, include_distance = TRUE,
@@ -531,7 +532,7 @@ setMethod("createNetwork", signature("matrix", "missing"),
         mchoices <- if (type %in% c("sNN", "kNN")) {
             "dbscan"
         } else {
-            c("deldir", "RTriangle", "geometry")
+            c("geometry", "deldir", "RTriangle")
         }
         if (identical(method, mdef)) method <- mchoices[[1L]]
         method <- match.arg(method, choices = mchoices)
@@ -930,8 +931,6 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
         x, include_weight = TRUE, options = "Pp", maximum_distance = "auto",
         minimum_k = 0L, weight_fun = function(d) 1 / d,
         ...) {
-    package_check("geometry", repository = "CRAN:geometry")
-
     # data.table variables
     from <- to <- distance <- NULL
 
@@ -1036,6 +1035,7 @@ setMethod("createNetwork", signature("giotto", "delaunayNetworkParam"),
             use method \'geometry\' instead")
     }
 
+    package_check("deldir", repository = "CRAN:deldir")
     deldir_obj <- deldir::deldir(x = x, ...)
 
     delaunay_network_dt <- data.table::data.table(

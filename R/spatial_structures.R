@@ -173,13 +173,15 @@ compatible_spatial_network <- function(spatial_network,
 #' | 50,000 | 21.1 s | 0.20 s |
 #' | 200,000 | ~363 s | 0.94 s |
 #'
-#' `deldir` remains the default for backward compatibility, but
-#' **`delaunay_method = "delaunayn_geometry"` is strongly preferred above a few
-#' thousand points**. It requires the \pkg{geometry} package, and it is also the
-#' only backend that handles 3D.
+#' `"delaunayn_geometry"` is the default. It is also the only backend that
+#' handles 3D. `deldir` is in Suggests and must be installed to use it.
 #'
-#' Two caveats. Qhull can struggle with exactly cocircular input -- a
-#' grid-aligned platform such as Visium -- in which case pass
+#' Three caveats. Where points are exactly cocircular, as on a square grid of
+#' bins, the triangulation is not unique and the backends can choose different
+#' diagonals (about 17% of edges on a 100 x 100 grid); pass `method = "deldir"`
+#' to reproduce a network built before geometry became the default. Qhull
+#' can also struggle with exactly cocircular input -- a grid-aligned platform
+#' such as Visium -- in which case pass
 #' `options = "Qbb Qc Qz"`; a 10,000-point exact grid worked with the default
 #' `"Pp"` in testing, but the failure mode is degenerate input rather than
 #' size. And `deldir` peaks around 2.9 GB of memory at 200,000 points against
@@ -196,7 +198,7 @@ createSpatialDelaunayNetwork <- function(gobject,
     spat_unit = NULL,
     feat_type = NULL,
     spat_loc_name = NULL,
-    method = c("deldir", "delaunayn_geometry", "RTriangle"),
+    method = c("delaunayn_geometry", "deldir", "RTriangle"),
     dimensions = "all",
     maximum_distance = "auto",
     minimum_k = 0,
@@ -208,7 +210,7 @@ createSpatialDelaunayNetwork <- function(gobject,
     space = NULL,
     ...) {
     # Thin wrapper over createNetwork() + spatialNetworkObj construction.
-    method <- match.arg(method, c("deldir", "delaunayn_geometry", "RTriangle"))
+    method <- match.arg(method, c("delaunayn_geometry", "deldir", "RTriangle"))
 
     # `method` is kept in the wrapper's spelling for @method and the param
     # record; the Param API calls the same backend "geometry".
@@ -381,9 +383,8 @@ createSpatialKNNnetwork <- function(gobject,
 #' @param delaunay_method method to use to generate Delaunay network. All
 #' three give the identical triangulation; `"delaunayn_geometry"` is far faster
 #' above a few thousand points (0.94 s vs ~363 s at 200,000) and is the only
-#' one that handles 3D. `"deldir"` remains the default for backward
-#' compatibility. See the *Choosing a Delaunay backend* section of
-#' [createSpatialDelaunayNetwork()].
+#' one that handles 3D. It is the default. See the *Choosing a Delaunay backend*
+#' section of [createSpatialDelaunayNetwork()].
 #' @param maximum_distance_delaunay distance cutoff for nearest neighbors to
 #' consider for Delaunay network. If "auto", "upper whisker" value of the
 #' distance vector between neighbors is used; see the [grDevices::boxplot.stats]
@@ -445,7 +446,7 @@ createSpatialNetwork <- function(gobject,
     spat_loc_name = NULL,
     dimensions = "all",
     method = c("Delaunay", "kNN", "radius"),
-    delaunay_method = c("deldir", "delaunayn_geometry", "RTriangle"),
+    delaunay_method = c("delaunayn_geometry", "deldir", "RTriangle"),
     maximum_distance_delaunay = "auto",
     options = "Pp",
     Y = TRUE,
@@ -493,7 +494,7 @@ createSpatialNetwork <- function(gobject,
     } else if (method == "Delaunay") {
         delaunay_method <- match.arg(
             delaunay_method,
-            c("deldir", "delaunayn_geometry", "RTriangle")
+            c("delaunayn_geometry", "deldir", "RTriangle")
         )
         out <- createSpatialDelaunayNetwork(
             gobject = gobject,
