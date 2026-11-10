@@ -91,7 +91,7 @@ test_that("kNN distances no longer depend on whether a cutoff was asked for", {
 })
 
 test_that("deldir and geometry produce the same Delaunay graph", {
-    skip_if_not_installed("geometry")
+    skip_if_not_installed("deldir")
     set.seed(9)
     x <- matrix(runif(600 * 2, 0, 100), ncol = 2)
     key <- function(dt) {

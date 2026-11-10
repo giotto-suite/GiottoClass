@@ -376,7 +376,7 @@ describe("Network Creation Functions", {
 
                 expect_true(inherits(result, "spatialNetworkObj"))
                 expect_equal(objName(result), "Delaunay_network") # default
-                expect_equal(result@method, "deldir")
+                expect_equal(result@method, "delaunayn_geometry")
                 expect_true(igraph::ecount(result[]) > 0)
                 expect_equal(spatUnit(result), activeSpatUnit(g))
             })
@@ -530,6 +530,7 @@ describe("Network Creation Functions", {
         })
 
         it("delaunay_method = 'delaunayn_geometry' is the geometry backend", {
+            skip_if_not_installed("deldir")
             sn_geom <- createSpatialNetwork(g,
                 method = "Delaunay",
                 delaunay_method = "delaunayn_geometry",

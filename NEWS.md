@@ -1,3 +1,11 @@
+# GiottoClass 0.7.30
+
+## changes
+
+- Delaunay networks default to the `geometry` backend, which is much faster
+  than `deldir`. On square grids the two can pick different diagonal edges;
+  `method = "deldir"` (now in Suggests) reproduces earlier networks.
+
 # GiottoClass 0.7.29
 
 ## changes

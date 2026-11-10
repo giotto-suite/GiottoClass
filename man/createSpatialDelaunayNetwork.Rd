@@ -11,7 +11,7 @@ createSpatialDelaunayNetwork(
   spat_unit = NULL,
   feat_type = NULL,
   spat_loc_name = NULL,
-  method = c("deldir", "delaunayn_geometry", "RTriangle"),
+  method = c("delaunayn_geometry", "deldir", "RTriangle"),
   dimensions = "all",
   maximum_distance = "auto",
   minimum_k = 0,
@@ -113,13 +113,15 @@ one of implementation speed, and \code{deldir} is by a wide margin the slowest:\
 }
 
 
-\code{deldir} remains the default for backward compatibility, but
-\strong{\code{delaunay_method = "delaunayn_geometry"} is strongly preferred above a few
-thousand points}. It requires the \pkg{geometry} package, and it is also the
-only backend that handles 3D.
+\code{"delaunayn_geometry"} is the default. It is also the only backend that
+handles 3D. \code{deldir} is in Suggests and must be installed to use it.
 
-Two caveats. Qhull can struggle with exactly cocircular input -- a
-grid-aligned platform such as Visium -- in which case pass
+Three caveats. Where points are exactly cocircular, as on a square grid of
+bins, the triangulation is not unique and the backends can choose different
+diagonals (about 17\% of edges on a 100 x 100 grid); pass \code{method = "deldir"}
+to reproduce a network built before geometry became the default. Qhull
+can also struggle with exactly cocircular input -- a grid-aligned platform
+such as Visium -- in which case pass
 \code{options = "Qbb Qc Qz"}; a 10,000-point exact grid worked with the default
 \code{"Pp"} in testing, but the failure mode is degenerate input rather than
 size. And \code{deldir} peaks around 2.9 GB of memory at 200,000 points against
