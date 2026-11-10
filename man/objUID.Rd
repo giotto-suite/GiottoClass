@@ -7,20 +7,22 @@
 objUID(x)
 }
 \arguments{
-\item{x}{giotto object}
+\item{x}{giotto or giottoMulti object}
 }
 \value{
 \code{character(1)}, or \code{NULL} for an object that has none
 }
 \description{
-The identifier a \code{giotto} object is given when it is created. It stays with
-the object as it is changed, copied, subset, saved and loaded, so it says
-which object this is, not what it holds: two states of one object share it.
-Compare \code{\link[=objManifest]{objManifest()}} contents to tell states apart.
+The identifier a \code{giotto} or \link[=giottoMulti-class]{giottoMulti} object is given when it
+is created. It stays with the object as it is changed, copied, subset,
+sliced, saved and loaded, so it says which object this is, not what it
+holds: two states of one object share it. Compare \code{\link[=objManifest]{objManifest()}} contents
+to tell states apart.
 
-A new object, such as one built by a reader or by
-\code{\link[=joinGiottoObjects]{joinGiottoObjects()}}, gets a new uid. So does one assembled from another's
-parts, for example with \code{setGiotto(giotto(), as.list(g))}.
+A new object, such as one built by a reader or by \code{\link[=joinGiottoObjects]{joinGiottoObjects()}},
+gets a new uid. So does one assembled from another's parts, for example
+with \code{setGiotto(giotto(), as.list(g))}. A \code{giottoMulti} has its own uid;
+each of its samples keeps its own.
 }
 \examples{
 g <- giotto()

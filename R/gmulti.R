@@ -222,6 +222,10 @@ setMethod("initialize", signature("giottoMulti"), function(.Object, objects = NU
         .Object@instructions <- createGiottoInstructions()
     }
 
+    # its own uid, as a giotto gets one: the multi is a new object, not any
+    # one of its children
+    .Object <- .gobject_uid_init(.Object)
+
     if (length(.Object@objects) == 0L) return(.Object)
 
     # Source resolution: federated multi keeps per-child sources intact but

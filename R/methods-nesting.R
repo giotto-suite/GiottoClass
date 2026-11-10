@@ -159,16 +159,7 @@ setMethod("spatUnit<-", signature("giotto"), function(x, old, value) {
             spatUnit(glist[[item_i]]) <- value
         }
     }
-    g <- giotto(
-        images = x@images,
-        parameters = x@parameters,
-        instructions = x@instructions,
-        offset_file = x@offset_file,
-        versions = x@versions,
-        join_info = x@join_info,
-        source = x@source,
-        initialize = FALSE
-    )
+    g <- .giotto_shell(x)
     g <- setGiotto(g, glist, initialize = TRUE, verbose = FALSE)
 
     active_spat <- activeSpatUnit(g)
@@ -260,16 +251,7 @@ setMethod("featType<-", signature("giotto"), function(x, old, value) {
             featType(glist[[item_i]]) <- value
         }
     }
-    g <- giotto(
-        images = x@images,
-        parameters = x@parameters,
-        instructions = x@instructions,
-        offset_file = x@offset_file,
-        versions = x@versions,
-        join_info = x@join_info,
-        source = x@source,
-        initialize = FALSE
-    )
+    g <- .giotto_shell(x)
     g <- setGiotto(g, glist, initialize = TRUE, verbose = FALSE)
 
     active_feat <- activeFeatType(g)

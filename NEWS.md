@@ -3,7 +3,14 @@
 ## new
 
 - `objUID()` returns the identifier a `giotto` object is given at creation,
-  which stays with it through edits, copies, subsets, saves and loads.
+  which stays with it through edits, copies, subsets, saves and loads. A
+  `giottoMulti` now gets one of its own.
+
+## changes
+
+- `g[[..., drop = FALSE]]` and `sliceGiotto()` keep the object's uid,
+  backend, views, spaces, parameters and `@misc`. A disk-backed object used to
+  come back in memory.
 
 # GiottoClass 0.7.27
 

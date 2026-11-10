@@ -1776,9 +1776,7 @@ setMethod(
         if (drop) {
             return(res)
         } else {
-            g <- giotto(initialize = FALSE,
-                    instructions = instructions(x),
-                    parameters = x@parameters)
+            g <- .giotto_shell(x)
             g <- setGiotto(g, res, verbose = FALSE)
             if (!is.null(spat_unit)) activeSpatUnit(g) <- spat_unit[[1]]
             if (!is.null(feat_type)) activeFeatType(g) <- feat_type[[1]]
@@ -1799,7 +1797,7 @@ setMethod(
         if (drop) {
             return(res)
         } else {
-            g <- giotto(initialize = FALSE, instructions = instructions(x))
+            g <- .giotto_shell(x)
             g <- setGiotto(g, res, verbose = FALSE)
             if (!is.null(spat_unit)) activeSpatUnit(g) <- spat_unit[[1]]
             if (!is.null(feat_type)) activeFeatType(g) <- feat_type[[1]]
@@ -1822,7 +1820,7 @@ setMethod(
         if (drop) {
             return(res)
         } else {
-            g <- giotto(initialize = FALSE, instructions = instructions(x))
+            g <- .giotto_shell(x)
             g <- setGiotto(g, res, verbose = FALSE)
             if (!is.null(spat_unit)) activeSpatUnit(g) <- spat_unit[[1]]
             if (!is.null(feat_type)) activeFeatType(g) <- feat_type[[1]]
@@ -1854,7 +1852,7 @@ setMethod(
         if (drop) {
             return(res)
         } else {
-            g <- giotto(initialize = FALSE, instructions = instructions(x))
+            g <- .giotto_shell(x)
             g <- setGiotto(g, res, verbose = FALSE)
             if (!is.null(spat_unit)) activeSpatUnit(g) <- spat_unit[[1]]
             if (!is.null(feat_type)) activeFeatType(g) <- feat_type[[1]]
@@ -2198,16 +2196,7 @@ sliceGiotto <- function(gobject, spat_unit = ":all:", feat_type = ":all:", negat
     # combine selected data
     datalist <- c(spat_only, feat_only, spat_feat)
 
-    g <- giotto(
-        images = x@images,
-        parameters = x@parameters,
-        instructions = x@instructions,
-        offset_file = x@offset_file,
-        versions = x@versions,
-        join_info = x@join_info,
-        h5_file = x@h5_file,
-        initialize = FALSE
-    )
+    g <- .giotto_shell(x, images = x@images)
     g <- setGiotto(g,
         datalist,
         initialize = FALSE,
@@ -2271,6 +2260,26 @@ setMethod("as.list", signature("giotto"), function(x, slots, spat_unit = NULL, f
 
 # internals ####
 # suspend slot checking until all items in list are supplied
+
+# An empty giotto carrying everything of `x` that is not a subobject: its uid
+# and versions, backend (@source), instructions, parameters, views, spaces
+# and the rest. An object rebuilt from some of another's subobjects starts
+# from this, so it stays the same object, on the same backend. `...` sets
+# slots, such as @images when the subobjects put back leave them out.
+# @cell_ID, @feat_ID and @expression_feat are derived by initialize().
+.GIOTTO_SHELL_SLOTS <- c(
+    "parameters", "instructions", "offset_file", "versions", "join_info",
+    "source", "view", "spaces", "h5_file", "misc"
+)
+
+.giotto_shell <- function(x, ...) {
+    args <- lapply(stats::setNames(nm = .GIOTTO_SHELL_SLOTS), function(s) {
+        methods::slot(x, s)
+    })
+    dots <- list(...)
+    args[names(dots)] <- dots
+    do.call(giotto, c(args, list(initialize = FALSE)))
+}
 
 
 .dbrkt_su_filter <- function(x, y) {
