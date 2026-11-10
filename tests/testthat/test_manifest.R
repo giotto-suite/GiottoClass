@@ -368,6 +368,12 @@ describe("object uid", {
         g2 <- g
         expect_identical(.gobject_uid(g2), .gobject_uid(g))
     })
+
+    it("is read with objUID()", {
+        expect_identical(objUID(g), .gobject_uid(g))
+        expect_type(objUID(g), "character")
+        expect_error(objUID(list()))
+    })
 })
 
 describe("object source", {

@@ -1,3 +1,10 @@
+# GiottoClass 0.7.28
+
+## new
+
+- `objUID()` returns the identifier a `giotto` object is given at creation,
+  which stays with it through edits, copies, subsets, saves and loads.
+
 # GiottoClass 0.7.27
 
 ## new
