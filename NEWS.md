@@ -11,6 +11,9 @@
 - `g[[..., drop = FALSE]]` and `sliceGiotto()` keep the object's uid,
   backend, views, spaces, parameters and `@misc`. A disk-backed object used to
   come back in memory.
+- `saveGiotto()` returns the object invisibly; use `g <- saveGiotto(g)`. A
+  backed object can change in the save, which also records the snapshot it
+  now matches in `@versions$snapshot`.
 
 # GiottoClass 0.7.27
 

@@ -27,6 +27,14 @@ describe("Giotto Object Save/Load", {
             expect_true(methods::validObject(g3))
         })
 
+        it("returns the in-memory object as given", {
+            rlang::local_options(lifecycle_verbosity = "quiet")
+            res <- withVisible(saveGiotto(g2, dir = test, overwrite = TRUE,
+                verbose = FALSE))
+            expect_false(res$visible)
+            expect_identical(res$value, g2)
+        })
+
     })
 
     describe("qs2 method", {
