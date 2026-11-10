@@ -155,6 +155,28 @@ objUID <- function(x) {
     gobject
 }
 
+## snapshot pointer ####
+
+# Tags of the snapshots an object last passed, `@versions$snapshot`: NULL
+# until a backend's load or save sets one (GiottoDisk sets one tag; a save
+# records the previous value as its parents). An object combined from others
+# starts with all of theirs, so its first save shows the merge.
+.gobject_snapshot <- function(gobject) {
+    if (!methods::.hasSlot(gobject, "versions")) return(NULL)
+    v <- slot(gobject, "versions")
+    if (is.list(v)) v$snapshot
+}
+
+.gobject_snapshot_from <- function(gobject, objects) {
+    tags <- unique(unlist(lapply(objects, .gobject_snapshot)))
+    if (!length(tags)) return(gobject)
+    v <- slot(gobject, "versions")
+    if (!is.list(v)) v <- list()
+    v$snapshot <- tags
+    slot(gobject, "versions") <- v
+    gobject
+}
+
 #' @name objManifest
 #' @title Giotto object manifest
 #' @description

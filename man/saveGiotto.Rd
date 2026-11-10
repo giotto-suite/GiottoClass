@@ -49,7 +49,10 @@ when saving. Dropping them can improve performance for large datasets.}
 \item{...}{additional parameters for \code{\link[terra]{writeRaster}}}
 }
 \value{
-Creates a directory with Giotto object information
+The giotto object, invisibly. Save a backed object as
+\code{g <- saveGiotto(g)}: the save can change it, adopting data into the
+project and recording the snapshot it now matches. An in-memory object
+is returned as given.
 }
 \description{
 Saves a Giotto object to a specific folder structure.
@@ -65,5 +68,5 @@ and will go to \code{\link[base]{saveRDS}} or \code{\link[qs2]{qs_save}}
 \examples{
 g <- GiottoData::loadGiottoMini("visium")
 
-saveGiotto(gobject = g, dir = tempdir(), overwrite = TRUE)
+g <- saveGiotto(gobject = g, dir = tempdir(), overwrite = TRUE)
 }

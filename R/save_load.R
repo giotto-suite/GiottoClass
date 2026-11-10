@@ -22,14 +22,17 @@
 #' when saving. Dropping them can improve performance for large datasets.
 #' @param verbose be verbose
 #' @param ... additional parameters for \code{\link[terra]{writeRaster}}
-#' @returns Creates a directory with Giotto object information
+#' @returns The giotto object, invisibly. Save a backed object as
+#'   `g <- saveGiotto(g)`: the save can change it, adopting data into the
+#'   project and recording the snapshot it now matches. An in-memory object
+#'   is returned as given.
 #' @details Works together with \code{\link{loadGiotto}} to save and re-load
 #' Giotto objects. Additional method_params need to be provided as a list
 #' and will go to \code{\link[base]{saveRDS}} or \code{\link[qs2]{qs_save}}
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
 #'
-#' saveGiotto(gobject = g, dir = tempdir(), overwrite = TRUE)
+#' g <- saveGiotto(gobject = g, dir = tempdir(), overwrite = TRUE)
 #' @export
 saveGiotto <- function(
         gobject,
@@ -70,6 +73,10 @@ saveGiotto <- function(
             "Save the children individually, or attach a source (see ",
             "GiottoDisk::snapshotSave).", call. = FALSE)
     }
+
+    # returned as given: the save below re-points images at files in a folder
+    # that is renamed into place afterwards
+    x <- gobject
 
     # check params
     checkmate::assert_string(foldername, min.chars = 1L)
@@ -215,6 +222,7 @@ saveGiotto <- function(
         unlink(x = final_dir, recursive = TRUE)
         file.rename(from = use_dir, to = final_dir)
     }
+    invisible(x)
 }
 
 

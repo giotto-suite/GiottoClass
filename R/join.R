@@ -616,6 +616,7 @@ joinGiottoObjects <- function(gobject_list,
         versions = .versions_info(),
         join_info = NULL
     )
+    comb_gobject <- .gobject_snapshot_from(comb_gobject, gobject_list)
 
 
 

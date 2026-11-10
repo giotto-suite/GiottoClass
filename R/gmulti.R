@@ -316,7 +316,10 @@ createGiottoMulti <- function(objects, instructions = NULL, source = NULL) {
     args <- list(objects = objects)
     if (!is.null(instructions)) args$instructions <- instructions
     if (!is.null(source)) args$source <- source
-    do.call(new, c("giottoMulti", args))
+    x <- do.call(new, c("giottoMulti", args))
+    # built from its samples' saved states, which its first save records as
+    # parents
+    .gobject_snapshot_from(x, objects)
 }
 
 
