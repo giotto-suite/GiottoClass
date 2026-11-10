@@ -14,6 +14,9 @@
 - `saveGiotto()` returns the object invisibly; use `g <- saveGiotto(g)`. A
   backed object can change in the save, which also records the snapshot it
   now matches in `@versions$snapshot`.
+- `joinGiottoObjects()` and `createGiottoMulti()` keep the snapshots their
+  inputs were last loaded from or saved as, so the result's first save names
+  all of them as parents.
 
 # GiottoClass 0.7.27
 

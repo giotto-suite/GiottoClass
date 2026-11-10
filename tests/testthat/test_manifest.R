@@ -397,6 +397,19 @@ describe("object uid", {
         expect_identical(objUID(x), objUID(g))
     })
 
+    it("is joined with the snapshots of the objects combined", {
+        a <- g
+        a@versions$snapshot <- "a.aaaaaaaa"
+        b <- g
+        b@versions$snapshot <- "b.bbbbbbbb"
+        j <- suppressWarnings(suppressMessages(joinGiottoObjects(list(a, b),
+            gobject_names = c("a", "b"), verbose = FALSE)))
+        expect_identical(.gobject_snapshot(j), c("a.aaaaaaaa", "b.bbbbbbbb"))
+        m <- createGiottoMulti(list(a = a, b = g))
+        expect_identical(.gobject_snapshot(m), "a.aaaaaaaa")
+        expect_null(.gobject_snapshot(createGiottoMulti(list(s = g))))
+    })
+
     it("of a giottoMulti is its own; its samples keep theirs", {
         m <- as(g, "giottoMulti")
         expect_type(objUID(m), "character")

@@ -79,7 +79,9 @@ protein, metabolites, ... that are provided in the expression slot.}
 \item{\code{versions}}{giotto object metadata and versioning info: the producing
 GiottoClass version, the object's uid (see \code{\link[=objUID]{objUID()}}) and \code{snapshot}, the
 tag of the snapshot the object was last loaded from or saved as, set by
-a backend such as GiottoDisk (\code{NULL} until then)}
+a backend such as GiottoDisk (\code{NULL} until then). An object combined from
+others, by \code{\link[=joinGiottoObjects]{joinGiottoObjects()}} or \code{\link[=createGiottoMulti]{createGiottoMulti()}}, holds the tags
+of all of them until it is saved.}
 
 \item{\code{join_info}}{information about joined Giotto objects}
 
