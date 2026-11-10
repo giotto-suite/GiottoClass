@@ -319,6 +319,18 @@ describe("gobject [[ extraction", {
             expect_identical(original_instructions, result_instructions)
         })
 
+        it("keeps the uid and object-level slots when drop = FALSE", {
+            x <- g
+            x@misc$note <- "kept"
+            for (res in list(x[[, drop = FALSE]],
+                x[["expression", drop = FALSE]],
+                x[[spat_unit = "z0", drop = FALSE]])) {
+                expect_identical(objUID(res), objUID(x))
+                expect_identical(res@misc, x@misc)
+                expect_identical(res@parameters, x@parameters)
+            }
+        })
+
     })
 
     describe("Integration with as.list method", {

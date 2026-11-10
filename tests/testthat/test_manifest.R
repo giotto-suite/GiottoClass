@@ -356,6 +356,21 @@ describe("reading a disk-backed project directory", {
         expect_false(manifestDiff(objManifest(td), objManifest(gb))$changed)
         expect_identical(objHistory(td, name = "snap1"), objHistory(gb))
     })
+
+    it("stays on its backend through sliceGiotto() and [[ drop = FALSE", {
+        skip_if_not_installed("GiottoDisk")
+        td <- tempfile("proj_")
+        dir.create(td)
+        on.exit(unlink(td, recursive = TRUE), add = TRUE)
+        gb <- g
+        # a dense matrix does not write through to a vault yet
+        gb@expression$cell$rna$scaled <- NULL
+        gb@source <- GiottoDisk::gDirSource(td)
+        for (res in list(sliceGiotto(gb, spat_unit = "cell"),
+            gb[["expression", drop = FALSE]])) {
+            expect_identical(res@source, gb@source)
+        }
+    })
 })
 
 describe("object uid", {
@@ -367,6 +382,26 @@ describe("object uid", {
     it("survives a copy", {
         g2 <- g
         expect_identical(.gobject_uid(g2), .gobject_uid(g))
+    })
+
+    it("is read with objUID()", {
+        expect_identical(objUID(g), .gobject_uid(g))
+        expect_type(objUID(g), "character")
+        expect_error(objUID(list()))
+    })
+
+    it("is kept by sliceGiotto() and by renaming a spatial unit", {
+        expect_identical(objUID(sliceGiotto(g, spat_unit = "cell")), objUID(g))
+        x <- g
+        suppressWarnings(spatUnit(x, old = "cell") <- "cell2")
+        expect_identical(objUID(x), objUID(g))
+    })
+
+    it("of a giottoMulti is its own; its samples keep theirs", {
+        m <- as(g, "giottoMulti")
+        expect_type(objUID(m), "character")
+        expect_false(identical(objUID(m), objUID(g)))
+        expect_identical(objUID(m[[1]]), objUID(g))
     })
 })
 
