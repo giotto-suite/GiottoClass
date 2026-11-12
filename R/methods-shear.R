@@ -87,7 +87,7 @@ setMethod("shear", signature("giottoAffineImage"), function(x, fx = 0, fy = 0, x
     # update affine
     x@affine <- do.call(shear, args = a)
 
-    return(initialize(x))
+    return(initialize(x, .keep_stats = TRUE))
 })
 
 # * affine2d ####

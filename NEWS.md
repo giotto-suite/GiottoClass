@@ -1,3 +1,12 @@
+# GiottoClass 0.7.31
+
+## changes
+
+- `reconnect()` on an image opened from the file it was made from keeps the
+  stored intensity range and integer flag instead of sampling the pixels
+  again. `loadGiotto()` no longer reads each image at full resolution when
+  its file has no usable overviews (2.2 s per image on Atera's VRT images).
+
 # GiottoClass 0.7.30
 
 ## changes

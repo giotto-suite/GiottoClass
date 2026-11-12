@@ -626,7 +626,7 @@ setMethod("plot", signature(x = "affine2d", y = "missing"), function(x, ...) {
 
 .plot_giottoaffineimage <- function(x, maxcell = 5e5, ...) {
     pargs <- get_args_list(...)
-    gimg <- x@funs$realize_magick()
+    gimg <- .gaffine_realize(x)
     pargs$x <- gimg
     do.call(plot, args = pargs)
     # TODO things to be implemented for this pipeline:

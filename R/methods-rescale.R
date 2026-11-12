@@ -232,7 +232,7 @@ setMethod(
         # update affine
         x@affine <- do.call(rescale, args = a)
 
-        return(initialize(x))
+        return(initialize(x, .keep_stats = TRUE))
     }
 )
 
