@@ -256,7 +256,7 @@ setMethod(
         a$x <- aff
         # update affine
         x@affine <- do.call(affine, args = a)
-        return(initialize(x))
+        return(initialize(x, .keep_stats = TRUE))
     }
 )
 
