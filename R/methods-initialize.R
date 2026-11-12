@@ -235,9 +235,6 @@ setMethod("initialize", signature("giottoAffineImage"), function(.Object, ...) {
         objName(.Object) <- "test"
     }
 
-    # append associated functions
-
-
     r <- .Object@raster_object
     if (!is.null(r)) {
         # apply the image extent as anchor for affine object plotting
@@ -250,24 +247,9 @@ setMethod("initialize", signature("giottoAffineImage"), function(.Object, ...) {
         .Object@extent <- .ext_to_num_vec(ext(d))
     }
 
-    .Object@funs$realize_magick <- function(filename = NULL, size = 5e5) {
-        mg <- .gaffine_realize_magick(.Object, size = size)
-        gimg <- .magick_preview(mg@mg_object, filename = filename) %>%
-            createGiottoLargeImage()
-        ext(gimg) <- ext(.Object)
-
-        # mask image
-        aff <- .Object@affine
-        m <- .bound_poly(ext(aff@anchor))
-        m <- affine(m, aff)
-        gimg@raster_object <- terra::mask(gimg@raster_object, mask = m)
-
-        return(gimg)
-        # TODO things to be implemented for this pipeline:
-        # col (the trip the magick-image flattened the image without applying col)
-        # max_intensity same as above
-        # the above options are also stripped when the fresh largeImage is created
-    }
+    # Realizing the image is .gaffine_realize(); objects saved before held it
+    # here as a closure over a copy of themselves
+    .Object@funs$realize_magick <- NULL
 
     return(.Object)
 })

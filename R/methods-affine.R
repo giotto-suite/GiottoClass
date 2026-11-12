@@ -373,6 +373,27 @@ setMethod(
 
 
 # perform the actual affine operation
+# The affine applied to the image's pixels, as a new giottoLargeImage of at
+# least `size` pixels, masked to the transformed bounds (doDeferred(), plot())
+.gaffine_realize <- function(x, filename = NULL, size = 5e5) {
+    mg <- .gaffine_realize_magick(x, size = size)
+    gimg <- .magick_preview(mg@mg_object, filename = filename) %>%
+        createGiottoLargeImage()
+    ext(gimg) <- ext(x)
+
+    # mask image
+    aff <- x@affine
+    m <- .bound_poly(ext(aff@anchor))
+    m <- affine(m, aff)
+    gimg@raster_object <- terra::mask(gimg@raster_object, mask = m)
+
+    return(gimg)
+    # TODO things to be implemented for this pipeline:
+    # col (the trip the magick-image flattened the image without applying col)
+    # max_intensity same as above
+    # the above options are also stripped when the fresh largeImage is created
+}
+
 .gaffine_realize_magick <- function(x, size = 5e5, ...) {
     mg <- .spatraster_sample_values(x, output = "magick", size = size, ...)
     aff <- x@affine

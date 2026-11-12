@@ -75,3 +75,27 @@ describe("reconnecting an image", {
         expect_false(is.null(a@is_int))
     })
 })
+
+describe("an affine image", {
+    a <- createGiottoLargeImage(plain, verbose = FALSE)
+    aff <- spin(a, 30)
+
+    it("holds no copy of itself, and is realized from what it is now", {
+        expect_null(aff@funs$realize_magick)
+        moved <- spatShift(aff, dx = 1000)
+        r <- doDeferred(moved, size = 1e4)
+        expect_s4_class(r, "giottoLargeImage")
+        expect_equal(ext(r)[], ext(moved)[])
+    })
+
+    it("drops the copy an older save carried when reconnected", {
+        old <- aff
+        old@funs$realize_magick <- local({
+            .Object <- aff
+            function(filename = NULL, size = 5e5) .Object
+        })
+        b <- .round_trip(old)
+        expect_true(is.function(b@funs$realize_magick))
+        expect_null(reconnect(b)@funs$realize_magick)
+    })
+})
