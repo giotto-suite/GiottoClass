@@ -529,6 +529,28 @@
     return(gobject)
 }
 
+# Multiomics results (e.g. runWNN()'s weights and neighbor indices) cover all
+# cells, partly as positions, so removing cells drops them.
+.subset_multiomics <- function(gobject, spat_unit = ":all:", cell_ids = NULL) {
+    mo <- gobject@multiomics
+    if (is.null(cell_ids) || !length(mo)) return(gobject)
+    units <- names(mo)
+    if (!isTRUE(spat_unit == ":all:")) units <- intersect(units, spat_unit)
+    drop <- units[vapply(units, function(su) {
+        !all(spatIDs(gobject, spat_unit = su) %in% cell_ids)
+    }, FUN.VALUE = logical(1L))]
+    if (!length(drop)) return(gobject)
+    warning(wrap_txt(
+        "[subsetGiotto] multiomics results of spat_unit",
+        paste(dQuote(drop, FALSE), collapse = ", "),
+        "were dropped: they were computed on the removed cells too.",
+        "Rerun the integration (e.g. runWNN()) on the subset"
+    ), call. = FALSE)
+    mo[drop] <- NULL
+    gobject@multiomics <- if (length(mo)) mo else NULL
+    gobject
+}
+
 
 
 
@@ -781,6 +803,13 @@
     # children themselves are never mutated -- mutating them would report a
     # filter on data the child never went through.
     is_multi <- inherits(gobject, "giottoMulti")
+
+    # first, while spatIDs() still lists the cells before the subset
+    gobject <- .subset_multiomics(
+        gobject = gobject,
+        spat_unit = spat_unit,
+        cell_ids = cell_ids
+    )
 
     if (verbose) wrap_msg("completed 1: preparation")
 

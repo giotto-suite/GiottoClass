@@ -1247,7 +1247,9 @@ setMethod("setMultiomics", signature("gAny"), function(gobject,
 
     # Notify on replacement
     potential_names <- names(
-        slot(gobject, "multiomics")[[spat_unit]][[integration_method]][[feat_type]]
+        slot(gobject, "multiomics")[[spat_unit]][[feat_type]][[
+            integration_method
+        ]]
     )
     if (result_name %in% potential_names) {
         vmsg(.v = verbose,
@@ -1324,15 +1326,16 @@ setMethod("getMultiomics", signature("gAny"), function(gobject,
     # automatic result selection
     if (is.null(result_name)) {
         result_to_use <- names(
-            gobject@multiomics[[spat_unit]][[integration_method]][[feat_type]]
-        )[[1]]
-        if (is.null(result_to_use)) {
+            gobject@multiomics[[spat_unit]][[feat_type]][[integration_method]]
+        )[1]
+        if (is.null(result_to_use) || is.na(result_to_use)) {
             stop('There is currently no multiomics integration created for
             spatial unit: "', spat_unit, '" and feature type "', feat_type, '".
             First run runWNN() or other multiomics integration method\n')
         } else {
             message('The result name was not specified, default to the
                     first: "', result_to_use, '"')
+            result_name <- result_to_use
         }
     }
 
@@ -1340,10 +1343,10 @@ setMethod("getMultiomics", signature("gAny"), function(gobject,
         integration_method
     ]][[result_name]]
     if (is.null(result)) {
-        stop(
-            'result: "', result_to_use,
-            '" does not exist. Create a multiomics integration first'
-        )
+        stop(wrap_txt(
+            "[getMultiomics] result", dQuote(result_name, FALSE),
+            "does not exist. Create a multiomics integration first"
+        ), call. = FALSE)
     }
 
     result
