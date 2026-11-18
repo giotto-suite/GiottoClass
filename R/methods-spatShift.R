@@ -202,7 +202,7 @@ setMethod(
     "spatShift", signature("giottoAffineImage"),
     function(x, dx = 0, dy = 0, ...) {
         x@affine <- spatShift(x@affine, dx = dx, dy = dy, ...)
-        return(initialize(x))
+        return(initialize(x, .keep_stats = TRUE))
     }
 )
 

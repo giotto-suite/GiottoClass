@@ -207,7 +207,7 @@ setMethod("spin", signature("giottoAffineImage"), function(x, angle = NULL, x0 =
     # update affine
     x@affine <- do.call(spin, args = a)
 
-    return(initialize(x))
+    return(initialize(x, .keep_stats = TRUE))
 })
 
 #' @rdname spin

@@ -141,7 +141,7 @@ setMethod("flip", signature("giottoAffineImage"), function(x, direction = "verti
     # update affine
     x@affine <- do.call(flip, args = a)
 
-    return(initialize(x))
+    return(initialize(x, .keep_stats = TRUE))
 })
 
 #' @rdname flip

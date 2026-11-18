@@ -1,6 +1,12 @@
 #' @name reconnect
 #' @title Reconnect a GiottoClass object
 #' @param x object to reconnect
+#' @description
+#' Reopen what an object reads from disk, such as an image's file after the
+#' object was read back with `readRDS()`. An image reconnected to the file it
+#' was made from keeps its stored intensity range and integer flag (the
+#' defaults for its colour scaling); given a different `path`, they are
+#' sampled from the new file.
 #' @param path character. (optional) New filepath to associate with the object.
 #' Only needed if the filepath is not normally carried by the object or the path
 #' has changed.
@@ -21,6 +27,7 @@ NULL
 #' @rdname reconnect
 #' @export
 setMethod("reconnect", signature("giottoAffineImage"), function(x, path = NULL, ...) {
+    same_file <- .same_image_file(path, x)
     path <- path %null% slot(x, "file_path")
     .image_path_checks(path)
 
@@ -37,13 +44,14 @@ setMethod("reconnect", signature("giottoAffineImage"), function(x, path = NULL, 
     # this only affects the image extent, so do second
     ext(x@raster_object) <- img_ext
 
-    return(initialize(x))
+    return(initialize(x, .keep_stats = same_file))
 })
 
 
 #' @rdname reconnect
 #' @export
 setMethod("reconnect", signature("giottoLargeImage"), function(x, path = NULL, ...) {
+    same_file <- .same_image_file(path, x)
     path <- path %null% slot(x, "file_path")
     .image_path_checks(path)
 
@@ -52,8 +60,18 @@ setMethod("reconnect", signature("giottoLargeImage"), function(x, path = NULL, .
     slot(x, "raster_object") <- raster_object
     ext(slot(x, "raster_object")) <- slot(x, "extent")
 
-    return(initialize(x))
+    return(initialize(x, .keep_stats = same_file))
 })
+
+# Whether reconnecting opens the file the image was made from: no `path`, or
+# the same one. Its stored intensity range and integer flag still hold then,
+# so they are kept rather than sampled again.
+.same_image_file <- function(path, x) {
+    old <- slot(x, "file_path")
+    is.null(path) || (!is.null(old) &&
+        identical(normalizePath(path, mustWork = FALSE),
+            normalizePath(old, mustWork = FALSE)))
+}
 
 
 #' @rdname reconnect

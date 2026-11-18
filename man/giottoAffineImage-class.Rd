@@ -21,7 +21,7 @@ the deferred affine transform using \code{doDeferred()} and return a processed
 \item{\code{affine}}{contains \code{affine2d} object allowing lazily performed spatial
 transforms}
 
-\item{\code{funs}}{list of functions associated with the object. Primarily to
-perform the delayed/lazy operation}
+\item{\code{funs}}{unused, kept so saved objects load. Performing the deferred
+affine is \code{doDeferred()}.}
 }}
 

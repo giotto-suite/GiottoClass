@@ -26,7 +26,11 @@ has changed.}
 GiottoClass object
 }
 \description{
-Reconnect a GiottoClass object
+Reopen what an object reads from disk, such as an image's file after the
+object was read back with \code{readRDS()}. An image reconnected to the file it
+was made from keeps its stored intensity range and integer flag (the
+defaults for its colour scaling); given a different \code{path}, they are
+sampled from the new file.
 }
 \examples{
 temp <- tempfile()

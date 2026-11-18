@@ -2774,7 +2774,7 @@ NULL
 setMethod(
     "doDeferred", signature("giottoAffineImage"),
     function(x, size = 5e5, filename = NULL, ...) {
-        x@funs$realize_magick(filename = filename, size = size, ...)
+        .gaffine_realize(x, filename = filename, size = size)
     }
 )
 

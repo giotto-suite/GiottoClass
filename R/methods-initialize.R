@@ -160,8 +160,15 @@ setMethod("initialize", "affine2d", function(.Object, ...) {
 })
 
 ## giottoLargeImage ####
-setMethod("initialize", signature("giottoLargeImage"), function(.Object, ...) {
-    .Object <- methods::callNextMethod()
+# `.keep_stats`: keep the stored min/max intensity and is_int instead of
+# sampling the pixels again, when all three are set. For what leaves the
+# pixels as they were: reconnect() to the same file, and a giottoAffineImage's
+# transforms, which change only its affine. The sample sets display defaults
+# only, and on a file GDAL cannot read through overviews it reads full
+# resolution (seconds per image, at every load).
+setMethod("initialize", signature("giottoLargeImage"), function(.Object, ...,
+    .keep_stats = FALSE) {
+    .Object <- methods::callNextMethod(.Object, ...)
 
     # defaults
     .Object@OS_platform <- .Object@OS_platform %null% .Platform[["OS.type"]]
@@ -178,23 +185,25 @@ setMethod("initialize", signature("giottoLargeImage"), function(.Object, ...) {
     .Object@scale_factor <- 1 / .Object@resolution
 
     # sample for image characteristics
-    svals <- .spatraster_sample_values(r, size = 5000, verbose = FALSE)
+    if (!(isTRUE(.keep_stats) && .lgimg_has_stats(.Object))) {
+        svals <- .spatraster_sample_values(r, size = 5000, verbose = FALSE)
 
-    if (nrow(svals) != 0) {
-        intensity_range <- .spatraster_intensity_range(
+        if (nrow(svals) != 0) {
+            intensity_range <- .spatraster_intensity_range(
+                raster_object = r,
+                sample_values = svals
+            )
+        }
+        .Object@min_intensity <- intensity_range[["min"]]
+        .Object@max_intensity <- intensity_range[["max"]]
+
+        # find out if image is int or floating pt
+        is_int <- .spatraster_is_int(
             raster_object = r,
             sample_values = svals
         )
+        .Object@is_int <- is_int
     }
-    .Object@min_intensity <- intensity_range[["min"]]
-    .Object@max_intensity <- intensity_range[["max"]]
-
-    # find out if image is int or floating pt
-    is_int <- .spatraster_is_int(
-        raster_object = r,
-        sample_values = svals
-    )
-    .Object@is_int <- is_int
 
     # extent
     .Object@extent <- as.vector(terra::ext(r))
@@ -210,6 +219,13 @@ setMethod("initialize", signature("giottoLargeImage"), function(.Object, ...) {
     return(.Object)
 })
 
+# whether the sampled characteristics are stored
+.lgimg_has_stats <- function(x) {
+    length(x@min_intensity) == 1L && !is.na(x@min_intensity) &&
+        length(x@max_intensity) == 1L && !is.na(x@max_intensity) &&
+        length(x@is_int) == 1L && !is.na(x@is_int)
+}
+
 ## giottoAffineImage ####
 setMethod("initialize", signature("giottoAffineImage"), function(.Object, ...) {
     .Object <- methods::callNextMethod()
@@ -218,9 +234,6 @@ setMethod("initialize", signature("giottoAffineImage"), function(.Object, ...) {
     if (is.null(objName(.Object))) {
         objName(.Object) <- "test"
     }
-
-    # append associated functions
-
 
     r <- .Object@raster_object
     if (!is.null(r)) {
@@ -234,24 +247,9 @@ setMethod("initialize", signature("giottoAffineImage"), function(.Object, ...) {
         .Object@extent <- .ext_to_num_vec(ext(d))
     }
 
-    .Object@funs$realize_magick <- function(filename = NULL, size = 5e5) {
-        mg <- .gaffine_realize_magick(.Object, size = size)
-        gimg <- .magick_preview(mg@mg_object, filename = filename) %>%
-            createGiottoLargeImage()
-        ext(gimg) <- ext(.Object)
-
-        # mask image
-        aff <- .Object@affine
-        m <- .bound_poly(ext(aff@anchor))
-        m <- affine(m, aff)
-        gimg@raster_object <- terra::mask(gimg@raster_object, mask = m)
-
-        return(gimg)
-        # TODO things to be implemented for this pipeline:
-        # col (the trip the magick-image flattened the image without applying col)
-        # max_intensity same as above
-        # the above options are also stripped when the fresh largeImage is created
-    }
+    # Realizing the image is .gaffine_realize(); objects saved before held it
+    # here as a closure over a copy of themselves
+    .Object@funs$realize_magick <- NULL
 
     return(.Object)
 })

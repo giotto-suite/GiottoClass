@@ -125,8 +125,8 @@ giottoLargeImage <- setClass(
 #' `giottoLargeImage`.
 #' @slot affine contains `affine2d` object allowing lazily performed spatial
 #' transforms
-#' @slot funs list of functions associated with the object. Primarily to
-#' perform the delayed/lazy operation
+#' @slot funs unused, kept so saved objects load. Performing the deferred
+#' affine is `doDeferred()`.
 #' @returns `giottoAffineImage`
 setClass(
     "giottoAffineImage",
