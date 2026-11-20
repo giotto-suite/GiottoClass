@@ -20,6 +20,17 @@
 
 # GiottoClass 0.7.30
 
+## bug fixes
+
+- `getMultiomics()` names the missing result in its error ("object
+  'result_to_use' not found" before), and with `result_name = NULL` returns
+  the first stored result. `setMultiomics()` notes when it replaces a result.
+  Both looked the slot up with `feat_type` and `integration_method` swapped.
+- `subsetGiotto()` drops multiomics results (e.g. from `runWNN()`) with a
+  warning when it removes cells: they were kept unchanged, for every cell of
+  the full object, and `runIntegratedUMAP()` then embedded the removed cells.
+  `joinGiottoObjects()` lists them among the results it drops.
+
 ## changes
 
 - Delaunay networks default to the `geometry` backend, which is much faster

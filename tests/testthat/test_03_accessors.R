@@ -1376,3 +1376,21 @@ describe("addFeatMetadata()", {
     })
 
 })
+
+test_that("multiomics results are found by name, or the first when result_name = NULL", {
+    g <- giotto()
+    w <- list(rna = c(c1 = 0.4, c2 = 0.7))
+    g <- setMultiomics(g, x = w, spat_unit = "cell", feat_type = "rna_protein",
+        result_name = "w_rna", verbose = FALSE)
+    expect_identical(getMultiomics(g, spat_unit = "cell",
+        feat_type = "rna_protein", result_name = "w_rna"), w)
+    expect_error(getMultiomics(g, spat_unit = "cell",
+        feat_type = "rna_protein", result_name = "w_protein"),
+        "\\[getMultiomics\\] result \"w_protein\" does not exist")
+    expect_message(first <- getMultiomics(g, spat_unit = "cell",
+        feat_type = "rna_protein", result_name = NULL), "w_rna")
+    expect_identical(first, w)
+    expect_message(setMultiomics(g, x = w, spat_unit = "cell",
+        feat_type = "rna_protein", result_name = "w_rna", verbose = TRUE),
+        "already exists")
+})

@@ -19,6 +19,19 @@ test_that("visium can join", {
     # TODO check spatial
 })
 
+test_that("join warns that multiomics results are dropped", {
+    gm <- g
+    gm@spatial_network <- NULL
+    gm@nn_network <- NULL
+    gm <- setMultiomics(gm, x = list(rna = 1), spat_unit = "cell",
+        feat_type = "rna_protein", result_name = "w_rna", verbose = FALSE)
+    expect_warning(j <- joinGiottoObjects(
+        gobject_list = list(gm, gm),
+        gobject_names = letters[seq_len(2)]
+    ), "multiomics\\s+results")
+    expect_null(j@multiomics)
+})
+
 test_that("expression and spatloc join", {
     gtest <- suppressWarnings(giotto())
     gtest <- setGiotto(gtest, getExpression(g), verbose = FALSE)
