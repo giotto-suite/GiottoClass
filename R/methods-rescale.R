@@ -244,7 +244,7 @@ setMethod("rescale", signature("affine2d"), function(x, fx = 1, fy = fx, x0, y0)
     # update linear
     scale_m <- diag(c(fx, fy))
     old_aff <- new_aff <- x@affine
-    .aff_linear_2d(new_aff) <- .aff_linear_2d(new_aff) %*% scale_m
+    .aff_linear_2d(new_aff) <- scale_m %*% .aff_linear_2d(new_aff)
 
     ## calc shifts ##
     # create dummy

@@ -160,7 +160,7 @@ setMethod("flip", signature("affine2d"), function(x, direction = "vertical", x0 
             xyshift <- c(x0 * 2, 0) + .aff_shift_2d(aff) * c(-1, 1)
         }
     )
-    .aff_linear_2d(aff) <- .aff_linear_2d(aff) %*% flip_m
+    .aff_linear_2d(aff) <- flip_m %*% .aff_linear_2d(aff)
     .aff_shift_2d(aff) <- xyshift
 
     x@affine <- aff

@@ -169,6 +169,12 @@ updateGiottoObject <- function(gobject) {
         gobject <- .update_binpoints_slots(gobject)
     }
 
+    # GiottoClass 0.8.0 stores affine matrices pre-multiplied (column
+    # vectors); earlier objects hold the transposed linear block
+    if (.gversion(gobject) < "0.8.0") {
+        gobject <- .update_affine_layout(gobject)
+    }
+
     # -------------------------------------------------------------------------#
 
     # subobject updates
@@ -341,6 +347,53 @@ updateGiottoObject <- function(gobject) {
         x@spaces <- NULL
     }
     x
+}
+
+# for updating pre-0.8.0 objects: affine images and recorded `affine` space
+# steps move from the post-multiply layout to the pre-multiply one. Geometry
+# is unchanged; only the stored linear block is transposed.
+.update_affine_layout <- function(x) {
+    for (i in seq_along(x@images)) {
+        if (inherits(x@images[[i]], "giottoAffineImage")) {
+            aff <- .affine2d_from_post(x@images[[i]]@affine)
+            x@images[[i]]@affine <- aff
+            # loadGiotto() initializes images before the object, which
+            # caches an extent from the unconverted matrix
+            x@images[[i]]@extent <- .ext_to_num_vec(
+                ext(affine(.bound_poly(ext(aff@anchor)), aff)))
+        }
+    }
+    x@spaces <- .update_spaces_affine_layout(x@spaces)
+    x
+}
+
+.update_spaces_affine_layout <- function(spaces) {
+    if (length(spaces) == 0L) return(spaces)
+    lapply(spaces, function(sp) {
+        sp@steps <- lapply(sp@steps, .update_space_step_affine_layout)
+        sp
+    })
+}
+
+# A recorded matrix was read post-multiplied unless the call said
+# `pre_multiply = TRUE`; an explicit choice is left as recorded.
+.update_space_step_affine_layout <- function(step) {
+    if (!identical(step$op, "affine")) return(step)
+    y <- step$args$y
+    if (inherits(y, "affine2d")) {
+        step$args$y <- .affine2d_from_post(y)
+    } else if (is.matrix(y) && is.null(step$args$pre_multiply)) {
+        y[seq(2), seq(2)] <- t(y[seq(2), seq(2)])
+        step$args$y <- y
+    }
+    step
+}
+
+.affine2d_from_post <- function(x) {
+    m <- x@affine
+    m[seq(2), seq(2)] <- t(m[seq(2), seq(2)])
+    x@affine <- m
+    initialize(x)
 }
 
 # for updating pre-0.6.0 objects: slot renames on spatNetData / nnData

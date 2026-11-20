@@ -12,9 +12,9 @@
 #' @param inv logical. Whether the inverse of the affine transform should
 #' be applied.
 #' @param pre_multiply logical. Either pre: `t(A %*% t(xy))` or post: `xy %*% A`
-#' convention to use when applying the affine matrix. The general convention
-#' is to set `TRUE`, but Giotto internally uses `FALSE` (this may be updated
-#' in the future).
+#' convention to use when applying the affine matrix. Default `TRUE` is the
+#' standard column-vector convention, which `affine2d` also stores. `FALSE`
+#' reads the linear block transposed, as Giotto did before GiottoClass 0.8.0.
 #' @param ... additional args to pass (none implemented)
 #' @returns affine transformed object or an `affine2d` if a `matrix` was
 #' passed to `x`
@@ -168,7 +168,7 @@ setMethod("affine", signature(x = "ANY", y = "affine2d"), function(x, y, ...) {
 #' @export
 setMethod(
     "affine", signature(x = "SpatVector", y = "matrix"),
-    function(x, y, inv = FALSE, pre_multiply = FALSE, ...) {
+    function(x, y, inv = FALSE, pre_multiply = TRUE, ...) {
         a <- list(...)
         if (terra::geomtype(x) != "none") {
             a$geomtype <- terra::geomtype(x)
@@ -186,7 +186,7 @@ setMethod(
 #' @export
 setMethod(
     "affine", signature(x = "giottoPoints", y = "matrix"),
-    function(x, y, inv = FALSE, pre_multiply = FALSE, ...) {
+    function(x, y, inv = FALSE, pre_multiply = TRUE, ...) {
         x[] <- .affine_sv(
             x = x[],
             m = y,
@@ -204,7 +204,7 @@ setMethod(
 #' @export
 setMethod(
     "affine", signature(x = "giottoPolygon", y = "matrix"),
-    function(x, y, inv = FALSE, pre_multiply = FALSE, ...) {
+    function(x, y, inv = FALSE, pre_multiply = TRUE, ...) {
         a <- list(
             geomtype = "polygons", m = y,
             inv = inv,
@@ -220,7 +220,7 @@ setMethod(
 #' @export
 setMethod(
     "affine", signature("spatLocsObj", y = "matrix"),
-    function(x, y, inv = FALSE, pre_multiply = FALSE, ...) {
+    function(x, y, inv = FALSE, pre_multiply = TRUE, ...) {
         x[] <- .affine_dt(
             x = x[], m = y,
             xcol = "sdimx", ycol = "sdimy",
@@ -237,7 +237,7 @@ setMethod(
 #' @export
 setMethod(
     "affine", signature(x = "giottoLargeImage", y = "matrix"),
-    function(x, y, inv = FALSE, pre_multiply = FALSE, ...) {
+    function(x, y, inv = FALSE, pre_multiply = TRUE, ...) {
         a <- get_args_list(...)
         a$x <- as(x, "giottoAffineImage") # convert to giottoAffineImage
         res <- do.call(affine, args = a)
@@ -250,7 +250,7 @@ setMethod(
 #' @export
 setMethod(
     "affine", signature(x = "giottoAffineImage", y = "matrix"),
-    function(x, y, inv = FALSE, pre_multiply = FALSE, ...) {
+    function(x, y, inv = FALSE, pre_multiply = TRUE, ...) {
         a <- get_args_list(...)
         aff <- x@affine
         a$x <- aff
@@ -265,17 +265,14 @@ setMethod(
 #' @export
 setMethod(
     "affine", signature(x = "affine2d", y = "matrix"),
-    function(x, y, inv = FALSE, pre_multiply = FALSE, ...) {
+    function(x, y, inv = FALSE, pre_multiply = TRUE, ...) {
         a <- get_args_list(...)
         # update linear
         m <- .aff_linear_2d(y)
         if (isTRUE(inv)) m <- solve(m)
+        if (!isTRUE(pre_multiply)) m <- t(m)
         old_aff <- new_aff <- x@affine
-        if (isTRUE(pre_multiply)) {
-            .aff_linear_2d(new_aff) <- t(m %*% t(.aff_linear_2d(new_aff)))
-        } else {
-            .aff_linear_2d(new_aff) <- .aff_linear_2d(new_aff) %*% m
-        }
+        .aff_linear_2d(new_aff) <- m %*% .aff_linear_2d(new_aff)
 
 
         ## calc shifts ##
@@ -339,7 +336,7 @@ setMethod(
     return(x)
 }
 
-.affine_matrix <- function(x, m, inv = FALSE, pre_multiply = FALSE, ...) {
+.affine_matrix <- function(x, m, inv = FALSE, pre_multiply = TRUE, ...) {
     x <- as.matrix(x)
 
     # translations (if any)
@@ -538,10 +535,13 @@ setMethod(
     # should be matrix or coercible to matrix
     x <- as.matrix(x)
 
-    a11 <- x[[1, 1]]
-    a21 <- x[[2, 1]]
-    a12 <- x[[1, 2]]
-    a22 <- x[[2, 2]]
+    # the solutions below are written for the row-vector layout
+    # (`xy %*% l`), the transpose of the stored linear block
+    l <- t(x[seq(2), seq(2)])
+    a11 <- l[[1, 1]]
+    a21 <- l[[2, 1]]
+    a12 <- l[[1, 2]]
+    a22 <- l[[2, 2]]
 
     res_x <- .decomp_affine_xshear(a11, a21, a12, a22)
     res_y <- .decomp_affine_yshear(a11, a21, a12, a22)

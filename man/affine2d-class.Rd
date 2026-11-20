@@ -19,7 +19,8 @@ Before chaining centroid-relative operations (\code{spin()},
 
 The combined linear transform is stored as a 3x3 homogeneous matrix in
 \code{@affine}. Translations are encoded in column 3 (rows 1-2). The
-convention is post-multiply: \code{xy_out = xy_in \%*\% A}.
+convention is the standard pre-multiply one on column vectors:
+\code{c(x_out, y_out, 1) = A \%*\% c(x_in, y_in, 1)}.
 }
 \section{Slots}{
 

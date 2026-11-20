@@ -97,10 +97,10 @@ setMethod("shear", signature("affine2d"), function(x, fx = 0, fy = 0, x0, y0, ..
     a <- get_args_list(...)
 
     # update linear
-    shear_x <- matrix(c(1, fx, 0, 1), ncol = 2)
-    shear_y <- matrix(c(1, 0, fy, 1), ncol = 2)
+    shear_x <- matrix(c(1, 0, fx, 1), ncol = 2)
+    shear_y <- matrix(c(1, fy, 0, 1), ncol = 2)
     old_aff <- new_aff <- x@affine
-    .aff_linear_2d(new_aff) <- .aff_linear_2d(new_aff) %*% shear_x %*% shear_y
+    .aff_linear_2d(new_aff) <- shear_y %*% shear_x %*% .aff_linear_2d(new_aff)
 
     ## calc shifts ##
     # create dummy

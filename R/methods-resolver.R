@@ -386,10 +386,9 @@ project_region <- function(y, from_space = NULL, to_space = NULL) {
 }
 
 # The 3x3 affine a space applies, measured by pushing three basis points
-# through its steps. Layout is what `affine()` reads: linear part in
-# `m[1:2, 1:2]`, post-multiplied, translation in COLUMN 3 -- a translation in
-# row 3 is silently ignored. The probe is a spatLocsObj because `spatShift()`
-# has no SpatVector method. NULL when the space has no steps.
+# through its steps: the images of the basis vectors are its columns. The
+# probe is a spatLocsObj because `spatShift()` has no SpatVector method. NULL
+# when the space has no steps.
 #' @keywords internal
 #' @noRd
 .space_composite_affine <- function(space) {
@@ -403,8 +402,8 @@ project_region <- function(y, from_space = NULL, to_space = NULL) {
     probe <- .apply_space_to_subobj(probe, space)
     p <- as.matrix(probe@coordinates[, c("sdimx", "sdimy")])
     m <- diag(3L)
-    m[1L, 1:2] <- p[2L, ] - p[1L, ]
-    m[2L, 1:2] <- p[3L, ] - p[1L, ]
+    m[1:2, 1L] <- p[2L, ] - p[1L, ]
+    m[1:2, 2L] <- p[3L, ] - p[1L, ]
     m[1:2, 3L] <- p[1L, ]
     m
 }

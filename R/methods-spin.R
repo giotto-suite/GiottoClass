@@ -219,9 +219,10 @@ setMethod("spin", signature("affine2d"), function(x, angle = NULL, x0 = NULL, y0
     if (is.null(y0)) a$y0 <- NULL
     # update linear
     r <- radians(angle)
-    rotate_m <- matrix(c(cos(r), sin(r), -sin(r), cos(r)), nrow = 2L)
+    # spin() turns clockwise for positive angles
+    rotate_m <- matrix(c(cos(r), -sin(r), sin(r), cos(r)), nrow = 2L)
     old_aff <- new_aff <- x@affine
-    .aff_linear_2d(new_aff) <- .aff_linear_2d(new_aff) %*% rotate_m
+    .aff_linear_2d(new_aff) <- rotate_m %*% .aff_linear_2d(new_aff)
 
     ## calc shifts ##
     # create dummy
