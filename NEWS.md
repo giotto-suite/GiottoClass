@@ -1,3 +1,14 @@
+# GiottoClass 0.8.0
+
+## breaking changes
+
+- `affine()` reads matrices in the standard pre-multiply convention by
+  default (`pre_multiply = TRUE`): `c(x', y', 1) = A %*% c(x, y, 1)`, where
+  earlier versions applied the transposed linear block. Pass
+  `pre_multiply = FALSE` for the old reading. `affine2d` stores its matrix in
+  the same convention. Objects saved by earlier versions are converted on
+  load and place their images and spaces exactly as before.
+
 # GiottoClass 0.7.31
 
 ## changes

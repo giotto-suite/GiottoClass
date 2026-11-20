@@ -204,6 +204,13 @@ giottoMulti <- setClass(
 setMethod("initialize", signature("giottoMulti"), function(.Object, objects = NULL, ...) {
     .Object <- callNextMethod(.Object, ...)
 
+    # GiottoClass 0.8.0 stores affine matrices pre-multiplied; see
+    # updateGiottoObject(), which the children get below
+    if (.gversion(.Object) < "0.8.0") {
+        .Object@spaces <- .update_spaces_affine_layout(.Object@spaces)
+        .gversion(.Object) <- packageVersion("GiottoClass")
+    }
+
     # Construction path: ingest the children. Skipped on bare re-init calls
     # (no `objects` arg) so an already-constructed giottoMulti can be
     # re-initialized without re-supplying its children.
@@ -213,6 +220,11 @@ setMethod("initialize", signature("giottoMulti"), function(.Object, objects = NU
 
         .Object@objects <- objects
     }
+
+    # children saved before 0.8.0 are updated as their own initialize() would
+    old <- vapply(.Object@objects, function(g) .gversion(g) < "0.8.0",
+        logical(1L))
+    .Object@objects[old] <- lapply(.Object@objects[old], updateGiottoObject)
 
     # Default instructions, same lifecycle as on a single giotto: created
     # on first initialize if not user-supplied. The multi is the object the
