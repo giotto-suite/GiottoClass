@@ -68,8 +68,6 @@ Suggests:
     S4Vectors,
     ScaledMatrix,
     scattermore,
-    Seurat,
-    SeuratObject,
     sf,
     SingleCellExperiment,
     sp,
@@ -162,7 +160,6 @@ Collate:
     'nn_search_hnsw.R'
     'process-spatialSmooth.R'
     'provenance.R'
-    'python_bento.R'
     'python_environment.R'
     'save_load.R'
     'slot_check.R'
