@@ -365,18 +365,18 @@ BiocCheck runs to ensure Bioconductor submission compatibility.
 
 ## Interoperability
 
-Conversions live in `R/interoperability.R`. All are lossy — the schema above has
-no counterpart in most of these formats, so a round trip does not preserve
-provenance or multi-unit nesting.
+Conversions from other ecosystems live in GiottoConnect (Seurat, AnnData,
+SpatialData, Bento; mapping-based). What is left in `R/interoperability.R` is
+lossy — the schema above has no counterpart in most of these formats, so a round
+trip does not preserve provenance or multi-unit nesting.
 
 | From / To | Function |
 |-----------|----------|
-| Seurat v4/v5 → Giotto | `seuratToGiotto()`, `seuratToGiottoV4()`, `seuratToGiottoV5()` |
-| Giotto → Seurat | `giottoToSeurat()`, `giottoToSeuratV5()` |
-| AnnData → Giotto | `anndataToGiotto()` |
+| Stereo-seq GEF → Giotto | `gefToGiotto()` |
 | Giotto → AnnData | `giottoToAnnData()` |
-| SpatialExperiment ↔ Giotto | `spatialExperimentToGiotto()`, `giottoToSpatialExperiment()` |
-| SpatialData → Giotto | `spatialdataToGiotto()` |
+| Giotto → SpatialData | `giottoToSpatialData()` |
+| SpatialExperiment ↔ Giotto | `spatialExperimentToGiotto()`, `giottoToSpatialExperiment()` (until GiottoConnect's adapter) |
+| older Giotto → Giotto Suite | `giottoMasterToSuite()` |
 
 ---
 

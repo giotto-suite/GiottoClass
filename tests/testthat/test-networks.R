@@ -384,7 +384,7 @@ test_that("as.data.table returns the edge table of an in-memory network", {
 test_that("as.data.table reads @unfiltered, which holds a bare carrier", {
     rlang::local_options(lifecycle_verbosity = "quiet")
     # createSpatialNetwork() leaves @unfiltered NULL; the slot is filled by
-    # createSpatNetObj(), the legacy migration and the Seurat conversion. It
+    # createSpatNetObj() and the legacy migration. It
     # holds the graph directly rather than a subobject, so it cannot go
     # through as.data.table() -- hence the carrier-level reader.
     full <- igraph::make_ring(5)

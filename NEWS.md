@@ -2,6 +2,13 @@
 
 ## breaking changes
 
+- The Seurat, AnnData, SpatialData and Bento converters moved to GiottoConnect:
+  `seuratToGiotto()`, `giottoToSeurat()`, `anndataToGiotto()`,
+  `spatialdataToGiotto()` and `createBentoAdata()` are removed here, as are
+  `seuratToGiottoV4/V5()` and `giottoToSeuratV4/V5()` (use GiottoConnect's
+  `seuratToGiotto()` / `giottoToSeurat()`). `gefToGiotto()`, `giottoToAnnData()`,
+  `giottoToSpatialData()` and the SpatialExperiment converters stay for now.
+
 - `affine()` reads matrices in the standard pre-multiply convention by
   default (`pre_multiply = TRUE`): `c(x', y', 1) = A %*% c(x, y, 1)`, where
   earlier versions applied the transposed linear block. Pass
