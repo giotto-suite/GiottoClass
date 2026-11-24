@@ -1020,8 +1020,8 @@
                 spat_unit
             }
             for (su in su_keys) {
-                current <- gobject@cell_ID[[su]]
-                if (is.null(current)) current <- spatIDs(gobject, spat_unit = su)
+                current <- gobject@cell_ID[[su]] %||%
+                    .gm_unit_cell_ids(gobject, su)
                 gobject@cell_ID[[su]] <- intersect(current, cell_ids)
             }
         }

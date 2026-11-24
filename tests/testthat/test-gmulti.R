@@ -393,6 +393,74 @@ test_that("children are never mutated by a subset on the parent", {
     expect_identical(spatIDs(mg2@objects$b), paste0("c", 1:3))
 })
 
+.mk_grouped_multi <- function() {
+    mg <- createGiottoMulti(list(a = .mk_minimal(5, 4), b = .mk_minimal(3, 4)))
+    addCellMetadata(mg,
+        new_metadata = data.frame(cell_ID = spatIDs(mg),
+            grp = c(1, 1, 2, 2, 2, 2, 2, 2)),
+        by_column = TRUE, column_cell_ID = "cell_ID")
+}
+
+test_that("an eager predicate subset is evaluated once into frozen IDs", {
+    mg <- .mk_grouped_multi()
+    mg2 <- suppressMessages(subset(mg, grp == 1))
+    expect_identical(mg2@cell_ID$cell, c("a::c1", "a::c2"))
+    # no view is recorded: the narrowing is the ID set, not a rule
+    expect_length(giottoViews(mg2), 0L)
+    # composes with `cells =` and `negate`
+    mg3 <- subset(mg, grp == 1, negate = TRUE,
+        cells = c("a::c1", "a::c3", "b::c1"))
+    expect_identical(spatIDs(mg3), c("a::c3", "b::c1"))
+})
+
+test_that("subset names the samples it empties, and keeps them", {
+    mg <- .mk_grouped_multi()
+    expect_message(mg2 <- subset(mg, grp == 1), "sample\\(s\\) b")
+    expect_identical(names(mg2), c("a", "b"))
+    expect_output(show(mg2), "b: 0 / 3 cells")
+    # a cell-keyed read skips the emptied child
+    expect_identical(names(getSpatialLocations(mg2)), "a")
+})
+
+test_that("`[[` applies the frozen narrowing; `raw = TRUE` does not", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(5, 4), b = .mk_minimal(3, 4)))
+    mg2 <- suppressMessages(subset(mg, cells = c("a::c1", "a::c3")))
+    expect_identical(spatIDs(mg2[["a"]]), c("c1", "c3"))
+    expect_identical(spatIDs(mg2[["a", raw = TRUE]]), paste0("c", 1:5))
+    # an emptied child comes back with no cells rather than erroring
+    expect_length(spatIDs(mg2[["b"]]), 0L)
+    # the stored child is untouched
+    expect_identical(spatIDs(mg2@objects$a), paste0("c", 1:5))
+})
+
+test_that("`[` keeps the narrowing of the children it keeps", {
+    mg <- createGiottoMulti(list(a = .mk_minimal(5, 4), b = .mk_minimal(3, 4)))
+    mg2 <- subset(mg, cells = c("a::c1", "b::c2"))
+    sub <- mg2["a"]
+    expect_identical(sub@cell_ID$cell, "a::c1")
+    expect_identical(spatIDs(sub), "a::c1")
+})
+
+test_that("a cell subset narrows only its own spat_unit", {
+    g <- .mk_minimal(5, 4)
+    m <- matrix(0, 4, 3, dimnames = list(paste0("f", 1:4), paste0("n", 1:3)))
+    g <- setExpression(g, createExprObj(m, spat_unit = "nuc",
+        feat_type = "rna", name = "raw"), verbose = FALSE)
+    mg <- createGiottoMulti(list(a = g, b = .mk_minimal(3, 4)))
+
+    # default unit: `nuc`, whose IDs differ, is left alone
+    x <- suppressMessages(subset(mg, cells = "a::c1"))
+    expect_identical(names(x@cell_ID), "cell")
+    # another unit starts from that unit's own IDs, read from the children
+    y <- subset(mg, cells = c("a::n1", "a::c1"), spat_unit = "nuc")
+    expect_identical(y@cell_ID$nuc, "a::n1")
+    expect_identical(spatIDs(y[["a"]], spat_unit = "nuc"), "n1")
+    expect_identical(spatIDs(y[["a"]], spat_unit = "cell"), paste0("c", 1:5))
+    # spatIDs reads the named unit, not the registry's default one
+    expect_identical(spatIDs(mg, spat_unit = "nuc"), paste0("a::n", 1:3))
+    expect_identical(spatIDs(y, spat_unit = "nuc"), "a::n1")
+})
+
 
 # narrowing applies on read through the gAny accessors ####
 
