@@ -364,9 +364,43 @@ setMethod("length", "giottoMulti", function(x) length(x@objects))
 # `[[` on a giottoMulti selects a CHILD, not a slot — unlike `[[` on a
 # `giotto`, which returns slot contents. The two are not interchangeable, and
 # code that walks joint slots must read them off the object directly.
+#
+# The child comes back with the multi's frozen narrowing applied, since that
+# narrowing is what the multi says its data is; the stored child is never
+# touched. `raw = TRUE` is the explicit way to the child as contributed.
 #' @noRd
 setMethod("[[", signature(x = "giottoMulti", i = "ANY", j = "missing"),
-    function(x, i, j, ...) x@objects[[i]])
+    function(x, i, j, ..., raw = FALSE) {
+        child <- x@objects[[i]]
+        if (isTRUE(raw)) return(child)
+        nm <- if (is.character(i)) i else names(x@objects)[[i]]
+        .gm_narrow_child(x, child, nm)
+    }
+)
+
+#' Apply the multi's frozen narrowing to one child, in that child's own
+#' spat_unit / feat_type names and local IDs. Each narrowed axis is applied
+#' on its own unit only; a unit the multi has not narrowed passes through.
+#' An emptied child comes back with no cells, and its raw content intact.
+#' @noRd
+.gm_narrow_child <- function(gobject, child, nm) {
+    for (su in names(gobject@cell_ID)) {
+        child_su <- .gm_scope_child(
+            .gm_scope_map(gobject, "spat_unit", su), nm)
+        if (is.null(child_su) || is.na(child_su)) next
+        local <- .gm_cells_by_sample(gobject, su)[[nm]]
+        child <- subsetGiotto(child, spat_unit = child_su,
+            cell_ids = local, verbose = FALSE)
+    }
+    for (ft in names(gobject@feat_ID)) {
+        child_ft <- .gm_scope_child(
+            .gm_scope_map(gobject, "feat_type", ft), nm)
+        if (is.null(child_ft) || is.na(child_ft)) next
+        child <- subsetGiotto(child, feat_type = child_ft,
+            feat_ids = gobject@feat_ID[[ft]], verbose = FALSE)
+    }
+    child
+}
 
 #' @noRd
 setReplaceMethod("[[",
@@ -452,9 +486,30 @@ setMethod("[", signature(x = "giottoMulti", i = "ANY"),
 
         # rebuild id_map for the new child set
         out@id_sig <- list()
-        initialize(out)
+        out <- initialize(out)
+
+        # initialize() clears the narrowing on any population change, but
+        # dropping children is not a new population for the ones kept: their
+        # frozen narrowing still holds, so it is carried over, restricted to
+        # them. Features are not sample-namespaced and carry as they are.
+        if (!is.null(x@cell_ID)) {
+            out@cell_ID <- lapply(x@cell_ID, function(ids) {
+                ids[.gm_sample_of(ids) %in% sel]
+            })
+        }
+        out@feat_ID <- x@feat_ID
+        out
     }
 )
+
+#' The sample part of each global cell ID (before the first separator).
+#' @noRd
+.gm_sample_of <- function(ids) {
+    pos <- regexpr(.gm_id_sep, ids, fixed = TRUE)
+    out <- substr(ids, 1L, pos - 1L)
+    out[pos < 0L] <- NA_character_
+    out
+}
 
 #' @noRd
 setReplaceMethod("names", signature(x = "giottoMulti", value = "character"),
@@ -525,11 +580,19 @@ setMethod("show", "giottoMulti", function(object) {
     # when a child has cells in multiple spat_units.
     nms <- names(object)
     cat(sprintf("  %d child object(s):\n", length(object)))
+    # kept / total per child under the default spat_unit's narrowing, so a
+    # sample a subset emptied reads as 0 rather than as its full count
+    kept <- if (length(object@cell_ID) > 0L) {
+        .gm_cells_by_sample(object,
+            .gm_resolve_axis(object, "spat_unit", NULL)$handle)
+    }
     for (nm in nms) {
         g <- object@objects[[nm]]
         n_c <- length(tryCatch(spatIDs(g), error = function(e) character()))
         n_f <- length(tryCatch(featIDs(g), error = function(e) character()))
-        cat(sprintf("    %s: %d cells, %d features\n", nm, n_c, n_f))
+        c_txt <- if (is.null(kept)) sprintf("%d cells", n_c) else
+            sprintf("%d / %d cells", length(kept[[nm]]), n_c)
+        cat(sprintf("    %s: %s, %d features\n", nm, c_txt, n_f))
     }
 
     # view: subset filter state — visible / total reflects whether the user
@@ -605,21 +668,26 @@ setMethod("show", "giottoMulti", function(object) {
 #' @title Subset a giottoMulti
 #' @name subset-giottoMulti
 #' @description
-#' Narrow the joint analysis view of the multi to a subset of global cell IDs
-#' and/or global feature IDs. Eager: the surviving set is recorded on
-#' `@cell_ID` / `@feat_ID` and every populated joint shared slot is trimmed in
-#' place.
+#' Narrow the multi to a subset of its observations (global cell IDs) and/or
+#' features. Eager: the surviving set is frozen on `@cell_ID` / `@feat_ID`,
+#' and every populated joint shared slot is trimmed in place. A predicate is
+#' evaluated once, at the call; nothing re-evaluates it later. For a
+#' selection that follows the data, record it on a view with `view = `.
 #'
-#' Children (`@objects`) are the spatial axis and are not touched. If you want
-#' narrowed spatial content on a specific child, do that explicitly on the
-#' child.
+#' The narrowing applies to one spat_unit (`spat_unit`, default the active
+#' one); other spat_units are left as they are. Children (`@objects`) are
+#' never modified: reads, including `mg[["a"]]`, apply the narrowing on the
+#' way out. Points and images are raw content and are not removed by a cell
+#' subset. A sample left with no cells stays in the multi and is reported;
+#' drop it explicitly with `mg[...]`.
 #'
 #' Subset returns a new `giottoMulti`; R copy-on-modify means the original is
 #' untouched and acts as the "widen back" handle.
 #' @param x a `giottoMulti`
-#' @param subset predicate expression, captured unevaluated. Only used with
-#'   `view = `, where it becomes the recorded filter step; the eager path
-#'   narrows by ID vector instead (`cells` / `features`).
+#' @param subset predicate expression, captured unevaluated and evaluated
+#'   against the joint values (see [spatValues()]). Eagerly, its result is
+#'   intersected with `cells`; with `view = `, it becomes the recorded
+#'   filter step.
 #' @param cells `character` vector of global cell IDs to retain. `NULL` =
 #'   no cell-level filter.
 #' @param features `character` vector of global feature IDs to retain.
@@ -632,6 +700,9 @@ setMethod("show", "giottoMulti", function(object) {
 #' @param view `NULL` or `character(1)`. When supplied, records the
 #'   predicate as a filter step and/or `samples` as a sample step on the
 #'   named view (created if new) instead of narrowing eagerly.
+#' @param spat_unit,feat_type the spat_unit the cell narrowing applies to,
+#'   and the feat_type the feature narrowing applies to (and the predicate
+#'   reads). `NULL` uses the active ones.
 #' @param ... additional scope args forwarded to `spatValues()` when a
 #'   recorded filter step resolves
 #' @returns a `giottoMulti` with `@cell_ID` / `@feat_ID` narrowed and
@@ -640,6 +711,7 @@ setMethod("show", "giottoMulti", function(object) {
 #' @examples
 #' \dontrun{
 #' subset(mg, cells = c("a::c1", "a::c2"))
+#' subset(mg, leiden_clus == 1)
 #' subset(mg, samples = "a")
 #' subset(mg, leiden_clus == 1, view = "cluster1")
 #' subset(mg, samples = c("a", "b"), view = "pair")
@@ -647,7 +719,8 @@ setMethod("show", "giottoMulti", function(object) {
 #' @export
 setMethod("subset", "giottoMulti",
     function(x, subset, cells = NULL, features = NULL, negate = FALSE,
-             samples = NULL, view = NULL, ...) {
+             samples = NULL, view = NULL, spat_unit = NULL,
+             feat_type = NULL, ...) {
         # Recording path, mirroring subset(<giotto>). Q8 removed the recipe
         # builders, so this is now the only way to put a filter step on a
         # gmulti view. `subset` sits ahead of `cells` / `features` because
@@ -672,24 +745,87 @@ setMethod("subset", "giottoMulti",
                 pred <- .eager_substitute_env(pred,
                     .find_predicate_env(pred, parent.frame()))
             }
-            scope_args <- list(...)
+            scope_args <- c(Filter(Negate(is.null), list(
+                spat_unit = spat_unit, feat_type = feat_type)), list(...))
             return(.record_view_on_gobject(x, view, function(v) {
                 .view_record_subset(v, pred = pred,
                     samples = samples, negate = negate,
                     scope_args = scope_args)
             }))
         }
+        has_pred <- .subset_has_predicate(substitute(subset))
         if (!is.null(samples)) {
             x <- x[.gm_resolve_samples(x, samples, site = "subset")]
-            if (is.null(cells) && is.null(features)) return(x)
+            if (is.null(cells) && is.null(features) && !has_pred) return(x)
         }
-        subsetGiotto(
+        su <- spat_unit %||% .gm_resolve_axis(x, "spat_unit", NULL)$handle
+        ft <- feat_type %||% .gm_resolve_axis(x, "feat_type", NULL)$handle
+        # Eagerly, a predicate is evaluated once -- the same way a view's
+        # filter step is -- and only its result is kept. The narrowing is a
+        # frozen ID set: nothing re-evaluates it when the data under it
+        # changes. A movable selection is what `view =` is for.
+        if (has_pred) {
+            pred <- substitute(subset)
+            pred <- .eager_substitute_env(pred,
+                .find_predicate_env(pred, parent.frame()))
+            v <- .view_record_subset(.new_view(), pred = pred,
+                negate = negate, scope_args = c(
+                    list(spat_unit = su, feat_type = ft), list(...)))
+            keep <- .surviving_cell_ids(x, v, spat_unit = su,
+                feat_type = ft)
+            cells <- if (is.null(cells)) keep else intersect(cells, keep)
+        }
+        out <- subsetGiotto(
             gobject = x,
+            spat_unit = su,
+            feat_type = ft,
             cell_ids = cells,
             feat_ids = features
         )
+        emptied <- .gm_emptied_samples(x, out, su)
+        if (length(emptied) > 0L) {
+            vmsg(sprintf(paste0("[subset] no '%s' cells left in sample(s) ",
+                "%s. They stay in the multi, with their raw content; drop ",
+                "them with `mg[setdiff(names(mg), ...)]`."), su,
+                toString(emptied)))
+        }
+        out
     }
 )
+
+#' Every cell of one multi-level spat_unit, in the `@id_map` layout, read
+#' from the children under their own unit names. `@id_map` holds only each
+#' child's default spat_unit, so it cannot answer this for any other.
+#' @noRd
+.gm_unit_idmap <- function(gobject, spat_unit) {
+    map <- .gm_scope_map(gobject, "spat_unit", spat_unit)
+    parts <- lapply(names(gobject@objects), function(nm) {
+        child_su <- .gm_scope_child(map, nm)
+        if (!is.null(child_su) && is.na(child_su)) return(NULL)
+        ids <- spatIDs(gobject@objects[[nm]], spat_unit = child_su)
+        if (length(ids) == 0L) return(NULL)
+        data.table::data.table(object = nm, local_id = ids,
+            global_id = paste(nm, ids, sep = .gm_id_sep))
+    })
+    data.table::rbindlist(parts)
+}
+
+#' @noRd
+.gm_unit_cell_ids <- function(gobject, spat_unit) {
+    .gm_unit_idmap(gobject, spat_unit)$global_id %||% character()
+}
+
+#' Samples that had cells of `spat_unit` before a subset and have none
+#' after. A sample with no cells in that unit to begin with is not reported.
+#' @noRd
+.gm_emptied_samples <- function(before, after, spat_unit) {
+    after_by <- .gm_cells_by_sample(after, spat_unit)
+    if (is.null(after_by)) return(character())
+    before_ids <- before@cell_ID[[spat_unit]] %||%
+        .gm_unit_cell_ids(before, spat_unit)
+    had <- unique(.gm_sample_of(before_ids))
+    intersect(names(after_by)[lengths(after_by) == 0L], had)
+}
 
 
 # ID ACCESSORS ####
@@ -705,7 +841,10 @@ setMethod("subset", "giottoMulti",
 setMethod(
     "spatIDs", signature(x = "giottoMulti"),
     function(x, object = NULL, local = FALSE, spat_unit = NULL, ...) {
-        m <- x@id_map$cells
+        # the registry holds each child's default spat_unit only; any named
+        # unit is read from the children under their own unit names
+        m <- if (is.null(spat_unit)) x@id_map$cells else
+            .gm_unit_idmap(x, spat_unit)
         if (is.null(m) || nrow(m) == 0L) return(character())
         if (!is.null(object)) {
             target <- .gm_resolve_objects(x, object)
@@ -3278,37 +3417,56 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
 # child; feature globals are passthrough.
 #' @noRd
 .gm_narrow_child_outputs <- function(out_list, gobject, spat_unit = NULL,
-    feat_type = NULL, cells = NULL) {
-    allowed_global <- if (!is.null(spat_unit) && length(spat_unit) == 1L) {
-        gobject@cell_ID[[spat_unit]]
-    } else {
-        NULL
-    }
-    # A view resolves at the parent to a set of globals. Folding it in here
-    # rather than at each call site is what keeps the two narrowing
-    # channels -- eager (`@cell_ID`, recorded by subset()) and lazy (a
-    # view) -- from ever disagreeing about which cells are in scope.
-    if (!is.null(cells)) {
-        allowed_global <- if (is.null(allowed_global)) cells else
-            intersect(allowed_global, cells)
-    }
+    feat_type = NULL, cells = NULL,
+    by_sample = .gm_cells_by_sample(gobject, spat_unit, cells)) {
     allowed_feats <- if (!is.null(feat_type) && length(feat_type) == 1L) {
         gobject@feat_ID[[feat_type]]
     } else {
         NULL
     }
-    if (is.null(allowed_global) && is.null(allowed_feats)) return(out_list)
+    if (is.null(by_sample) && is.null(allowed_feats)) return(out_list)
     Map(function(child_obj, sample_name) {
-        prefix <- paste0(sample_name, .gm_id_sep)
-        local_cells <- if (!is.null(allowed_global)) {
-            sub(paste0("^", prefix), "",
-                allowed_global[startsWith(allowed_global, prefix)])
-        } else {
-            NULL
-        }
-        .narrow_subobject(child_obj, cells = local_cells,
+        .narrow_subobject(child_obj, cells = by_sample[[sample_name]],
             feats = allowed_feats)
     }, out_list, names(out_list))
+}
+
+#' The cells in scope for `spat_unit`, in each child's local IDs: a list
+#' keyed by every child, where a zero-length entry is a child the narrowing
+#' emptied. `NULL` when nothing narrows the unit.
+#'
+#' `cells` is a view's set, already resolved at the parent to globals. It is
+#' folded in here so the frozen narrowing (`@cell_ID`, from `subset()`) and a
+#' view can never disagree about which cells are in scope.
+#'
+#' Splits each global at its first separator, as the rename path does.
+#' `@id_map` cannot do this lookup: it holds only each child's default
+#' spat_unit.
+#' @noRd
+.gm_cells_by_sample <- function(gobject, spat_unit = NULL, cells = NULL) {
+    allowed <- if (!is.null(spat_unit) && length(spat_unit) == 1L) {
+        gobject@cell_ID[[spat_unit]]
+    } else {
+        NULL
+    }
+    if (!is.null(cells)) {
+        allowed <- if (is.null(allowed)) cells else intersect(allowed, cells)
+    }
+    if (is.null(allowed)) return(NULL)
+    samp <- .gm_sample_of(allowed)
+    ok <- !is.na(samp)
+    local <- substring(allowed[ok],
+        nchar(samp[ok]) + nchar(.gm_id_sep) + 1L)
+    split(local, factor(samp[ok], levels = names(gobject@objects)))
+}
+
+#' Children a cell-keyed read should visit: those the narrowing left at least
+#' one cell in. An emptied child stays in the multi -- its raw content is
+#' untouched by a subset -- but there is nothing cell-keyed to read from it.
+#' @noRd
+.gm_skip_emptied <- function(objs, by_sample) {
+    if (is.null(by_sample)) return(objs)
+    objs[lengths(by_sample[objs]) > 0L]
 }
 
 #' Each sample's spatial locations, as a named list keyed by sample: the
@@ -3320,7 +3478,9 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
     samples = NULL, space = NULL, vw = NULL, ...) {
     cell_ID <- NULL  # NSE
     su <- spat_unit %||% .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
-    objs <- .gm_read_objects(gobject, samples, vw)
+    by_sample <- .gm_cells_by_sample(gobject, su, vw$cells)
+    objs <- .gm_skip_emptied(.gm_read_objects(gobject, samples, vw),
+        by_sample)
     # cell-keyed, so the view is fully expressed by its global ID set and the
     # children are handed no view at all
     out <- lapply(objs, function(nm) {
@@ -3329,8 +3489,7 @@ setMethod("getFeatureMetadata", "giottoMulti", function(gobject,
             space = .gm_space_for_child(space, nm), ...)
     })
     names(out) <- objs
-    out <- .gm_narrow_child_outputs(out, gobject, spat_unit = su,
-        cells = vw$cells)
+    out <- .gm_narrow_child_outputs(out, gobject, by_sample = by_sample)
     # Namespace last: the narrowing above matches in each child's local IDs.
     stats::setNames(lapply(objs, function(nm) {
         sl <- out[[nm]]
@@ -3442,14 +3601,15 @@ setMethod("getSpatialNetwork", signature("giottoMulti"),
             }
         }
 
-        objs <- .gm_read_objects(gobject, samples, vw)
+        by_sample <- .gm_cells_by_sample(gobject, su, vw$cells)
+        objs <- .gm_skip_emptied(.gm_read_objects(gobject, samples, vw),
+            by_sample)
         out <- lapply(objs, function(nm) {
             getSpatialNetwork(gobject@objects[[nm]],
                 spat_unit = spat_unit, name = name, ...)
         })
         names(out) <- objs
-        .gm_narrow_child_outputs(out, gobject, spat_unit = su,
-            cells = vw$cells)
+        .gm_narrow_child_outputs(out, gobject, by_sample = by_sample)
     }
 )
 
@@ -3489,14 +3649,15 @@ setMethod("getPolygonInfo", signature("giottoMulti"),
             .gm_resolve_axis(gobject, "spat_unit", NULL)$handle
         sp <- .gm_resolve_space_arg(gobject, space)
         vw <- .gm_resolve_view_arg(gobject, view, spat_unit = su)
-        objs <- .gm_read_objects(gobject, samples, vw)
+        by_sample <- .gm_cells_by_sample(gobject, su, vw$cells)
+        objs <- .gm_skip_emptied(.gm_read_objects(gobject, samples, vw),
+            by_sample)
         out <- lapply(objs, function(nm) {
             getPolygonInfo(gobject@objects[[nm]], name = name,
                 space = .gm_space_for_child(sp, nm), ...)
         })
         names(out) <- objs
-        .gm_narrow_child_outputs(out, gobject, spat_unit = su,
-            cells = vw$cells)
+        .gm_narrow_child_outputs(out, gobject, by_sample = by_sample)
     }
 )
 

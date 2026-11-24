@@ -12,15 +12,18 @@
   negate = FALSE,
   samples = NULL,
   view = NULL,
+  spat_unit = NULL,
+  feat_type = NULL,
   ...
 )
 }
 \arguments{
 \item{x}{a \code{giottoMulti}}
 
-\item{subset}{predicate expression, captured unevaluated. Only used with
-\verb{view = }, where it becomes the recorded filter step; the eager path
-narrows by ID vector instead (\code{cells} / \code{features}).}
+\item{subset}{predicate expression, captured unevaluated and evaluated
+against the joint values (see \code{\link[=spatValues]{spatValues()}}). Eagerly, its result is
+intersected with \code{cells}; with \verb{view = }, it becomes the recorded
+filter step.}
 
 \item{cells}{\code{character} vector of global cell IDs to retain. \code{NULL} =
 no cell-level filter.}
@@ -39,6 +42,10 @@ on the view instead, resolved before the view's other steps.}
 predicate as a filter step and/or \code{samples} as a sample step on the
 named view (created if new) instead of narrowing eagerly.}
 
+\item{spat_unit, feat_type}{the spat_unit the cell narrowing applies to,
+and the feat_type the feature narrowing applies to (and the predicate
+reads). \code{NULL} uses the active ones.}
+
 \item{...}{additional scope args forwarded to \code{spatValues()} when a
 recorded filter step resolves}
 }
@@ -48,14 +55,18 @@ populated joint slots trimmed accordingly. \verb{@id_map} (the identity
 registry) is left untouched — it records identity, not selection.
 }
 \description{
-Narrow the joint analysis view of the multi to a subset of global cell IDs
-and/or global feature IDs. Eager: the surviving set is recorded on
-\verb{@cell_ID} / \verb{@feat_ID} and every populated joint shared slot is trimmed in
-place.
+Narrow the multi to a subset of its observations (global cell IDs) and/or
+features. Eager: the surviving set is frozen on \verb{@cell_ID} / \verb{@feat_ID},
+and every populated joint shared slot is trimmed in place. A predicate is
+evaluated once, at the call; nothing re-evaluates it later. For a
+selection that follows the data, record it on a view with \verb{view = }.
 
-Children (\verb{@objects}) are the spatial axis and are not touched. If you want
-narrowed spatial content on a specific child, do that explicitly on the
-child.
+The narrowing applies to one spat_unit (\code{spat_unit}, default the active
+one); other spat_units are left as they are. Children (\verb{@objects}) are
+never modified: reads, including \code{mg[["a"]]}, apply the narrowing on the
+way out. Points and images are raw content and are not removed by a cell
+subset. A sample left with no cells stays in the multi and is reported;
+drop it explicitly with \code{mg[...]}.
 
 Subset returns a new \code{giottoMulti}; R copy-on-modify means the original is
 untouched and acts as the "widen back" handle.
@@ -63,6 +74,7 @@ untouched and acts as the "widen back" handle.
 \examples{
 \dontrun{
 subset(mg, cells = c("a::c1", "a::c2"))
+subset(mg, leiden_clus == 1)
 subset(mg, samples = "a")
 subset(mg, leiden_clus == 1, view = "cluster1")
 subset(mg, samples = c("a", "b"), view = "pair")

@@ -1,6 +1,32 @@
+# GiottoClass 0.8.1
+
+## changes
+
+- `subset()` on a `giottoMulti` applies a predicate without `view =`, which
+  it used to ignore. It is evaluated once, and the surviving cells are kept
+  as a fixed set; a selection that follows the data belongs on a view.
+- A multi's subset now holds on extraction: `mg[["a"]]` returns the child
+  narrowed to it (`mg[["a", raw = TRUE]]` for the child as contributed), and
+  `mg[i]` keeps it for the samples kept instead of clearing it.
+- A cell subset on a multi applies to one spat_unit (`spat_unit =`, default
+  the active one), so spat_units with other cell IDs are no longer emptied.
+  Samples left with no cells stay in the multi with their points and images,
+  are named in a message and shown as `0 / n cells`, and are skipped by
+  cell-keyed reads.
+
 # GiottoClass 0.8.0
 
 ## breaking changes
+
+- **gsource only:** `getSpatialLocations()` on a `giottoMulti`
+  returns `sample::cell_ID` IDs, the vocabulary of joint cell metadata and
+  expression, instead of each sample's local IDs. The shape follows the
+  space: in native frames or a `perSampleSpace` it is still a named list
+  with one entry per sample, and a `combinedSpace` returns one
+  `spatLocsObj` across its members (`samples =` narrows the members;
+  naming a non-member is an error). A sample's own locations, with local
+  IDs, are `getSpatialLocations(mg[["a"]])`. `spatValues()` can now read
+  `sdimx` / `sdimy` from a multi.
 
 - The Seurat, AnnData, SpatialData and Bento converters moved to GiottoConnect:
   `seuratToGiotto()`, `giottoToSeurat()`, `anndataToGiotto()`,
@@ -557,16 +583,6 @@
   relative `save_dir` until it is set again.
 
 ## changes
-
-- **Breaking (gsource only):** `getSpatialLocations()` on a `giottoMulti`
-  returns `sample::cell_ID` IDs, the vocabulary of joint cell metadata and
-  expression, instead of each sample's local IDs. The shape follows the
-  space: in native frames or a `perSampleSpace` it is still a named list
-  with one entry per sample, and a `combinedSpace` returns one
-  `spatLocsObj` across its members (`samples =` narrows the members;
-  naming a non-member is an error). A sample's own locations, with local
-  IDs, are `getSpatialLocations(mg[["a"]])`. `spatValues()` can now read
-  `sdimx` / `sdimy` from a multi.
 
 - `selectSamples()` is removed. A view's sample step is recorded with
   `subset(mg, samples = , view = )`, which can record a filter in the same
