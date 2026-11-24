@@ -353,14 +353,19 @@ networkParam <- function(type = c("kNN", "sNN", "delaunay", "radius"), ...) {
     }
     if (output == "parquet") {
         package_check("GiottoDisk", repository = "github:giotto-suite/GiottoDisk")
+        # the store records whether edges are directed (kNN) or each pair is
+        # stored once, and its kind
+        store_args <- list(directed = directed,
+            type = switch(type, kNN = "kNN", sNN = "sNN", "spatial"))
         if (is.null(backend)) {
             # storeCreate handles dump-path resolution when no path supplied
             store <- GiottoDisk::storeCreate(type = "parquetEdgeStore")
-            return(GiottoDisk::storeWrite(store, network_dt))
+            return(do.call(GiottoDisk::storeWrite,
+                c(list(store, network_dt), store_args)))
         }
         # write through the supplied source backend
-        return(GiottoDisk::sourceWrite(backend, network_dt,
-            store_type = "parquetEdgeStore"))
+        return(do.call(GiottoDisk::sourceWrite, c(list(backend, network_dt,
+            store_type = "parquetEdgeStore"), store_args)))
     }
     stop(sprintf("[createNetwork] unknown output: %s", output))
 }

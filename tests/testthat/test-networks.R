@@ -655,3 +655,18 @@ test_that("getNearestNetwork serves a disk-backed NN network", {
     expect_s3_class(ig, "igraph")
     expect_equal(igraph::ecount(ig), nrow(dt))
 })
+
+test_that("network stores record direction and kind", {
+    skip_if_not_installed("GiottoDisk")
+    set.seed(1)
+    xy <- matrix(runif(200), ncol = 2,
+        dimnames = list(paste0("c", 1:100), NULL))
+    knn <- createNetwork(xy, kNNNetworkParam(k = 5L, output = "parquet"))
+    expect_true(knn@directed)
+    expect_identical(knn@type, "kNN")
+    expect_equal(nrow(dplyr::collect(GiottoDisk::storeRead(knn,
+        output = "arrow"))), 500L)
+    del <- createNetwork(xy, delaunayNetworkParam(output = "parquet"))
+    expect_false(del@directed)
+    expect_identical(del@type, "spatial")
+})
