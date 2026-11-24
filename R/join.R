@@ -632,7 +632,10 @@ joinGiottoObjects <- function(gobject_list,
             NULL
         })) "overlaps",
         if (.any_in_glist(gobject_list, function(g) g@spatial_network)) "spatial networks",
-        if (.any_in_glist(gobject_list, function(g) g@nn_network)) "nearest-neighbor networks"
+        if (.any_in_glist(gobject_list, function(g) g@nn_network)) "nearest-neighbor networks",
+        if (.any_in_glist(gobject_list, function(g) g@multiomics)) {
+            "multiomics results"
+        }
     )
     if (length(dropped) > 0L) {
         warning(wrap_txt(

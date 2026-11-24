@@ -264,3 +264,19 @@ test_that("subsetGiotto leaves feature types it does not subset untouched", {
         g2[["feat_info", "NegControlProbe"]][[1]]
     )
 })
+
+test_that("subsetGiotto drops multiomics results when it removes cells", {
+    su <- activeSpatUnit(g)
+    ids <- spatIDs(g, spat_unit = su)
+    gm <- setMultiomics(g, x = list(rna = stats::setNames(seq_along(ids), ids)),
+        spat_unit = su, feat_type = "rna_protein", result_name = "w_rna",
+        verbose = FALSE)
+    expect_warning(sub_g <- subsetGiotto(gm, spat_unit = su,
+        cell_ids = ids[1:6]), "multiomics\\s+results\\s+of\\s+spat_unit")
+    expect_null(sub_g@multiomics[[su]])
+    expect_no_warning(all_g <- subsetGiotto(gm, spat_unit = su,
+        cell_ids = ids))
+    expect_identical(all_g@multiomics, gm@multiomics)
+    f_g <- subsetGiotto(gm, feat_ids = sub_feat_ids)
+    expect_identical(f_g@multiomics, gm@multiomics)
+})
