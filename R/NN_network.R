@@ -307,15 +307,19 @@ networkParam <- function(type = c("kNN", "sNN", "delaunay", "radius"), ...) {
     if (is.null(node_ids) && !is.null(rownames(x))) {
         node_ids <- rownames(x)
     }
+    # the nodes with an edge, in order of first appearance: found on the
+    # integer indices before they become IDs, since unique() over the ID
+    # strings dominates the cost of large networks
+    all_index <- unique(c(network_dt$from, network_dt$to))
     if (!is.null(node_ids)) {
         names(node_ids) <- seq_along(node_ids)
+        if (is.numeric(all_index)) all_index <- node_ids[all_index]
         network_dt[, "from" := node_ids[from]]
         network_dt[, "to" := node_ids[to]]
     }
 
     # cols to keep
     keep_cols <- c("from", "to")
-    all_index <- network_dt[, unique(unlist(.SD)), .SDcols = keep_cols]
 
     # A node with no surviving edge is not a vertex of the graph built below,
     # so it disappears from every downstream result -- proximity enrichment,
