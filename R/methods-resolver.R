@@ -529,17 +529,17 @@ project_region <- function(y, from_space = NULL, to_space = NULL) {
     as.points(sl)
 }
 
-# Every child's locations in one `spatLocsObj`: the space applied per child
-# (each sample has its own chain), IDs promoted to `sample::id` (children
-# share local IDs, so `rbind2()` rejects the fold otherwise), then one fold.
-# The space is applied here rather than passed to the getter because a
-# multi's frames live on the parent, which a child cannot look up.
+# Every child's locations in one `spatLocsObj`, in `sample::id`. The
+# per-sample read is the getter's own (`.gm_spatlocs_by_sample()`), which
+# applies each child's space chain and promotes the IDs; this only folds.
+# The getter folds only for a `combinedSpace`; this folds for any space,
+# because its consumers either build in a shared frame (a combined network)
+# or only test membership (a crop carrier).
 # `samples =` narrows to a frame's members; multi-only (adr/0006).
 #' @keywords internal
 #' @noRd
 .gm_fused_spatlocs <- function(gobject, space,
     spat_unit = NULL, name = NULL, samples = NULL) {
-    cell_ID <- NULL  # NSE
     is_multi <- inherits(gobject, "giottoMulti")
     if (!is.null(samples) && !is_multi) {
         stop("[gmulti fused spatlocs] `samples =` is only meaningful on a ",
@@ -553,30 +553,16 @@ project_region <- function(y, from_space = NULL, to_space = NULL) {
         samples <- .gm_resolve_samples(gobject, samples,
             "gmulti fused spatlocs")
     }
-    args <- list(gobject, spat_unit = spat_unit, name = name,
-        output = "spatLocsObj")
-    if (is_multi) args$samples <- samples
-    sl <- tryCatch(do.call(getSpatialLocations, args),
-        error = function(e) NULL)
-    if (is.null(sl)) return(NULL)
-
-    if (is.list(sl) && !inherits(sl, "spatLocsObj")) {
-        parts <- lapply(names(sl), function(nm) {
-            child_sl <- sl[[nm]]
-            if (!inherits(child_sl, "spatLocsObj")) return(NULL)
-            child_sl <- .apply_space_to_subobj(child_sl, space, sample = nm)
-            dt <- data.table::copy(child_sl[])
-            dt[, cell_ID := .gm_global_cell_ids(gobject, nm, cell_ID)]
-            child_sl[] <- dt
-            child_sl
-        })
-        parts <- Filter(Negate(is.null), parts)
-        if (length(parts) == 0L) return(NULL)
-        sl <- Reduce(rbind2, parts)
-    } else if (!is.null(space)) {
-        sl <- .apply_space_to_subobj(sl, space)
+    if (!is_multi) {
+        sl <- tryCatch(getSpatialLocations(gobject, spat_unit = spat_unit,
+            name = name, output = "spatLocsObj"), error = function(e) NULL)
+        if (is.null(sl) || is.null(space)) return(sl)
+        return(.apply_space_to_subobj(sl, space))
     }
-    sl
+    per_sample <- tryCatch(.gm_spatlocs_by_sample(gobject,
+        spat_unit = spat_unit, name = name, samples = samples,
+        space = space, output = "spatLocsObj"), error = function(e) NULL)
+    .gm_fold_spatlocs(per_sample)
 }
 
 # Apply `view` / `space` to one subobject at the tail of a getter.
