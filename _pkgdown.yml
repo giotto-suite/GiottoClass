@@ -420,6 +420,9 @@ reference:
   - objHistory
   - update_giotto_params
   - showProcessingSteps
+  - objCitations
+  - methodCitation
+  - citeMethod
 - title: Utilities
   desc: Utility functions that are used in other code
 - contents:
