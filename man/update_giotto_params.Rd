@@ -23,7 +23,10 @@ update_giotto_params(
 recorded was made. If negative, param recording is skipped}
 
 \item{attachments}{named list. Items to attach. These are intended for lightweight
-param classes containing settings. No large items should be added here.}
+param classes containing settings. No large items should be added here.
+A param with a \code{\link[=methodCitation]{methodCitation()}} (or a \code{bibentry}) also records its
+citation with the step, shown once per session and listed by
+\code{\link[=objCitations]{objCitations()}}.}
 }
 \value{
 giotto object or list of parameters

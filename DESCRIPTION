@@ -99,6 +99,7 @@ Collate:
     'analyze-labelProportions.R'
     'auxilliary.R'
     'buffer.R'
+    'citations.R'
     'classes-binpoints.R'
     'classes-resolver.R'
     'classes-space.R'

@@ -61,6 +61,13 @@
 
 ## new
 
+- Methods can declare the paper to cite: a package defines `methodCitation()`
+  for its param class. When the param is recorded with
+  `update_giotto_params(attachments =)`, the citation is stored with the step
+  and shown once per session (`options(giotto.cite = FALSE)` turns this off).
+  `objCitations()` lists the citations of every step in an object's history,
+  also from a `saveGiotto()` folder. `citeMethod()` shows one citation for
+  functions that do not return a giotto object.
 - `objUID()` returns the identifier a `giotto` object is given at creation,
   which stays with it through edits, copies, subsets, saves and loads. A
   `giottoMulti` now gets one of its own.

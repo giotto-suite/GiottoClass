@@ -23,6 +23,9 @@
 #' recorded was made. If negative, param recording is skipped
 #' @param attachments named list. Items to attach. These are intended for lightweight
 #' param classes containing settings. No large items should be added here.
+#' A param with a [methodCitation()] (or a `bibentry`) also records its
+#' citation with the step, shown once per session and listed by
+#' [objCitations()].
 #' @returns giotto object or list of parameters
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
@@ -36,6 +39,7 @@ update_giotto_params <- function(
         toplevel = 2,
         attachments = NULL) {
     checkmate::assert_list(attachments, null.ok = TRUE, names = "unique")
+    cites <- .attachment_citations(attachments)
     parameters_list <- gobject@parameters
     number_of_rounds <- length(parameters_list)
     update_name <- paste0(number_of_rounds, description)
@@ -43,6 +47,7 @@ update_giotto_params <- function(
     # return before updating if toplevel negative or global setting is FALSE
     if (skip_update <- toplevel < 0 ||
         !getOption("giotto.update_param", TRUE)) {
+        .cite_show(cites)
         if (isTRUE(return_gobject)) {
             return(gobject)
         } else {
@@ -67,11 +72,18 @@ update_giotto_params <- function(
     # deparsed argument expressions, which keep `1:30` intact where the
     # flattened character form of `get_args()` reduces it to its first element.
     call_info <- .ghistory_call_info(toplevel = toplevel)
-    attr(new_entry, "step") <- .ghistory_step(
+    step <- .ghistory_step(
         step_id = update_name,
         fn = call_info$fn,
         params = call_info$params
     )
+    # citations of attached params are kept with the step, so they survive
+    # saveGiotto() and objCitations() finds them later
+    if (length(cites)) {
+        step$cite <- cites
+        .cite_show(cites, what = paste0(call_info$fn, "()"))
+    }
+    attr(new_entry, "step") <- step
 
     parameters_list[[update_name]] <- new_entry
     class(parameters_list) <- "ghistory"
