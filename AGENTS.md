@@ -69,7 +69,7 @@ NEWS.md                   # Changelog
 | `R/methods-setGiotto.R` | `setGiotto()` — the untyped, schema-routed setter |
 | `R/methods-nesting.R` | The schema accessors: `spatUnit`, `featType`, `objName`, `prov` |
 | `R/create.R` | Primary object creation functions |
-| `R/interoperability.R` | Seurat, AnnData, SpatialExperiment, SpatialData conversions |
+| `R/interoperability.R` | The converters left here: SpatialData export, older Giotto objects |
 | `R/aggregate.R` | Feature aggregation (polygon × point overlaps → matrix) |
 | `R/subset.R` | Subsetting operations |
 | `R/flex_functions.R` | `*_flex` dispatch helpers (see *Dispatch outside S4* below) |
@@ -365,17 +365,14 @@ BiocCheck runs to ensure Bioconductor submission compatibility.
 
 ## Interoperability
 
-Conversions from other ecosystems live in GiottoConnect (Seurat, AnnData,
-SpatialData, Bento; mapping-based). What is left in `R/interoperability.R` is
-lossy — the schema above has no counterpart in most of these formats, so a round
-trip does not preserve provenance or multi-unit nesting.
+Conversions to and from other ecosystems live in GiottoConnect: Seurat,
+AnnData and SpatialExperiment / SFE (mapping-based, both directions),
+SpatialData → Giotto and Bento; Stereo-seq GEF files are read by Giotto's
+`importStereoSeq()`. Only these converters are left in `R/interoperability.R`:
 
 | From / To | Function |
 |-----------|----------|
-| Stereo-seq GEF → Giotto | `gefToGiotto()` |
-| Giotto → AnnData | `giottoToAnnData()` |
-| Giotto → SpatialData | `giottoToSpatialData()` |
-| SpatialExperiment ↔ Giotto | `spatialExperimentToGiotto()`, `giottoToSpatialExperiment()` (until GiottoConnect's adapter) |
+| Giotto → SpatialData | `giottoToSpatialData()` (python; writes through the internal `.giotto_to_anndata_py()`) |
 | older Giotto → Giotto Suite | `giottoMasterToSuite()` |
 
 ---

@@ -61,7 +61,6 @@ Suggests:
     remotes,
     reshape2,
     rgl,
-    rhdf5,
     rlang,
     rmarkdown,
     RTriangle (>= 1.6-0.10),
