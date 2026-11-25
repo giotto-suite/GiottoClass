@@ -2,6 +2,8 @@
 
 ## breaking changes
 
+- `gefToGiotto()` is removed: Giotto's `importStereoSeq()` reads Stereo-seq
+  GEF files. rhdf5 is no longer suggested.
 - The Seurat, AnnData, SpatialData and Bento converters moved to GiottoConnect:
   `seuratToGiotto()`, `giottoToSeurat()`, `anndataToGiotto()`,
   `spatialdataToGiotto()` and `createBentoAdata()` are removed here, as are
@@ -9,7 +11,7 @@
   `seuratToGiotto()` / `giottoToSeurat()`). `giottoToAnnData()`,
   `giottoToSpatialExperiment()` and `spatialExperimentToGiotto()` are removed
   too: GiottoConnect's versions write `.h5ad` without python and return one
-  SpatialExperiment. `gefToGiotto()` and `giottoToSpatialData()` stay.
+  SpatialExperiment. `giottoToSpatialData()` stays.
 
 - `affine()` reads matrices in the standard pre-multiply convention by
   default (`pre_multiply = TRUE`): `c(x', y', 1) = A %*% c(x, y, 1)`, where
