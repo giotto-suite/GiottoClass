@@ -57,12 +57,14 @@
   - resolveSubobject
 - subtitle: History and manifests
 - contents:
-  - ghistory_records
   - recordGiottoStep
-  - objHistory_ndjson
   - objManifest
-  - objManifest_json
   - manifestDiff
+  - objUID
   - objCitations
   - methodCitation
   - citeMethod
+- subtitle: Bin overlaps
+- contents:
+  - binOverlaps
+  - extract_bin_overlap

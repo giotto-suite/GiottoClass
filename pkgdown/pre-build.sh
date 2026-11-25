@@ -31,6 +31,10 @@ echo "pre-build: spliced gsource reference entries ($(grep -c 'New on the gsourc
 sed -i.bak '/^ *- spat_net_to_igraph$/d' _pkgdown.yml && rm -f _pkgdown.yml.bak
 echo "pre-build: dropped spat_net_to_igraph (removed on gsource)"
 
+# 1c. createBentoAdata() moved to GiottoConnect; the release index still lists it.
+sed -i.bak '/^ *- createBentoAdata$/d' _pkgdown.yml && rm -f _pkgdown.yml.bak
+echo "pre-build: dropped createBentoAdata (moved to GiottoConnect)"
+
 # 2. Articles that exist only on gsource. The shared workflow replaces the
 # checkout's vignettes/ with this branch's, which would drop them; restore the
 # checkout's copies alongside this branch's (files present in both are
