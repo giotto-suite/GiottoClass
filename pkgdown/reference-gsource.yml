@@ -63,3 +63,6 @@
   - objManifest
   - objManifest_json
   - manifestDiff
+  - objCitations
+  - methodCitation
+  - citeMethod
