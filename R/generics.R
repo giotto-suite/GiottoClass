@@ -230,6 +230,10 @@ setGeneric("objManifest", function(x, ...) standardGeneric("objManifest"))
 # Documentation and methods found in function_logging.R
 setGeneric("objHistory", function(x, ...) standardGeneric("objHistory"))
 
+## methodCitation() generic ####
+# Documentation and methods found in citations.R
+setGeneric("methodCitation", function(x, ...) standardGeneric("methodCitation"))
+
 ## fingerprint_data() generic ####
 # Documentation and methods found in manifest.R
 setGeneric("fingerprint_data",
