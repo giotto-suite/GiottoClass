@@ -6,8 +6,10 @@
   `seuratToGiotto()`, `giottoToSeurat()`, `anndataToGiotto()`,
   `spatialdataToGiotto()` and `createBentoAdata()` are removed here, as are
   `seuratToGiottoV4/V5()` and `giottoToSeuratV4/V5()` (use GiottoConnect's
-  `seuratToGiotto()` / `giottoToSeurat()`). `gefToGiotto()`, `giottoToAnnData()`,
-  `giottoToSpatialData()` and the SpatialExperiment converters stay for now.
+  `seuratToGiotto()` / `giottoToSeurat()`). `giottoToAnnData()`,
+  `giottoToSpatialExperiment()` and `spatialExperimentToGiotto()` are removed
+  too: GiottoConnect's versions write `.h5ad` without python and return one
+  SpatialExperiment. `gefToGiotto()` and `giottoToSpatialData()` stay.
 
 - `affine()` reads matrices in the standard pre-multiply convention by
   default (`pre_multiply = TRUE`): `c(x', y', 1) = A %*% c(x, y, 1)`, where
