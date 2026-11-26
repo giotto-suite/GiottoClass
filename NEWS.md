@@ -37,6 +37,10 @@
 
 ## bug fixes
 
+- `loadGiotto()` (and `GiottoData::loadGiottoMini()`) work without conda:
+  with no Giotto python environment configured they fell back to the envname
+  `"giotto_env"` and stopped with "Unable to find a conda binary" instead of
+  looking for a system python.
 - `setSpatialGrid()` takes the spatial unit, feature type and name from the
   grid object when they are not given. `loadGiotto()` failed on objects with
   a spatial grid (e.g. the starmap mini) with "attempt to select less than

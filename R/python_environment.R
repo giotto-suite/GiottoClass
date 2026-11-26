@@ -1145,7 +1145,9 @@ checkPythonPackage <- function(package_name = NULL,
 # if found, return the fullpath
 # if not, return without modification
 .envname_to_pypath <- function(envname, must_exist = TRUE) {
-    .check_conda()
+    # without conda an envname cannot be resolved: return it unchanged unless
+    # it must exist
+    if (isFALSE(.check_conda(error = must_exist))) return(envname)
 
     envs <- reticulate::conda_list()
     enames <- envs$name
