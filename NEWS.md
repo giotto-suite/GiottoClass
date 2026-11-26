@@ -28,7 +28,6 @@
   (Leiden, Louvain, Scrublet, SpatialDE, silhouetteRank, the legacy HMRF
   readers and a duplicate of Giotto's segmentation script); `g2ad.py`,
   `g2sd.py` and `tif_convert.py` remain.
-
 - `reconnect()` on an image opened from the file it was made from keeps the
   stored intensity range and integer flag instead of sampling the pixels
   again. `loadGiotto()` no longer reads each image at full resolution when
