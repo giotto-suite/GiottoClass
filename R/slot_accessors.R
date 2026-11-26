@@ -2512,6 +2512,11 @@ setSpatialGrid <- function(gobject,
     verbose = NULL,
     set_defaults = TRUE,
     ...) {
+    # `nospec_*` are read from this frame by read_s4_nesting(): nesting the
+    # caller did not give comes from the grid object
+    nospec_unit <- is.null(spat_unit)
+    nospec_feat <- is.null(feat_type)
+    nospec_name <- is.null(name)
     if (isTRUE(set_defaults)) {
         .set_default_nesting(gobject, spat_unit, feat_type)
     }

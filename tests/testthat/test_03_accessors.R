@@ -1394,3 +1394,15 @@ test_that("multiomics results are found by name, or the first when result_name =
         feat_type = "rna_protein", result_name = "w_rna", verbose = TRUE),
         "already exists")
 })
+
+test_that("setSpatialGrid takes the nesting of the grid object", {
+    g <- test_data$viz
+    g <- createSpatialGrid(g, sdimx_stepsize = 500, sdimy_stepsize = 500,
+        name = "grid_a")
+    sg <- getSpatialGrid(g, name = "grid_a", return_grid_Obj = TRUE)
+    # as loadGiotto() re-sets grids: no nesting given, no defaults
+    g2 <- setSpatialGrid(g, sg, set_defaults = FALSE, verbose = FALSE)
+    expect_identical(list_spatial_grids(g2), list_spatial_grids(g))
+    g3 <- setSpatialGrid(g, sg, name = "grid_b", verbose = FALSE)
+    expect_true("grid_b" %in% list_spatial_grids(g3)$name)
+})

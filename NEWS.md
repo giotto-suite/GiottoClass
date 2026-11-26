@@ -33,6 +33,10 @@
 
 ## bug fixes
 
+- `setSpatialGrid()` takes the spatial unit, feature type and name from the
+  grid object when they are not given. `loadGiotto()` failed on objects with
+  a spatial grid (e.g. the starmap mini) with "attempt to select less than
+  one element".
 - `getMultiomics()` names the missing result in its error ("object
   'result_to_use' not found" before), and with `result_name = NULL` returns
   the first stored result. `setMultiomics()` notes when it replaces a result.
