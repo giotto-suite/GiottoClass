@@ -52,9 +52,10 @@ createGiottoInstructions(
 \S4method{instructions}{giottoInstructions,character,ANY}(gobject, param) <- value
 }
 \arguments{
-\item{python_path}{path to python binary to use or directory one level
-up from the \code{env} directory (similar to output of
-\code{reticulate::miniconda_path()})}
+\item{python_path}{path to a python executable, kept in the instructions.
+Python is not started here: Python tools run in worker R sessions with
+their own environments (\code{GiottoUtils::py_run()}); to use an own Python
+set \code{options(giotto.py_python =)}}
 
 \item{show_plot}{print plot to console, default = TRUE}
 
@@ -81,8 +82,7 @@ plots}
 
 \item{fiji_path}{path to fiji executable}
 
-\item{no_python_warn}{turn off warning that no compatible python env has
-been detected}
+\item{no_python_warn}{not used: no python environment is looked for}
 
 \item{gobject}{giotto object}
 

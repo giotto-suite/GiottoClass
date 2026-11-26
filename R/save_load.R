@@ -262,7 +262,8 @@ saveGiotto <- function(
 #' @param load_params additional parameters for loading or reading giotto object
 #' @param reconnect_giottoImage (default = TRUE) whether to attempt
 #' reconnection of magick based image objects
-#' @param python_path (optional) manually set your python path
+#' @param python_path (optional) a python path to keep in the instructions;
+#' Python is not started on load
 #' @param init_gobject logical. Whether to initialize the `giotto` object after
 #' loading. (default = TRUE)
 #' @param verbose be verbose
@@ -358,23 +359,11 @@ loadGiotto <- function(path_to_folder,
     }
 
 
-    ## 5. Update python path (do not initialize yet)
-    # ***if python should be used...***
-    if (isTRUE(getOption("giotto.use_conda", TRUE))) {
-        identified_python_path <- set_giotto_python_path(
-            python_path = python_path,
-            verbose = verbose,
-            initialize = TRUE
-        )
-        vmsg(.v = verbose, .is_debug = TRUE, identified_python_path)
-        instructions(gobject, "python_path", initialize = FALSE) <-
-            identified_python_path
-    } else {
-        # ***if python is not needed...***
-        instr <- instructions(gobject)
-        instr["python_path"] <- list(NULL)
-        instructions(gobject, initialize = FALSE) <- instr
-    }
+    ## 5. Python is not started on load (tools run in worker sessions,
+    ## GiottoUtils::py_run()); a given python_path is only kept
+    instr <- instructions(gobject)
+    instr["python_path"] <- list(python_path)
+    instructions(gobject, initialize = FALSE) <- instr
 
     ## 6. overallocate for data.tables
     # (data.tables when read from disk have a truelength of 0)

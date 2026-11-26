@@ -813,7 +813,8 @@ giottoToSpatialData <- function(
         python_path = NULL,
         env_name = NULL,
         save_directory = NULL) {
-    # Initialize reticulate
+    # runs Python in this session (not yet through GiottoUtils::py_run())
+    package_check("reticulate", repository = "CRAN")
     instrs <- createGiottoInstructions(python_path = python_path)
 
     if (dir.exists(save_directory)) {
