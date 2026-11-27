@@ -11,7 +11,9 @@
   `seuratToGiotto()` / `giottoToSeurat()`). `giottoToAnnData()`,
   `giottoToSpatialExperiment()` and `spatialExperimentToGiotto()` are removed
   too: GiottoConnect's versions write `.h5ad` without python and return one
-  SpatialExperiment. `giottoToSpatialData()` stays.
+  SpatialExperiment.
+- `giottoToSpatialData()` is retired, with its python scripts `g2ad.py` and
+  `g2sd.py`. Export to SpatialData will be revisited in GiottoConnect.
 
 - `affine()` reads matrices in the standard pre-multiply convention by
   default (`pre_multiply = TRUE`): `c(x', y', 1) = A %*% c(x, y, 1)`, where

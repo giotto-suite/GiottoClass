@@ -368,11 +368,10 @@ BiocCheck runs to ensure Bioconductor submission compatibility.
 Conversions to and from other ecosystems live in GiottoConnect: Seurat,
 AnnData and SpatialExperiment / SFE (mapping-based, both directions),
 SpatialData → Giotto and Bento; Stereo-seq GEF files are read by Giotto's
-`importStereoSeq()`. Only these converters are left in `R/interoperability.R`:
+`importStereoSeq()`. Only this converter is left in `R/interoperability.R`:
 
 | From / To | Function |
 |-----------|----------|
-| Giotto → SpatialData | `giottoToSpatialData()` (python; writes through the internal `.giotto_to_anndata_py()`) |
 | older Giotto → Giotto Suite | `giottoMasterToSuite()` |
 
 ---
