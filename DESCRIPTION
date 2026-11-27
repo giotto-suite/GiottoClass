@@ -77,7 +77,7 @@ Suggests:
     testthat (>= 3.0.0),
     qs2,
     xml2
-Remotes: giotto-suite/GiottoUtils@python-workers
+Remotes: giotto-suite/GiottoUtils@dev
 Config/testthat/edition: 3
 Collate: 
     'classes-virtuals.R'
