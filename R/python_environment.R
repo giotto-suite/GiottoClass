@@ -137,11 +137,7 @@ checkGiottoEnvironment <- function(
         envname = NULL,
         mini_install_path = deprecated(),
         verbose = NULL) {
-    deprecate_warn("0.8.0", "checkGiottoEnvironment()",
-        details = paste("Python tools install their own environment on",
-            "first use (GiottoUtils::py_run()); no Giotto environment is",
-            "needed. Use options(giotto.py_python =) for an own Python."))
-    package_check("reticulate", repository = "CRAN")
+    .py_env_deprecated("checkGiottoEnvironment()")
     if (is_present(mini_install_path)) {
         deprecate_warn(
             when = "0.3.2",
@@ -528,11 +524,7 @@ installGiottoEnvironment <- function(packages_to_install = c(
     force_miniconda = FALSE,
     force_environment = FALSE,
     verbose = NULL) {
-    deprecate_warn("0.8.0", "installGiottoEnvironment()",
-        details = paste("Python tools install their own environment on",
-            "first use (GiottoUtils::py_run()); no Giotto environment is",
-            "needed. Use options(giotto.py_python =) for an own Python."))
-    package_check("reticulate", repository = "CRAN")
+    .py_env_deprecated("installGiottoEnvironment()")
     ## 1. check and install miniconda locally if necessary
     conda_found <- .check_conda(conda = conda, error = FALSE)
 
@@ -587,11 +579,7 @@ removeGiottoEnvironment <- function(
         mini_path = deprecated(),
         conda = "auto",
         verbose = TRUE) {
-    deprecate_warn("0.8.0", "removeGiottoEnvironment()",
-        details = paste("Python tools install their own environment on",
-            "first use (GiottoUtils::py_run()); no Giotto environment is",
-            "needed. Use options(giotto.py_python =) for an own Python."))
-    package_check("reticulate", repository = "CRAN")
+    .py_env_deprecated("removeGiottoEnvironment()")
     if (is_present(mini_path)) {
         deprecate_warn(
             when = "0.3.2",
@@ -666,11 +654,7 @@ set_giotto_python_path <- function(
         python_path = NULL,
         verbose = NULL,
         initialize = TRUE) {
-    deprecate_warn("0.8.0", "set_giotto_python_path()",
-        details = paste("Python tools install their own environment on",
-            "first use (GiottoUtils::py_run()); no Giotto environment is",
-            "needed. Use options(giotto.py_python =) for an own Python."))
-    package_check("reticulate", repository = "CRAN")
+    .py_env_deprecated("set_giotto_python_path()")
     if (isFALSE(getOption("giotto.use_conda", TRUE))) {
         return(invisible(NULL)) # exit early
     }
@@ -943,11 +927,7 @@ set_giotto_python_path <- function(
 checkPythonPackage <- function(package_name = NULL,
     github_package_url = NULL,
     env_to_use = "giotto_env") {
-    deprecate_warn("0.8.0", "checkPythonPackage()",
-        details = paste("Python tools install their own environment on",
-            "first use (GiottoUtils::py_run()); no Giotto environment is",
-            "needed. Use options(giotto.py_python =) for an own Python."))
-    package_check("reticulate", repository = "CRAN")
+    .py_env_deprecated("checkPythonPackage()")
     # Guard clauses
     if (is.null(package_name) & is.null(github_package_url)) {
         null_input_err_msg <- "A python package name must be provided,
@@ -1232,4 +1212,14 @@ checkPythonPackage <- function(package_name = NULL,
 # also if a file exists (also covers directories)
 .is_path <- function(x) {
     grepl("\\\\|/", x) || file.exists(x)
+}
+
+# The conda-based Giotto environment functions are deprecated: Python tools
+# install their own environment on first use (GiottoUtils::py_run()).
+.py_env_deprecated <- function(what) {
+    deprecate_warn("0.8.0", what, env = parent.frame(), user_env = parent.frame(2),
+        details = paste("Python tools install their own environment on",
+            "first use (GiottoUtils::py_run()); no Giotto environment is",
+            "needed. Use options(giotto.py_python =) for an own Python."))
+    package_check("reticulate", repository = "CRAN")
 }
