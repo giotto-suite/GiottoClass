@@ -1,6 +1,6 @@
 # GiottoClass 0.8.0
 
-## python (python-workers branch)
+## python
 - Python is no longer looked for or started when giotto objects are created
   or loaded, and no Giotto Python environment is needed. Python tools run in
   worker R sessions with their own environment (`GiottoUtils::py_run()`,
