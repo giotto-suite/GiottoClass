@@ -1,5 +1,266 @@
 # Changelog
 
+## GiottoClass 0.8.0
+
+### python
+
+- Python is no longer looked for or started when giotto objects are
+  created or loaded, and no Giotto Python environment is needed. Python
+  tools run in worker R sessions with their own environment
+  ([`GiottoUtils::py_run()`](https://giotto-suite.github.io/GiottoUtils/reference/py_run.html),
+  uv through `reticulate::py_require()`); `options(giotto.py_python =)`
+  points them at an own Python.
+  [`to_simple_tif()`](https://giotto-suite.github.io/GiottoClass/dev/reference/to_simple_tif.md)
+  and the tifffile fallback of
+  [`tif_metadata()`](https://giotto-suite.github.io/GiottoClass/dev/reference/tif_metadata.md)
+  run this way. Loading also works without conda.
+- [`installGiottoEnvironment()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_python.md),
+  [`removeGiottoEnvironment()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_python.md),
+  [`checkGiottoEnvironment()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_python.md),
+  [`set_giotto_python_path()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giotto_python.md)
+  and
+  [`checkPythonPackage()`](https://giotto-suite.github.io/GiottoClass/dev/reference/checkPythonPackage.md)
+  are deprecated.
+  `createGiottoInstructions(python_path, no_python_warn)` and
+  `loadGiotto(python_path)` only keep the path.
+- The Python and package versions a tool ran with (`py_versions`,
+  attached through
+  [`update_giotto_params()`](https://giotto-suite.github.io/GiottoClass/dev/reference/update_giotto_params.md))
+  are recorded in the step’s history record:
+  [`objHistory()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory.md)
+  lists them and
+  [`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md)
+  keeps them.
+- reticulate moves to Suggests. Requires GiottoUtils 0.2.11.
+
+### breaking changes
+
+- `gefToGiotto()` is removed: Giotto’s `importStereoSeq()` reads
+  Stereo-seq GEF files. rhdf5 is no longer suggested.
+
+- The Seurat, AnnData, SpatialData and Bento converters moved to
+  GiottoConnect: `seuratToGiotto()`, `giottoToSeurat()`,
+  `anndataToGiotto()`, `spatialdataToGiotto()` and `createBentoAdata()`
+  are removed here, as are `seuratToGiottoV4/V5()` and
+  `giottoToSeuratV4/V5()` (use GiottoConnect’s `seuratToGiotto()` /
+  `giottoToSeurat()`). `giottoToAnnData()`,
+  `giottoToSpatialExperiment()` and `spatialExperimentToGiotto()` are
+  removed too: GiottoConnect’s versions write `.h5ad` without python and
+  return one SpatialExperiment.
+
+- `giottoToSpatialData()` is retired, with its python scripts `g2ad.py`
+  and `g2sd.py`. Export to SpatialData will be revisited in
+  GiottoConnect.
+
+- [`affine()`](https://giotto-suite.github.io/GiottoClass/dev/reference/affine.md)
+  reads matrices in the standard pre-multiply convention by default
+  (`pre_multiply = TRUE`): `c(x', y', 1) = A %*% c(x, y, 1)`, where
+  earlier versions applied the transposed linear block. Pass
+  `pre_multiply = FALSE` for the old reading. `affine2d` stores its
+  matrix in the same convention. Objects saved by earlier versions are
+  converted on load and place their images and spaces exactly as before.
+
+## GiottoClass 0.7.31
+
+### changes
+
+- Python scripts no package loads any more are removed from
+  `inst/python` (Leiden, Louvain, Scrublet, SpatialDE, silhouetteRank,
+  the legacy HMRF readers and a duplicate of Giotto’s segmentation
+  script); `g2ad.py`, `g2sd.py` and `tif_convert.py` remain.
+- [`reconnect()`](https://giotto-suite.github.io/GiottoClass/dev/reference/reconnect.md)
+  on an image opened from the file it was made from keeps the stored
+  intensity range and integer flag instead of sampling the pixels again.
+  [`loadGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/loadGiotto.md)
+  no longer reads each image at full resolution when its file has no
+  usable overviews (2.2 s per image on Atera’s VRT images).
+
+## GiottoClass 0.7.30
+
+### bug fixes
+
+- [`setSpatialGrid()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setSpatialGrid.md)
+  takes the spatial unit, feature type and name from the grid object
+  when they are not given.
+  [`loadGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/loadGiotto.md)
+  failed on objects with a spatial grid (e.g. the starmap mini) with
+  “attempt to select less than one element”.
+- [`getMultiomics()`](https://giotto-suite.github.io/GiottoClass/dev/reference/getMultiomics.md)
+  names the missing result in its error (“object ‘result_to_use’ not
+  found” before), and with `result_name = NULL` returns the first stored
+  result.
+  [`setMultiomics()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setMultiomics.md)
+  notes when it replaces a result. Both looked the slot up with
+  `feat_type` and `integration_method` swapped.
+- [`subsetGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/subsetGiotto.md)
+  drops multiomics results (e.g. from `runWNN()`) with a warning when it
+  removes cells: they were kept unchanged, for every cell of the full
+  object, and `runIntegratedUMAP()` then embedded the removed cells.
+  [`joinGiottoObjects()`](https://giotto-suite.github.io/GiottoClass/dev/reference/joinGiottoObjects.md)
+  lists them among the results it drops.
+
+### changes
+
+- Delaunay networks default to the `geometry` backend, which is much
+  faster than `deldir`. On square grids the two can pick different
+  diagonal edges; `method = "deldir"` (now in Suggests) reproduces
+  earlier networks.
+
+## GiottoClass 0.7.29
+
+### changes
+
+- [`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md)
+  returns the object invisibly; use `g <- saveGiotto(g)`. A backed
+  object can change in the save, which also records the snapshot it now
+  matches in `@versions$snapshot`.
+- [`joinGiottoObjects()`](https://giotto-suite.github.io/GiottoClass/dev/reference/joinGiottoObjects.md)
+  and
+  [`createGiottoMulti()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoMulti.md)
+  keep the snapshots their inputs were last loaded from or saved as, so
+  the result’s first save names all of them as parents.
+
+## GiottoClass 0.7.28
+
+### new
+
+- Methods can declare the paper to cite: a package defines
+  [`methodCitation()`](https://giotto-suite.github.io/GiottoClass/dev/reference/methodCitation.md)
+  for its param class. When the param is recorded with
+  `update_giotto_params(attachments =)`, the citation is stored with the
+  step and shown once per session (`options(giotto.cite = FALSE)` turns
+  this off).
+  [`objCitations()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objCitations.md)
+  lists the citations of every step in an object’s history, also from a
+  [`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md)
+  folder.
+  [`citeMethod()`](https://giotto-suite.github.io/GiottoClass/dev/reference/citeMethod.md)
+  shows one citation for functions that do not return a giotto object.
+- [`objUID()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objUID.md)
+  returns the identifier a `giotto` object is given at creation, which
+  stays with it through edits, copies, subsets, saves and loads. A
+  `giottoMulti` now gets one of its own.
+
+### changes
+
+- `g[[..., drop = FALSE]]` and
+  [`sliceGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/sliceGiotto.md)
+  keep the object’s uid, backend, views, spaces, parameters and `@misc`.
+  A disk-backed object used to come back in memory.
+
+## GiottoClass 0.7.27
+
+### new
+
+- Bin points carry their geometry: `bin_width`, `bin_offset` (from a
+  bin’s point to its centre) and `bin_overlap`, the rule
+  [`calculateOverlap()`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateOverlap.md)
+  uses for them unless told otherwise.
+  [`createGiottoBinPoints()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoBinPoints-class.md)
+  takes all three; readers set them for their platform. Objects saved
+  earlier get the defaults (`NA`, `c(0, 0)`, `"inside"`) from
+  [`updateGiottoObject()`](https://giotto-suite.github.io/GiottoClass/dev/reference/updateGiottoObject.md).
+- [`calculateOverlap()`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateOverlap.md)
+  on bin points takes `bin_overlap = "area"`: a bin goes to the one
+  polygon holding its centre or, failing that, covering most of it, so
+  every bin is counted once. `"inside"` (the bin’s point) stays the
+  default. The rule is
+  [`extract_bin_overlap()`](https://giotto-suite.github.io/GiottoClass/dev/reference/extract_bin_overlap.md);
+  GiottoDisk applies it to store-backed bins.
+- [`binOverlaps()`](https://giotto-suite.github.io/GiottoClass/dev/reference/binOverlaps.md)
+  gives the polygon of each bin from a stored overlap, for in-memory and
+  store-backed bin points alike.
+- [`as.data.table()`](https://giotto-suite.github.io/GiottoClass/dev/reference/as.data.table.md)
+  on bin points takes `bin_id = TRUE`.
+
+### changes
+
+- Polygon constructors repair invalid geometries (such as
+  self-intersecting outlines) by default: `make_valid` now defaults to
+  the `giotto.make_valid` option, `TRUE` when unset.
+  `options(giotto.make_valid = FALSE)` turns it off for every reader.
+  Valid geometries are left as they are, and only the invalid ones are
+  checked and repaired.
+
+## GiottoClass 0.7.26
+
+### new
+
+- [`createNearestNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createNearestNetwork.md)
+  records what it searched in the stored network’s `@misc$nn_input`: the
+  reduction and its name, the dimensions actually used (or the
+  expression values and features), `k`, and the engine, `ef` and
+  distance. A step that reuses a stored graph, such as `runUMAP()`, can
+  now check that it was built from the same input; the name `kNN.pca`
+  alone says only that it came from some PCA. The kNN kept with an sNN
+  carries the same record. See the “Recorded inputs” section of
+  [`?createNearestNetwork`](https://giotto-suite.github.io/GiottoClass/dev/reference/createNearestNetwork.md).
+
+### bug fixes
+
+- `createNearestNetwork(type = "sNN")` now passes `...` to the search
+  behind the kNN it keeps (`keep_knn = TRUE`), as the other paths
+  already did. Under `engine = "hnsw"`, `distance = "cosine"` used to be
+  dropped there, so the kept kNN, and the sNN built from it, were
+  searched with euclidean distance.
+
+## GiottoClass 0.7.25
+
+### new
+
+- [`objManifest()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest.md)
+  and
+  [`objHistory()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory.md)
+  also take a manifest or history already in hand, so it can be written
+  (`file =`) or re-encoded (`output = "json"` / `"ndjson"`) without its
+  object.
+
+## GiottoClass 0.7.24
+
+### new
+
+- `objManifest(<path>)` and `objHistory(<path>)` also take a disk-backed
+  project directory. It is detected as a source, and the snapshot is
+  read through it (`name =`, the most recent by default).
+
+## GiottoClass 0.7.23
+
+### breaking changes
+
+- `objManifest_json()` is removed. Use
+  `objManifest(x, output = "json")`, or `objManifest(x, file = )` to
+  write the file.
+- [`objHistory()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory.md)
+  returns one record per step (`fn`, `params`, `status`, `error`,
+  `diff`, …) instead of `@parameters`’ character vectors. It prints the
+  same step view, now with the parameters as written (`1:30`) and the
+  status of a failed step. `ghistory_records()` and
+  `objHistory_ndjson()` are removed; use
+  [`objHistory()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory.md)
+  and `objHistory(output = "ndjson")`.
+
+### new
+
+- [`objManifest()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest.md)
+  takes `output = "json"` and `file =`, and dispatches on `gAny`. A
+  `giottoMulti` method is not written yet.
+- `objManifest(<path>)` reads the manifest saved by
+  [`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md)
+  back, given the save folder or its `manifest.json`, without loading
+  the object. It is the same as the live manifest at save time, so it
+  can go to
+  [`manifestDiff()`](https://giotto-suite.github.io/GiottoClass/dev/reference/manifestDiff.md).
+- [`objHistory()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory.md)
+  is a generic on `gAny` with the same `output` and `file`, and
+  `objHistory(<path>)` reads `history.ndjson` back from a save folder.
+
+### changes
+
+- Manifest JSON writes doubles with 17 significant digits and always
+  with a decimal point, and keeps the finite values in an array numeric
+  when others are `NA`, `NaN` or `Inf`, so a manifest reads back
+  unchanged.
+
 ## GiottoClass 0.7.22
 
 ### new
@@ -488,6 +749,19 @@
 
 ### changes
 
+- **Breaking (gsource only):**
+  [`getSpatialLocations()`](https://giotto-suite.github.io/GiottoClass/dev/reference/getSpatialLocations.md)
+  on a `giottoMulti` returns `sample::cell_ID` IDs, the vocabulary of
+  joint cell metadata and expression, instead of each sample’s local
+  IDs. The shape follows the space: in native frames or a
+  `perSampleSpace` it is still a named list with one entry per sample,
+  and a `combinedSpace` returns one `spatLocsObj` across its members
+  (`samples =` narrows the members; naming a non-member is an error). A
+  sample’s own locations, with local IDs, are
+  `getSpatialLocations(mg[["a"]])`.
+  [`spatValues()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatValues.md)
+  can now read `sdimx` / `sdimy` from a multi.
+
 - `selectSamples()` is removed. A view’s sample step is recorded with
   `subset(mg, samples = , view = )`, which can record a filter in the
   same call, and `subset(mg, samples = )` without `view =` slices the
@@ -567,7 +841,7 @@
   converting a `kNN`/`NN` object from
   [`hnswKNN()`](https://giotto-suite.github.io/GiottoClass/dev/reference/hnswKNN.md)
   or
-  [`dbscan::kNN()`](http://michael.hahsler.net/dbscan/reference/kNN.md)
+  [`dbscan::kNN()`](https://michael.hahsler.net/dbscan/reference/kNN.html)
   into the `list(idx =, dist =)` that `uwot::umap()` and `uwot::umap2()`
   take as `nn_method`. Two conventions have to be reconciled and uwot
   validates neither, so getting either wrong corrupts the embedding
@@ -1074,7 +1348,7 @@ released version, so no stored object holds a recipe.
   builds a fixed-radius spatial network: every pair of nodes within
   `eps` is joined, so degree follows local density rather than being
   fixed as it is for kNN. Backed by the exact
-  [`dbscan::frNN`](http://michael.hahsler.net/dbscan/reference/frNN.md).
+  [`dbscan::frNN`](https://michael.hahsler.net/dbscan/reference/frNN.html).
   `minimum_k` keeps a floor of nearest neighbours for nodes whose radius
   is empty, which otherwise drop out of the network entirely. Previously
   the only route to a distance-based network was kNN with a large `k`
@@ -1090,10 +1364,8 @@ released version, so no stored object holds a recipe.
   returns a machine-readable inventory of a `giotto` object: identity, a
   summary block, and a slot-by-slot description nested as the object
   nests it. Derived on demand, so it cannot go stale. `level = "full"`
-  adds content fingerprints.
-  [`objManifest_json()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest_json.md)
-  serializes it against the schema in
-  `inst/schema/giotto-manifest-0.1.0.json`.
+  adds content fingerprints. `objManifest_json()` serializes it against
+  the schema in `inst/schema/giotto-manifest-0.1.0.json`.
 - [`manifestDiff()`](https://giotto-suite.github.io/GiottoClass/dev/reference/manifestDiff.md)
   compares two manifests and reports what changed, as data and as one
   sentence. Pure: manifests in, diff out. Use `level = "full"` on both
@@ -1104,10 +1376,8 @@ released version, so no stored object holds a recipe.
   `params`, `timestamp`, `seed`, `status`, `diff`) as an attribute; the
   character entry every existing reader expects is unchanged. `params`
   holds the deparsed argument expressions, so `1:30` is no longer
-  recorded as `1`. Read them with
-  [`ghistory_records()`](https://giotto-suite.github.io/GiottoClass/dev/reference/ghistory_records.md)
-  or
-  [`objHistory_ndjson()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory_ndjson.md).
+  recorded as `1`. Read them with `ghistory_records()` or
+  `objHistory_ndjson()`.
 - [`recordGiottoStep()`](https://giotto-suite.github.io/GiottoClass/dev/reference/recordGiottoStep.md)
   logs a failed call or a change made outside a logging function
   (`status = "error"` / `"unattributed"`).
@@ -1142,7 +1412,7 @@ released version, so no stored object holds a recipe.
     search is read-only and deterministic at any thread count, so
     `n_threads` stays parallel. Costs 2.82s -\> 11.8s, still 6.8x faster
     than the 79.85s exact
-    [`dbscan::kNN()`](http://michael.hahsler.net/dbscan/reference/kNN.md),
+    [`dbscan::kNN()`](https://michael.hahsler.net/dbscan/reference/kNN.html),
     with accuracy unchanged (recall 0.999980).
   - An `engine = "auto"` that selects by dataset size is planned; for
     now prefer `"dbscan"` on small data, where it is both exact and
@@ -1210,7 +1480,7 @@ released version, so no stored object holds a recipe.
   Non-euclidean metrics keep the general path.
 - kNN networks no longer recompute distances when `maximum_distance` is
   set.
-  [`dbscan::kNN`](http://michael.hahsler.net/dbscan/reference/kNN.md)
+  [`dbscan::kNN`](https://michael.hahsler.net/dbscan/reference/kNN.html)
   already returns them and the recompute went through the per-edge loop
   above, so asking for a cutoff cost 11x: at 50,000 points a spatial kNN
   network went 1.89 s with a cutoff against 0.17 s without. Both are now
@@ -1606,8 +1876,8 @@ released version, so no stored object holds a recipe.
 
 ### bug fixes
 
-- [`seuratToGiottoV5()`](https://giotto-suite.github.io/GiottoClass/dev/reference/seuratToGiottoV5.md)/[`giottoToSeuratV5()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSeuratV5.md)
-  updated for `layer` param (replacing `slot`)
+- `seuratToGiottoV5()`/`giottoToSeuratV5()` updated for `layer` param
+  (replacing `slot`)
 
 ### enhancements
 
@@ -1692,9 +1962,7 @@ released version, so no stored object holds a recipe.
   matrices defined for either pre or post-multiply. Pre is the general
   convention, but Giotto internally uses post. This will be addressed in
   a later update.
-- fix
-  [`giottoToSeuratV5()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSeuratV5.md)
-  selection of a default image to use
+- fix `giottoToSeuratV5()` selection of a default image to use
 - replace internal usage of deprecated create_spat_net_obj -\>
   createSpatNetObj and set_spatialNetwork -\> setSpatialNetwork when
   calculating spatial networks.
@@ -1803,9 +2071,7 @@ released version, so no stored object holds a recipe.
 
 ### bug fixes
 
-- fix
-  [`gefToGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/gefToGiotto.md)
-  gene column reading
+- fix `gefToGiotto()` gene column reading
   [\#255](https://github.com/drieslab/GiottoClass/pull/255) by
   cmubioinformatics
 - fix `plot(add = TRUE)` for adding on to rasterized point plots
@@ -1856,9 +2122,7 @@ released version, so no stored object holds a recipe.
 
 ### bug fixes
 
-- fix
-  [`giottoToSeuratV5()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSeuratV5.md)
-  Interoperability for Xenium Image
+- fix `giottoToSeuratV5()` Interoperability for Xenium Image
 - fix
   [`createGiottoPolygon()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoPolygon.md)
   when no attributes information is provided
@@ -2042,8 +2306,8 @@ released version, so no stored object holds a recipe.
   replaced
 - [`ometif_to_tif()`](https://giotto-suite.github.io/GiottoClass/dev/reference/to_simple_tif.md)
   now checks for *imagecodecs* package as well
-- [`anndataToGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/anndataToGiotto.md)
-  and `giottoToAnndata` now check for *anndata* package as well.
+- `anndataToGiotto()` and `giottoToAnndata` now check for *anndata*
+  package as well.
 - fix
   [`joinGiottoObjects()`](https://giotto-suite.github.io/GiottoClass/dev/reference/joinGiottoObjects.md)
   `"z_stack"` join method
@@ -2096,8 +2360,7 @@ released version, so no stored object holds a recipe.
 - [`loadGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/loadGiotto.md)
   no longer errors with similarly named spat_units or feat_types
   (e.g. “cell” and “new_cell” would previously throw an error)
-- fix in
-  [`giottoToSpatialExperiment()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSpatialExperiment.md)
+- fix in `giottoToSpatialExperiment()`
 - fix for `giottoToSeuratV5` for cosmx mini dataset
   [\#989](https://github.com/drieslab/Giotto/issues/989) by
   guillermoturiel

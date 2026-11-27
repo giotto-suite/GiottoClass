@@ -17,13 +17,6 @@ vizmini <- GiottoData::loadGiottoMini("vizgen")
 
     ## 4. read Giotto image information
 
-    ## checking default envname 'giotto_env'
-
-    ## a system default python environment was found
-
-    ## Using python path:
-    ##  "/usr/bin/python3"
-
     ## > " Delaunay_network " already exists and will be replaced with new
     ##  spatial network
 
@@ -38,12 +31,6 @@ vizmini <- GiottoData::loadGiottoMini("vizgen")
     ##  new nearest neighbor network
 
     ## Setting nearest neighbor network [aggregate][rna] sNN.pca
-
-    ## Warning: Some of Giotto's expected python module(s) were not found:
-    ## pandas, igraph, leidenalg, community, networkx, sklearn
-    ## (This is fine if python-based functions are not needed)
-    ## 
-    ## ** Python path used: "/usr/bin/python3"
 
 ``` r
 
@@ -555,13 +542,13 @@ print(st)
 sessionInfo()
 ```
 
-    ## R version 4.6.1 (2026-06-24)
+    ## R version 4.6.2 (2026-10-29)
     ## Platform: x86_64-pc-linux-gnu
-    ## Running under: Ubuntu 24.04.5 LTS
+    ## Running under: Ubuntu 26.04.1 LTS
     ## 
     ## Matrix products: default
     ## BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
     ## 
     ## locale:
     ##  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
@@ -576,27 +563,24 @@ sessionInfo()
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] GiottoClass_0.7.22
+    ## [1] GiottoClass_0.8.0
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] rappdirs_0.3.4        sass_0.4.10           generics_0.1.4       
-    ##  [4] SparseArray_1.12.3    gtools_3.9.5          lattice_0.22-9       
-    ##  [7] digest_0.6.39         magrittr_2.0.5        evaluate_1.0.5       
-    ## [10] grid_4.6.1            fastmap_1.2.0         jsonlite_2.0.0       
-    ## [13] Matrix_1.7-5          backports_1.5.1       GiottoData_0.3.7     
-    ## [16] codetools_0.2-20      textshaping_1.0.5     jquerylib_0.1.4      
-    ## [19] abind_1.4-8           cli_3.6.6             rlang_1.3.0          
-    ## [22] XVector_0.52.0        withr_3.0.3           cachem_1.1.0         
-    ## [25] DelayedArray_0.38.2   yaml_2.3.12           otel_0.2.0           
-    ## [28] S4Arrays_1.12.1       tools_4.6.1           GiottoUtils_0.2.9    
-    ## [31] checkmate_2.3.4       BiocGenerics_0.58.1   reticulate_1.47.0    
-    ## [34] vctrs_0.7.3           R6_2.6.1              png_0.1-9            
-    ## [37] matrixStats_1.5.0     stats4_4.6.1          lifecycle_1.0.5      
-    ## [40] S4Vectors_0.50.3      fs_2.1.0              IRanges_2.46.0       
-    ## [43] ragg_1.5.2            pkgconfig_2.0.3       desc_1.4.3           
-    ## [46] ScaledMatrix_1.20.0   pillar_1.11.1         pkgdown_2.2.1        
-    ## [49] terra_1.9-50          bslib_0.12.0          glue_1.8.1           
-    ## [52] data.table_1.18.6.1   Rcpp_1.1.2            systemfonts_1.3.2    
-    ## [55] xfun_0.62             MatrixGenerics_1.24.0 knitr_1.52           
-    ## [58] htmltools_0.5.9       igraph_2.3.4          rmarkdown_2.32       
-    ## [61] compiler_4.6.1
+    ##  [1] Matrix_1.7-6          jsonlite_2.0.0        compiler_4.6.2       
+    ##  [4] gtools_3.9.5          Rcpp_1.1.2            jquerylib_0.1.4      
+    ##  [7] IRanges_2.46.0        systemfonts_1.3.4     textshaping_1.1.0    
+    ## [10] yaml_2.3.12           fastmap_1.2.0         lattice_0.23-1       
+    ## [13] XVector_0.52.0        R6_2.6.1              S4Arrays_1.12.1      
+    ## [16] generics_0.1.4        igraph_2.3.4          ScaledMatrix_1.20.0  
+    ## [19] knitr_1.52            BiocGenerics_0.58.1   backports_1.5.1      
+    ## [22] checkmate_2.3.4       DelayedArray_0.38.2   desc_1.4.3           
+    ## [25] MatrixGenerics_1.24.0 bslib_0.12.0          GiottoUtils_0.2.11   
+    ## [28] rlang_1.3.0           cachem_1.1.0          terra_1.9-60         
+    ## [31] xfun_0.62             fs_2.1.0              sass_0.5.0           
+    ## [34] otel_0.3.0            SparseArray_1.12.3    cli_3.6.6            
+    ## [37] pkgdown_2.2.1         magrittr_2.0.5        digest_0.6.39        
+    ## [40] grid_4.6.2            lifecycle_1.0.5       S4Vectors_0.50.3     
+    ## [43] evaluate_1.0.5        data.table_1.18.6.1   codetools_0.2-20     
+    ## [46] ragg_1.5.2            abind_1.4-8           stats4_4.6.2         
+    ## [49] GiottoData_0.3.8      rmarkdown_2.32        pkgconfig_2.0.3      
+    ## [52] matrixStats_1.5.0     tools_4.6.2           htmltools_0.5.9

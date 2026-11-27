@@ -63,11 +63,6 @@ g <- GiottoData::loadGiottoMini("visium", verbose = FALSE)
 #> > 'custom_NN' already exists and will be replaced with
 #>  new nearest neighbor network
 #> Setting nearest neighbor network [cell][rna] custom_NN
-#> Warning: Some of Giotto's expected python module(s) were not found:
-#> pandas, igraph, leidenalg, community, networkx, sklearn
-#> (This is fine if python-based functions are not needed)
-#> 
-#> ** Python path used: "/usr/bin/python3"
 
 g <- subset(g, leiden_clus == 1, view = "cluster1")
 giottoViews(g)
@@ -294,13 +289,10 @@ mg <- createGiottoMulti(list(
 #> > 'custom_NN' already exists and will be replaced with
 #>  new nearest neighbor network
 #> Setting nearest neighbor network [cell][rna] custom_NN
-#> python already initialized in this session
-#>  active environment : '/usr/bin/python3'
-#>  python version : 3.12
 
 mg <- subset(mg, leiden_clus == 1, samples = "visium_a", view = "pair")
 names(getSpatialLocations(mg, view = "pair"))
-#> Getting values from [cell][rna] cell metadata
+#> Getting 'leiden_clus' from [cell][rna] cell metadata
 #> [1] "visium_a"
 ```
 
@@ -621,7 +613,7 @@ nrow(all_meta)
 # Narrowed to cluster 1 via the view slotted above
 narrowed <- getCellMetadata(g, output = "data.table",
     view = "cluster1_only")
-#> Getting values from [cell][rna] cell metadata
+#> Getting 'leiden_clus' from [cell][rna] cell metadata
 nrow(narrowed)
 #> [1] 162
 ```
@@ -639,7 +631,7 @@ the spatial geometry of those survivors:
 
 g <- spatShift(g, dx = 100, dy = 0, space = "layout")
 getSpatialLocations(g, view = "cluster1_only", space = "layout")
-#> Getting values from [cell][rna] cell metadata
+#> Getting 'leiden_clus' from [cell][rna] cell metadata
 #> An object of class spatLocsObj : "raw"
 #> spat_unit : "cell"
 #> provenance: cell 
@@ -685,18 +677,18 @@ mg <- spatShift(mg, dx = 8000, dy = 0, space = "side_by_side",
     samples = "visium_b")
 
 getSpatialLocations(mg, view = "cluster3", space = "side_by_side")
-#> Getting values from [cell][rna] cell metadata
+#> Getting 'leiden_clus' from [cell][rna] cell metadata
 #> $visium_a
 #> An object of class spatLocsObj : "raw"
 #> spat_unit : "cell"
 #> provenance: cell 
 #> dimensions: 108 3 
 #> preview   :
-#>    sdimx sdimy            cell_ID
-#>    <int> <int>             <char>
-#> 1:  5684 -4005 AACGCGGTCTCCAGCC-1
-#> 2:  3964 -4125 AACGTCAGACTAGTGG-1
-#> 3:  3826 -4125 AAGGCGCGTAAAGCTT-1
+#>    sdimx sdimy                      cell_ID
+#>    <int> <int>                       <char>
+#> 1:  5684 -4005 visium_a::AACGCGGTCTCCAGCC-1
+#> 2:  3964 -4125 visium_a::AACGTCAGACTAGTGG-1
+#> 3:  3826 -4125 visium_a::AAGGCGCGTAAAGCTT-1
 #> 
 #> ranges:
 #>      sdimx sdimy
@@ -710,11 +702,11 @@ getSpatialLocations(mg, view = "cluster3", space = "side_by_side")
 #> provenance: cell 
 #> dimensions: 108 3 
 #> preview   :
-#>    sdimx sdimy            cell_ID
-#>    <num> <num>             <char>
-#> 1: 13684 -4005 AACGCGGTCTCCAGCC-1
-#> 2: 11964 -4125 AACGTCAGACTAGTGG-1
-#> 3: 11826 -4125 AAGGCGCGTAAAGCTT-1
+#>    sdimx sdimy                      cell_ID
+#>    <num> <num>                       <char>
+#> 1: 13684 -4005 visium_b::AACGCGGTCTCCAGCC-1
+#> 2: 11964 -4125 visium_b::AACGTCAGACTAGTGG-1
+#> 3: 11826 -4125 visium_b::AAGGCGCGTAAAGCTT-1
 #> 
 #> ranges:
 #>      sdimx sdimy

@@ -43,7 +43,18 @@ update_giotto_params(
 - attachments:
 
   named list. Items to attach. These are intended for lightweight param
-  classes containing settings. No large items should be added here.
+  classes containing settings. No large items should be added here. A
+  param with a
+  [`methodCitation()`](https://giotto-suite.github.io/GiottoClass/dev/reference/methodCitation.md)
+  (or a `bibentry`) also records its citation with the step, shown once
+  per session and listed by
+  [`objCitations()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objCitations.md).
+  An item `py_versions` (the versions a Python tool ran with, from
+  [`GiottoUtils::py_run()`](https://giotto-suite.github.io/GiottoUtils/reference/py_run.html))
+  is recorded with the step, so it is part of
+  [`objHistory()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory.md)
+  and survives
+  [`saveGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/saveGiotto.md).
 
 ## Value
 

@@ -26,6 +26,7 @@ getSpatialLocations(
   gobject,
   spat_unit = NULL,
   name = NULL,
+  output = c("spatLocsObj", "data.table"),
   ...,
   samples = NULL,
   space = NULL,
@@ -93,6 +94,17 @@ getSpatialLocations(
 ## Value
 
 data.table with coordinates or spatLocsObj depending on `output`
+
+## Details
+
+On a `giottoMulti`, cell IDs are always `sample::cell_ID`, the
+vocabulary of joint cell metadata and expression. The shape follows the
+space. In a sample's native frame, or a `perSampleSpace`, each sample
+has its own frame, so the result is a named list with one entry per
+sample. A `combinedSpace` puts its members in one shared frame, so the
+result is a single object across them; `samples =` then narrows the
+members, and naming a non-member is an error. A sample's own locations,
+with local IDs, are `getSpatialLocations(mg[["a"]])`.
 
 ## See also
 

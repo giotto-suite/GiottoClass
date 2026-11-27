@@ -65,9 +65,11 @@ instructions(gobject, param) <- value
 
 - python_path:
 
-  path to python binary to use or directory one level up from the `env`
-  directory (similar to output of
-  [`reticulate::miniconda_path()`](https://rstudio.github.io/reticulate/reference/miniconda_path.html))
+  path to a python executable, kept in the instructions. Python is not
+  started here: Python tools run in worker R sessions with their own
+  environments
+  ([`GiottoUtils::py_run()`](https://giotto-suite.github.io/GiottoUtils/reference/py_run.html));
+  to use an own Python set `options(giotto.py_python =)`
 
 - show_plot:
 
@@ -119,7 +121,7 @@ instructions(gobject, param) <- value
 
 - no_python_warn:
 
-  turn off warning that no compatible python env has been detected
+  not used: no python environment is looked for
 
 - gobject:
 

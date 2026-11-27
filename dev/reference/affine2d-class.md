@@ -22,7 +22,8 @@ pivot point matches your data.
 
 The combined linear transform is stored as a 3x3 homogeneous matrix in
 `@affine`. Translations are encoded in column 3 (rows 1-2). The
-convention is post-multiply: `xy_out = xy_in %*% A`.
+convention is the standard pre-multiply one on column vectors:
+`c(x_out, y_out, 1) = A %*% c(x_in, y_in, 1)`.
 
 ## Slots
 

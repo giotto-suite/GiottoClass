@@ -6,7 +6,7 @@ Coerce to data.table if possible
 
 ``` r
 # S3 method for class 'giottoBinPoints'
-as.data.table(x, geom, ...)
+as.data.table(x, geom, bin_id = FALSE, ...)
 
 # S3 method for class 'SpatVector'
 as.data.table(
@@ -48,6 +48,10 @@ as.data.table(x, ...)
   character or NULL. If not NULL, either "XY", "WKT", or "HEX", to get
   the geometry included in coordinates of each point or vertex,
   Well-Known-Text or hexadecimal notation.
+
+- bin_id:
+
+  giottoBinPoints: add the bin each row belongs to (`bin_ID`)
 
 - ...:
 

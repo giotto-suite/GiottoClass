@@ -130,13 +130,13 @@ plot(gimg, col = viridis_colors) # can be used without setting the slot
 sessionInfo()
 ```
 
-    ## R version 4.6.1 (2026-06-24)
+    ## R version 4.6.2 (2026-10-29)
     ## Platform: x86_64-pc-linux-gnu
-    ## Running under: Ubuntu 24.04.5 LTS
+    ## Running under: Ubuntu 26.04.1 LTS
     ## 
     ## Matrix products: default
     ## BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
     ## 
     ## locale:
     ##  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
@@ -151,24 +151,24 @@ sessionInfo()
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] GiottoClass_0.7.22
+    ## [1] GiottoClass_0.8.0
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] Matrix_1.7-5          jsonlite_2.0.0        compiler_4.6.1       
+    ##  [1] Matrix_1.7-6          jsonlite_2.0.0        compiler_4.6.2       
     ##  [4] gtools_3.9.5          Rcpp_1.1.2            jquerylib_0.1.4      
-    ##  [7] IRanges_2.46.0        systemfonts_1.3.2     textshaping_1.0.5    
-    ## [10] yaml_2.3.12           fastmap_1.2.0         lattice_0.22-9       
+    ##  [7] IRanges_2.46.0        systemfonts_1.3.4     textshaping_1.1.0    
+    ## [10] yaml_2.3.12           fastmap_1.2.0         lattice_0.23-1       
     ## [13] XVector_0.52.0        R6_2.6.1              S4Arrays_1.12.1      
     ## [16] generics_0.1.4        ScaledMatrix_1.20.0   knitr_1.52           
     ## [19] BiocGenerics_0.58.1   backports_1.5.1       checkmate_2.3.4      
     ## [22] DelayedArray_0.38.2   desc_1.4.3            MatrixGenerics_1.24.0
-    ## [25] bslib_0.12.0          GiottoUtils_0.2.9     rlang_1.3.0          
-    ## [28] cachem_1.1.0          terra_1.9-50          xfun_0.62            
-    ## [31] fs_2.1.0              sass_0.4.10           otel_0.2.0           
+    ## [25] bslib_0.12.0          GiottoUtils_0.2.11    rlang_1.3.0          
+    ## [28] cachem_1.1.0          terra_1.9-60          xfun_0.62            
+    ## [31] fs_2.1.0              sass_0.5.0            otel_0.3.0           
     ## [34] SparseArray_1.12.3    cli_3.6.6             pkgdown_2.2.1        
-    ## [37] magrittr_2.0.5        digest_0.6.39         grid_4.6.1           
+    ## [37] magrittr_2.0.5        digest_0.6.39         grid_4.6.2           
     ## [40] lifecycle_1.0.5       S4Vectors_0.50.3      evaluate_1.0.5       
     ## [43] data.table_1.18.6.1   codetools_0.2-20      ragg_1.5.2           
-    ## [46] abind_1.4-8           stats4_4.6.1          GiottoData_0.3.7     
-    ## [49] rmarkdown_2.32        matrixStats_1.5.0     tools_4.6.1          
+    ## [46] abind_1.4-8           stats4_4.6.2          GiottoData_0.3.8     
+    ## [49] rmarkdown_2.32        matrixStats_1.5.0     tools_4.6.2          
     ## [52] htmltools_0.5.9

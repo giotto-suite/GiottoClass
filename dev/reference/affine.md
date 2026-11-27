@@ -28,25 +28,25 @@ affine(x)
 affine(x, y, ...)
 
 # S4 method for class 'SpatVector,matrix'
-affine(x, y, inv = FALSE, pre_multiply = FALSE, ...)
+affine(x, y, inv = FALSE, pre_multiply = TRUE, ...)
 
 # S4 method for class 'giottoPoints,matrix'
-affine(x, y, inv = FALSE, pre_multiply = FALSE, ...)
+affine(x, y, inv = FALSE, pre_multiply = TRUE, ...)
 
 # S4 method for class 'giottoPolygon,matrix'
-affine(x, y, inv = FALSE, pre_multiply = FALSE, ...)
+affine(x, y, inv = FALSE, pre_multiply = TRUE, ...)
 
 # S4 method for class 'spatLocsObj,matrix'
-affine(x, y, inv = FALSE, pre_multiply = FALSE, ...)
+affine(x, y, inv = FALSE, pre_multiply = TRUE, ...)
 
 # S4 method for class 'giottoLargeImage,matrix'
-affine(x, y, inv = FALSE, pre_multiply = FALSE, ...)
+affine(x, y, inv = FALSE, pre_multiply = TRUE, ...)
 
 # S4 method for class 'giottoAffineImage,matrix'
-affine(x, y, inv = FALSE, pre_multiply = FALSE, ...)
+affine(x, y, inv = FALSE, pre_multiply = TRUE, ...)
 
 # S4 method for class 'affine2d,matrix'
-affine(x, y, inv = FALSE, pre_multiply = FALSE, ...)
+affine(x, y, inv = FALSE, pre_multiply = TRUE, ...)
 
 # S4 method for class 'giottoMulti,ANY'
 affine(x, y, inv = FALSE, space = NULL, samples = NULL, ...)
@@ -93,9 +93,9 @@ affine(x, y, inv = FALSE, samples = NULL, ...)
 - pre_multiply:
 
   logical. Either pre: `t(A %*% t(xy))` or post: `xy %*% A` convention
-  to use when applying the affine matrix. The general convention is to
-  set `TRUE`, but Giotto internally uses `FALSE` (this may be updated in
-  the future).
+  to use when applying the affine matrix. Default `TRUE` is the standard
+  column-vector convention, which `affine2d` also stores. `FALSE` reads
+  the linear block transposed, as Giotto did before GiottoClass 0.8.0.
 
 ## Value
 

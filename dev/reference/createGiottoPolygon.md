@@ -17,13 +17,19 @@ createGiottoPolygon(
   x,
   remove_background_polygon = TRUE,
   background_algo = "range",
-  make_valid = FALSE,
+  make_valid = getOption("giotto.make_valid", TRUE),
   verbose = TRUE,
   ...
 )
 
 # S4 method for class 'SpatVector'
-createGiottoPolygon(x, name = "cell", calc_centroids = FALSE, verbose = TRUE)
+createGiottoPolygon(
+  x,
+  name = "cell",
+  calc_centroids = FALSE,
+  make_valid = getOption("giotto.make_valid", TRUE),
+  verbose = TRUE
+)
 
 # S4 method for class 'SpatRaster'
 createGiottoPolygon(
@@ -53,7 +59,7 @@ createGiottoPolygon(
   skip_eval_dfr = FALSE,
   copy_dt = TRUE,
   verbose = TRUE,
-  make_valid = FALSE,
+  make_valid = getOption("giotto.make_valid", TRUE),
   ...
 )
 
@@ -80,7 +86,7 @@ createGiottoPolygonsFromDfr(
   name = "cell",
   part_col = NULL,
   calc_centroids = FALSE,
-  make_valid = FALSE,
+  make_valid = getOption("giotto.make_valid", TRUE),
   verbose = TRUE,
   skip_eval_dfr = FALSE,
   copy_dt = TRUE
@@ -90,7 +96,7 @@ createGiottoPolygonsFromGeoJSON(
   GeoJSON,
   name = "cell",
   calc_centroids = FALSE,
-  make_valid = FALSE,
+  make_valid = getOption("giotto.make_valid", TRUE),
   remove_background_polygon = TRUE,
   background_algo = "range",
   verbose = TRUE
@@ -114,10 +120,13 @@ createGiottoPolygonsFromGeoJSON(
 
 - make_valid:
 
-  logical. (default `FALSE`) Whether to run
-  [`terra::makeValid()`](https://rspatial.github.io/terra/reference/is.valid.html)
-  on the geometries. Polygons that cannot be repaired into a polygon are
-  dropped along with their attributes.
+  logical. Whether to repair invalid geometries (such as
+  self-intersecting outlines) with
+  [`terra::makeValid()`](https://rspatial.github.io/terra/reference/is.valid.html);
+  valid ones are left as they are. Polygons that cannot be repaired into
+  a polygon are dropped along with their attributes. Defaults to the
+  `giotto.make_valid` option (`TRUE` when unset);
+  `options(giotto.make_valid = FALSE)` turns it off for every reader.
 
 - verbose:
 

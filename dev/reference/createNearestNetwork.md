@@ -135,9 +135,9 @@ neighbour (sNN) network based on the provided dimension reduction space.
 To run it directly on the gene expression matrix set
 *dim_reduction_to_use = NULL*.
 
-See also [`kNN`](http://michael.hahsler.net/dbscan/reference/kNN.md) and
-[`sNN`](http://michael.hahsler.net/dbscan/reference/sNN.md) for more
-information about how the networks are created.
+See also [`kNN`](https://michael.hahsler.net/dbscan/reference/kNN.html)
+and [`sNN`](https://michael.hahsler.net/dbscan/reference/sNN.html) for
+more information about how the networks are created.
 
 Output for kNN:
 
@@ -169,6 +169,33 @@ For sNN networks two additional parameters can be set:
 
 - **top_shared:** keep this number of the top shared neighbours,
   irrespective of minimum_shared setting
+
+## Recorded inputs
+
+A stored network records the matrix it was searched on in
+`@misc$nn_input`, so a later step can check that a graph it reuses was
+built from the same input. The name alone cannot say: `kNN.pca` is built
+from *some* PCA, with *some* dimensions. The record holds:
+
+- **dim_reduction_to_use**, **dim_reduction_name:** the reduction
+  searched, or `NULL` when the network was built from expression values.
+
+- **dimensions_to_use:** the dimensions actually used, after dropping
+  any the reduction does not have.
+
+- **expression_values**, **feats_to_use:** set instead when
+  `dim_reduction_to_use = NULL`. `feats_to_use` is the features used, or
+  `NULL` for all of them.
+
+- **k:** neighbours searched per cell, after capping at the number of
+  cells minus one.
+
+- **engine**, **ef**, **distance:** the search backend; `ef` is `NULL`
+  unless `engine = "hnsw"`.
+
+Under `keep_knn = TRUE` the kNN stored alongside an sNN carries the same
+record, since both come from one search. Networks created before the
+record existed have no `nn_input`.
 
 ## Examples
 

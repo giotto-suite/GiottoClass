@@ -8,7 +8,14 @@ the points.
 ## Usage
 
 ``` r
-createGiottoBinPoints(expr_values, spatial_locs, feat_type = "rna")
+createGiottoBinPoints(
+  expr_values,
+  spatial_locs,
+  feat_type = "rna",
+  bin_width = NA_real_,
+  bin_offset = c(0, 0),
+  bin_overlap = c("inside", "area")
+)
 ```
 
 ## Arguments
@@ -24,6 +31,12 @@ createGiottoBinPoints(expr_values, spatial_locs, feat_type = "rna")
 - feat_type:
 
   `character` (default = "rna"). Feature type of the data
+
+- bin_width, bin_offset, bin_overlap:
+
+  bin geometry and the default rule for
+  [`calculateOverlap()`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateOverlap.md);
+  see the slots of the same names
 
 ## Functions
 
@@ -70,6 +83,24 @@ createGiottoBinPoints(expr_values, spatial_locs, feat_type = "rna")
   relationship). When `FALSE`, they may contain bins not present in
   `@counts` (unidirectional: every bin in counts has spatial, but not
   every spatial has counts).
+
+- `bin_width`:
+
+  `numeric`. Side of a (square) bin, in the units of `@spatial`. `NA`
+  when unknown.
+
+- `bin_offset`:
+
+  `numeric(2)`. Offset from a bin's point to its centre.
+
+- `bin_overlap`:
+
+  `character`. How
+  [`calculateOverlap()`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateOverlap.md)
+  assigns a bin to a polygon unless told otherwise: `"inside"` or
+  `"area"`; see
+  [`extract_bin_overlap()`](https://giotto-suite.github.io/GiottoClass/dev/reference/extract_bin_overlap.md).
+  Set by the reader for its platform.
 
 ## Examples
 

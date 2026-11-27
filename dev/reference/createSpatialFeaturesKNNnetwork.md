@@ -70,7 +70,7 @@ createSpatialFeaturesKNNnetwork(
 - ...:
 
   additional parameters to pass to
-  [`kNN`](http://michael.hahsler.net/dbscan/reference/kNN.md)
+  [`kNN`](https://michael.hahsler.net/dbscan/reference/kNN.html)
 
 ## Value
 

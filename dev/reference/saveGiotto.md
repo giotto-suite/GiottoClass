@@ -79,7 +79,10 @@ saveGiotto(
 
 ## Value
 
-Creates a directory with Giotto object information
+The giotto object, invisibly. Save a backed object as
+`g <- saveGiotto(g)`: the save can change it, adopting data into the
+project and recording the snapshot it now matches. An in-memory object
+is returned as given.
 
 ## Details
 
@@ -94,5 +97,5 @@ provided as a list and will go to
 ``` r
 g <- GiottoData::loadGiottoMini("visium")
 
-saveGiotto(gobject = g, dir = tempdir(), overwrite = TRUE)
+g <- saveGiotto(gobject = g, dir = tempdir(), overwrite = TRUE)
 ```

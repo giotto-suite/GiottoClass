@@ -17,7 +17,7 @@ createSpatialNetwork(
   spat_loc_name = NULL,
   dimensions = "all",
   method = c("Delaunay", "kNN", "radius"),
-  delaunay_method = c("deldir", "delaunayn_geometry", "RTriangle"),
+  delaunay_method = c("delaunayn_geometry", "deldir", "RTriangle"),
   maximum_distance_delaunay = "auto",
   options = "Pp",
   Y = TRUE,
@@ -74,8 +74,8 @@ createSpatialNetwork(
   method to use to generate Delaunay network. All three give the
   identical triangulation; `"delaunayn_geometry"` is far faster above a
   few thousand points (0.94 s vs ~363 s at 200,000) and is the only one
-  that handles 3D. `"deldir"` remains the default for backward
-  compatibility. See the *Choosing a Delaunay backend* section of
+  that handles 3D. It is the default. See the *Choosing a Delaunay
+  backend* section of
   [`createSpatialDelaunayNetwork()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createSpatialDelaunayNetwork.md).
 
 - maximum_distance_delaunay:

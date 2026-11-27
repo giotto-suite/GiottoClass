@@ -94,6 +94,20 @@ calculateOverlap(
   feat_subset_ids = deprecated(),
   count_info_column = deprecated()
 )
+
+# S4 method for class 'giottoPolygon,giottoBinPoints'
+calculateOverlap(
+  x,
+  y,
+  name_overlap = NULL,
+  poly_subset_ids = NULL,
+  return_gpolygon = TRUE,
+  bin_overlap = NULL,
+  bin_width = NULL,
+  bin_offset = NULL,
+  verbose = NULL,
+  ...
+)
 ```
 
 ## Arguments
@@ -184,6 +198,13 @@ calculateOverlap(
   - `"raster"` uses rasterization (faster, assigns each feature to only
     one polygon even in overlapping regions as a byproduct of the
     rasterization).
+
+- bin_overlap, bin_width, bin_offset:
+
+  for bin points: how a bin is assigned to a polygon (see
+  [`extract_bin_overlap()`](https://giotto-suite.github.io/GiottoClass/dev/reference/extract_bin_overlap.md)).
+  `NULL` takes the bin points' own setting, which the reader sets for
+  its platform.
 
 ## Value
 

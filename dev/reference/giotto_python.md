@@ -43,7 +43,7 @@ environment based on the following defaults in decreasing priority:
 2.  Any provided path or envname in option `"giotto.py_path"`
 
 3.  Default expected giotto environment location based on
-    [`reticulate::miniconda_path()`](https://rstudio.github.io/reticulate/reference/miniconda_path.html)
+    `reticulate::miniconda_path()`
 
 4.  Envname `"giotto_env"`
 
@@ -97,8 +97,7 @@ set_giotto_python_path(python_path = NULL, verbose = NULL, initialize = TRUE)
 - mini_install_path:
 
   (optional) desired miniconda installation location. Default is chosen
-  by
-  [`reticulate::install_miniconda()`](https://rstudio.github.io/reticulate/reference/install_miniconda.html)
+  by `reticulate::install_miniconda()`
 
 - verbose:
 
@@ -200,7 +199,7 @@ installed Giotto environment
     2.  Any provided path or envname in option `"giotto.py_path"`
 
     3.  Default expected giotto environment location based on
-        [`reticulate::miniconda_path()`](https://rstudio.github.io/reticulate/reference/miniconda_path.html)
+        `reticulate::miniconda_path()`
 
     4.  Envname "giotto_env"
 

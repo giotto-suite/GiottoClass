@@ -13,7 +13,7 @@ createSpatialDelaunayNetwork(
   spat_unit = NULL,
   feat_type = NULL,
   spat_loc_name = NULL,
-  method = c("deldir", "delaunayn_geometry", "RTriangle"),
+  method = c("delaunayn_geometry", "deldir", "RTriangle"),
   dimensions = "all",
   maximum_distance = "auto",
   minimum_k = 0,
@@ -136,9 +136,9 @@ giotto object with updated spatial network slot
 
 ## Details
 
-Creates a spatial Delaunay network as explained in `delaunayn`
-(default), [`deldir`](https://rdrr.io/pkg/deldir/man/deldir.html), or
-`triangulate`.
+Creates a spatial Delaunay network as explained in
+[`delaunayn`](https://rdrr.io/pkg/geometry/man/delaunayn.html)
+(default), `deldir`, or `triangulate`.
 
 ## Choosing a Delaunay backend
 
@@ -154,12 +154,14 @@ the slowest:
 | 50,000  | 21.1 s   | 0.20 s               |
 | 200,000 | ~363 s   | 0.94 s               |
 
-`deldir` remains the default for backward compatibility, but
-**`delaunay_method = "delaunayn_geometry"` is strongly preferred above a
-few thousand points**. It requires the geometry package, and it is also
-the only backend that handles 3D.
+`"delaunayn_geometry"` is the default. It is also the only backend that
+handles 3D. `deldir` is in Suggests and must be installed to use it.
 
-Two caveats. Qhull can struggle with exactly cocircular input – a
+Three caveats. Where points are exactly cocircular, as on a square grid
+of bins, the triangulation is not unique and the backends can choose
+different diagonals (about 17% of edges on a 100 x 100 grid); pass
+`method = "deldir"` to reproduce a network built before geometry became
+the default. Qhull can also struggle with exactly cocircular input – a
 grid-aligned platform such as Visium – in which case pass
 `options = "Qbb Qc Qz"`; a 10,000-point exact grid worked with the
 default `"Pp"` in testing, but the failure mode is degenerate input

@@ -114,7 +114,16 @@ the following steps:
 
 - `versions`:
 
-  giotto object metadata and versioning info
+  giotto object metadata and versioning info: the producing GiottoClass
+  version, the object's uid (see
+  [`objUID()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objUID.md))
+  and `snapshot`, the tag of the snapshot the object was last loaded
+  from or saved as, set by a backend such as GiottoDisk (`NULL` until
+  then). An object combined from others, by
+  [`joinGiottoObjects()`](https://giotto-suite.github.io/GiottoClass/dev/reference/joinGiottoObjects.md)
+  or
+  [`createGiottoMulti()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createGiottoMulti.md),
+  holds the tags of all of them until it is saved.
 
 - `join_info`:
 

@@ -8,7 +8,7 @@ graph is **undirected** — one edge per pair.
 
 ``` r
 delaunayNetworkParam(
-  method = c("deldir", "RTriangle", "geometry"),
+  method = c("geometry", "deldir", "RTriangle"),
   maximum_distance = "auto",
   minimum_k = 0L,
   weight_fun = function(d) 1/d,
@@ -26,7 +26,7 @@ delaunayNetworkParam(
 
 - method:
 
-  backend: `"deldir"`, `"RTriangle"`, or `"geometry"`
+  backend: `"geometry"` (default), `"deldir"`, or `"RTriangle"`
 
 - maximum_distance:
 
@@ -50,7 +50,8 @@ delaunayNetworkParam(
 
 - options:
 
-  *geometry only.* passed to `geometry::delaunayn`
+  *geometry only.* passed to
+  [`geometry::delaunayn`](https://rdrr.io/pkg/geometry/man/delaunayn.html)
 
 - Y, j, S:
 

@@ -34,7 +34,8 @@ loadGiotto(
 
 - python_path:
 
-  (optional) manually set your python path
+  (optional) a python path to keep in the instructions; Python is not
+  started on load
 
 - init_gobject:
 

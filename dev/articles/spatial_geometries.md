@@ -466,13 +466,13 @@ print(intens_mat[1, 1:3, drop = FALSE])
 sessionInfo()
 ```
 
-    ## R version 4.6.1 (2026-06-24)
+    ## R version 4.6.2 (2026-10-29)
     ## Platform: x86_64-pc-linux-gnu
-    ## Running under: Ubuntu 24.04.5 LTS
+    ## Running under: Ubuntu 26.04.1 LTS
     ## 
     ## Matrix products: default
     ## BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
     ## 
     ## locale:
     ##  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
@@ -487,27 +487,27 @@ sessionInfo()
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] GiottoClass_0.7.22
+    ## [1] GiottoClass_0.8.0
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] sass_0.4.10           generics_0.1.4        class_7.3-23         
-    ##  [4] SparseArray_1.12.3    KernSmooth_2.23-26    gtools_3.9.5         
-    ##  [7] lattice_0.22-9        digest_0.6.39         magrittr_2.0.5       
-    ## [10] evaluate_1.0.5        grid_4.6.1            fastmap_1.2.0        
-    ## [13] jsonlite_2.0.0        Matrix_1.7-5          e1071_1.7-17         
-    ## [16] backports_1.5.1       DBI_1.3.0             GiottoData_0.3.7     
-    ## [19] codetools_0.2-20      textshaping_1.0.5     jquerylib_0.1.4      
+    ##  [1] sass_0.5.0            generics_0.1.4        class_7.3-24         
+    ##  [4] SparseArray_1.12.3    KernSmooth_2.23-27    gtools_3.9.5         
+    ##  [7] lattice_0.23-1        digest_0.6.39         magrittr_2.0.5       
+    ## [10] evaluate_1.0.5        grid_4.6.2            fastmap_1.2.0        
+    ## [13] jsonlite_2.0.0        Matrix_1.7-6          e1071_1.7-17         
+    ## [16] backports_1.5.1       DBI_1.3.0             GiottoData_0.3.8     
+    ## [19] codetools_0.2-20      textshaping_1.1.0     jquerylib_0.1.4      
     ## [22] abind_1.4-8           cli_3.6.6             rlang_1.3.0          
     ## [25] units_1.0-1           XVector_0.52.0        cachem_1.1.0         
-    ## [28] DelayedArray_0.38.2   yaml_2.3.12           otel_0.2.0           
-    ## [31] S4Arrays_1.12.1       tools_4.6.1           raster_3.6-32        
-    ## [34] GiottoUtils_0.2.9     checkmate_2.3.4       BiocGenerics_0.58.1  
+    ## [28] DelayedArray_0.38.2   yaml_2.3.12           otel_0.3.0           
+    ## [31] S4Arrays_1.12.1       tools_4.6.2           raster_3.6-32        
+    ## [34] GiottoUtils_0.2.11    checkmate_2.3.4       BiocGenerics_0.58.1  
     ## [37] exactextractr_0.10.1  R6_2.6.1              proxy_0.4-29         
-    ## [40] matrixStats_1.5.0     stats4_4.6.1          lifecycle_1.0.5      
+    ## [40] matrixStats_1.5.0     stats4_4.6.2          lifecycle_1.0.5      
     ## [43] classInt_0.4-11       S4Vectors_0.50.3      fs_2.1.0             
     ## [46] IRanges_2.46.0        ragg_1.5.2            desc_1.4.3           
-    ## [49] ScaledMatrix_1.20.0   pkgdown_2.2.1         terra_1.9-50         
+    ## [49] ScaledMatrix_1.20.0   pkgdown_2.2.1         terra_1.9-60         
     ## [52] bslib_0.12.0          data.table_1.18.6.1   Rcpp_1.1.2           
-    ## [55] sf_1.1-3              systemfonts_1.3.2     xfun_0.62            
+    ## [55] sf_1.1-3              systemfonts_1.3.4     xfun_0.62            
     ## [58] MatrixGenerics_1.24.0 knitr_1.52            htmltools_0.5.9      
-    ## [61] rmarkdown_2.32        compiler_4.6.1        sp_2.2-4
+    ## [61] rmarkdown_2.32        compiler_4.6.2        sp_2.2-4

@@ -21,7 +21,7 @@ activeSpatUnit(g) <- "aggregate"
 
 objManifest(g)
 #> <gmanifest> schema 0.2.0
-#>   uid: g-20261022202917-405419191f55 | source: in memory
+#>   uid: g-20261127023423-421fc63cd53 | source: in memory
 #>   cells: z0 498, z1 504, aggregate 462 | features: rna 337
 #>   cell_metadata
 #>     aggregate / rna
@@ -281,20 +281,48 @@ manifestDiff(mu, objManifest(gu))$summary
 
 ## The history log
 
-[`ghistory_records()`](https://giotto-suite.github.io/GiottoClass/dev/reference/ghistory_records.md)
-returns the object’s history as structured records rather than printed
-text:
+[`objHistory()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory.md)
+returns the object’s history as one record per step. Printed as a whole,
+it shows each step and the arguments it ran with:
 
 ``` r
 
 g <- subsetGiotto(g, cell_ids = head(spatIDs(g), 100))
 
-str(tail(ghistory_records(g), 1)[[1]], max.level = 1)
+tail(objHistory(g), 2)
+#> Steps and parameters used:
+#> <18_nn_network>
+#>   gobject        : gobject
+#>   description    : "_nn_network"
+#>   return_gobject : TRUE
+#>   toplevel       : 1L
+#>   attachments    : NULL
+#> <19_subset>
+#>   gobject         : g
+#>   spat_unit       : ":all:"
+#>   feat_type       : "rna"
+#>   cell_ids        : head(spatIDs(g), 100)
+#>   feat_ids        : NULL
+#>   poly_info       : spat_unit
+#>   all_spat_units  : NULL
+#>   all_feat_types  : NULL
+#>   spat_unit_fsub  : ":all:"
+#>   feat_type_ssub  : ":all:"
+#>   verbose         : FALSE
+#>   toplevel_params : 2
+```
+
+A single step is a plain list holding the whole record: the function,
+its arguments, when it ran, the RNG state, and whether it succeeded:
+
+``` r
+
+str(tail(objHistory(g), 1)[[1]], max.level = 1)
 #> List of 8
 #>  $ step_id  : chr "19_subset"
 #>  $ fn       : chr "subsetGiotto"
 #>  $ params   :List of 12
-#>  $ timestamp: chr "2026-10-22T20:29:24Z"
+#>  $ timestamp: chr "2026-11-27T02:34:30Z"
 #>  $ seed     :List of 2
 #>  $ status   : chr "ok"
 #>  $ error    : NULL
@@ -353,34 +381,50 @@ list.files(saved)
 ```
 
 The point of the sidecar is that it answers questions about the object
-without loading it:
+without loading it.
+[`objManifest()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest.md)
+reads it back from the folder, in the same form it returns for a live
+object:
 
 ``` r
 
-sc <- jsonlite::fromJSON(file.path(saved, "manifest.json"),
-                         simplifyVector = FALSE)
-
-unlist(sc$summary$spat_units)
-#> [1] "aggregate" "z0"        "z1"
-unlist(sc$summary$n_cells)
+ms <- objManifest(saved)
+unlist(ms$summary$n_cells)
 #>        z0        z1 aggregate 
 #>       100       100       100
-vapply(sc$slots$expression, function(r) {
-    paste(r$keys$spat_unit, r$keys$name, sep = "/")
-}, character(1))
-#> [1] "aggregate/normalized" "aggregate/pearson"    "aggregate/raw"       
-#> [4] "aggregate/scaled"     "z0/raw"               "z1/raw"
 ```
 
-Fingerprints survive the round trip: an object saved and loaded back has
-the same fingerprints as the one that was saved, so a diff across a save
-reports only what actually changed.
+So a saved object can be diffed against a live one, or against another
+save, without loading either. Fingerprints survive the round trip, so
+the diff reports only what changed since the save:
 
-[`objManifest_json()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest_json.md)
-and
-[`objHistory_ndjson()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory_ndjson.md)
-produce the same two documents for any object, whether or not you are
-saving it. The JSON follows a versioned schema that ships with the
+``` r
+
+g_after <- createSpatialNetwork(g, name = "after_save", method = "Delaunay")
+manifestDiff(ms, objManifest(g_after))$summary
+#> [1] "spatial network added: after_save"
+```
+
+The history reads back the same way, and matches the object’s history at
+the time it was saved:
+
+``` r
+
+hs <- objHistory(saved)
+tail(names(hs), 2)
+#> [1] "19_subset"       "20_unattributed"
+```
+
+Both functions return the same three forms, whether given an object or a
+saved folder:
+
+| Call | Returns |
+|----|----|
+| `objManifest(x)` / `objHistory(x)` | the R list (`gmanifest` / `ghistory`) |
+| `objManifest(x, output = "json")` / `objHistory(x, output = "ndjson")` | the document as a string |
+| `objManifest(x, file = )` / `objHistory(x, file = )` | writes the document, returns the path |
+
+The manifest JSON follows a versioned schema that ships with the
 package:
 
 ``` r

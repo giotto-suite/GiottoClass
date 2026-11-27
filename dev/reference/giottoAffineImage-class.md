@@ -24,5 +24,5 @@ and return a processed `giottoLargeImage`.
 
 - `funs`:
 
-  list of functions associated with the object. Primarily to perform the
-  delayed/lazy operation
+  unused, kept so saved objects load. Performing the deferred affine is
+  [`doDeferred()`](https://giotto-suite.github.io/GiottoClass/dev/reference/doDeferred.md).

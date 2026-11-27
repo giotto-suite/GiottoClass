@@ -386,43 +386,12 @@ Creation of polygon shapes and arrays
 
 Convert from other frameworks to Giotto
 
-- [`anndataToGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/anndataToGiotto.md)
-  : Convert anndata to Giotto
-- [`gefToGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/gefToGiotto.md)
-  : Convert gef to Giotto
-- [`seuratToGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/seuratToGiotto.md)
-  : Deprecated
-- [`seuratToGiottoV4()`](https://giotto-suite.github.io/GiottoClass/dev/reference/seuratToGiottoV4.md)
-  : Convert a Seurat V4 object to a Giotto object
-- [`seuratToGiottoV5()`](https://giotto-suite.github.io/GiottoClass/dev/reference/seuratToGiottoV5.md)
-  : Convert a Seurat V5 object to a Giotto object
-- [`spatialExperimentToGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatialExperimentToGiotto.md)
-  : Utility function to convert a SpatialExperiment object to a Giotto
-  object
-- [`spatialdataToGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatialdataToGiotto.md)
-  : Convert SpatialData to Giotto
 - [`giottoMasterToSuite()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoMasterToSuite.md)
   : Convert a master Giotto object to suite
 
 ### To
 
 Convert Giotto Object to other frameworks
-
-- [`giottoToAnnData()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToAnnData.md)
-  : Convert Giotto to anndata
-- [`giottoToSeurat()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSeurat.md)
-  : Deprecated
-- [`giottoToSeuratV4()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSeuratV4.md)
-  : Convert Giotto to Seurat V4
-- [`giottoToSeuratV5()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSeuratV5.md)
-  : Convert Giotto to Seurat V5
-- [`giottoToSpatialData()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSpatialData.md)
-  : Convert Giotto to SpatialData
-- [`giottoToSpatialExperiment()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSpatialExperiment.md)
-  : Utility function to convert a Giotto object to a SpatialExperiment
-  object.
-- [`createBentoAdata()`](https://giotto-suite.github.io/GiottoClass/dev/reference/createBentoAdata.md)
-  : Create bento adata object from gobject
 
 ## Aggregate
 
@@ -456,6 +425,7 @@ Calculate spatial features overlapped by polygons
   [`calculateOverlap(`*`<giottoPolygon>`*`,`*`<SpatRaster>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateOverlap.md)
   [`calculateOverlap(`*`<SpatVector>`*`,`*`<SpatRaster>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateOverlap.md)
   [`calculateOverlap(`*`<SpatVector>`*`,`*`<SpatVector>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateOverlap.md)
+  [`calculateOverlap(`*`<giottoPolygon>`*`,`*`<giottoBinPoints>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateOverlap.md)
   : Calculate features overlapped by polygons
 - [`calculateOverlapRaster()`](https://giotto-suite.github.io/GiottoClass/dev/reference/calculateOverlapRaster.md)
   : calculateOverlapRaster
@@ -1220,7 +1190,9 @@ Image tools
 
 Functions for logging Giotto Object history
 
-- [`objHistory()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory.md)
+- [`objHistory(`*`<gAny>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory.md)
+  [`objHistory(`*`<ghistory>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory.md)
+  [`objHistory(`*`<character>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory.md)
   : Giotto object history
 - [`update_giotto_params()`](https://giotto-suite.github.io/GiottoClass/dev/reference/update_giotto_params.md)
   : Update giotto parameters
@@ -1396,15 +1368,26 @@ present in the released version.
 
 ### History and manifests
 
-- [`ghistory_records()`](https://giotto-suite.github.io/GiottoClass/dev/reference/ghistory_records.md)
-  : Structured giotto object history
 - [`recordGiottoStep()`](https://giotto-suite.github.io/GiottoClass/dev/reference/recordGiottoStep.md)
   : Record a giotto object history step
-- [`objHistory_ndjson()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objHistory_ndjson.md)
-  : Giotto object history as NDJSON
-- [`objManifest(`*`<giotto>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest.md)
+- [`objManifest(`*`<gAny>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest.md)
+  [`objManifest(`*`<gmanifest>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest.md)
+  [`objManifest(`*`<character>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest.md)
   : Giotto object manifest
-- [`objManifest_json()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objManifest_json.md)
-  : Giotto object manifest as JSON
 - [`manifestDiff()`](https://giotto-suite.github.io/GiottoClass/dev/reference/manifestDiff.md)
   : Diff two giotto manifests
+- [`objUID()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objUID.md)
+  : Giotto object uid
+- [`objCitations()`](https://giotto-suite.github.io/GiottoClass/dev/reference/objCitations.md)
+  : Citations of the methods used on an object
+- [`methodCitation(`*`<ANY>`*`)`](https://giotto-suite.github.io/GiottoClass/dev/reference/methodCitation.md)
+  : Citation of a method
+- [`citeMethod()`](https://giotto-suite.github.io/GiottoClass/dev/reference/citeMethod.md)
+  : Show the citation of a method
+
+### Bin overlaps
+
+- [`binOverlaps()`](https://giotto-suite.github.io/GiottoClass/dev/reference/binOverlaps.md)
+  : Bins in polygons
+- [`extract_bin_overlap()`](https://giotto-suite.github.io/GiottoClass/dev/reference/extract_bin_overlap.md)
+  : Assign bins to polygons

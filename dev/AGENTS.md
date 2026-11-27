@@ -69,7 +69,7 @@ it from the code you are about to edit.
 | `R/methods-setGiotto.R` | [`setGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/setGiotto.md) — the untyped, schema-routed setter |
 | `R/methods-nesting.R` | The schema accessors: `spatUnit`, `featType`, `objName`, `prov` |
 | `R/create.R` | Primary object creation functions |
-| `R/interoperability.R` | Seurat, AnnData, SpatialExperiment, SpatialData conversions |
+| `R/interoperability.R` | The converters left here: SpatialData export, older Giotto objects |
 | `R/aggregate.R` | Feature aggregation (polygon × point overlaps → matrix) |
 | `R/subset.R` | Subsetting operations |
 | `R/flex_functions.R` | `*_flex` dispatch helpers (see *Dispatch outside S4* below) |
@@ -403,18 +403,15 @@ BiocCheck runs to ensure Bioconductor submission compatibility.
 
 ## Interoperability
 
-Conversions live in `R/interoperability.R`. All are lossy — the schema
-above has no counterpart in most of these formats, so a round trip does
-not preserve provenance or multi-unit nesting.
+Conversions to and from other ecosystems live in GiottoConnect: Seurat,
+AnnData and SpatialExperiment / SFE (mapping-based, both directions),
+SpatialData → Giotto and Bento; Stereo-seq GEF files are read by
+Giotto’s `importStereoSeq()`. Only this converter is left in
+`R/interoperability.R`:
 
 | From / To | Function |
 |----|----|
-| Seurat v4/v5 → Giotto | [`seuratToGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/seuratToGiotto.md), [`seuratToGiottoV4()`](https://giotto-suite.github.io/GiottoClass/dev/reference/seuratToGiottoV4.md), [`seuratToGiottoV5()`](https://giotto-suite.github.io/GiottoClass/dev/reference/seuratToGiottoV5.md) |
-| Giotto → Seurat | [`giottoToSeurat()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSeurat.md), [`giottoToSeuratV5()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSeuratV5.md) |
-| AnnData → Giotto | [`anndataToGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/anndataToGiotto.md) |
-| Giotto → AnnData | [`giottoToAnnData()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToAnnData.md) |
-| SpatialExperiment ↔︎ Giotto | [`spatialExperimentToGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatialExperimentToGiotto.md), [`giottoToSpatialExperiment()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoToSpatialExperiment.md) |
-| SpatialData → Giotto | [`spatialdataToGiotto()`](https://giotto-suite.github.io/GiottoClass/dev/reference/spatialdataToGiotto.md) |
+| older Giotto → Giotto Suite | [`giottoMasterToSuite()`](https://giotto-suite.github.io/GiottoClass/dev/reference/giottoMasterToSuite.md) |
 
 ------------------------------------------------------------------------
 
