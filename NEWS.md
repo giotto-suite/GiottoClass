@@ -11,6 +11,9 @@
   `checkGiottoEnvironment()`, `set_giotto_python_path()` and
   `checkPythonPackage()` are deprecated. `createGiottoInstructions(python_path,
   no_python_warn)` and `loadGiotto(python_path)` only keep the path.
+- The Python and package versions a tool ran with (`py_versions`, attached
+  through `update_giotto_params()`) are recorded in the step's history record:
+  `objHistory()` lists them and `saveGiotto()` keeps them.
 - reticulate moves to Suggests. Requires GiottoUtils 0.2.11.
 
 ## breaking changes

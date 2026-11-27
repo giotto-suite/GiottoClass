@@ -25,7 +25,9 @@
 #' param classes containing settings. No large items should be added here.
 #' A param with a [methodCitation()] (or a `bibentry`) also records its
 #' citation with the step, shown once per session and listed by
-#' [objCitations()].
+#' [objCitations()]. An item `py_versions` (the versions a Python tool ran
+#' with, from `GiottoUtils::py_run()`) is recorded with the step, so it is
+#' part of [objHistory()] and survives [saveGiotto()].
 #' @returns giotto object or list of parameters
 #' @examples
 #' g <- GiottoData::loadGiottoMini("visium")
@@ -82,6 +84,11 @@ update_giotto_params <- function(
     if (length(cites)) {
         step$cite <- cites
         .cite_show(cites, what = paste0(call_info$fn, "()"))
+    }
+    # the Python and package versions a Python tool ran with
+    # (GiottoUtils::py_run()) are provenance of the step too
+    if (length(attachments$py_versions)) {
+        step$py_versions <- as.list(attachments$py_versions)
     }
     attr(new_entry, "step") <- step
 
