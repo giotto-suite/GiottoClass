@@ -2,9 +2,10 @@
 
 
 #' @rdname giotto_instructions
-#' @param python_path path to python binary to use or directory one level
-#' up from the `env` directory (similar to output of
-#' `reticulate::miniconda_path()`)
+#' @param python_path path to a python executable, kept in the instructions.
+#' Python is not started here: Python tools run in worker R sessions with
+#' their own environments (`GiottoUtils::py_run()`); to use an own Python
+#' set `options(giotto.py_python =)`
 #' @param show_plot print plot to console, default = TRUE
 #' @param return_plot return plot as object, default = TRUE
 #' @param save_plot automatically save plot, dafault = FALSE
@@ -18,8 +19,7 @@
 #' @param plot_count (global option) start count for creating automatic unique
 #' plots
 #' @param fiji_path path to fiji executable
-#' @param no_python_warn turn off warning that no compatible python env has
-#' been detected
+#' @param no_python_warn not used: no python environment is looked for
 #' @export
 createGiottoInstructions <- function(python_path = getOption("giotto.py_path"),
     show_plot = NULL,
@@ -35,29 +35,10 @@ createGiottoInstructions <- function(python_path = getOption("giotto.py_path"),
     plot_count = 0,
     fiji_path = NULL,
     no_python_warn = FALSE) {
-    # python path to use
-    # try used here to allow instructions to be made in the absence of a
-    # compatible python env
-    python_path <- try(
-        if (is_docker) {
-            set_giotto_python_path(python_path = "/usr/bin/python3")
-            # fixed path in docker version
-        } else {
-            set_giotto_python_path(python_path = python_path)
-        },
-        silent = TRUE
-    )
-
-    if ((is.null(python_path) || inherits(python_path, "try-error")) &&
-        (!no_python_warn && !getOption("giotto.no_python_warn", FALSE))) {
-        warning(wrap_txt(
-            "Python is required for full Giotto functionality.
-            Turn off this message by setting option
-            \"giotto.no_python_warn\" = TRUE"),
-            call. = FALSE
-        )
-        options("giotto.has_conda" = FALSE)
-        options("giotto.no_python_warn" = TRUE)
+    # Python is not looked up or started here: Python tools run in worker
+    # R sessions (GiottoUtils::py_run()). A given python_path is only kept.
+    if (isTRUE(is_docker) && is.null(python_path)) {
+        python_path <- "/usr/bin/python3"
     }
 
     # print plot to console

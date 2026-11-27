@@ -275,10 +275,6 @@ setMethod("initialize", signature("giottoAffineImage"), function(.Object, ...) {
         instructions(.Object, initialize = FALSE) <- createGiottoInstructions()
     }
 
-    ## test python module availability if a python env is expected ##
-    .check_giotto_python_modules(
-        my_python_path = instructions(.Object, "python_path")
-    )
 
 
 

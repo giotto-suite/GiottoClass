@@ -1,5 +1,21 @@
 # GiottoClass 0.8.0
 
+## python
+- Python is no longer looked for or started when giotto objects are created
+  or loaded, and no Giotto Python environment is needed. Python tools run in
+  worker R sessions with their own environment (`GiottoUtils::py_run()`,
+  uv through `reticulate::py_require()`); `options(giotto.py_python =)` points
+  them at an own Python. `to_simple_tif()` and the tifffile fallback of
+  `tif_metadata()` run this way. Loading also works without conda.
+- `installGiottoEnvironment()`, `removeGiottoEnvironment()`,
+  `checkGiottoEnvironment()`, `set_giotto_python_path()` and
+  `checkPythonPackage()` are deprecated. `createGiottoInstructions(python_path,
+  no_python_warn)` and `loadGiotto(python_path)` only keep the path.
+- The Python and package versions a tool ran with (`py_versions`, attached
+  through `update_giotto_params()`) are recorded in the step's history record:
+  `objHistory()` lists them and `saveGiotto()` keeps them.
+- reticulate moves to Suggests. Requires GiottoUtils 0.2.11.
+
 ## breaking changes
 
 - `gefToGiotto()` is removed: Giotto's `importStereoSeq()` reads Stereo-seq

@@ -459,17 +459,10 @@ to_simple_tif <- function(input_file,
     page = NULL,
     overwrite = FALSE) {
 
-    # get tifffile py
-    package_check(
-        pkg_name = c("tifffile", "imagecodecs"),
-        repository = c("pip:tifffile", "pip:imagecodecs")
-    )
-
     py_tif_convert_path <- system.file(
         "python", "tif_convert.py",
         package = "GiottoClass"
     )
-    reticulate::source_python(py_tif_convert_path)
     # ensure output directory exists
     if (!checkmate::test_directory_exists(output_dir)) {
         dir.create(output_dir, recursive = TRUE)
@@ -515,8 +508,19 @@ to_simple_tif <- function(input_file,
             )
         }
     }
-    # Convert (Python expects 0-based page)
-    py_tif_convert(input_file = input_file, output_file = outpath, page = page_0based)
+    # Convert (Python expects 0-based page) with tifffile, in a worker R
+    # session with its own Python environment
+    GiottoUtils::py_run(
+        function(script, input_file, output_file, page) {
+            reticulate::source_python(script)
+            py_tif_convert(input_file = input_file, output_file = output_file,
+                page = page)
+            TRUE
+        },
+        args = list(script = py_tif_convert_path, input_file = input_file,
+            output_file = outpath, page = page_0based),
+        requirements = c("tifffile", "imagecodecs"), name = "tifffile"
+    )
 
     invisible(outpath)
 }
@@ -602,22 +606,26 @@ tif_metadata <- function(path,
 
     # formats whose metadata is not in ImageDescription (lsm, fluoview, nih,
     # micromanager, ...) still need tifffile to parse their private tags.
-    package_check(
-        pkg_name   = c("tifffile", "imagecodecs"),
-        repository = c("pip:tifffile", "pip:imagecodecs")
+    # read with tifffile in a worker R session with its own Python; the
+    # metadata text comes back and is parsed here
+    xml <- GiottoUtils::py_run(
+        function(path, page) {
+            TIF <- reticulate::import("tifffile", convert = TRUE)
+            reticulate::import("imagecodecs")
+            img <- TIF$TiffFile(path)
+            on.exit(try(img$close(), silent = TRUE), add = TRUE)
+            GiottoClass:::.tif_metadata_extract(img = img, node = NULL,
+                page = page, type = NULL, output = NULL, raw = TRUE)
+        },
+        args = list(path = path, page = page),
+        requirements = c("tifffile", "imagecodecs"), name = "tifffile"
     )
-    TIF <- reticulate::import("tifffile", convert = TRUE, delay_load = TRUE)
-    reticulate::import("imagecodecs", delay_load = TRUE)
-    img <- TIF$TiffFile(path)
-    on.exit(try(img$close(), silent = TRUE), add = TRUE)
-
-    .tif_metadata_extract(
-        img = img,
-        node = node,
-        page = page,
-        type = type,
-        output = output
-    )
+    if (!is.list(xml)) xml <- list(xml)
+    res <- lapply(xml, .tif_metadata_parse, node = node, type = type,
+        output = output)
+    if (length(res) == 1L) return(res[[1L]])
+    if (inherits(res[[1L]], "data.frame")) return(Reduce(rbind, res))
+    res
 }
 
 #' @title Read the XML metadata string(s) of a tif without python
@@ -687,7 +695,10 @@ tif_metadata <- function(path,
 ometif_metadata <- tif_metadata
 
 
-.tif_metadata_extract <- function(img, node, page = NULL, type, output) {
+# raw = TRUE returns the metadata text instead of parsing it (used in a
+# py_run() worker, whose results must be plain R values)
+.tif_metadata_extract <- function(img, node, page = NULL, type, output,
+    raw = FALSE) {
     npages <- tryCatch(length(img$pages), error = function(e) NA_integer_)
     if (is.na(npages)) {
         npages <- length(img$series[[1L]]$pages)
@@ -714,9 +725,11 @@ ometif_metadata <- tif_metadata
                 node = node,
                 page = p,
                 type = type,
-                output = output
+                output = output,
+                raw = raw
             )
         })
+        if (isTRUE(raw)) return(reslist)
         if (length(reslist) && inherits(reslist[[1]], "data.frame")) {
             reslist <- Reduce(rbind, reslist)
         }
@@ -751,6 +764,7 @@ ometif_metadata <- tif_metadata
         stop("No XML metadata found in file (empty description/OME-XML).", call. = FALSE)
     }
 
+    if (isTRUE(raw)) return(as.character(x))
     .tif_metadata_parse(x = x, node = node, type = type, output = output)
 }
 

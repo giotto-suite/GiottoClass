@@ -23,7 +23,8 @@ with \code{\link{saveGiotto}}}
 \item{reconnect_giottoImage}{(default = TRUE) whether to attempt
 reconnection of magick based image objects}
 
-\item{python_path}{(optional) manually set your python path}
+\item{python_path}{(optional) a python path to keep in the instructions;
+Python is not started on load}
 
 \item{init_gobject}{logical. Whether to initialize the \code{giotto} object after
 loading. (default = TRUE)}

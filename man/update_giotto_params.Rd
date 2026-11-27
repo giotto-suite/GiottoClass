@@ -26,7 +26,9 @@ recorded was made. If negative, param recording is skipped}
 param classes containing settings. No large items should be added here.
 A param with a \code{\link[=methodCitation]{methodCitation()}} (or a \code{bibentry}) also records its
 citation with the step, shown once per session and listed by
-\code{\link[=objCitations]{objCitations()}}.}
+\code{\link[=objCitations]{objCitations()}}. An item \code{py_versions} (the versions a Python tool ran
+with, from \code{GiottoUtils::py_run()}) is recorded with the step, so it is
+part of \code{\link[=objHistory]{objHistory()}} and survives \code{\link[=saveGiotto]{saveGiotto()}}.}
 }
 \value{
 giotto object or list of parameters
